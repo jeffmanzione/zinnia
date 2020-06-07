@@ -5,6 +5,12 @@ cc_library(
     srcs = ["heap.c"],
     hdrs = ["heap.h"],
     deps = [
+        "//entity",
+        "//entity:object",
+        "//struct:alist",
+        "//struct:keyed_list",
         "@memory-wrapper//alloc",
+        "@memory-wrapper//alloc/arena",
+        "@memory-wrapper//alloc/memory_graph",
     ],
 )

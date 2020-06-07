@@ -6,6 +6,6 @@ typedef struct __VM VM;
 VM *vm_create();
 void vm_delete(VM *vm);
 
-bool vm_execute(VM *vm, Ins *ins);
+bool vm_execute(VM *vm, Instruction *ins);
 
 #endif /* HEAP_VIRTUAL_MACHINE_H_ */
