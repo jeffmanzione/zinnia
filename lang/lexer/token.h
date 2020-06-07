@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "alloc/arena/arena.h"
+#include "entity/primitive.h"
 
 #define KEYWORD_TOKEN_OFFSET 1000
 
@@ -128,6 +129,7 @@ Token *token_create(TokenType type, int line, int col, const char text[]);
 Token *token_copy(Token *tok);
 void token_delete(Token *tok);
 
+Primitive token_to_primitive(const Token *tok);
 void token_print(Token *tok, FILE *file);
 
 void token_finalize_all();

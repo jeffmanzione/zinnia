@@ -37,6 +37,7 @@ cc_library(
     srcs = ["token.c"],
     hdrs = ["token.h"],
     deps = [
+        "//entity:primitive",
         "@memory-wrapper//alloc/arena",
         "@memory-wrapper//alloc/arena:intern",
         "@memory-wrapper//debug",

@@ -9,23 +9,75 @@
 typedef enum {
   // Do nothing.
   NOP,
+  EXIT,
   // Loads something into resval.
   RES,
+  TGET,
+  TLEN,
+  SET,
   // Assigns a value locally.
   LET,
-  // Assigns a value looking up the hierarchy for a variable with the given
-  // name.
-  ASSN,
-  // Field setter.
-  SET,
-  // Field getter.
-  GET,
-  // Calls a function with arguments.
-  CALL,
-  // Calls a function with no arguments.
-  CLLN,
-  // Returns to the previous caller.
+  PUSH,
+  PEEK,
+  PSRS,  // PUSH+RES
+  NOT,   // where !1 == Nil
+  NOTC,  // C-like NOT, where !1 == 0
+  GT,
+  LT,
+  EQ,
+  NEQ,
+  GTE,
+  LTE,
+  AND,
+  OR,
+  XOR,
+  IF,
+  IFN,
+  JMP,
+  NBLK,
+  BBLK,
   RET,
+  ADD,
+  SUB,
+  MULT,
+  DIV,
+  MOD,
+  INC,
+  DEC,
+  FINC,
+  FDEC,
+  SINC,
+  CALL,
+  CLLN,
+  TUPL,
+  TGTE,
+  TLTE,
+  TEQ,
+  DUP,
+  GOTO,
+  PRNT,
+  LMDL,
+  GET,
+  GTSH,  // GET+PUSH
+  RNIL,  // RES Nil
+  PNIL,  // PUSH Nil
+  FLD,
+  FLDC,
+  IS,
+  ADR,
+  RAIS,
+  CTCH,
+  // ARRAYS
+  ANEW,
+  AIDX,
+  ASET,
+  //
+  CNST,
+  SETC,
+  LETC,
+  SGET,
+  // NOT A REAL OP
+  OP_BOUND,
 } Op;
 
 const char *op_to_str(Op op);

@@ -10,6 +10,7 @@
 #include "alloc/arena/arena.h"
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
+#include "entity/primitive.h"
 
 static ARENA_DEFINE(Token);
 
@@ -166,6 +167,24 @@ void token_print(Token *tok, FILE *file) {
     fprintf(file, ", line=%d, col=%d", tok->line, tok->col);
   }
   fprintf(file, ")");
+}
+
+Primitive token_to_primitive(const Token *tok) {
+  ASSERT_NOT_NULL(tok);
+  Primitive val;
+  switch (tok->type) {
+    case INTEGER:
+      val._type = INT;
+      val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
+      break;
+    case FLOATING:
+      val._type = FLOAT;
+      val._float_val = strtod(tok->text, NULL);
+      break;
+    default:
+      ERROR("Attempted to create a Value from '%s'.", tok->text);
+  }
+  return val;
 }
 
 void token_finalize_all() {
