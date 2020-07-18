@@ -125,7 +125,9 @@ bool is_any_space(const char c) {
   }
 }
 
-inline bool is_whitespace(const char c) { return ' ' == c || '\t' == c; }
+inline bool is_whitespace(const char c) {
+  return ' ' == c || '\t' == c || '\r' == c;
+}
 
 char char_unesc(char u) {
   switch (u) {

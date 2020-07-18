@@ -32,4 +32,8 @@ int32_t pint(const Primitive *p);
 // Gets the float value of the primitve.
 double pfloat(const Primitive *p);
 
+void pset_char(Primitive *p, int8_t val);
+void pset_int(Primitive *p, int32_t val);
+void pset_float(Primitive *p, double val);
+
 #endif /* ENTITY_PRIMITIVE_H_ */

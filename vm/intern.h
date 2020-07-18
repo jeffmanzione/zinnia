@@ -4,7 +4,7 @@
 //     Author: Jeff Manzione
 
 #ifndef VM_INTERN_H_
-#include VM_INTERN_H_
+#define VM_INTERN_H_
 
 extern char *ADDRESS_KEY;
 extern char *ANON_FUNCTION_NAME;

@@ -31,29 +31,27 @@ typedef struct {
   bool has_args, is_const;
   Arguments args;
   ExpressionTree *body;
-} Function;
+} FunctionDef;
 
 typedef void (*FuncDefPopulator)(const SyntaxTree *fn_identifier,
-                                 Function *func);
+                                 FunctionDef *func);
 typedef Arguments (*FuncArgumentsPopulator)(const SyntaxTree *fn_identifier,
                                             const Token *token);
 
 void add_arg(Arguments *args, Argument *arg);
-void set_function_def(const SyntaxTree *fn_identifier, Function *func);
+void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 Arguments set_function_args(const SyntaxTree *stree, const Token *token);
 
-int produce_function(Function *func, Tape *tape);
-void delete_function(Function *func);
+int produce_function(FunctionDef *func, Tape *tape);
+void delete_function(FunctionDef *func);
 
-Function populate_function_variant(const SyntaxTree *stree, ParseExpression def,
-                                   ParseExpression signature_const,
-                                   ParseExpression signature_nonconst,
-                                   ParseExpression fn_identifier,
-                                   ParseExpression function_arguments_no_args,
-                                   ParseExpression function_arguments_present,
-                                   FuncDefPopulator def_populator,
-                                   FuncArgumentsPopulator args_populator);
-Function populate_function(const SyntaxTree *stree);
+FunctionDef populate_function_variant(
+    const SyntaxTree *stree, ParseExpression def,
+    ParseExpression signature_const, ParseExpression signature_nonconst,
+    ParseExpression fn_identifier, ParseExpression function_arguments_no_args,
+    ParseExpression function_arguments_present, FuncDefPopulator def_populator,
+    FuncArgumentsPopulator args_populator);
+FunctionDef populate_function(const SyntaxTree *stree);
 
 int produce_arguments(Arguments *args, Tape *tape);
 

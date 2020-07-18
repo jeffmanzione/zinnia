@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "debug/debug.h"
 #include "lang/lexer/token.h"
 #include "lang/parser/parser.h"
 #include "program/tape.h"

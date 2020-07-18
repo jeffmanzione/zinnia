@@ -3,43 +3,39 @@
 #include <stdio.h>
 
 #include "debug/debug.h"
-
-#define OP_ID_FMT "  %-6s%s"
-#define OP_STR_FMT "  %-6s%s"
-#define OP_INT_FMT "  %-6s%d"
-#define OP_FLT_FMT "  %-6s%f"
+#define OP_FMT "  %-6s"
+#define STR_FMT "%s"
+#define INT_FMT "%d"
+#define FLT_FMT "%f"
 #define OP_NO_ARG_FMT "  %s"
 
-void _instruction_write_primitive(const Instruction *ins, FILE *file);
+int _instruction_write_primitive(const Instruction *ins, FILE *file);
 
-void instruction_write(const Instruction *ins, FILE *file) {
+int instruction_write(const Instruction *ins, FILE *file) {
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
-      fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
-      return;
+      return fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
     case INSTRUCTION_ID:
-      fprintf(file, OP_ID_FMT, op_to_str(ins->op), ins->id);
-      return;
+      return fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op), ins->id);
     case INSTRUCTION_STRING:
-      fprintf(file, OP_STR_FMT, op_to_str(ins->op), ins->str);
-      return;
+      return fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op), ins->str);
     case INSTRUCTION_PRIMITIVE:
-      _instruction_write_primitive(ins, file);
-      return;
+      return _instruction_write_primitive(ins, file);
     default:
       ERROR("Unknown instruction type.");
+      return -1;
   }
 }
 
-void _instruction_write_primitive(const Instruction *ins, FILE *file) {
+int _instruction_write_primitive(const Instruction *ins, FILE *file) {
   switch (ptype(&ins->val)) {
     case INT:
-      fprintf(file, OP_INT_FMT, op_to_str(ins->op), pint(&ins->val));
-      return;
+      return fprintf(file, OP_FMT INT_FMT, op_to_str(ins->op), pint(&ins->val));
     case FLOAT:
-      fprintf(file, OP_FLT_FMT, op_to_str(ins->op), pfloat(&ins->val));
-      return;
+      return fprintf(file, OP_FMT FLT_FMT, op_to_str(ins->op),
+                     pfloat(&ins->val));
     default:
       ERROR("Unkown primitive instruction.");
+      return -1;
   }
 }

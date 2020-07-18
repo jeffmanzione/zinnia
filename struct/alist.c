@@ -11,7 +11,7 @@
 #include "debug/debug.h"
 #include "util/util.h"
 
-inline AList *__arraylist_create(void *arr, size_t obj_sz, size_t table_sz) {
+inline AList *__alist_create(void *arr, size_t obj_sz, size_t table_sz) {
   ASSERT(NOT_NULL(arr));
   AList *a = ALLOC(AList);
   __alist_init(a, arr, obj_sz, table_sz);
@@ -46,6 +46,12 @@ inline void *alist_add(AList *const e) {
   return e->_arr + (e->_len++ * e->_obj_sz);
 }
 
+inline void alist_remove_last(AList *const e) {
+  ASSERT(NOT_NULL(e));
+  if (e->_len <= 0) return;
+  e->_len--;
+}
+
 inline void alist_finalize(AList *const e) {
   ASSERT(NOT_NULL(e), NOT_NULL(e->_arr));
   DEALLOC(e->_arr);
@@ -72,4 +78,19 @@ inline void alist_iterate(const AList *const e, EAction action) {
   for (i = 0; i < alist_len(e); ++i) {
     action(alist_get(e, i));
   }
+}
+
+inline AL_iter alist_iter(const AList *const a) {
+  AL_iter iter = {._list = a, ._i = 0};
+  return iter;
+}
+
+inline void *al_value(AL_iter *iter) {
+  return alist_get(iter->_list, iter->_i);
+}
+
+inline void al_inc(AL_iter *iter) { ++iter->_i; }
+
+inline bool al_has(AL_iter *iter) {
+  return (iter->_i + 1) < alist_len(iter->_list);
 }

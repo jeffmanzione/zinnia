@@ -34,7 +34,8 @@ void *keyedlist_insert(KeyedList *klist, const void *key, void **entry) {
     return NULL;
   }
   // And this one too.
-  *entry = (void *)(klist->_list._arr + (uintptr_t)existing - 1);
+  existing = (void *)(klist->_list._arr + (uintptr_t)existing - 1);
+  *entry = existing;
   return existing;
 }
 

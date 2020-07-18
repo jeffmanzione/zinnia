@@ -3,17 +3,18 @@
 // Created on: Dec 30, 2019
 //     Author: Jeff Manzione
 
-#include "classes.h"
+#include "lang/semantics/expressions/classes.h"
 
 #include "alloc/arena/intern.h"
-#include "expression_macros.h"
 #include "lang/parser/parser.h"
+#include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expression_tree.h"
 #include "program/tape.h"
 #include "struct/alist.h"
 #include "struct/q.h"
 #include "vm/intern.h"
 
-void populate_class_def(ClassDef *def, const SyntaxTree *stree) {
+void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
   def->parent_classes = alist_create(ClassName, 2);
   // No parent classes.
   if (IS_SYNTAX(stree, identifier)) {
@@ -109,26 +110,26 @@ Arguments set_constructor_args(const SyntaxTree *stree, const Token *token) {
   return args;
 }
 
-void set_method_def(const SyntaxTree *fn_identifier, Function *func) {
+void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   ASSERT(IS_SYNTAX(fn_identifier, method_identifier));
   func->def_token = fn_identifier->first->token;
   func->fn_name = fn_identifier->second->token;
 }
 
-Function populate_method(const SyntaxTree *stree) {
+FunctionDef populate_method(const SyntaxTree *stree) {
   return populate_function_variant(
       stree, method_definition, method_signature_const,
       method_signature_nonconst, method_identifier, function_arguments_no_args,
       function_arguments_present, set_method_def, set_function_args);
 }
 
-void set_new_def(const SyntaxTree *fn_identifier, Function *func) {
+void set_new_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   ASSERT(IS_SYNTAX(fn_identifier, new_expression));
   func->def_token = fn_identifier->token;
   func->fn_name = fn_identifier->token;
 }
 
-Function populate_constructor(const SyntaxTree *stree) {
+FunctionDef populate_constructor(const SyntaxTree *stree) {
   return populate_function_variant(stree, new_definition, new_signature_const,
                                    new_signature_nonconst, new_expression,
                                    new_arguments_no_args, new_arguments_present,
@@ -141,7 +142,7 @@ Field populate_field_statement(const Token *field_token,
   return field;
 }
 
-void populate_field_statements(const SyntaxTree *stree, Class *class) {
+void populate_field_statements(const SyntaxTree *stree, ClassDef *class) {
   ASSERT(IS_TOKEN(stree->first, FIELD));
   const Token *field_token = stree->first->token;
 
@@ -168,11 +169,11 @@ void populate_field_statements(const SyntaxTree *stree, Class *class) {
   }
 }
 
-void populate_class_statement(Class *class, const SyntaxTree *stree) {
+void populate_class_statement(ClassDef *class, const SyntaxTree *stree) {
   if (IS_SYNTAX(stree, field_statement)) {
     populate_field_statements(stree, class);
   } else if (IS_SYNTAX(stree, method_definition)) {
-    Function method = populate_method(stree);
+    FunctionDef method = populate_method(stree);
     alist_append(class->methods, &method);
   } else if (IS_SYNTAX(stree, new_definition)) {
     class->constructor = populate_constructor(stree);
@@ -182,7 +183,7 @@ void populate_class_statement(Class *class, const SyntaxTree *stree) {
   }
 }
 
-void populate_class_statements(Class *class, const SyntaxTree *stree) {
+void populate_class_statements(ClassDef *class, const SyntaxTree *stree) {
   ASSERT(IS_TOKEN(stree->first, LBRCE));
   if (IS_TOKEN(stree->second, RBRCE)) {
     // Empty body.
@@ -204,12 +205,12 @@ void populate_class_statements(Class *class, const SyntaxTree *stree) {
   }
 }
 
-Class populate_class(const SyntaxTree *stree) {
+ClassDef populate_class(const SyntaxTree *stree) {
   ASSERT(!IS_LEAF(stree->first), IS_TOKEN(stree->first->first, CLASS));
-  Class class;
+  ClassDef class;
   class.has_constructor = false;
   class.fields = alist_create(Field, 4);
-  class.methods = alist_create(Function, 6);
+  class.methods = alist_create(FunctionDef, 6);
   populate_class_def(&class.def, stree->first->second);
 
   const SyntaxTree *body = stree->second;
@@ -221,21 +222,21 @@ Class populate_class(const SyntaxTree *stree) {
   return class;
 }
 
-void delete_class(Class *class) {
+void delete_class(ClassDef *class) {
   if (class->has_constructor) {
     delete_function(&class->constructor);
   }
   alist_delete(class->def.parent_classes);
   alist_delete(class->fields);
-  void delete_method(void *ptr) {
-    Function *func = (Function *)ptr;
+  int i;
+  for (i = 0; i < alist_len(class->methods); ++i) {
+    FunctionDef *func = (FunctionDef *)alist_get(class->methods, i);
     delete_function(func);
   }
-  alist_iterate(class->methods, delete_method);
   alist_delete(class->methods);
 }
 
-int produce_constructor(Class *class, Tape *tape) {
+int produce_constructor(ClassDef *class, Tape *tape) {
   int num_ins = 0;
 
   if (class->has_constructor) {
@@ -262,7 +263,7 @@ int produce_constructor(Class *class, Tape *tape) {
   }
 
   if (class->has_constructor) {
-    Function *func = &class->constructor;
+    FunctionDef *func = &class->constructor;
     num_ins += produce_instructions(func->body, tape);
     num_ins += tape_ins_text(tape, RES, SELF, func->fn_name);
     if (func->is_const) {
@@ -276,7 +277,7 @@ int produce_constructor(Class *class, Tape *tape) {
   return num_ins;
 }
 
-int produce_class(Class *class, Tape *tape) {
+int produce_class(ClassDef *class, Tape *tape) {
   int num_ins = 0;
   if (alist_len(class->def.parent_classes) == 0) {
     // No parents.
@@ -284,11 +285,11 @@ int produce_class(Class *class, Tape *tape) {
   } else {
     Q parents;
     Q_init(&parents);
-    void add_parent(void *ptr) {
-      ClassName *name = (ClassName *)ptr;
-      queue_add(&parents, name->token->text);
+    int i;
+    for (i = 0; i < alist_len(class->def.parent_classes); ++i) {
+      ClassName *name = (ClassName *)alist_get(class->def.parent_classes, i);
+      Q_enqueue(&parents, (char *)name->token->text);
     }
-    alist_iterate(class->def.parent_classes, add_parent);
     num_ins += tape_class_with_parents(tape, class->def.name.token, &parents);
     Q_finalize(&parents);
   }
@@ -298,7 +299,7 @@ int produce_class(Class *class, Tape *tape) {
   }
   int i, num_methods = alist_len(class->methods);
   for (i = 0; i < num_methods; ++i) {
-    Function *func = (Function *)alist_get(class->methods, i);
+    FunctionDef *func = (FunctionDef *)alist_get(class->methods, i);
     num_ins += produce_function(func, tape);
   }
   num_ins += tape_endclass(tape, class->def.name.token);

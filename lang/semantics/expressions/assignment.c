@@ -5,10 +5,12 @@
 
 #include "lang/semantics/expressions/assignment.h"
 
+#include "alloc/alloc.h"
 #include "debug/debug.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_macros.h"
-#include "lang/semantics/expressions/expression.h"
+#include "lang/semantics/expression_tree.h"
+#include "lang/semantics/expressions/postfix.h"
 #include "program/tape.h"
 #include "struct/alist.h"
 

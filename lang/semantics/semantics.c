@@ -5,6 +5,13 @@
 
 #include "lang/semantics/expression_macros.h"
 #include "lang/semantics/expression_tree.h"
+#include "lang/semantics/expressions/assignment.h"
+#include "lang/semantics/expressions/classes.h"
+#include "lang/semantics/expressions/expression.h"
+#include "lang/semantics/expressions/files.h"
+#include "lang/semantics/expressions/loops.h"
+#include "lang/semantics/expressions/statements.h"
+#include "struct/struct_defaults.h"
 
 static Map populators;
 static Map producers;

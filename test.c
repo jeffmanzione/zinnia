@@ -3,74 +3,58 @@
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
+#include "debug/debug.h"
 #include "lang/lexer/file_info.h"
 #include "lang/lexer/lexer.h"
 #include "lang/parser/parser.h"
+#include "lang/semantics/semantics.h"
 #include "program/instruction.h"
 #include "program/op.h"
 #include "program/tape.h"
+#include "vm/intern.h"
+#include "vm/module_manager.h"
+#include "vm/process/context.h"
+#include "vm/process/process.h"
+#include "vm/process/processes.h"
+#include "vm/process/task.h"
+#include "vm/virtual_machine.h"
 
 int main(int arc, char *args[]) {
   alloc_init();
   intern_init();
+  strings_init();
   parsers_init();
+  semantics_init();
 
-  Tape *tape = tape_create();
-  tape_start_class(tape, intern("Test"));
-  tape_start_func(tape, intern("new"));
+  // FILE *tmp = tmpfile();
+  // char file[] =
+  //     "module test\ndef test(x) {\n  y = x\n}\nclass Test {\n  new(field "
+  //     "x) {}\n  method test(x) {\n    return x\n  }\n}\n";
+  // printf("%s", file);
+  // fprintf(tmp, "%s", file);
+  // rewind(tmp);
+  // FileInfo *fi = file_info_file(tmp);
 
-  Instruction *i = tape_add(tape);
-  i->op = LET;
-  i->type = INSTRUCTION_ID;
-  i->id = intern("x");
+  // SyntaxTree stree = parse_file(fi);
 
-  SourceMapping *sm = tape_add_source(tape, i);
-  sm->line = 1;
-  sm->col = 2;
+  // ExpressionTree *etree = populate_expression(&stree);
+  // Tape *tape = tape_create();
+  // produce_instructions(etree, tape);
 
-  i = tape_add(tape);
-  i->op = RET;
-  i->type = INSTRUCTION_NO_ARG;
+  // tape_write(tape, stdout);
 
-  sm = tape_add_source(tape, i);
-  sm->line = 2;
-  sm->col = 2;
+  VM *vm = vm_create();
+  ModuleManager *mm = vm_module_manager(vm);
+  Module *main_module = modulemanager_read(mm, "test.jl");
+  Task *task = process_create_task(vm_main_process(vm));
+  task_create_context(task, NULL, main_module, 0);
+  vm_execute_task(vm, task);
 
-  tape_end_class(tape);
+  vm_delete(vm);
 
-  tape_write(tape, stdout);
-
-  FILE *tmp = tmpfile();
-  fprintf(tmp, "class Test\n@new\n  let  x\n  ret\nendclass\n");
-  rewind(tmp);
-  FileInfo *fi = file_info_file(tmp);
-
-  Lexer lexer;
-  lexer_init(&lexer, fi, /*excape_characters*/ true);
-  Q *q = lex(&lexer);
-
-  Q_iter iter = Q_iterator(q);
-  for (; Q_has(&iter); Q_inc(&iter)) {
-    Token *tok = (Token *)Q_value(&iter);
-    token_print(tok, stdout);
-    printf("\n");
-    fflush(stdout);
-  }
-
-  lexer_finalize(&lexer);
-  file_info_delete(fi);
-
-  tmp = tmpfile();
-  fprintf(tmp, "module test\nclass Test {\n  new(x) {\n    return x\n}\n}\n");
-  rewind(tmp);
-  fi = file_info_file(tmp);
-
-  SyntaxTree stree = parse_file(fi);
-  syntax_tree_delete(&stree);
-
-  file_info_delete(fi);
-
+  semantics_finalize();
   parsers_finalize();
+  strings_init();
   intern_finalize();
   alloc_finalize();
 

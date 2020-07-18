@@ -20,7 +20,7 @@ typedef struct {
 typedef struct {
   ClassName name;
   AList *parent_classes;
-} ClassDef;
+} ClassSignature;
 
 typedef struct {
   const Token *name;
@@ -28,15 +28,15 @@ typedef struct {
 } Field;
 
 typedef struct {
-  ClassDef def;
+  ClassSignature def;
   AList *fields;
   bool has_constructor;
-  Function constructor;
+  FunctionDef constructor;
   AList *methods;  // Function.
-} Class;
+} ClassDef;
 
-Class populate_class(const SyntaxTree *stree);
-int produce_class(Class *class, Tape *tape);
-void delete_class(Class *class);
+ClassDef populate_class(const SyntaxTree *stree);
+int produce_class(ClassDef *class, Tape *tape);
+void delete_class(ClassDef *class);
 
 #endif /* LANG_SEMANTICS_EXPRESSIONS_CLASSES_H_ */

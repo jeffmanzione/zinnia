@@ -20,6 +20,7 @@ cc_library(
     srcs = ["object.c"],
     hdrs = ["object.h"],
     deps = [
+        "//program:tape",
         "//struct:keyed_list",
         "@memory-wrapper//alloc/memory_graph",
         "@memory-wrapper//struct:map",

@@ -8,9 +8,9 @@
 #ifndef CODEGEN_EXPRESSIONS_STATEMENTS_H_
 #define CODEGEN_EXPRESSIONS_STATEMENTS_H_
 
-#include "../../datastructure/expando.h"
-#include "assignment.h"
-#include "expression_macros.h"
+#include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expressions/assignment.h"
+#include "struct/alist.h"
 
 typedef struct {
   Token *if_token;
@@ -19,7 +19,7 @@ typedef struct {
 } Conditional;
 
 typedef struct {
-  Expando *conditions;
+  AList *conditions;
   ExpressionTree *else_exp;
 } IfElse;
 
@@ -27,7 +27,7 @@ void populate_if_else(IfElse *if_else, const SyntaxTree *stree);
 void delete_if_else(IfElse *if_else);
 int produce_if_else(IfElse *if_else, Tape *tape);
 
-DefineExpression(compound_statement) { Expando *expressions; };
+DefineExpression(compound_statement) { AList *expressions; };
 
 DefineExpression(try_statement) {
   ExpressionTree *try_body;

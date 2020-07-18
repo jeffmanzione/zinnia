@@ -9,8 +9,10 @@
 #include "debug/debug.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expression_tree.h"
 #include "lang/semantics/expressions/classes.h"
 #include "program/tape.h"
+#include "struct/alist.h"
 #include "vm/intern.h"
 
 Argument populate_argument(const SyntaxTree *stree) {
@@ -71,25 +73,23 @@ Arguments set_function_args(const SyntaxTree *stree, const Token *token) {
   return args;
 }
 
-void set_function_def(const SyntaxTree *fn_identifier, Function *func) {
+void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->def_token = fn_identifier->first->token;
   func->fn_name = fn_identifier->second->token;
 }
 
-Function populate_function_variant(const SyntaxTree *stree, ParseExpression def,
-                                   ParseExpression signature_const,
-                                   ParseExpression signature_nonconst,
-                                   ParseExpression fn_identifier,
-                                   ParseExpression function_arguments_no_args,
-                                   ParseExpression function_arguments_present,
-                                   FuncDefPopulator def_populator,
-                                   FuncArgumentsPopulator args_populator) {
-  Function func = {.def_token = NULL,
-                   .fn_name = NULL,
-                   .const_token = NULL,
-                   .has_args = false,
-                   .is_const = false,
-                   .body = NULL};
+FunctionDef populate_function_variant(
+    const SyntaxTree *stree, ParseExpression def,
+    ParseExpression signature_const, ParseExpression signature_nonconst,
+    ParseExpression fn_identifier, ParseExpression function_arguments_no_args,
+    ParseExpression function_arguments_present, FuncDefPopulator def_populator,
+    FuncArgumentsPopulator args_populator) {
+  FunctionDef func = {.def_token = NULL,
+                      .fn_name = NULL,
+                      .const_token = NULL,
+                      .has_args = false,
+                      .is_const = false,
+                      .body = NULL};
   ASSERT(IS_SYNTAX(stree, def));
 
   const SyntaxTree *func_sig;
@@ -117,7 +117,7 @@ Function populate_function_variant(const SyntaxTree *stree, ParseExpression def,
   return func;
 }
 
-Function populate_function(const SyntaxTree *stree) {
+FunctionDef populate_function(const SyntaxTree *stree) {
   return populate_function_variant(
       stree, function_definition, function_signature_const,
       function_signature_nonconst, def_identifier, function_arguments_no_args,
@@ -130,16 +130,17 @@ void delete_argument(Argument *arg) {
   }
 }
 
+void _delete_argument_elt(void *ptr) {
+  Argument *arg = (Argument *)ptr;
+  delete_argument(arg);
+}
+
 void delete_arguments(Arguments *args) {
-  void delete_argument_elt(void *ptr) {
-    Argument *arg = (Argument *)ptr;
-    delete_argument(arg);
-  }
-  alist_iterate(args->args, delete_argument_elt);
+  alist_iterate(args->args, _delete_argument_elt);
   alist_delete(args->args);
 }
 
-void delete_function(Function *func) {
+void delete_function(FunctionDef *func) {
   if (func->has_args) {
     delete_arguments(&func->args);
   }
@@ -172,7 +173,6 @@ int produce_all_arguments(Arguments *args, Tape *tape) {
                  tape_ins_int(tape, JMP, default_ins, arg->arg_name) +
                  default_ins;
       tape_append(tape, tmp);
-      tape_delete(tmp);
     } else {
       if (i == num_args - 1) {
         // Pop for last arg.
@@ -201,8 +201,6 @@ int produce_arguments(Arguments *args, Tape *tape) {
       tape_append(tape, defaults);
       num_ins += tape_ins_int(tape, JMP, 1, arg->arg_name) +
                  tape_ins_int(tape, TGET, 0, arg->arg_name);
-
-      tape_delete(defaults);
     }
     num_ins += produce_argument(arg, tape);
     return num_ins;
@@ -239,13 +237,11 @@ int produce_arguments(Arguments *args, Tape *tape) {
   num_ins += tape_ins_int(tape, IFN, defaults_ins, first->arg_name);
   tape_append(tape, defaults);
   tape_append(tape, non_defaults);
-  tape_delete(defaults);
-  tape_delete(non_defaults);
   num_ins += defaults_ins + nondefaults_ins;
   return num_ins;
 }
 
-int produce_function(Function *func, Tape *tape) {
+int produce_function(FunctionDef *func, Tape *tape) {
   int num_ins = 0;
   num_ins += tape_label(tape, func->fn_name);
   if (func->has_args) {
@@ -276,10 +272,10 @@ void populate_fi_statement(const SyntaxTree *stree, ModuleDef *module) {
                      .module_name = stree->second->token};
     alist_append(module->imports, &import);
   } else if (IS_SYNTAX(stree, class_definition)) {
-    Class class = populate_class(stree);
+    ClassDef class = populate_class(stree);
     alist_append(module->classes, &class);
   } else if (IS_SYNTAX(stree, function_definition)) {
-    Function func = populate_function(stree);
+    FunctionDef func = populate_function(stree);
     alist_append(module->functions, &func);
   } else {
     ExpressionTree *etree = populate_expression(stree);
@@ -292,10 +288,10 @@ ModuleDef populate_module_def(const SyntaxTree *stree) {
   ModuleName module_name = {
       .is_named = false, .module_token = NULL, .module_name = NULL};
   module_def.name = module_name;
-  module_def.imports = expando(Import, 4);
-  module_def.classes = expando(Class, 4);
-  module_def.functions = expando(Function, 4);
-  module_def.statements = expando(ExpressionTree *, DEFAULT_ARRAY_SZ);
+  module_def.imports = alist_create(Import, 4);
+  module_def.classes = alist_create(ClassDef, 4);
+  module_def.functions = alist_create(FunctionDef, 4);
+  module_def.statements = alist_create(ExpressionTree *, DEFAULT_ARRAY_SZ);
 
   populate_fi_statement(stree->first, &module_def);
   const SyntaxTree *cur = stree->second;
@@ -314,6 +310,11 @@ ImplPopulate(file_level_statement_list, const SyntaxTree *stree) {
   file_level_statement_list->def = populate_module_def(stree);
 }
 
+void _delete_statement(void *ptr) {
+  ExpressionTree *statement = *((ExpressionTree **)ptr);
+  delete_expression(statement);
+}
+
 void delete_module_def(ModuleDef *module) {
   alist_delete(module->imports);
 
@@ -323,11 +324,7 @@ void delete_module_def(ModuleDef *module) {
   alist_iterate(module->functions, (void (*)(void *))delete_function);
   alist_delete(module->functions);
 
-  void delete_statement(void *ptr) {
-    ExpressionTree *statement = *((ExpressionTree **)ptr);
-    delete_expression(statement);
-  }
-  alist_iterate(module->statements, delete_statement);
+  alist_iterate(module->statements, _delete_statement);
   alist_delete(module->statements);
 }
 
@@ -337,31 +334,28 @@ ImplDelete(file_level_statement_list) {
 
 int produce_module_def(ModuleDef *module, Tape *tape) {
   int num_ins = 0;
-
   if (module->name.is_named) {
     num_ins += tape_module(tape, module->name.module_name);
   }
-  void produce_imports(Import * import) {
+  int i;
+  for (i = 0; i < alist_len(module->imports); ++i) {
+    Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->module_name);
   }
-  alist_iterate(module->imports, (void (*)(void *))produce_imports);
-
-  void produce_statement(void *ptr) {
-    ExpressionTree *statement = *((ExpressionTree **)ptr);
+  for (i = 0; i < alist_len(module->statements); ++i) {
+    ExpressionTree *statement =
+        *((ExpressionTree **)alist_get(module->statements, i));
     num_ins += produce_instructions(statement, tape);
   }
-  alist_iterate(module->statements, produce_statement);
-  num_ins += tape_ins_int(tape, EXIT, 0, NULL);
-
-  void produce_class_helper(Class * class) {
+  num_ins += tape_ins_int(tape, EXIT, 0, module->name.module_token);
+  for (i = 0; i < alist_len(module->classes); ++i) {
+    ClassDef *class = (ClassDef *)alist_get(module->classes, i);
     num_ins += produce_class(class, tape);
   }
-  alist_iterate(module->classes, (void (*)(void *))produce_class_helper);
-
-  void produce_function_helper(Function * func) {
+  for (i = 0; i < alist_len(module->functions); ++i) {
+    FunctionDef *func = (FunctionDef *)alist_get(module->functions, i);
     num_ins += produce_function(func, tape);
   }
-  alist_iterate(module->functions, (void (*)(void *))produce_function_helper);
   return num_ins;
 }
 

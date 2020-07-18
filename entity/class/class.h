@@ -8,9 +8,9 @@
 
 #include "entity/object.h"
 
-Class *class_create(const char name[], const Class *super,
-                    const Module *module);
-void class_delete(Class *cls);
-Function *class_add_function(Class *cls, const char name[]);
+Class *class_init(Class *cls, const char name[], const Class *super,
+                  const Module *module);
+void class_finalize(Class *cls);
+Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos);
 
 #endif /* OBJECT_CLASS_CLASS_H_ */

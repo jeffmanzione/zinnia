@@ -10,19 +10,22 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#include "../../arena/strings.h"
-#include "../../error.h"
-#include "../../program/tape.h"
-#include "../syntax.h"
-#include "../tokenizer.h"
-#include "assignment.h"
-#include "expression.h"
-#include "expression_macros.h"
+#include "alloc/arena/intern.h"
+#include "debug/debug.h"
+#include "lang/lexer/token.h"
+#include "lang/parser/parser.h"
+#include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expression_tree.h"
+#include "lang/semantics/expressions/assignment.h"
+#include "lang/semantics/expressions/expression.h"
+#include "program/tape.h"
+#include "struct/struct_defaults.h"
 #include "vm/intern.h"
 
 ImplPopulate(compound_statement, const SyntaxTree *stree) {
   ASSERT(IS_TOKEN(stree->first, LBRCE));
-  compound_statement->expressions = expando(ExpressionTree *, DEFAULT_ARRAY_SZ);
+  compound_statement->expressions =
+      alist_create(ExpressionTree *, DEFAULT_ARRAY_SZ);
   if (IS_TOKEN(stree->second, RBRCE)) {
     return;
   }
@@ -30,21 +33,21 @@ ImplPopulate(compound_statement, const SyntaxTree *stree) {
 
   if (!IS_SYNTAX(stree->second->first, statement_list)) {
     ExpressionTree *elt = populate_expression(stree->second->first);
-    expando_append(compound_statement->expressions, &elt);
+    alist_append(compound_statement->expressions, &elt);
     return;
   }
 
   ExpressionTree *first = populate_expression(stree->second->first->first);
-  expando_append(compound_statement->expressions, &first);
+  alist_append(compound_statement->expressions, &first);
   SyntaxTree *cur = stree->second->first->second;
   while (true) {
     if (!IS_SYNTAX(cur, statement_list1)) {
       ExpressionTree *elt = populate_expression(cur);
-      expando_append(compound_statement->expressions, &elt);
+      alist_append(compound_statement->expressions, &elt);
       break;
     }
     ExpressionTree *elt = populate_expression(cur->first);
-    expando_append(compound_statement->expressions, &elt);
+    alist_append(compound_statement->expressions, &elt);
     cur = cur->second;
   }
 }
@@ -54,20 +57,20 @@ ImplDelete(compound_statement) {
     ExpressionTree *tree = *((ExpressionTree **)ptr);
     delete_expression(tree);
   }
-  expando_iterate(compound_statement->expressions, delete_statement);
-  expando_delete(compound_statement->expressions);
+  alist_iterate(compound_statement->expressions, delete_statement);
+  alist_delete(compound_statement->expressions);
 }
 
 ImplProduce(compound_statement, Tape *tape) {
   int num_ins = 0;
-  if (expando_len(compound_statement->expressions) == 0) {
+  if (alist_len(compound_statement->expressions) == 0) {
     return 0;
   }
   void produce_statements(void *ptr) {
     ExpressionTree *tree = *((ExpressionTree **)ptr);
     num_ins += produce_instructions(tree, tape);
   }
-  expando_iterate(compound_statement->expressions, produce_statements);
+  alist_iterate(compound_statement->expressions, produce_statements);
   return num_ins;
 }
 
@@ -124,10 +127,6 @@ ImplProduce(try_statement, Tape *tape) {
   num_ins += tape_ins_no_arg(tape, RNIL, try_statement->catch_token) +
              tape_ins_text(tape, SET, "$try_goto", try_statement->catch_token) +
              tape_ins_no_arg(tape, BBLK, try_statement->try_token);
-
-  tape_delete(try_body_tape);
-  tape_delete(error_assign_tape);
-  tape_delete(catch_body_tape);
   return num_ins;
 }
 

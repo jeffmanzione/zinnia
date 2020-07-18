@@ -10,7 +10,9 @@ cc_library(
     hdrs = ["module.h"],
     deps = [
         "//entity:object",
+        "//entity/class",
         "//entity/function",
+        "//program:tape",
         "//struct:keyed_list",
     ],
 )

@@ -31,19 +31,23 @@ void __alist_init(AList *e, void *arr, size_t obj_sz, size_t table_sz);
 AList *__alist_create(void *arr, size_t obj_sz, size_t table_sz);
 
 void alist_finalize(AList *const a);
-
 void alist_delete(AList *const a);
-
 size_t alist_append(AList *const a, const void *v);
-
 void *alist_add(AList *const a);
-
+void alist_remove_last(AList *const a);
 void *alist_get(const AList *const a, uint32_t i);
-
 size_t alist_len(const AList *const a);
-
 void alist_sort(AList *const a, Comparator c, ESwapper eswap);
-
 void alist_iterate(const AList *const a, EAction action);
+
+typedef struct {
+  const AList *_list;
+  uint32_t _i;
+} AL_iter;
+
+AL_iter alist_iter(const AList *const a);
+void *al_value(AL_iter *iter);
+void al_inc(AL_iter *iter);
+bool al_has(AL_iter *iter);
 
 #endif /* STRUCT_ALIST_H_ */

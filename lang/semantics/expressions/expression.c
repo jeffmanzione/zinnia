@@ -3,19 +3,24 @@
 // Created on: Jun 23, 2018
 //     Author: Jeff Manzione
 
-#include "expression.h"
+#include "lang/semantics/expressions/expression.h"
 
 #include <stddef.h>
 
 #include "alloc/alloc.h"
-#include "alloc/arena/itern.h"
+#include "alloc/arena/intern.h"
 #include "lang/parser/parser.h"
+#include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expression_tree.h"
 #include "lang/semantics/expressions/files.h"
+#include "lang/semantics/expressions/postfix.h"
+#include "program/tape.h"
 #include "struct/map.h"
+#include "vm/intern.h"
 
-ExpressionTree *__extract_tree(Expando *expando_of_tree, int index) {
+ExpressionTree *__extract_tree(AList *alist_of_tree, int index) {
   ExpressionTree **tree_ptr2 =
-      (ExpressionTree **)expando_get(expando_of_tree, index);
+      (ExpressionTree **)alist_get(alist_of_tree, index);
   return *tree_ptr2;
 }
 
@@ -36,7 +41,7 @@ ImplProduce(identifier, Tape *tape) {
 
 ImplPopulate(constant, const SyntaxTree *stree) {
   constant->token = stree->token;
-  constant->value = token_to_val(stree->token);
+  constant->value = token_to_primitive(stree->token);
 }
 
 ImplDelete(constant) {}
@@ -58,7 +63,7 @@ ImplProduce(string_literal, Tape *tape) {
 
 ImplPopulate(tuple_expression, const SyntaxTree *stree) {
   tuple_expression->token = stree->second->first->token;  // First comma.
-  tuple_expression->list = expando(ExpressionTree *, DEFAULT_ARRAY_SZ);
+  tuple_expression->list = alist_create(ExpressionTree *, DEFAULT_ARRAY_SZ);
   APPEND_TREE(tuple_expression->list, stree->first);
   DECLARE_IF_TYPE(tuple1, tuple_expression1, stree->second);
   // Loop through indices > 0.
@@ -76,16 +81,17 @@ ImplPopulate(tuple_expression, const SyntaxTree *stree) {
 }
 
 ImplDelete(tuple_expression) {
-  void delete_expression_inner(void *elt) {
-    delete_expression(*((ExpressionTree **)elt));
+  int i;
+  for (i = 0; i < alist_len(tuple_expression->list); ++i) {
+    delete_expression(
+        *((ExpressionTree **)alist_get(tuple_expression->list, i)));
   }
-  expando_iterate(tuple_expression->list, delete_expression_inner);
-  expando_delete(tuple_expression->list);
+  alist_delete(tuple_expression->list);
 }
 
 int tuple_expression_helper(Expression_tuple_expression *tuple_expression,
                             Tape *tape) {
-  int i, num_ins = 0, tuple_len = expando_len(tuple_expression->list);
+  int i, num_ins = 0, tuple_len = alist_len(tuple_expression->list);
   // Start from end and go backward.
   for (i = tuple_len - 1; i >= 0; --i) {
     ExpressionTree *elt = EXTRACT_TREE(tuple_expression->list, i);
@@ -97,7 +103,7 @@ int tuple_expression_helper(Expression_tuple_expression *tuple_expression,
 
 ImplProduce(tuple_expression, Tape *tape) {
   return tuple_expression_helper(tuple_expression, tape) +
-         tape_ins_int(tape, TUPL, expando_len(tuple_expression->list),
+         tape_ins_int(tape, TUPL, alist_len(tuple_expression->list),
                       tuple_expression->token);
 }
 
@@ -127,7 +133,7 @@ ImplProduce(array_declaration, Tape *tape) {
 
   int num_ins = 0, num_members = 1;
   if (IS_EXPRESSION(array_declaration->exp, tuple_expression)) {
-    num_members = expando_len(array_declaration->exp->tuple_expression.list);
+    num_members = alist_len(array_declaration->exp->tuple_expression.list);
     num_ins += tuple_expression_helper(
         &array_declaration->exp->tuple_expression, tape);
   } else {
@@ -154,34 +160,34 @@ ImplProduce(primary_expression, Tape *tape) {
   return produce_instructions(primary_expression->exp, tape);
 }
 
-void postfix_helper(const SyntaxTree *suffix, Expando *suffixes);
+void postfix_helper(const SyntaxTree *suffix, AList *suffixes);
 
 void postfix_period(const SyntaxTree *ext, const SyntaxTree *tail,
-                    Expando *suffixes) {
+                    AList *suffixes) {
   Postfix postfix = {
       .type = Postfix_field, .token = ext->token, .id = NULL, .exp = NULL};
   if (IS_SYNTAX(tail, identifier) || IS_TOKEN(tail, NEW)) {
     postfix.id = tail->token;
-    expando_append(suffixes, &postfix);
+    alist_append(suffixes, &postfix);
     return;
   }
   ASSERT(!IS_LEAF(tail));
   postfix.id = tail->first->token;
-  expando_append(suffixes, &postfix);
+  alist_append(suffixes, &postfix);
   postfix_helper(tail->second, suffixes);
 }
 
-void postfix_increment(const SyntaxTree *inc, Expando *suffixes) {
+void postfix_increment(const SyntaxTree *inc, AList *suffixes) {
   Postfix postfix = {.type = inc->token->type == INCREMENT ? Postfix_increment
                                                            : Postfix_decrement,
                      .token = inc->token,
                      .id = NULL,
                      .exp = NULL};
   ASSERT(IS_LEAF(inc));
-  expando_append(suffixes, &postfix);
+  alist_append(suffixes, &postfix);
 }
 
-void postfix_surround_helper(const SyntaxTree *suffix, Expando *suffixes,
+void postfix_surround_helper(const SyntaxTree *suffix, AList *suffixes,
                              PostfixType postfix_type, TokenType opener,
                              TokenType closer) {
   Postfix postfix = {.type = postfix_type,
@@ -192,21 +198,21 @@ void postfix_surround_helper(const SyntaxTree *suffix, Expando *suffixes,
   if (IS_TOKEN(suffix->second, closer)) {
     // No args.
     postfix.exp = NULL;
-    expando_append(suffixes, &postfix);
+    alist_append(suffixes, &postfix);
     return;
   }
-  // Function call w/o args followed by postfix. E.g., a().b
+  // FunctionDef call w/o args followed by postfix. E.g., a().b
   if (!IS_LEAF(suffix->second) && IS_TOKEN(suffix->second->first, closer)) {
     // No args.
     postfix.exp = NULL;
-    expando_append(suffixes, &postfix);
+    alist_append(suffixes, &postfix);
     postfix_helper(suffix->second->second, suffixes);
     return;
   }
 
   SyntaxTree *fn_args = suffix->second->first;
   postfix.exp = populate_expression(fn_args);
-  expando_append(suffixes, &postfix);
+  alist_append(suffixes, &postfix);
 
   if (IS_TOKEN(suffix->second->second, closer)) {
     // No additional postfix.
@@ -218,7 +224,7 @@ void postfix_surround_helper(const SyntaxTree *suffix, Expando *suffixes,
   postfix_helper(suffix->second->second->second, suffixes);
 }
 
-void postfix_helper(const SyntaxTree *suffix, Expando *suffixes) {
+void postfix_helper(const SyntaxTree *suffix, AList *suffixes) {
   if (IS_LEAF(suffix)) {
     if (IS_TOKEN(suffix, INCREMENT) || IS_TOKEN(suffix, DECREMENT)) {
       postfix_increment(suffix, suffixes);
@@ -251,7 +257,7 @@ void postfix_helper(const SyntaxTree *suffix, Expando *suffixes) {
 
 ImplPopulate(postfix_expression, const SyntaxTree *stree) {
   postfix_expression->prefix = populate_expression(stree->first);
-  postfix_expression->suffixes = expando(Postfix, DEFAULT_ARRAY_SZ);
+  postfix_expression->suffixes = alist_create(Postfix, DEFAULT_ARRAY_SZ);
 
   SyntaxTree *suffix = stree->second;
   postfix_helper(suffix, postfix_expression->suffixes);
@@ -259,22 +265,22 @@ ImplPopulate(postfix_expression, const SyntaxTree *stree) {
 
 ImplDelete(postfix_expression) {
   delete_expression(postfix_expression->prefix);
-  void delete_postfix(void *ptr) {
-    Postfix *postfix = (Postfix *)ptr;
+  int i;
+  for (i = 0; i < alist_len(postfix_expression->suffixes); ++i) {
+    Postfix *postfix = (Postfix *)alist_get(postfix_expression->suffixes, i);
     if (postfix->type != Postfix_field && NULL != postfix->exp) {
       delete_expression(postfix->exp);
     }
   }
-  expando_iterate(postfix_expression->suffixes, delete_postfix);
-  expando_delete(postfix_expression->suffixes);
+  alist_delete(postfix_expression->suffixes);
 }
 
-int produce_postfix(int *i, int num_postfix, Expando *suffixes, Postfix **next,
+int produce_postfix(int *i, int num_postfix, AList *suffixes, Postfix **next,
                     Tape *tape) {
   int num_ins = 0;
   Postfix *cur = *next;
   *next =
-      (*i + 1 == num_postfix) ? NULL : (Postfix *)expando_get(suffixes, *i + 1);
+      (*i + 1 == num_postfix) ? NULL : (Postfix *)alist_get(suffixes, *i + 1);
   if (cur->type == Postfix_fncall) {
     num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
     if (cur->exp != NULL) {
@@ -287,7 +293,7 @@ int produce_postfix(int *i, int num_postfix, Expando *suffixes, Postfix **next,
                produce_instructions(cur->exp, tape) +
                tape_ins_no_arg(tape, AIDX, cur->token);
   } else if (cur->type == Postfix_field) {
-    // Function calls on fields must be handled with CALL X.
+    // FunctionDef calls on fields must be handled with CALL X.
     if (NULL != *next && (*next)->type == Postfix_fncall) {
       num_ins +=
           tape_ins_no_arg(tape, PUSH, cur->token) +
@@ -296,9 +302,8 @@ int produce_postfix(int *i, int num_postfix, Expando *suffixes, Postfix **next,
           tape_ins(tape, (NULL == (*next)->exp) ? CLLN : CALL, cur->id);
       // Advance past the function call since we have already handled it.
       ++(*i);
-      *next = (*i + 1 == num_postfix)
-                  ? NULL
-                  : (Postfix *)expando_get(suffixes, *i + 1);
+      *next = (*i + 1 == num_postfix) ? NULL
+                                      : (Postfix *)alist_get(suffixes, *i + 1);
     } else {
       num_ins += tape_ins(tape, GET, cur->id);
     }
@@ -313,9 +318,9 @@ int produce_postfix(int *i, int num_postfix, Expando *suffixes, Postfix **next,
 }
 
 ImplProduce(postfix_expression, Tape *tape) {
-  int i, num_ins = 0, num_postfix = expando_len(postfix_expression->suffixes);
+  int i, num_ins = 0, num_postfix = alist_len(postfix_expression->suffixes);
   num_ins += produce_instructions(postfix_expression->prefix, tape);
-  Postfix *next = (Postfix *)expando_get(postfix_expression->suffixes, 0);
+  Postfix *next = (Postfix *)alist_get(postfix_expression->suffixes, 0);
   for (i = 0; i < num_postfix; ++i) {
     if (NULL == next) {
       break;
@@ -355,8 +360,8 @@ ImplDelete(range_expression) {
 
 ImplProduce(range_expression, Tape *tape) {
   int num_ins = 0;
-  num_ins += tape_ins_text(tape, PUSH, strings_intern("range"),
-                           range_expression->token);
+  num_ins +=
+      tape_ins_text(tape, PUSH, intern("range"), range_expression->token);
   if (NULL != range_expression->inc) {
     num_ins += produce_instructions(range_expression->inc, tape) +
                tape_ins_no_arg(tape, PUSH, range_expression->token);
@@ -499,7 +504,7 @@ Op bi_to_ins(BiType type) {
 #define BiExpressionPopulate(expr, stree)                               \
   {                                                                     \
     expr->exp = populate_expression(stree->first);                      \
-    Expando *suffixes = expando(BiSuffix, DEFAULT_ARRAY_SZ);            \
+    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);         \
     SyntaxTree *cur_suffix = stree->second;                             \
     while (true) {                                                      \
       EXPECT_TYPE(cur_suffix, expr##1);                                 \
@@ -509,26 +514,26 @@ Op bi_to_ins(BiType type) {
       SyntaxTree *second_exp = cur_suffix->second;                      \
       if (second_exp->expression == stree->expression) {                \
         suffix.exp = populate_expression(second_exp->first);            \
-        expando_append(suffixes, &suffix);                              \
+        alist_append(suffixes, &suffix);                                \
         cur_suffix = second_exp->second;                                \
       } else {                                                          \
         suffix.exp = populate_expression(second_exp);                   \
-        expando_append(suffixes, &suffix);                              \
+        alist_append(suffixes, &suffix);                                \
         break;                                                          \
       }                                                                 \
     }                                                                   \
     expr->suffixes = suffixes;                                          \
   }
 
-#define BiExpressionDelete(expr)                              \
-  {                                                           \
-    delete_expression(expr->exp);                             \
-    void delete_expression_inner(void *ptr) {                 \
-      BiSuffix *suffix = (BiSuffix *)ptr;                     \
-      delete_expression(suffix->exp);                         \
-    }                                                         \
-    expando_iterate(expr->suffixes, delete_expression_inner); \
-    expando_delete(expr->suffixes);                           \
+#define BiExpressionDelete(expr)                            \
+  {                                                         \
+    delete_expression(expr->exp);                           \
+    void delete_expression_inner(void *ptr) {               \
+      BiSuffix *suffix = (BiSuffix *)ptr;                   \
+      delete_expression(suffix->exp);                       \
+    }                                                       \
+    alist_iterate(expr->suffixes, delete_expression_inner); \
+    alist_delete(expr->suffixes);                           \
   }
 
 #define BiExpressionProduce(expr, tape)                                  \
@@ -543,7 +548,7 @@ Op bi_to_ins(BiType type) {
           tape_ins_no_arg(tape, PUSH, suffix->token) +                   \
           tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token); \
     }                                                                    \
-    expando_iterate(expr->suffixes, iterate_mult);                       \
+    alist_iterate(expr->suffixes, iterate_mult);                         \
     return num_ins;                                                      \
   }
 
@@ -574,28 +579,27 @@ ImplBiExpressionNoProduce(or_expression);
 // ifn d
 // d
 ImplProduce(and_expression, Tape *tape) {
-  Expando *and_bodies = expando(Tape *, DEFAULT_ARRAY_SZ);
-  int num_suffixes = expando_len(and_expression->suffixes);
+  AList *and_bodies = alist_create(Tape *, DEFAULT_ARRAY_SZ);
+  int num_suffixes = alist_len(and_expression->suffixes);
   int num_ins = produce_instructions(and_expression->exp, tape);
   int i, and_suffix_ins = 0;
   for (i = 0; i < num_suffixes; ++i) {
-    BiSuffix *suffix = (BiSuffix *)expando_get(and_expression->suffixes, i);
+    BiSuffix *suffix = (BiSuffix *)alist_get(and_expression->suffixes, i);
     Tape *and_tape = tape_create();
     and_suffix_ins += produce_instructions(suffix->exp, and_tape);
-    expando_append(and_bodies, &and_tape);
+    alist_append(and_bodies, &and_tape);
   }
 
   for (i = 0; i < num_suffixes; ++i) {
-    BiSuffix *suffix = (BiSuffix *)expando_get(and_expression->suffixes, i);
-    Tape *and_tape = *((Tape **)expando_get(and_bodies, i));
+    BiSuffix *suffix = (BiSuffix *)alist_get(and_expression->suffixes, i);
+    Tape *and_tape = *((Tape **)alist_get(and_bodies, i));
     num_ins += tape_ins_int(tape, IFN, and_suffix_ins + num_suffixes - i - 1,
                             suffix->token);
-    and_suffix_ins -= tape_len(and_tape);
-    num_ins += tape_len(and_tape);
+    and_suffix_ins -= tape_size(and_tape);
+    num_ins += tape_size(and_tape);
     tape_append(tape, and_tape);
-    tape_delete(and_tape);
   }
-  expando_delete(and_bodies);
+  alist_delete(and_bodies);
   return num_ins;
 }
 
@@ -607,28 +611,27 @@ ImplProduce(and_expression, Tape *tape) {
 // if d
 // d
 ImplProduce(or_expression, Tape *tape) {
-  Expando *or_bodies = expando(Tape *, DEFAULT_ARRAY_SZ);
-  int num_suffixes = expando_len(or_expression->suffixes);
+  AList *or_bodies = alist_create(Tape *, DEFAULT_ARRAY_SZ);
+  int num_suffixes = alist_len(or_expression->suffixes);
   int num_ins = produce_instructions(or_expression->exp, tape);
   int i, or_suffix_ins = 0;
   for (i = 0; i < num_suffixes; ++i) {
-    BiSuffix *suffix = (BiSuffix *)expando_get(or_expression->suffixes, i);
+    BiSuffix *suffix = (BiSuffix *)alist_get(or_expression->suffixes, i);
     Tape *or_tape = tape_create();
     or_suffix_ins += produce_instructions(suffix->exp, or_tape);
-    expando_append(or_bodies, &or_tape);
+    alist_append(or_bodies, &or_tape);
   }
 
   for (i = 0; i < num_suffixes; ++i) {
-    BiSuffix *suffix = (BiSuffix *)expando_get(or_expression->suffixes, i);
-    Tape *or_tape = *((Tape **)expando_get(or_bodies, i));
+    BiSuffix *suffix = (BiSuffix *)alist_get(or_expression->suffixes, i);
+    Tape *or_tape = *((Tape **)alist_get(or_bodies, i));
     num_ins += tape_ins_int(tape, IF, or_suffix_ins + num_suffixes - i - 1,
                             suffix->token);
-    or_suffix_ins -= tape_len(or_tape);
-    num_ins += tape_len(or_tape);
+    or_suffix_ins -= tape_size(or_tape);
+    num_ins += tape_size(or_tape);
     tape_append(tape, or_tape);
-    tape_delete(or_tape);
   }
-  expando_delete(or_bodies);
+  alist_delete(or_bodies);
   return num_ins;
 }
 
@@ -674,7 +677,7 @@ ImplProduce(is_expression, Tape *tape) {
 }
 
 void populate_if_else(IfElse *if_else, const SyntaxTree *stree) {
-  if_else->conditions = expando(Conditional, DEFAULT_ARRAY_SZ);
+  if_else->conditions = alist_create(Conditional, DEFAULT_ARRAY_SZ);
   if_else->else_exp = NULL;
   ASSERT(stree->first->token->type == IF_T);
   SyntaxTree *if_tree = (SyntaxTree *)stree, *else_body = NULL;
@@ -694,7 +697,7 @@ void populate_if_else(IfElse *if_else, const SyntaxTree *stree) {
       else_body = NULL;
     }
     cond.body = populate_expression(if_body);
-    expando_append(if_else->conditions, &cond);
+    alist_append(if_else->conditions, &cond);
 
     // Is this the final else?
     if (NULL != else_body && !IS_SYNTAX(else_body, stree->expression)) {
@@ -712,13 +715,13 @@ ImplPopulate(conditional_expression, const SyntaxTree *stree) {
 }
 
 void delete_if_else(IfElse *if_else) {
-  void delete_conditional(void *ptr) {
-    Conditional *cond = (Conditional *)ptr;
+  int i;
+  for (i = 0; alist_len(if_else->conditions); ++i) {
+    Conditional *cond = (Conditional *)alist_get(if_else->conditions, i);
     delete_expression(cond->condition);
     delete_expression(cond->body);
   }
-  expando_iterate(if_else->conditions, delete_conditional);
-  expando_delete(if_else->conditions);
+  alist_delete(if_else->conditions);
   if (NULL != if_else->else_exp) {
     delete_expression(if_else->else_exp);
   }
@@ -729,19 +732,19 @@ ImplDelete(conditional_expression) {
 }
 
 int produce_if_else(IfElse *if_else, Tape *tape) {
-  int i, num_ins = 0, num_conds = expando_len(if_else->conditions),
+  int i, num_ins = 0, num_conds = alist_len(if_else->conditions),
          num_cond_ins = 0, num_body_ins = 0;
 
-  Expando *conds = expando(Tape *, DEFAULT_ARRAY_SZ);
-  Expando *bodies = expando(Tape *, DEFAULT_ARRAY_SZ);
+  AList *conds = alist_create(Tape *, DEFAULT_ARRAY_SZ);
+  AList *bodies = alist_create(Tape *, DEFAULT_ARRAY_SZ);
   for (i = 0; i < num_conds; ++i) {
-    Conditional *cond = (Conditional *)expando_get(if_else->conditions, i);
+    Conditional *cond = (Conditional *)alist_get(if_else->conditions, i);
     Tape *condition = tape_create();
     Tape *body = tape_create();
     num_cond_ins += produce_instructions(cond->condition, condition);
     num_body_ins += produce_instructions(cond->body, body);
-    expando_append(conds, &condition);
-    expando_append(bodies, &body);
+    alist_append(conds, &condition);
+    alist_append(bodies, &body);
   }
 
   int num_else_ins = 0;
@@ -758,13 +761,13 @@ int produce_if_else(IfElse *if_else, Tape *tape) {
 
   int num_body_jump = num_body_ins;
   // Iterate and write all conditions forward.
-  for (i = 0; i < expando_len(if_else->conditions); ++i) {
-    Conditional *cond = (Conditional *)expando_get(if_else->conditions, i);
-    Tape *condition = *((Tape **)expando_get(conds, i));
-    Tape *body = *((Tape **)expando_get(bodies, i));
+  for (i = 0; i < alist_len(if_else->conditions); ++i) {
+    Conditional *cond = (Conditional *)alist_get(if_else->conditions, i);
+    Tape *condition = *((Tape **)alist_get(conds, i));
+    Tape *body = *((Tape **)alist_get(bodies, i));
 
-    num_cond_ins -= tape_len(condition);
-    num_body_jump -= tape_len(body);
+    num_cond_ins -= tape_size(condition);
+    num_body_jump -= tape_size(body);
 
     tape_append(tape, condition);
     if (i == num_conds - 1) {
@@ -777,26 +780,23 @@ int produce_if_else(IfElse *if_else, Tape *tape) {
                    num_cond_ins + num_body_jump + 2 * (num_conds - i - 1),
                    cond->if_token);
     }
-    tape_delete(condition);
   }
   // Iterate and write all bodies backward.
   for (i = num_conds - 1; i >= 0; --i) {
-    Conditional *cond = (Conditional *)expando_get(if_else->conditions, i);
-    Tape *body = *((Tape **)expando_get(bodies, i));
-    num_body_ins -= tape_len(body);
+    Conditional *cond = (Conditional *)alist_get(if_else->conditions, i);
+    Tape *body = *((Tape **)alist_get(bodies, i));
+    num_body_ins -= tape_size(body);
     tape_append(tape, body);
     if (i > 0 || NULL != if_else->else_exp) {
       tape_ins_int(tape, JMP, num_else_ins + num_body_ins + i, cond->if_token);
     }
-    tape_delete(body);
   }
   // Add else if there is one.
   if (NULL != else_body) {
     tape_append(tape, else_body);
-    tape_delete(else_body);
   }
-  expando_delete(conds);
-  expando_delete(bodies);
+  alist_delete(conds);
+  alist_delete(bodies);
   return num_ins;
 }
 
@@ -804,20 +804,20 @@ ImplProduce(conditional_expression, Tape *tape) {
   return produce_if_else(&conditional_expression->if_else, tape);
 }
 
-void set_anon_function_def(const SyntaxTree *fn_identifier, Function *func) {
+void set_anon_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->def_token = fn_identifier->token;
   func->fn_name = NULL;
 }
 
-// Function populate_anon_function(const SyntaxTree *stree) {
+// FunctionDef populate_anon_function(const SyntaxTree *stree) {
 //  return populate_function_variant(
 //      stree, anon_function_definition, anon_signature_const,
 //      anon_signature_nonconst, anon_identifier, function_arguments_no_args,
 //      function_arguments_present, set_anon_function_def, set_function_args);
 //}
 
-Function populate_anon_function(const SyntaxTree *stree) {
-  Function func;
+FunctionDef populate_anon_function(const SyntaxTree *stree) {
+  FunctionDef func;
   ASSERT(IS_SYNTAX(stree, anon_function_definition));
 
   const SyntaxTree *func_arg_tuple;
@@ -864,7 +864,7 @@ ImplDelete(anon_function_definition) {
   delete_function(&anon_function_definition->func);
 }
 
-int produce_anon_function(Function *func, Tape *tape) {
+int produce_anon_function(FunctionDef *func, Tape *tape) {
   int num_ins = 0, func_ins = 0;
   Tape *tmp = tape_create();
   if (func->has_args) {
@@ -872,14 +872,13 @@ int produce_anon_function(Function *func, Tape *tape) {
   }
   func_ins += produce_instructions(func->body, tmp);
   if (func->is_const) {
-    func_ins += tmp->ins_no_arg(tmp, CNST, func->const_token);
+    func_ins += tape_ins_no_arg(tmp, CNST, func->const_token);
   }
-  func_ins += tmp->ins_no_arg(tmp, RET, func->def_token);
+  func_ins += tape_ins_no_arg(tmp, RET, func->def_token);
 
   num_ins += tape_ins_int(tape, JMP, func_ins, func->def_token) +
              tape_anon_label(tape, func->def_token);
   tape_append(tape, tmp);
-  tape_delete(tmp);
   num_ins += func_ins + tape_ins_anon(tape, RES, func->def_token);
 
   return num_ins;
@@ -913,22 +912,22 @@ ImplPopulate(map_declaration, const SyntaxTree *stree) {
   ASSERT(IS_TOKEN(stree->second->second, RBRCE));
   map_declaration->rbrce = stree->second->second->token;
   map_declaration->is_empty = false;
-  map_declaration->entries = expando(MapDecEntry, 4);
+  map_declaration->entries = alist_create(MapDecEntry, 4);
   // Only 1 entry.
   if (IS_SYNTAX(body, map_declaration_entry)) {
     MapDecEntry entry = populate_map_dec_entry(body);
-    expando_append(map_declaration->entries, &entry);
+    alist_append(map_declaration->entries, &entry);
     return;
   }
   // Multiple entries.
   ASSERT(IS_SYNTAX(body, map_declaration_list));
   MapDecEntry first = populate_map_dec_entry(body->first);
-  expando_append(map_declaration->entries, &first);
+  alist_append(map_declaration->entries, &first);
   SyntaxTree *remaining = body->second;
   while (true) {
     if (IS_SYNTAX(remaining, map_declaration_entry)) {
       MapDecEntry entry = populate_map_dec_entry(remaining);
-      expando_append(map_declaration->entries, &entry);
+      alist_append(map_declaration->entries, &entry);
       break;
     }
     ASSERT(IS_SYNTAX(remaining, map_declaration_entry1));
@@ -939,7 +938,7 @@ ImplPopulate(map_declaration, const SyntaxTree *stree) {
     }
     ASSERT(IS_SYNTAX(remaining->first->second, map_declaration_entry));
     MapDecEntry entry = populate_map_dec_entry(remaining->first->second);
-    expando_append(map_declaration->entries, &entry);
+    alist_append(map_declaration->entries, &entry);
     remaining = remaining->second;
   }
 }
@@ -948,28 +947,26 @@ ImplDelete(map_declaration) {
   if (map_declaration->is_empty) {
     return;
   }
-  void delete_entry(void *elt) {
-    MapDecEntry *entry = (MapDecEntry *)elt;
+  int i;
+  for (i = 0; i < alist_len(map_declaration->entries); ++i) {
+    MapDecEntry *entry = (MapDecEntry *)alist_get(map_declaration->entries, i);
     delete_expression(entry->lhs);
     delete_expression(entry->rhs);
   }
-  expando_iterate(map_declaration->entries, delete_entry);
-  expando_delete(map_declaration->entries);
+  alist_delete(map_declaration->entries);
 }
 
 ImplProduce(map_declaration, Tape *tape) {
   int num_ins = 0, i;
   num_ins +=
-      tape_ins_text(tape, PUSH, strings_intern("struct"),
-                    map_declaration->lbrce) +
-      tape_ins_text(tape, CLLN, strings_intern("Map"), map_declaration->lbrce);
+      tape_ins_text(tape, PUSH, intern("struct"), map_declaration->lbrce) +
+      tape_ins_text(tape, CLLN, intern("Map"), map_declaration->lbrce);
   if (map_declaration->is_empty) {
     return num_ins;
   }
   num_ins += tape_ins_no_arg(tape, PUSH, map_declaration->lbrce);
-  for (i = 0; i < expando_len(map_declaration->entries); ++i) {
-    MapDecEntry *entry =
-        (MapDecEntry *)expando_get(map_declaration->entries, i);
+  for (i = 0; i < alist_len(map_declaration->entries); ++i) {
+    MapDecEntry *entry = (MapDecEntry *)alist_get(map_declaration->entries, i);
     num_ins += tape_ins_no_arg(tape, DUP, entry->colon) +
                produce_instructions(entry->rhs, tape) +
                tape_ins_no_arg(tape, PUSH, entry->colon) +

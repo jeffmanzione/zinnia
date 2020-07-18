@@ -23,11 +23,11 @@ typedef struct {
   char type;
   union {
     Primitive val;
-    char *id;
-    char *str;
+    const char *id;
+    const char *str;
   };
 } Instruction;
 
-void instruction_write(const Instruction *ins, FILE *file);
+int instruction_write(const Instruction *ins, FILE *file);
 
 #endif /* PROGRAM_INSTRUCTION_H_ */

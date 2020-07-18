@@ -5,29 +5,21 @@ package(
 )
 
 cc_library(
-    name = "expression_macro",
-    hdrs = ["expression_macros.h"],
+    name = "semantics",
+    srcs = glob(["**/*.c"]),
+    hdrs = glob(["**/*.h"]),
     deps = [
         "//lang/lexer:token",
         "//lang/parser",
-        "//struct:alist",
-        "@memory-wrapper//struct:map",
-    ],
-)
-
-cc_library(
-    name = "expression_tree",
-    hdrs = ["expression_tree.h"],
-)
-
-cc_library(
-    name = "semantics",
-    srcs = ["semantics.c"],
-    hdrs = ["semantics.h"],
-    deps = [
-        ":expression_macro",
-        ":expression_tree",
-        "//lang/parser",
         "//program:tape",
+        "//struct:alist",
+        "//struct:keyed_list",
+        "//struct:q",
+        "//vm:intern",
+        "@memory-wrapper//alloc",
+        "@memory-wrapper//alloc/arena:intern",
+        "@memory-wrapper//debug",
+        "@memory-wrapper//struct:map",
+        "@memory-wrapper//struct:struct_defaults",
     ],
 )

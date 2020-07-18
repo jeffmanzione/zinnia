@@ -10,7 +10,8 @@
 
 #include "entity/object.h"
 
-void function_init(Function *f, const char name[], const Module *module);
+void function_init(Function *f, const char name[], const Module *module,
+                   uint32_t ins_pos);
 void function_finalize(Function *f);
 
 #endif /* OBJECT_FUNCTION_FUNCTION_H_ */

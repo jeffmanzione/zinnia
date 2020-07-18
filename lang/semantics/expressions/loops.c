@@ -11,6 +11,7 @@
 #include "debug/debug.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_macros.h"
+#include "lang/semantics/expression_tree.h"
 #include "program/tape.h"
 #include "vm/intern.h"
 
@@ -57,24 +58,22 @@ ImplProduce(foreach_statement, Tape *tape) {
       tape_ins_int(tape, IFN, body_ins + 1, foreach_statement->in_token);
 
   int i;
-  for (i = 0; i < tape_len(tmp); ++i) {
-    InsContainer *c = tape_get_mutable(tmp, i);
-    if (c->ins.op != JMP) {
+  for (i = 0; i < tape_size(tmp); ++i) {
+    Instruction *ins = tape_get_mutable(tmp, i);
+    if (ins->op != JMP) {
       continue;
     }
     // break
-    if (c->ins.val.int_val == 0) {
-      c->ins.val.int_val = body_ins - i;
+    if (pint(&ins->val) == 0) {
+      pset_int(&ins->val, body_ins - i);
     }
     // continue
-    else if (c->ins.val.int_val == INT_MAX) {
-      c->ins.val.int_val = body_ins - i - 1;
+    else if (pint(&ins->val) == INT_MAX) {
+      pset_int(&ins->val, body_ins - i - 1);
     }
   }
 
   tape_append(tape, tmp);
-  tape_delete(tmp);
-
   num_ins += body_ins + inc_lines +
              tape_ins_int(tape, JMP, -(inc_lines + body_ins + 1),
                           foreach_statement->in_token) +
@@ -120,18 +119,18 @@ ImplProduce(for_statement, Tape *tape) {
   int inc_ins = produce_instructions(for_statement->inc, tmp_tape);
 
   int i;
-  for (i = 0; i < tape_len(tmp_tape); ++i) {
-    InsContainer *c = tape_get_mutable(tmp_tape, i);
-    if (c->ins.op != JMP) {
+  for (i = 0; i < tape_size(tmp_tape); ++i) {
+    Instruction *ins = tape_get_mutable(tmp_tape, i);
+    if (ins->op != JMP) {
       continue;
     }
     // break
-    if (c->ins.val.int_val == 0) {
-      c->ins.val.int_val = body_ins + inc_ins - i;
+    if (pint(&ins->val) == 0) {
+      pset_int(&ins->val, body_ins + inc_ins - i);
     }
     // continue
-    else if (c->ins.val.int_val == INT_MAX) {
-      c->ins.val.int_val = body_ins - i - 1;
+    else if (pint(&ins->val) == INT_MAX) {
+      pset_int(&ins->val, body_ins - i - 1);
     }
   }
 
@@ -139,7 +138,6 @@ ImplProduce(for_statement, Tape *tape) {
       body_ins + inc_ins +
       tape_ins_int(tape, IFN, body_ins + inc_ins + 1, for_statement->for_token);
   tape_append(tape, tmp_tape);
-  tape_delete(tmp_tape);
 
   num_ins += tape_ins_int(tape, JMP, -(body_ins + condition_ins + inc_ins + 1),
                           for_statement->for_token) +
@@ -169,22 +167,21 @@ ImplProduce(while_statement, Tape *tape) {
   Tape *tmp_tape = tape_create();
   int lines_for_body = produce_instructions(while_statement->body, tmp_tape);
   int i;
-  for (i = 0; i < tape_len(tmp_tape); ++i) {
-    InsContainer *c = tape_get_mutable(tmp_tape, i);
-    if (c->ins.op != JMP) {
+  for (i = 0; i < tape_size(tmp_tape); ++i) {
+    Instruction *ins = tape_get_mutable(tmp_tape, i);
+    if (ins->op != JMP) {
       continue;
     }
-    if (c->ins.val.int_val == 0) {
-      c->ins.val.int_val = lines_for_body - i;
-    } else if (c->ins.val.int_val == INT_MAX) {
-      c->ins.val.int_val = -(i + 1);
+    if (pint(&ins->val) == 0) {
+      pset_int(&ins->val, lines_for_body - i);
+    } else if (pint(&ins->val) == INT_MAX) {
+      pset_int(&ins->val, -(i + 1));
     }
   }
 
   num_ins += lines_for_body + tape_ins_int(tape, IFN, lines_for_body + 1,
                                            while_statement->while_token);
   tape_append(tape, tmp_tape);
-  tape_delete(tmp_tape);
 
   num_ins += tape_ins_int(tape, JMP, -num_ins, while_statement->while_token) +
              tape_ins_no_arg(tape, BBLK, while_statement->while_token);

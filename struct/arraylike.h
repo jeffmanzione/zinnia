@@ -31,6 +31,7 @@
     uint32_t _i;                                                     \
     name* _arr;                                                      \
   } name##_iter;                                                     \
+  void name##_init_sz(name*, size_t table_sz);                       \
   void name##_init(name*);                                           \
   name* name##_create();                                             \
   name* name##_create_sz(size_t len);                                \

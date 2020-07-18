@@ -29,7 +29,7 @@ LineInfo *line_info(FileInfo *fi, char line_text[], int line_num) {
   return li;
 }
 
-inline void line_info_delete(LineInfo *li) { DEALLOC(li); }
+void _line_info_delete(LineInfo *li) { DEALLOC(li); }
 
 FileInfo *file_info(const char fn[]) {
   FILE *file = FILE_FN(fn, "r");
@@ -72,7 +72,7 @@ void file_info_delete(FileInfo *fi) {
   ASSERT_NOT_NULL(fi->lines);
   int i;
   for (i = 0; i < fi->num_lines; i++) {
-    line_info_delete(fi->lines[i]);
+    _line_info_delete(fi->lines[i]);
   }
   DEALLOC(fi->lines);
   file_info_close_file(fi);

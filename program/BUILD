@@ -28,9 +28,12 @@ cc_library(
     hdrs = ["tape.h"],
     deps = [
         ":instruction",
+        "//lang/lexer:token",
         "//struct:alist",
         "//struct:keyed_list",
+        "//struct:q",
         "@memory-wrapper//alloc",
+        "@memory-wrapper//alloc/arena:intern",
         "@memory-wrapper//debug",
     ],
 )

@@ -12,13 +12,15 @@
 #include "lang/lexer/token.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expressions/files.h"
+#include "lang/semantics/expressions/postfix.h"
+#include "lang/semantics/expressions/statements.h"
 #include "program/tape.h"
 
 DefineExpression(identifier) { Token *id; };
 
 DefineExpression(constant) {
   Token *token;
-  Value value;
+  Primitive value;
 };
 
 DefineExpression(string_literal) {
@@ -28,7 +30,7 @@ DefineExpression(string_literal) {
 
 DefineExpression(tuple_expression) {
   Token *token;
-  Expando *list;
+  AList *list;
 };
 
 DefineExpression(array_declaration) {
@@ -42,30 +44,12 @@ DefineExpression(primary_expression) {
   ExpressionTree *exp;
 };
 
-typedef enum {
-  Postfix_none,
-  Postfix_field,
-  Postfix_fncall,
-  Postfix_array_index,
-  Postfix_increment,
-  Postfix_decrement
-} PostfixType;
-
-typedef struct {
-  PostfixType type;
-  union {
-    const Token *id;
-    ExpressionTree *exp;  // Can be NULL for empty fncall.
-  };
-  Token *token;
-} Postfix;
-
-int produce_postfix(int *i, int num_postfix, Expando *suffixes, Postfix **next,
+int produce_postfix(int *i, int num_postfix, AList *suffixes, Postfix **next,
                     Tape *tape);
 
 DefineExpression(postfix_expression) {
   ExpressionTree *prefix;
-  Expando *suffixes;
+  AList *suffixes;
 };
 
 DefineExpression(range_expression) {
@@ -122,7 +106,7 @@ typedef struct {
 #define BiDefineExpression(expr) \
   DefineExpression(expr) {       \
     ExpressionTree *exp;         \
-    Expando *suffixes;           \
+    AList *suffixes;             \
   }
 
 BiDefineExpression(multiplicative_expression);
@@ -148,7 +132,7 @@ DefineExpression(is_expression) {
 
 DefineExpression(conditional_expression) { IfElse if_else; };
 
-DefineExpression(anon_function_definition) { Function func; };
+DefineExpression(anon_function_definition) { FunctionDef func; };
 
 typedef struct {
   Token *colon;
@@ -159,7 +143,7 @@ typedef struct {
 DefineExpression(map_declaration) {
   Token *lbrce, *rbrce;
   bool is_empty;
-  Expando *entries;
+  AList *entries;
 };
 
 #endif /* LANG_SEMANTICS_EXPRESSIONS_EXPRESSION_H_ */
