@@ -19,6 +19,7 @@ Class *class_init(Class *cls, const char name[], const Class *super,
   cls->_name = name;
   cls->_super = super;
   cls->_module = module;
+  cls->_reflection = NULL;
   keyedlist_init(&cls->_functions, Function, DEFAULT_ARRAY_SZ);
   return cls;
 }
@@ -41,4 +42,8 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
   }
   function_init(f, name, cls->_module, ins_pos);
   return f;
+}
+
+inline KL_iter class_functions(Class *cls) {
+  return keyedlist_iter(&cls->_functions);
 }

@@ -23,9 +23,12 @@ typedef struct {
 } ModuleInfo;
 
 void _read_builtin(ModuleManager *mm, Heap *heap);
+Module *_read_helper(ModuleManager *mm, const char fn[]);
+void _add_reflection(ModuleManager *mm, Module *module);
 
 void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ASSERT(NOT_NULL(mm));
+  mm->_heap = heap;
   keyedlist_init(&mm->_modules, ModuleInfo, DEFAULT_ARRAY_SZ);
   _read_builtin(mm, heap);
 }
@@ -42,8 +45,10 @@ void modulemanager_finalize(ModuleManager *mm) {
 }
 
 void _read_builtin(ModuleManager *mm, Heap *heap) {
-  Module_builtin = modulemanager_read(mm, "lib/builtin.jl");
+  Module_builtin = _read_helper(mm, "lib/builtin.jl");
   init_classes(heap, Module_builtin);
+  Module_builtin->_reflection = heap_new(mm->_heap, Class_Module);
+  _add_reflection(mm, Module_builtin);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -78,7 +83,44 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   return module_info;
 }
 
-Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
+void _add_reflection(ModuleManager *mm, Module *module) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(module));
+
+  KL_iter funcs = module_functions(module);
+  for (; kl_has(&funcs); kl_inc(&funcs)) {
+    Function *func = (Function *)kl_value(&funcs);
+    if (NULL == func->_reflection) {
+      func->_reflection = heap_new(mm->_heap, Class_Function);
+    }
+    func->_reflection->_function_obj = func;
+    object_set_member_obj(mm->_heap, module->_reflection, func->_name,
+                          func->_reflection);
+  }
+
+  KL_iter classes = module_classes(module);
+  for (; kl_has(&classes); kl_inc(&classes)) {
+    Class *class = (Class *)kl_value(&classes);
+    if (NULL == class->_reflection) {
+      class->_reflection = heap_new(mm->_heap, Class_Class);
+    }
+    class->_reflection->_class_obj = class;
+    object_set_member_obj(mm->_heap, module->_reflection, class->_name,
+                          class->_reflection);
+
+    KL_iter funcs = class_functions(class);
+    for (; kl_has(&funcs); kl_inc(&funcs)) {
+      Function *func = (Function *)kl_value(&funcs);
+      if (NULL == func->_reflection) {
+        func->_reflection = heap_new(mm->_heap, Class_Function);
+      }
+      func->_reflection->_function_obj = func;
+      object_set_member_obj(mm->_heap, class->_reflection, func->_name,
+                            func->_reflection);
+    }
+  }
+}
+
+Module *_read_helper(ModuleManager *mm, const char fn[]) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
@@ -89,4 +131,11 @@ Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   delete_expression(etree);
   syntax_tree_delete(&stree);
   return &module_info->module;
+}
+
+Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
+  Module *module = _read_helper(mm, fn);
+  module->_reflection = heap_new(mm->_heap, Class_Module);
+  _add_reflection(mm, module);
+  return module;
 }

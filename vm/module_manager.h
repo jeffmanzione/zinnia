@@ -14,6 +14,7 @@
 extern Module *Module_builtin;
 
 typedef struct {
+  Heap *_heap;
   KeyedList _modules;  // ModuleInfo
 } ModuleManager;
 

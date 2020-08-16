@@ -14,6 +14,7 @@ inline void function_init(Function *f, const char name[], const Module *module,
   f->_name = name;
   f->_module = module;
   f->_ins_pos = ins_pos;
+  f->_reflection = NULL;
 }
 
 inline void function_finalize(Function *f) { ASSERT(NOT_NULL(f)); }

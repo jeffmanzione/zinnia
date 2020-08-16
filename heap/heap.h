@@ -20,6 +20,8 @@ void heap_delete(Heap *heap);
 Object *heap_new(Heap *heap, const Class *class);
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
-                       Entity *child);
+                       const Entity *child);
+void object_set_member_obj(Heap *heap, Object *parent, const char key[],
+                           const Object *child);
 
 #endif /* HEAP_HEAP_H_ */

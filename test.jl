@@ -1,4 +1,8 @@
 module test
 
+def test() x
+
 x = 5
-x
+y = 2
+test()
+x = y

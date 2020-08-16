@@ -5,6 +5,7 @@
 
 #include "vm/virtual_machine.h"
 
+#include "entity/class/classes.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
 #include "vm/process/context.h"
@@ -18,6 +19,92 @@ struct _VM {
   AList processes;
   Process *main;
 };
+
+void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
+void _execute_PUSH(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
+void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
+void _execute_CALL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+void _execute_RET(VM *vm, Task *task, Context *context, const Instruction *ins);
+Context *_execute_NBLK(VM *vm, Task *task, Context *context,
+                       const Instruction *ins);
+Context *_execute_BBLK(VM *vm, Task *task, Context *context,
+                       const Instruction *ins);
+
+inline double _float_of(Primitive *p) {
+  switch (ptype(p)) {
+    case INT:
+      return (double)pint(p);
+    case CHAR:
+      return (double)pchar(p);
+    default:
+      return pfloat(p);
+  }
+}
+
+inline int32_t _int_of(Primitive *p) {
+  switch (ptype(p)) {
+    case INT:
+      return pint(p);
+    case CHAR:
+      return (int32_t)pchar(p);
+    default:
+      return (int32_t)pfloat(p);
+  }
+}
+
+inline int8_t _char_of(Primitive *p) {
+  switch (ptype(p)) {
+    case INT:
+      return (int8_t)pint(p);
+    case CHAR:
+      return (int8_t)pchar(p);
+    default:
+      return (int8_t)pfloat(p);
+  }
+}
+
+#define PRIMITIVE_OP(op, symbol)                                    \
+  Primitive _execute_primitive_##op(Primitive *p1, Primitive *p2) { \
+    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                 \
+      return primitive_float(_float_of(p1) symbol _float_of(p2));   \
+    }                                                               \
+    if (INT == ptype(p1) || INT == ptype(p2)) {                     \
+      return primitive_int(_int_of(p1) symbol _int_of(p2));         \
+    }                                                               \
+    return primitive_int(_char_of(p1) symbol _char_of(p2));         \
+  }
+
+#define EXECUTE_PRIMITIVE(op, symbol)                                          \
+  void _execute_##op(VM *vm, Task *task, Context *context,                     \
+                     const Instruction *ins) {                                 \
+    Entity first, second;                                                      \
+    switch (ins->type) {                                                       \
+      case INSTRUCTION_NO_ARG:                                                 \
+        second = task_popstack(task);                                          \
+        if (PRIMITIVE != second.type) {                                        \
+          ERROR("RHS must bee primitive.");                                    \
+        }                                                                      \
+        first = task_popstack(task);                                           \
+        if (PRIMITIVE != first.type) {                                         \
+          ERROR("LHS must bee primitive.");                                    \
+        }                                                                      \
+        *task_mutable_resval(task) =                                           \
+            _execute_primitive_##op(first.primitive, second.primitive);        \
+        break;                                                                 \
+      case INSTRUCTION_ID:                                                     \
+        member = context_lookup(context, ins->id);                             \
+        *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member; \
+        break;                                                                 \
+      case INSTRUCTION_PRIMITIVE:                                              \
+        *task_mutable_resval(task) = entity_primitive(&ins->val);              \
+        break;                                                                 \
+      default:                                                                 \
+        ERROR("Invalid arg type=%d for RES.", ins->type);                      \
+    }                                                                          \
+  }
 
 VM *vm_create() {
   VM *vm = ALLOC2(VM);
@@ -49,15 +136,36 @@ inline Process *vm_main_process(VM *vm) { return vm->main; }
 
 inline void _execute_RES(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
+  Entity *member;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       *task_mutable_resval(task) = task_popstack(task);
       break;
     case INSTRUCTION_ID:
-      *task_mutable_resval(task) = context_lookup(context, ins->id);
+      member = context_lookup(context, ins->id);
+      *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
       *task_mutable_resval(task) = entity_primitive(&ins->val);
+      break;
+    default:
+      ERROR("Invalid arg type=%d for RES.", ins->type);
+  }
+}
+
+inline void _execute_PUSH(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  Entity *member;
+  switch (ins->type) {
+    case INSTRUCTION_NO_ARG:
+      *task_pushstack(task) = *task_get_resval(task);
+      break;
+    case INSTRUCTION_ID:
+      member = context_lookup(context, ins->id);
+      *task_pushstack(task) = (NULL == member) ? NONE_ENTITY : *member;
+      break;
+    case INSTRUCTION_PRIMITIVE:
+      *task_pushstack(task) = entity_primitive(&ins->val);
       break;
     default:
       ERROR("Invalid arg type=%d for RES.", ins->type);
@@ -85,35 +193,46 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-inline Context *_execute_CALL(VM *vm, Task *task, Context *context,
-                              const Instruction *ins) {
-  // switch (ins->type) {
-  //   case INSTRUCTION_ID:
-  //     Entity fn = context_lookup(context, ins->id);
-  //     if (fn.type != OBJECT) {
-  //       // TODO: This should be a recoverable error.
-  //       ERROR("Invalid arg type=%d for CALL.", ins->type);
-  //       return;
-  //     }
-  //     if (fn.type != OBJECT) {
-  //       // TODO: This should be a recoverable error.
-  //       ERROR("Invalid arg type=%d for CALL.", ins->type);
-  //       return;
-  //     }
-  //   default:
-  //     ERROR("Invalid arg type=%d for CALL.", ins->type);
-  // }
-  return NULL;
+inline void _execute_CALL(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  Entity fn;
+  switch (ins->type) {
+    case INSTRUCTION_ID:
+      fn = *context_lookup(context, ins->id);
+      break;
+    case INSTRUCTION_NO_ARG:
+      fn = task_popstack(task);
+      break;
+    default:
+      ERROR("Invalid arg type=%d for CALL.", ins->type);
+  }
+  if (fn.type != OBJECT) {
+    // TODO: This should be a recoverable error.
+    ERROR("Invalid fn type=%d for CALL.", fn.type);
+    return;
+  }
+  if (fn.obj->_class != Class_Function) {
+    // TODO: This should be a recoverable error.
+    ERROR("Invalid fn class type=%d for CALL.", fn.type);
+    return;
+  }
+  Function *func = fn.obj->_function_obj;
+  Task *new_task = process_create_task(task->parent_process);
+  new_task->dependent_task = task;
+  task_create_context(new_task, func->_module->_reflection,
+                      (Module *)func->_module, func->_ins_pos);
+  return;
 }
 
 inline void _execute_RET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
+      *task_mutable_resval(context->parent_task) = *task_get_resval(task);
       break;
     case INSTRUCTION_ID:
       *task_mutable_resval(context->parent_task) =
-          context_lookup(context, ins->id);
+          *context_lookup(context, ins->id);
       break;
     case INSTRUCTION_PRIMITIVE:
       *task_mutable_resval(context->parent_task) = entity_primitive(&ins->val);
@@ -148,15 +267,21 @@ inline Context *_execute_BBLK(VM *vm, Task *task, Context *context,
 
 // Please forgive me father, for I have sinned.
 TaskState vm_execute_task(VM *vm, Task *task) {
+  task->state = TASK_RUNNING;
+  task->wait_reason = NOT_WAITING;
   Context *context =
       alist_get(&task->context_stack, alist_len(&task->context_stack) - 1);
   for (;;) {
     const Instruction *ins = context_ins(context);
     instruction_write(ins, stdout);
     fprintf(stdout, "\n");
+    fflush(stdout);
     switch (ins->op) {
       case RES:
         _execute_RES(vm, task, context, ins);
+        break;
+      case PUSH:
+        _execute_PUSH(vm, task, context, ins);
         break;
       case LET:
         _execute_LET(vm, task, context, ins);
@@ -165,23 +290,61 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         _execute_SET(vm, task, context, ins);
         break;
       case CALL:
+      case CLLN:
         _execute_CALL(vm, task, context, ins);
-        goto jump_out_of_task_loop;
+        task->state = TASK_WAITING;
+        task->wait_reason = WAITING_ON_FN_CALL;
+        context->ins++;
+        goto end_of_loop;
       case RET:
         _execute_RET(vm, task, context, ins);
-        goto jump_out_of_task_loop;
+        task->state = TASK_COMPLETE;
+        context->ins++;
+        goto end_of_loop;
       case NBLK:
         context = _execute_NBLK(vm, task, context, ins);
         break;
       case BBLK:
         context = _execute_BBLK(vm, task, context, ins);
+        break;
       case EXIT:
-        goto jump_out_of_task_loop;
+        task->state = TASK_COMPLETE;
+        context->ins++;
+        goto end_of_loop;
+      case ADD:
+        _execute_ADD(vm, task, context, ins);
+        break;
+      default:
+        ERROR("Unknown instruction: %s", op_to_str(ins->op));
     }
     context->ins++;
   }
-jump_out_of_task_loop:
-  return TASK_COMPLETE;
+end_of_loop:
+  return task->state;
 }
 
 inline ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
+
+void vm_run_process(VM *vm, Process *process) {
+  while (Q_size(&process->queued_tasks) > 0) {
+    Task *task = Q_dequeue(&process->queued_tasks);
+    TaskState task_state = vm_execute_task(vm, task);
+    DEBUGF("TaskState=%s", task_state_str(task_state));
+    switch (task_state) {
+      case TASK_ERROR:
+        ERROR("OH NO!");
+        break;
+      case TASK_WAITING:
+        set_insert(&process->waiting_tasks, task);
+        break;
+      case TASK_COMPLETE:
+        if (NULL != task->dependent_task) {
+          Q_enqueue(&process->queued_tasks, task->dependent_task);
+          set_remove(&process->waiting_tasks, task->dependent_task);
+        }
+        break;
+      default:
+        ERROR("Some unknown TaskState.");
+    }
+  }
+}
