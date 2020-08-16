@@ -13,4 +13,6 @@ Class *class_init(Class *cls, const char name[], const Class *super,
 void class_finalize(Class *cls);
 Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos);
 
+KL_iter class_functions(Class *cls);
+
 #endif /* OBJECT_CLASS_CLASS_H_ */

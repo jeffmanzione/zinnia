@@ -9,6 +9,9 @@
 #include "entity/entity.h"
 #include "vm/process/processes.h"
 
+const char *task_state_str(TaskState state);
+const char *wait_reason_str(WaitReason reason);
+
 void task_init(Task *task);
 void task_finalize(Task *task);
 Context *task_create_context(Task *task, Object *self, Module *module,

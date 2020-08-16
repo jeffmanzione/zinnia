@@ -36,4 +36,8 @@ void pset_char(Primitive *p, int8_t val);
 void pset_int(Primitive *p, int32_t val);
 void pset_float(Primitive *p, double val);
 
+Primitive primitive_int(int32_t val);
+Primitive primitive_char(int8_t val);
+Primitive primitive_float(double val);
+
 #endif /* ENTITY_PRIMITIVE_H_ */

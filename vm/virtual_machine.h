@@ -16,6 +16,7 @@ void vm_delete(VM *vm);
 
 Process *vm_main_process(VM *vm);
 
+void vm_run_process(VM *vm, Process *process);
 TaskState vm_execute_task(VM *vm, Task *task);
 
 Process *vm_create_process(VM *vm);

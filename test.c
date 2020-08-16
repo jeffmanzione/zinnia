@@ -47,8 +47,8 @@ int main(int arc, char *args[]) {
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = modulemanager_read(mm, "test.jl");
   Task *task = process_create_task(vm_main_process(vm));
-  task_create_context(task, NULL, main_module, 0);
-  vm_execute_task(vm, task);
+  task_create_context(task, main_module->_reflection, main_module, 0);
+  vm_run_process(vm, vm_main_process(vm));
 
   vm_delete(vm);
 

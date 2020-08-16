@@ -19,6 +19,7 @@ typedef struct __Process Process;
 
 typedef struct {
   Task *parent_task;
+  uint32_t index;
 
   Object *member_obj;
 
@@ -37,23 +38,36 @@ typedef enum {
   TASK_ERROR,
 } TaskState;
 
+typedef enum {
+  NOT_WAITING,
+  WAITING_TO_START,
+  WAITING_ON_FN_CALL,
+  WAITING_ON_FUTURE,
+} WaitReason;
+
 struct __Task {
   TaskState state;
+  WaitReason wait_reason;
+
   Process *parent_process;
 
   Entity resval;
   AList entity_stack;
   AList context_stack;
+
+  Task *dependent_task;
 };
 
 struct __Process {
   VM *vm;
   Heap *heap;
 
+  __Arena task_arena;
+
   Task *current_task;
-  AList task_queue;
-  AList waiting_tasks;
-  AList completed_tasks;
+  Q queued_tasks;
+  Set waiting_tasks;
+  Set completed_tasks;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */
