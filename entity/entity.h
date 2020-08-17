@@ -35,7 +35,8 @@ Entity entity_char(const int8_t c);
 Entity entity_int(const int32_t i);
 Entity entity_float(const double d);
 
-Entity entity_primitive(const Primitive *p);
+Entity entity_primitive_ptr(const Primitive *p);
+Entity entity_primitive(Primitive p);
 
 Entity entity_none();
 
