@@ -24,6 +24,8 @@ cc_library(
     deps = [
         ":processes",
         ":task",
+        "@memory-wrapper//alloc/arena",
+        "@memory-wrapper//struct:struct_defaults",
     ],
 )
 
@@ -49,5 +51,6 @@ cc_library(
         ":processes",
         "//entity/class:classes",
         "//struct:alist",
+        "@memory-wrapper//debug",
     ],
 )

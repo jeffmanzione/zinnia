@@ -13,6 +13,7 @@
 extern Class* Class_Object;
 extern Class* Class_Class;
 extern Class* Class_Function;
+extern Class* Class_Module;
 
 void init_classes(Heap* heap, Module* builtin);
 

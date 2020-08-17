@@ -14,35 +14,50 @@ inline PrimitiveType ptype(const Primitive *p) {
   return p->_type;
 }
 
-int8_t pchar(const Primitive *p) {
+inline int8_t pchar(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == CHAR);
   return p->_char_val;
 }
 
-int32_t pint(const Primitive *p) {
+inline int32_t pint(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == INT);
   return p->_int_val;
 }
 
-double pfloat(const Primitive *p) {
+inline double pfloat(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == FLOAT);
   return p->_float_val;
 }
 
-void pset_char(Primitive *p, int8_t val) {
+inline void pset_char(Primitive *p, int8_t val) {
   ASSERT(NOT_NULL(p));
   p->_type = CHAR;
   p->_char_val = val;
 }
 
-void pset_int(Primitive *p, int32_t val) {
+inline void pset_int(Primitive *p, int32_t val) {
   ASSERT(NOT_NULL(p));
   p->_type = INT;
   p->_int_val = val;
 }
 
-void pset_float(Primitive *p, double val) {
+inline void pset_float(Primitive *p, double val) {
   ASSERT(NOT_NULL(p));
   p->_type = FLOAT;
   p->_float_val = val;
+}
+
+Primitive primitive_int(int32_t val) {
+  Primitive p = {._type = INT, ._int_val = val};
+  return p;
+}
+
+Primitive primitive_char(int8_t val) {
+  Primitive p = {._type = CHAR, ._char_val = val};
+  return p;
+}
+
+Primitive primitive_float(double val) {
+  Primitive p = {._type = FLOAT, ._float_val = val};
+  return p;
 }

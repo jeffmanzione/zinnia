@@ -12,4 +12,7 @@ Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos);
 Class *module_add_class(Module *module, const char name[]);
 
+KL_iter module_functions(Module *module);
+KL_iter module_classes(Module *module);
+
 #endif /* OBJECT_MODULE_MODULE_H_ */

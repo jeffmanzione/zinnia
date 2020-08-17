@@ -4,6 +4,8 @@
 #include "entity/object.h"
 #include "entity/primitive.h"
 
+Entity NONE_ENTITY = {.type = NONE};
+
 inline EntityType etype(const Entity *e) {
   ASSERT(NOT_NULL(e));
   return e->type;
@@ -14,7 +16,7 @@ const Object *object(const Entity *e) {
   return e->obj;
 }
 
-Object *object_m(Entity *e) {
+inline Object *object_m(Entity *e) {
   ASSERT(NOT_NULL(e));
   return e->obj;
 }
@@ -37,12 +39,22 @@ inline Entity entity_float(const double d) {
   return e;
 }
 
-inline Entity entity_primitive(const Primitive *p) {
+inline Entity entity_primitive_ptr(const Primitive *p) {
   Entity e = {.type = PRIMITIVE, .pri = *p};
   return e;
 }
 
-Entity entity_none() {
+inline Entity entity_primitive(Primitive p) {
+  Entity e = {.type = PRIMITIVE, .pri = p};
+  return e;
+}
+
+inline Entity entity_none() {
   Entity e = {.type = NONE};
   return e;
+}
+
+inline Entity *object_get(Object *obj, const char field[]) {
+  ASSERT(NOT_NULL(obj), NOT_NULL(field));
+  return (Entity *)keyedlist_lookup(&obj->_members, field);
 }

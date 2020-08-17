@@ -10,6 +10,7 @@
 void module_init(Module *module, const char name[], Tape *tape) {
   module->_name = name;
   module->_tape = tape;
+  module->_reflection = NULL;
   keyedlist_init(&module->_classes, Class, DEFAULT_ARRAY_SZ);
   keyedlist_init(&module->_functions, Function, DEFAULT_ARRAY_SZ);
 }
@@ -67,4 +68,12 @@ Class *module_add_class(Module *module, const char name[]) {
   }
   class_init(c, name, NULL, module);
   return c;
+}
+
+inline KL_iter module_functions(Module *module) {
+  return keyedlist_iter(&module->_functions);
+}
+
+inline KL_iter module_classes(Module *module) {
+  return keyedlist_iter(&module->_classes);
 }

@@ -3,8 +3,8 @@
 // Created on: May 28, 2020
 //     Author: Jeff Manzione
 
-#ifndef OBJECT_OBJECT_H_
-#define OBJECT_OBJECT_H_
+#ifndef ENTITY_OBJECT_H_
+#define ENTITY_OBJECT_H_
 
 #include <stdint.h>
 
@@ -58,4 +58,4 @@ struct _Function {
   uint32_t _ins_pos;
 };
 
-#endif /* OBJECT_OBJECT_H_ */
+#endif /* ENTITY_OBJECT_H_ */

@@ -20,6 +20,7 @@ void __keyedlist_init(KeyedList *klist, const char type_name[], size_t type_sz,
                       size_t table_sz);
 void keyedlist_finalize(KeyedList *klist);
 void *keyedlist_insert(KeyedList *klist, const void *key, void **entry);
+void *keyedlist_lookup(KeyedList *klist, const void *key);
 
 typedef struct {
   M_iter _iter;
