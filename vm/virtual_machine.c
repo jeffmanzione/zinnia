@@ -361,6 +361,12 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case MOD:
         _execute_MOD(vm, task, context, ins);
         break;
+      case AND:
+        _execute_AND(vm, task, context, ins);
+        break;
+      case OR:
+        _execute_OR(vm, task, context, ins);
+        break;
       default:
         ERROR("Unknown instruction: %s", op_to_str(ins->op));
     }
