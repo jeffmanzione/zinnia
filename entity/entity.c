@@ -39,8 +39,13 @@ inline Entity entity_float(const double d) {
   return e;
 }
 
-inline Entity entity_primitive(const Primitive *p) {
+inline Entity entity_primitive_ptr(const Primitive *p) {
   Entity e = {.type = PRIMITIVE, .pri = *p};
+  return e;
+}
+
+inline Entity entity_primitive(Primitive p) {
+  Entity e = {.type = PRIMITIVE, .pri = p};
   return e;
 }
 

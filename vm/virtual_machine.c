@@ -33,7 +33,7 @@ Context *_execute_NBLK(VM *vm, Task *task, Context *context,
 Context *_execute_BBLK(VM *vm, Task *task, Context *context,
                        const Instruction *ins);
 
-inline double _float_of(Primitive *p) {
+double _float_of(const Primitive *p) {
   switch (ptype(p)) {
     case INT:
       return (double)pint(p);
@@ -44,7 +44,7 @@ inline double _float_of(Primitive *p) {
   }
 }
 
-inline int32_t _int_of(Primitive *p) {
+int32_t _int_of(const Primitive *p) {
   switch (ptype(p)) {
     case INT:
       return pint(p);
@@ -55,7 +55,7 @@ inline int32_t _int_of(Primitive *p) {
   }
 }
 
-inline int8_t _char_of(Primitive *p) {
+int8_t _char_of(const Primitive *p) {
   switch (ptype(p)) {
     case INT:
       return (int8_t)pint(p);
@@ -66,45 +66,80 @@ inline int8_t _char_of(Primitive *p) {
   }
 }
 
-#define PRIMITIVE_OP(op, symbol)                                    \
-  Primitive _execute_primitive_##op(Primitive *p1, Primitive *p2) { \
-    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                 \
-      return primitive_float(_float_of(p1) symbol _float_of(p2));   \
-    }                                                               \
-    if (INT == ptype(p1) || INT == ptype(p2)) {                     \
-      return primitive_int(_int_of(p1) symbol _int_of(p2));         \
-    }                                                               \
-    return primitive_int(_char_of(p1) symbol _char_of(p2));         \
+#define MATH_OP(op, symbol)                                       \
+  Primitive _execute_primitive_##op(const Primitive *p1,          \
+                                    const Primitive *p2) {        \
+    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {               \
+      return primitive_float(_float_of(p1) symbol _float_of(p2)); \
+    }                                                             \
+    if (INT == ptype(p1) || INT == ptype(p2)) {                   \
+      return primitive_int(_int_of(p1) symbol _int_of(p2));       \
+    }                                                             \
+    return primitive_int(_char_of(p1) symbol _char_of(p2));       \
   }
 
-#define EXECUTE_PRIMITIVE(op, symbol)                                          \
-  void _execute_##op(VM *vm, Task *task, Context *context,                     \
-                     const Instruction *ins) {                                 \
-    Entity first, second;                                                      \
-    switch (ins->type) {                                                       \
-      case INSTRUCTION_NO_ARG:                                                 \
-        second = task_popstack(task);                                          \
-        if (PRIMITIVE != second.type) {                                        \
-          ERROR("RHS must bee primitive.");                                    \
-        }                                                                      \
-        first = task_popstack(task);                                           \
-        if (PRIMITIVE != first.type) {                                         \
-          ERROR("LHS must bee primitive.");                                    \
-        }                                                                      \
-        *task_mutable_resval(task) =                                           \
-            _execute_primitive_##op(first.primitive, second.primitive);        \
-        break;                                                                 \
-      case INSTRUCTION_ID:                                                     \
-        member = context_lookup(context, ins->id);                             \
-        *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member; \
-        break;                                                                 \
-      case INSTRUCTION_PRIMITIVE:                                              \
-        *task_mutable_resval(task) = entity_primitive(&ins->val);              \
-        break;                                                                 \
-      default:                                                                 \
-        ERROR("Invalid arg type=%d for RES.", ins->type);                      \
-    }                                                                          \
+#define MATH_OP_INT(op, symbol)                             \
+  Primitive _execute_primitive_##op(const Primitive *p1,    \
+                                    const Primitive *p2) {  \
+    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {         \
+      ERROR("Op not valid for FP types.");                  \
+    }                                                       \
+    if (INT == ptype(p1) || INT == ptype(p2)) {             \
+      return primitive_int(_int_of(p1) symbol _int_of(p2)); \
+    }                                                       \
+    return primitive_int(_char_of(p1) symbol _char_of(p2)); \
   }
+
+#define PRIMITIVE_OP(op, symbol, math_fn)                         \
+  math_fn;                                                        \
+  void _execute_##op(VM *vm, Task *task, Context *context,        \
+                     const Instruction *ins) {                    \
+    const Entity *resval, *lookup;                                \
+    Entity first, second;                                         \
+    switch (ins->type) {                                          \
+      case INSTRUCTION_NO_ARG:                                    \
+        second = task_popstack(task);                             \
+        if (PRIMITIVE != second.type) {                           \
+          ERROR("RHS must be primitive.");                        \
+        }                                                         \
+        first = task_popstack(task);                              \
+        if (PRIMITIVE != first.type) {                            \
+          ERROR("LHS must be primitive.");                        \
+        }                                                         \
+        *task_mutable_resval(task) = entity_primitive(            \
+            _execute_primitive_##op(&first.pri, &second.pri));    \
+        break;                                                    \
+      case INSTRUCTION_ID:                                        \
+        resval = task_get_resval(task);                           \
+        if (NULL != resval && PRIMITIVE != resval->type) {        \
+          ERROR("LHS must be primitive.");                        \
+        }                                                         \
+        lookup = context_lookup(context, ins->id);                \
+        if (NULL != lookup && PRIMITIVE != lookup->type) {        \
+          ERROR("RHS must be primitive.");                        \
+        }                                                         \
+        *task_mutable_resval(task) = entity_primitive(            \
+            _execute_primitive_##op(&resval->pri, &lookup->pri)); \
+        break;                                                    \
+      case INSTRUCTION_PRIMITIVE:                                 \
+        resval = task_get_resval(task);                           \
+        if (NULL != resval && PRIMITIVE != resval->type) {        \
+          ERROR("LHS must be primitive.");                        \
+        }                                                         \
+        *task_mutable_resval(task) = entity_primitive(            \
+            _execute_primitive_##op(&resval->pri, &ins->val));    \
+      default:                                                    \
+        ERROR("Invalid arg type=%d for RES.", ins->type);         \
+    }                                                             \
+  }
+
+PRIMITIVE_OP(ADD, +, MATH_OP(ADD, +));
+PRIMITIVE_OP(SUB, -, MATH_OP(SUB, -));
+PRIMITIVE_OP(MULT, *, MATH_OP(MULT, *));
+PRIMITIVE_OP(DIV, /, MATH_OP(DIV, /));
+PRIMITIVE_OP(MOD, %, MATH_OP_INT(MOD, %));
+PRIMITIVE_OP(AND, &&, MATH_OP_INT(AND, &&));
+PRIMITIVE_OP(OR, ||, MATH_OP_INT(OR, ||));
 
 VM *vm_create() {
   VM *vm = ALLOC2(VM);
@@ -146,7 +181,7 @@ inline void _execute_RES(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
-      *task_mutable_resval(task) = entity_primitive(&ins->val);
+      *task_mutable_resval(task) = entity_primitive(ins->val);
       break;
     default:
       ERROR("Invalid arg type=%d for RES.", ins->type);
@@ -165,7 +200,7 @@ inline void _execute_PUSH(VM *vm, Task *task, Context *context,
       *task_pushstack(task) = (NULL == member) ? NONE_ENTITY : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
-      *task_pushstack(task) = entity_primitive(&ins->val);
+      *task_pushstack(task) = entity_primitive(ins->val);
       break;
     default:
       ERROR("Invalid arg type=%d for RES.", ins->type);
@@ -235,7 +270,7 @@ inline void _execute_RET(VM *vm, Task *task, Context *context,
           *context_lookup(context, ins->id);
       break;
     case INSTRUCTION_PRIMITIVE:
-      *task_mutable_resval(context->parent_task) = entity_primitive(&ins->val);
+      *task_mutable_resval(context->parent_task) = entity_primitive(ins->val);
       break;
     default:
       ERROR("Invalid arg type=%d for RET.", ins->type);
@@ -313,6 +348,18 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         goto end_of_loop;
       case ADD:
         _execute_ADD(vm, task, context, ins);
+        break;
+      case SUB:
+        _execute_SUB(vm, task, context, ins);
+        break;
+      case MULT:
+        _execute_MULT(vm, task, context, ins);
+        break;
+      case DIV:
+        _execute_DIV(vm, task, context, ins);
+        break;
+      case MOD:
+        _execute_MOD(vm, task, context, ins);
         break;
       default:
         ERROR("Unknown instruction: %s", op_to_str(ins->op));
