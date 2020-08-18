@@ -32,6 +32,10 @@ Context *_execute_NBLK(VM *vm, Task *task, Context *context,
                        const Instruction *ins);
 Context *_execute_BBLK(VM *vm, Task *task, Context *context,
                        const Instruction *ins);
+void _execute_EXIT(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins);
+bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2);
 
 double _float_of(const Primitive *p) {
   switch (ptype(p)) {
@@ -137,6 +141,12 @@ PRIMITIVE_OP(ADD, +, MATH_OP(ADD, +));
 PRIMITIVE_OP(SUB, -, MATH_OP(SUB, -));
 PRIMITIVE_OP(MULT, *, MATH_OP(MULT, *));
 PRIMITIVE_OP(DIV, /, MATH_OP(DIV, /));
+PRIMITIVE_OP(LT, <, MATH_OP(LT, <));
+PRIMITIVE_OP(GT, >, MATH_OP(GT, >));
+PRIMITIVE_OP(LTE, <=, MATH_OP(LTE, <=));
+PRIMITIVE_OP(GTE, >=, MATH_OP(GTE, >=));
+PRIMITIVE_OP(NEQ, !=, MATH_OP(NEQ, !=));
+
 PRIMITIVE_OP(MOD, %, MATH_OP_INT(MOD, %));
 PRIMITIVE_OP(AND, &&, MATH_OP_INT(AND, &&));
 PRIMITIVE_OP(OR, ||, MATH_OP_INT(OR, ||));
@@ -168,6 +178,69 @@ Process *vm_create_process(VM *vm) {
 }
 
 inline Process *vm_main_process(VM *vm) { return vm->main; }
+
+inline bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2) {
+  if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {
+    return _float_of(p1) == _float_of(p2);
+  }
+  if (INT == ptype(p1) || INT == ptype(p2)) {
+    return _int_of(p1) == _int_of(p2);
+  }
+  return _char_of(p1) == _char_of(p2);
+}
+
+void _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
+  const Entity *resval, *lookup;
+  Entity first, second;
+  bool result;
+  switch (ins->type) {
+    case INSTRUCTION_NO_ARG:
+      second = task_popstack(task);
+      if (PRIMITIVE != second.type) {
+        ERROR("RHS must be primitive.");
+      }
+      first = task_popstack(task);
+      if (PRIMITIVE != first.type) {
+        ERROR("LHS must be primitive.");
+      }
+      result = _execute_primitive_EQ(&first.pri, &second.pri);
+      *task_mutable_resval(task) =
+          (((result == 0) && (EQ == ins->op)) ||
+           ((result != 0) && (NEQ == ins->op)))
+              ? NONE_ENTITY
+              : (result == 0) ? entity_int(1) : entity_int(result);
+      break;
+    case INSTRUCTION_ID:
+      resval = task_get_resval(task);
+      if (NULL != resval && PRIMITIVE != resval->type) {
+        ERROR("LHS must be primitive.");
+      }
+      lookup = context_lookup(context, ins->id);
+      if (NULL != lookup && PRIMITIVE != lookup->type) {
+        ERROR("RHS must be primitive.");
+      }
+      result = _execute_primitive_EQ(&first.pri, &lookup->pri);
+      *task_mutable_resval(task) =
+          (((result == 0) && (EQ == ins->op)) ||
+           ((result != 0) && (NEQ == ins->op)))
+              ? NONE_ENTITY
+              : (result == 0) ? entity_int(1) : entity_int(result);
+      break;
+    case INSTRUCTION_PRIMITIVE:
+      resval = task_get_resval(task);
+      if (NULL != resval && PRIMITIVE != resval->type) {
+        ERROR("LHS must be primitive.");
+      }
+      result = _execute_primitive_EQ(&resval->pri, &ins->val);
+      *task_mutable_resval(task) =
+          (((result == 0) && (EQ == ins->op)) ||
+           ((result != 0) && (NEQ == ins->op)))
+              ? NONE_ENTITY
+              : (result == 0) ? entity_int(1) : entity_int(result);
+    default:
+      ERROR("Invalid arg type=%d for RES.", ins->type);
+  }
+}
 
 inline void _execute_RES(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
@@ -212,6 +285,7 @@ inline void _execute_LET(VM *vm, Task *task, Context *context,
   switch (ins->type) {
     case INSTRUCTION_ID:
       context_let(context, ins->id, task_get_resval(context->parent_task));
+      break;
     default:
       ERROR("Invalid arg type=%d for LET.", ins->type);
   }
@@ -256,21 +330,25 @@ inline void _execute_CALL(VM *vm, Task *task, Context *context,
   new_task->dependent_task = task;
   task_create_context(new_task, func->_module->_reflection,
                       (Module *)func->_module, func->_ins_pos);
+  *task_mutable_resval(new_task) = *task_get_resval(task);
   return;
 }
 
 inline void _execute_RET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
+  if (NULL == task->dependent_task) {
+    return;
+  }
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
-      *task_mutable_resval(context->parent_task) = *task_get_resval(task);
+      *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
       break;
     case INSTRUCTION_ID:
-      *task_mutable_resval(context->parent_task) =
+      *task_mutable_resval(task->dependent_task) =
           *context_lookup(context, ins->id);
       break;
     case INSTRUCTION_PRIMITIVE:
-      *task_mutable_resval(context->parent_task) = entity_primitive(ins->val);
+      *task_mutable_resval(task->dependent_task) = entity_primitive(ins->val);
       break;
     default:
       ERROR("Invalid arg type=%d for RET.", ins->type);
@@ -298,6 +376,28 @@ inline Context *_execute_BBLK(VM *vm, Task *task, Context *context,
       ERROR("Invalid arg type=%d for BBLK.", ins->type);
   }
   return NULL;
+}
+
+inline void _execute_IF(VM *vm, Task *task, Context *context,
+                        const Instruction *ins) {
+  if (INSTRUCTION_PRIMITIVE != ins->type) {
+    ERROR("Invalid arg type=%d for IF.", ins->type);
+  }
+  const Entity *resval = task_get_resval(task);
+  bool is_false = (NULL == resval) || (NONE == resval->type);
+  if ((is_false && (IFN == ins->op)) || (!is_false && (IF == ins->op))) {
+    context->ins += ins->val._int_val;
+  }
+}
+
+inline void _execute_EXIT(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_PRIMITIVE != ins->type) {
+    ERROR("Invalid resval type.");
+  }
+  *task_mutable_resval(task) = entity_primitive(ins->val);
+  task->state = TASK_COMPLETE;
+  context->ins++;
 }
 
 // Please forgive me father, for I have sinned.
@@ -342,9 +442,12 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case BBLK:
         context = _execute_BBLK(vm, task, context, ins);
         break;
+      case IF:
+      case IFN:
+        _execute_IF(vm, task, context, ins);
+        break;
       case EXIT:
-        task->state = TASK_COMPLETE;
-        context->ins++;
+        _execute_EXIT(vm, task, context, ins);
         goto end_of_loop;
       case ADD:
         _execute_ADD(vm, task, context, ins);
@@ -367,6 +470,22 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case OR:
         _execute_OR(vm, task, context, ins);
         break;
+      case LT:
+        _execute_LT(vm, task, context, ins);
+        break;
+      case GT:
+        _execute_GT(vm, task, context, ins);
+        break;
+      case LTE:
+        _execute_LTE(vm, task, context, ins);
+        break;
+      case GTE:
+        _execute_GTE(vm, task, context, ins);
+        break;
+      case EQ:
+      case NEQ:
+        _execute_EQ(vm, task, context, ins);
+        break;
       default:
         ERROR("Unknown instruction: %s", op_to_str(ins->op));
     }
@@ -382,6 +501,11 @@ void vm_run_process(VM *vm, Process *process) {
   while (Q_size(&process->queued_tasks) > 0) {
     Task *task = Q_dequeue(&process->queued_tasks);
     TaskState task_state = vm_execute_task(vm, task);
+#ifdef DEBUG
+    fprintf(stdout, "<-- ");
+    entity_print(task_get_resval(task), stdout);
+    fprintf(stdout, "\n");
+#endif
     DEBUGF("TaskState=%s", task_state_str(task_state));
     switch (task_state) {
       case TASK_ERROR:

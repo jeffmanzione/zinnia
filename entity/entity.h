@@ -6,6 +6,8 @@
 #ifndef ENTITY_ENTITY_H_
 #define ENTITY_ENTITY_H_
 
+#include <stdio.h>
+
 #include "entity/object.h"
 #include "entity/primitive.h"
 
@@ -37,6 +39,8 @@ Entity entity_float(const double d);
 
 Entity entity_primitive_ptr(const Primitive *p);
 Entity entity_primitive(Primitive p);
+
+void entity_print(const Entity *e, FILE *file);
 
 Entity entity_none();
 
