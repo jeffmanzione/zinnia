@@ -126,6 +126,7 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
   ExpressionTree *etree = populate_expression(&stree);
   Tape *tape = tape_create();
   produce_instructions(etree, tape);
+  tape_write(tape, stdout);
   ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
   module_info->fi = fi;
   delete_expression(etree);

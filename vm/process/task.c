@@ -52,14 +52,17 @@ Context *task_create_context(Task *task, Object *self, Module *module,
 Context *task_back_context(Task *task) {
   Context *last = (Context *)alist_get(&task->context_stack,
                                        alist_len(&task->context_stack) - 1);
+  uint32_t ins = last->ins;
   context_finalize(last);
   alist_remove_last(&task->context_stack);
   // This was the last context.
   if (0 == alist_len(&task->context_stack)) {
     return NULL;
   }
-  return (Context *)alist_get(&task->context_stack,
-                              alist_len(&task->context_stack) - 1);
+  Context *cur = (Context *)alist_get(&task->context_stack,
+                                      alist_len(&task->context_stack) - 1);
+  cur->ins = ins;
+  return cur;
 }
 
 inline Entity task_popstack(Task *task) {

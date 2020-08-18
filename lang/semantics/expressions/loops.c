@@ -134,14 +134,18 @@ ImplProduce(for_statement, Tape *tape) {
     }
   }
 
+  DEBUGF("body_ins=%d, condition_ins=%d, inc_ins=%d", body_ins, condition_ins,
+         inc_ins);
+
   num_ins +=
       body_ins + inc_ins +
       tape_ins_int(tape, IFN, body_ins + inc_ins + 1, for_statement->for_token);
   tape_append(tape, tmp_tape);
 
-  num_ins += tape_ins_int(tape, JMP, -(body_ins + condition_ins + inc_ins + 1),
-                          for_statement->for_token) +
-             tape_ins_no_arg(tape, BBLK, for_statement->for_token);
+  num_ins +=
+      tape_ins_int(tape, JMP, -(body_ins + condition_ins + inc_ins + 1 + 1),
+                   for_statement->for_token) +
+      tape_ins_no_arg(tape, BBLK, for_statement->for_token);
 
   return num_ins;
 }
