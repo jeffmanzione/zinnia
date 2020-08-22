@@ -96,3 +96,8 @@ inline Entity *object_get(Object *obj, const char field[]) {
   ASSERT(NOT_NULL(obj), NOT_NULL(field));
   return (Entity *)keyedlist_lookup(&obj->_members, field);
 }
+
+inline Entity entity_object(Object *obj) {
+  Entity e = {.type = OBJECT, .obj = obj};
+  return e;
+}

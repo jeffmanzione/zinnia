@@ -35,10 +35,9 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
   Function *old =
       (Function *)keyedlist_insert(&cls->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR(
-        "Adding function %s to class %s that already has a function by this "
-        "name.",
-        name, cls->_name);
+    ERROR("Adding function %s to class %s that already has a function by this "
+          "name.",
+          name, cls->_name);
   }
   function_init(f, name, cls->_module, ins_pos);
   return f;
@@ -46,4 +45,8 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
 
 inline KL_iter class_functions(Class *cls) {
   return keyedlist_iter(&cls->_functions);
+}
+
+Function *class_get_function(Class *cls, const char name[]) {
+  return (Function *)keyedlist_lookup(&cls->_functions, name);
 }

@@ -46,4 +46,6 @@ Entity entity_none();
 
 Entity *object_get(Object *obj, const char field[]);
 
+Entity entity_object(Object *obj);
+
 #endif /* ENTITY_ENTITY_H_ */

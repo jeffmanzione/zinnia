@@ -8,6 +8,7 @@
 #include "entity/class/classes.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
+#include "vm/intern.h"
 #include "vm/process/context.h"
 #include "vm/process/process.h"
 #include "vm/process/processes.h"
@@ -23,11 +24,13 @@ struct _VM {
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
+void _execute_PNIL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
 void _execute_PEEK(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
-void _execute_CALL(VM *vm, Task *task, Context *context,
+bool _execute_CALL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_RET(VM *vm, Task *task, Context *context, const Instruction *ins);
 Context *_execute_NBLK(VM *vm, Task *task, Context *context,
@@ -342,8 +345,16 @@ inline void _execute_PUSH(VM *vm, Task *task, Context *context,
       *task_pushstack(task) = entity_primitive(ins->val);
       break;
     default:
-      ERROR("Invalid arg type=%d for RES.", ins->type);
+      ERROR("Invalid arg type=%d for PUSH.", ins->type);
   }
+}
+
+inline void _execute_PNIL(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->id) {
+    ERROR("Invalid arg type=%d for PNIL.", ins->type);
+  }
+  *task_pushstack(task) = NONE_ENTITY;
 }
 
 inline void _execute_LET(VM *vm, Task *task, Context *context,
@@ -368,36 +379,68 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-inline void _execute_CALL(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
-  Entity fn;
-  switch (ins->type) {
-    case INSTRUCTION_ID:
-      fn = *context_lookup(context, ins->id);
-      break;
-    case INSTRUCTION_NO_ARG:
-      fn = task_popstack(task);
-      break;
-    default:
-      ERROR("Invalid arg type=%d for CALL.", ins->type);
+void _call_function_base(Task *task, Function *func, Object *self) {
+  Task *new_task = process_create_task(task->parent_process);
+  new_task->dependent_task = task;
+  task_create_context(new_task, self, (Module *)func->_module, func->_ins_pos);
+  *task_mutable_resval(new_task) = *task_get_resval(task);
+}
+
+void _call_method(Task *task, Context *context, const Instruction *ins) {
+  ASSERT(NOT_NULL(ins), INSTRUCTION_ID == ins->type);
+  Entity obj = task_popstack(task);
+  ASSERT(OBJECT == obj.type);
+  Function *fn = class_get_function((Class *)obj.obj->_class, ins->id);
+  if (NULL == fn) {
+    ERROR("Method does not exist.");
   }
+  _call_function_base(task, fn, obj.obj);
+}
+
+void _call_function(Task *task, Function *func) {
+  _call_function_base(task, func, func->_module->_reflection);
+}
+
+inline bool _execute_CALL(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_ID == ins->type) {
+    if (CLLN == ins->op) {
+      *task_mutable_resval(task) = NONE_ENTITY;
+    }
+    _call_method(task, context, ins);
+    return true;
+  }
+  ASSERT(INSTRUCTION_NO_ARG == ins->type);
+  Entity fn = task_popstack(task);
   if (fn.type != OBJECT) {
     // TODO: This should be a recoverable error.
     ERROR("Invalid fn type=%d for CALL.", fn.type);
-    return;
+  }
+  if (fn.obj->_class == Class_Class) {
+    Class *class = fn.obj->_class_obj;
+    Object *obj = heap_new(task->parent_process->heap, class);
+    Function *constructor = class_get_function(class, CONSTRUCTOR_KEY);
+    if (NULL == constructor) {
+      *task_mutable_resval(task) = entity_object(obj);
+      return false;
+    } else {
+      if (CLLN == ins->op) {
+        *task_mutable_resval(task) = NONE_ENTITY;
+      }
+      _call_function_base(task, constructor, obj);
+      return true;
+    }
   }
   if (fn.obj->_class != Class_Function) {
     // TODO: This should be a recoverable error.
     ERROR("Invalid fn class type=%d for CALL.", fn.type);
-    return;
   }
   Function *func = fn.obj->_function_obj;
-  Task *new_task = process_create_task(task->parent_process);
-  new_task->dependent_task = task;
-  task_create_context(new_task, func->_module->_reflection,
-                      (Module *)func->_module, func->_ins_pos);
-  *task_mutable_resval(new_task) = *task_get_resval(task);
-  return;
+  if (CLLN == ins->op) {
+    *task_mutable_resval(task) = NONE_ENTITY;
+  }
+  _call_function(task, func);
+  return true;
 }
 
 inline void _execute_RET(VM *vm, Task *task, Context *context,
@@ -502,6 +545,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case PUSH:
         _execute_PUSH(vm, task, context, ins);
         break;
+      case PNIL:
+        _execute_PNIL(vm, task, context, ins);
+        break;
       case PEEK:
         _execute_PEEK(vm, task, context, ins);
         break;
@@ -513,11 +559,13 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         break;
       case CALL:
       case CLLN:
-        _execute_CALL(vm, task, context, ins);
-        task->state = TASK_WAITING;
-        task->wait_reason = WAITING_ON_FN_CALL;
-        context->ins++;
-        goto end_of_loop;
+        if (_execute_CALL(vm, task, context, ins)) {
+          task->state = TASK_WAITING;
+          task->wait_reason = WAITING_ON_FN_CALL;
+          context->ins++;
+          goto end_of_loop;
+        }
+        break;
       case RET:
         _execute_RET(vm, task, context, ins);
         task->state = TASK_COMPLETE;

@@ -9,7 +9,9 @@
 #include <stdint.h>
 
 #include "alloc/memory_graph/memory_graph.h"
+#include "lang/lexer/token.h"
 #include "program/tape.h"
+#include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/map.h"
 
@@ -17,6 +19,7 @@ typedef struct _Object Object;
 typedef struct _Class Class;
 typedef struct _Module Module;
 typedef struct _Function Function;
+typedef struct _Error Error;
 
 // Represents an object with properties.
 struct _Object {
@@ -56,6 +59,17 @@ struct _Function {
   const char *_name;
   const Module *_module;
   uint32_t _ins_pos;
+};
+
+struct _StackLine {
+  Module *module;
+  Function *func;
+  Token *error_token;
+};
+
+struct _Error {
+  char *msg;
+  AList stacktrace;
 };
 
 #endif /* ENTITY_OBJECT_H_ */
