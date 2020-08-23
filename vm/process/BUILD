@@ -14,6 +14,7 @@ cc_library(
         "//entity/module",
         "//program:instruction",
         "//program:tape",
+        "//vm:intern",
     ],
 )
 

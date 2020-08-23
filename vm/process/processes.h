@@ -24,7 +24,7 @@ typedef struct {
   Object *member_obj;
 
   bool is_function;
-  Object *self;
+  Entity self;
   Module *module;
   const Tape *tape;
   uint32_t ins;

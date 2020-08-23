@@ -45,6 +45,7 @@
   type name##_pop(name* const);                                      \
   void name##_enqueue(name* const, type);                            \
   type name##_dequeue(name* const);                                  \
+  type* name##_add_last(name* const);                                \
   void name##_set(name* const, uint32_t, type);                      \
   type name##_get(name* const, uint32_t);                            \
   type name##_last(name* const);                                     \
@@ -187,6 +188,12 @@
     return to_return;                                                         \
   }                                                                           \
                                                                               \
+  type* name##_add_last(name* const array) {                                  \
+    ASSERT(NOT_NULL(array));                                                  \
+    name##_maybe_realloc(array, array->num_elts + 1);                         \
+    return array->table + array->num_elts++;                                  \
+  }                                                                           \
+                                                                              \
   void name##_lshrink(name* const array, size_t amount) {                     \
     ASSERT(NOT_NULL(array), array->num_elts >= amount);                       \
     name##_shift(array, amount, -amount);                                     \
@@ -280,7 +287,7 @@
   }                                                                           \
   inline void name##_inc(name##_iter* iter) { iter->_i++; }                   \
   inline type* name##_value(name##_iter* iter) {                              \
-    return name##_get(iter->_arr, iter->_i);                                  \
+    return name##_get_ref(iter->_arr, iter->_i);                              \
   }
 
 #endif /* STRUCT_ARRAYLIKE_H_ */

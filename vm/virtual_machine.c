@@ -5,7 +5,9 @@
 
 #include "vm/virtual_machine.h"
 
+#include "entity/array/array.h"
 #include "entity/class/classes.h"
+#include "entity/object.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
 #include "vm/intern.h"
@@ -28,6 +30,7 @@ void _execute_PNIL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_PEEK(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
+void _execute_FLD(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
 bool _execute_CALL(VM *vm, Task *task, Context *context,
@@ -42,6 +45,10 @@ void _execute_EXIT(VM *vm, Task *task, Context *context,
 void _execute_JMP(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_NOT(VM *vm, Task *task, Context *context, const Instruction *ins);
+
+void _execute_ANEW(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+
 bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2);
 
 double _float_of(const Primitive *p) {
@@ -357,6 +364,19 @@ inline void _execute_PNIL(VM *vm, Task *task, Context *context,
   *task_pushstack(task) = NONE_ENTITY;
 }
 
+inline void _execute_FLD(VM *vm, Task *task, Context *context,
+                         const Instruction *ins) {
+  if (INSTRUCTION_ID != ins->type) {
+    ERROR("Invalid arg type=%d for FLD.", ins->type);
+  }
+  const Entity *resval = task_get_resval(task);
+  if (NULL == resval || OBJECT != resval->type) {
+    ERROR("Attempted to get '%s' on non-object.", ins->id);
+  }
+  Entity obj = task_popstack(task);
+  object_set_member(task->parent_process->heap, resval->obj, ins->id, &obj);
+}
+
 inline void _execute_LET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   switch (ins->type) {
@@ -468,7 +488,7 @@ inline Context *_execute_NBLK(VM *vm, Task *task, Context *context,
                               const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
-      return task_create_context(context->parent_task, context->self,
+      return task_create_context(context->parent_task, context->self.obj,
                                  context->module, context->ins);
     default:
       ERROR("Invalid arg type=%d for NBLK.", ins->type);
@@ -527,6 +547,28 @@ inline void _execute_NOT(VM *vm, Task *task, Context *context,
       (NULL == resval) || (NONE == resval->type) ? entity_int(1) : NONE_ENTITY;
 }
 
+void _execute_ANEW(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_ID == ins->type) {
+    ERROR("Invalid ANEW, ID type.");
+  }
+  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  Array *array = (Array *)array_obj->_internal_obj;
+  *task_mutable_resval(task) = entity_object(array_obj);
+  if (INSTRUCTION_NO_ARG == ins->type) {
+    return;
+  }
+  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+    ERROR("Invalid ANEW requires int primitive.");
+  }
+  int32_t num_args = pint(&ins->val);
+  int i;
+  for (i = 0; i < num_args; ++i) {
+    Entity *e = Array_add_last(array);
+    *e = task_popstack(task);
+  }
+}
+
 // Please forgive me father, for I have sinned.
 TaskState vm_execute_task(VM *vm, Task *task) {
   task->state = TASK_RUNNING;
@@ -550,6 +592,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         break;
       case PEEK:
         _execute_PEEK(vm, task, context, ins);
+        break;
+      case FLD:
+        _execute_FLD(vm, task, context, ins);
         break;
       case LET:
         _execute_LET(vm, task, context, ins);
@@ -626,6 +671,10 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         break;
       case NOT:
         _execute_NOT(vm, task, context, ins);
+        break;
+      case ANEW:
+        _execute_ANEW(vm, task, context, ins);
+        break;
       default:
         ERROR("Unknown instruction: %s", op_to_str(ins->op));
     }

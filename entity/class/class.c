@@ -20,6 +20,9 @@ Class *class_init(Class *cls, const char name[], const Class *super,
   cls->_super = super;
   cls->_module = module;
   cls->_reflection = NULL;
+  cls->_init_fn = NULL;
+  cls->_delete_fn = NULL;
+  cls->_print_fn = NULL;
   keyedlist_init(&cls->_functions, Function, DEFAULT_ARRAY_SZ);
   return cls;
 }
@@ -35,9 +38,10 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
   Function *old =
       (Function *)keyedlist_insert(&cls->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR("Adding function %s to class %s that already has a function by this "
-          "name.",
-          name, cls->_name);
+    ERROR(
+        "Adding function %s to class %s that already has a function by this "
+        "name.",
+        name, cls->_name);
   }
   function_init(f, name, cls->_module, ins_pos);
   return f;

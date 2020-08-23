@@ -66,6 +66,10 @@ void _primitive_print(const Primitive *p, FILE *file) {
 }
 
 void _object_print(const Object *obj, FILE *file) {
+  if (NULL != obj->_class->_print_fn) {
+    obj->_class->_print_fn(obj, file);
+    return;
+  }
   fprintf(file, "Instance of %s.%s", obj->_class->_module->_name,
           obj->_class->_name);
 }

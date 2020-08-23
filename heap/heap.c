@@ -83,11 +83,17 @@ Object *_object_create(Heap *heap, const Class *class) {
   Object *object = (Object *)__arena_alloc(&heap->object_arena);
   object->_class = class;
   keyedlist_init(&object->_members, Entity, DEFAULT_ARRAY_SZ);
+  if (NULL != class->_init_fn) {
+    class->_init_fn(object);
+  }
   return object;
 }
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
+  if (NULL != object && NULL != object->_class->_delete_fn) {
+    object->_class->_delete_fn(object);
+  }
   keyedlist_finalize(&object->_members);
   __arena_dealloc(&heap->object_arena, object);
 }

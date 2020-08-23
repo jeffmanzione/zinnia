@@ -19,6 +19,8 @@ cc_library(
     hdrs = ["virtual_machine.h"],
     deps = [
         ":module_manager",
+        "//entity:object",
+        "//entity/array",
         "//vm/process",
         "//vm/process:context",
         "//vm/process:processes",

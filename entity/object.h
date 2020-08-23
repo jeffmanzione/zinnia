@@ -19,7 +19,13 @@ typedef struct _Object Object;
 typedef struct _Class Class;
 typedef struct _Module Module;
 typedef struct _Function Function;
+typedef struct _StackLine StackLine;
 typedef struct _Error Error;
+
+typedef void (*ObjDelFn)(Object *);
+typedef void (*ObjInitFn)(Object *);
+// TODO: This should only be temporary until to_s() is supported.
+typedef void (*ObjPrintFn)(Object *, FILE *);
 
 // Represents an object with properties.
 struct _Object {
@@ -32,6 +38,8 @@ struct _Object {
     Module *_module_obj;
     Class *_class_obj;
     Function *_function_obj;
+    // Error *_error_obj;
+    void *_internal_obj;
   };
 };
 
@@ -42,6 +50,9 @@ struct _Class {
   const Class *_super;
   const Module *_module;
   KeyedList _functions;
+  ObjInitFn _init_fn;
+  ObjDelFn _delete_fn;
+  ObjPrintFn _print_fn;
 };
 
 struct _Module {
@@ -68,6 +79,8 @@ struct _StackLine {
 };
 
 struct _Error {
+  Object *_reflection;
+
   char *msg;
   AList stacktrace;
 };

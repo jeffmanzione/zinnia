@@ -22,6 +22,7 @@ cc_library(
     hdrs = ["classes.h"],
     deps = [
         "//entity:object",
+        "//entity/array",
         "//entity/class",
         "//entity/function",
         "//entity/module",

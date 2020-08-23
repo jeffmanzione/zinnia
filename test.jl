@@ -12,7 +12,7 @@ class Test {
   new() {
     t = 2
   }
-  method method1(x) { x + t }
+  method method1(x) { [x, t] }
 }
 
 x = 5
@@ -28,3 +28,5 @@ for i=5, i>0, i=i-1 {
 t = Test()
 
 t.method1(x)
+
+a = [1, 2, 3, 4, 5]
