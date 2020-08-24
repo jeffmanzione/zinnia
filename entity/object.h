@@ -6,6 +6,7 @@
 #ifndef ENTITY_OBJECT_H_
 #define ENTITY_OBJECT_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "alloc/memory_graph/memory_graph.h"
@@ -25,7 +26,7 @@ typedef struct _Error Error;
 typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
 // TODO: This should only be temporary until to_s() is supported.
-typedef void (*ObjPrintFn)(Object *, FILE *);
+typedef void (*ObjPrintFn)(const Object *, FILE *);
 
 // Represents an object with properties.
 struct _Object {
@@ -69,7 +70,12 @@ struct _Function {
 
   const char *_name;
   const Module *_module;
-  uint32_t _ins_pos;
+
+  bool _is_native;
+  union {
+    uint32_t _ins_pos;
+    void *_native_fn;  // NativeFn
+  };
 };
 
 struct _StackLine {

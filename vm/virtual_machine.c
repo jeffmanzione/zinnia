@@ -7,6 +7,7 @@
 
 #include "entity/array/array.h"
 #include "entity/class/classes.h"
+#include "entity/native.h"
 #include "entity/object.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
@@ -399,7 +400,17 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-void _call_function_base(Task *task, Function *func, Object *self) {
+void _call_function_base(Task *task, Context *context, Function *func,
+                         Object *self) {
+  if (func->_is_native) {
+    NativeFn native_fn = (NativeFn)func->_native_fn;
+    if (NULL == native_fn) {
+      ERROR("Invalid native function.");
+    }
+    *task_mutable_resval(task) =
+        native_fn(task, context, self, (Entity *)task_get_resval(task));
+    return;
+  }
   Task *new_task = process_create_task(task->parent_process);
   new_task->dependent_task = task;
   task_create_context(new_task, self, (Module *)func->_module, func->_ins_pos);
@@ -414,11 +425,11 @@ void _call_method(Task *task, Context *context, const Instruction *ins) {
   if (NULL == fn) {
     ERROR("Method does not exist.");
   }
-  _call_function_base(task, fn, obj.obj);
+  _call_function_base(task, context, fn, obj.obj);
 }
 
-void _call_function(Task *task, Function *func) {
-  _call_function_base(task, func, func->_module->_reflection);
+void _call_function(Task *task, Context *context, Function *func) {
+  _call_function_base(task, context, func, func->_module->_reflection);
 }
 
 inline bool _execute_CALL(VM *vm, Task *task, Context *context,
@@ -447,7 +458,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
       if (CLLN == ins->op) {
         *task_mutable_resval(task) = NONE_ENTITY;
       }
-      _call_function_base(task, constructor, obj);
+      _call_function_base(task, context, constructor, obj);
       return true;
     }
   }
@@ -459,7 +470,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
   if (CLLN == ins->op) {
     *task_mutable_resval(task) = NONE_ENTITY;
   }
-  _call_function(task, func);
+  _call_function(task, context, func);
   return true;
 }
 
@@ -577,9 +588,11 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       alist_get(&task->context_stack, alist_len(&task->context_stack) - 1);
   for (;;) {
     const Instruction *ins = context_ins(context);
+#ifdef DEBUG
     instruction_write(ins, stdout);
     fprintf(stdout, "\n");
     fflush(stdout);
+#endif
     switch (ins->op) {
       case RES:
         _execute_RES(vm, task, context, ins);

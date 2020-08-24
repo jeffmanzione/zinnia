@@ -16,6 +16,21 @@ cc_library(
 )
 
 cc_library(
+    name = "native",
+    srcs = ["native.c"],
+    hdrs = ["native.h"],
+    deps = [
+        ":entity",
+        ":object",
+        ":primitive",
+        "//entity/class",
+        "//entity/function",
+        "//vm/process:processes",
+        "@memory-wrapper//debug",
+    ],
+)
+
+cc_library(
     name = "object",
     srcs = ["object.c"],
     hdrs = ["object.h"],
