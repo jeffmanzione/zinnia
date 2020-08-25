@@ -417,13 +417,13 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_ID != ins->type) {
     ERROR("Invalid arg type=%d for GET.", ins->type);
   }
-  Entity *e = task_get_resval(task);
+  const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
     ERROR("Attempting to field a non-object.");
   }
   const Entity *member = object_get(e->obj, ins->id);
   if (NULL == member) {
-    Function *f = class_get_function(e->obj->_class, ins->id);
+    const Function *f = class_get_function(e->obj->_class, ins->id);
     if (NULL != f) {
       Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
       __function_ref_init(fn_ref, e->obj, f);
@@ -434,7 +434,7 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
 }
 
-void _call_function_base(Task *task, Context *context, Function *func,
+void _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self) {
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
@@ -455,10 +455,21 @@ void _call_method(Task *task, Context *context, const Instruction *ins) {
   ASSERT(NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   Entity obj = task_popstack(task);
   ASSERT(OBJECT == obj.type);
-  Function *fn = class_get_function((Class *)obj.obj->_class, ins->id);
-  if (NULL == fn) {
-    ERROR("Method does not exist.");
+  const Class *class = (Class *)obj.obj->_class;
+  const Function *fn;
+  int i;
+  for (i = 0; i < 10; ++i) {
+    fn = class_get_function(class, ins->id);
+    if (NULL != fn) {
+      break;
+    }
+    if (NULL == class->_super) {
+      ERROR("Method does not exist.");
+      return;
+    }
+    class = class->_super;
   }
+
   _call_function_base(task, context, fn, obj.obj);
 }
 
@@ -484,7 +495,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
   if (fn.obj->_class == Class_Class) {
     Class *class = fn.obj->_class_obj;
     Object *obj = heap_new(task->parent_process->heap, class);
-    Function *constructor = class_get_function(class, CONSTRUCTOR_KEY);
+    const Function *constructor = class_get_function(class, CONSTRUCTOR_KEY);
     if (NULL == constructor) {
       *task_mutable_resval(task) = entity_object(obj);
       return false;

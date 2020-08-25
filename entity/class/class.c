@@ -13,9 +13,7 @@
 
 Class *class_init(Class *cls, const char name[], const Class *super,
                   const Module *module) {
-  ASSERT(NOT_NULL(cls), NOT_NULL(name),
-         // NOT_NULL(super),
-         NOT_NULL(module));
+  ASSERT(NOT_NULL(cls), NOT_NULL(name), NOT_NULL(module));
   cls->_name = name;
   cls->_super = super;
   cls->_module = module;
@@ -23,7 +21,7 @@ Class *class_init(Class *cls, const char name[], const Class *super,
   cls->_init_fn = NULL;
   cls->_delete_fn = NULL;
   cls->_print_fn = NULL;
-  keyedlist_init(&cls->_functions, Function, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&cls->_functions, Function, 16);
   return cls;
 }
 
@@ -51,6 +49,6 @@ inline KL_iter class_functions(Class *cls) {
   return keyedlist_iter(&cls->_functions);
 }
 
-Function *class_get_function(Class *cls, const char name[]) {
-  return (Function *)keyedlist_lookup(&cls->_functions, name);
+const Function *class_get_function(const Class *cls, const char name[]) {
+  return (Function *)keyedlist_lookup((KeyedList *)&cls->_functions, name);
 }

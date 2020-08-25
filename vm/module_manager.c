@@ -71,8 +71,8 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   KL_iter classes = tape_classes(tape);
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *class = module_add_class(module, cref->name);
-    class_init(class, cref->name, NULL, module);
+    // TODO: Handle subclasses.
+    Class *class = module_add_class(module, cref->name, Class_Object);
 
     KL_iter funcs = keyedlist_iter(&cref->func_refs);
     for (; kl_has(&funcs); kl_inc(&funcs)) {

@@ -11,8 +11,8 @@ void module_init(Module *module, const char name[], Tape *tape) {
   module->_name = name;
   module->_tape = tape;
   module->_reflection = NULL;
-  keyedlist_init(&module->_classes, Class, DEFAULT_ARRAY_SZ);
-  keyedlist_init(&module->_functions, Function, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&module->_classes, Class, 16);
+  keyedlist_init(&module->_functions, Function, 16);
 }
 
 void module_finalize(Module *module) {
@@ -55,18 +55,14 @@ Function *module_add_function(Module *module, const char name[],
   return f;
 }
 
-Class *module_add_class(Module *module, const char name[]) {
+Class *module_add_class(Module *module, const char name[], const Class *super) {
   ASSERT(NOT_NULL(module), NOT_NULL(name));
   Class *c;
   Class *old = (Class *)keyedlist_insert(&module->_classes, name, (void **)&c);
   if (NULL != old) {
-    // ERROR(
-    //     "Adding class %s to module %s that already has a function by this "
-    //     "name.",
-    //     name, module->_name);
     return old;
   }
-  class_init(c, name, NULL, module);
+  class_init(c, name, super, module);
   return c;
 }
 

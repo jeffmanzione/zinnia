@@ -14,6 +14,6 @@ void class_finalize(Class *cls);
 Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos);
 
 KL_iter class_functions(Class *cls);
-Function *class_get_function(Class *cls, const char name[]);
+const Function *class_get_function(const Class *cls, const char name[]);
 
 #endif /* OBJECT_CLASS_CLASS_H_ */
