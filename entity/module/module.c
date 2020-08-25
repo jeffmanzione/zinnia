@@ -70,6 +70,18 @@ Class *module_add_class(Module *module, const char name[]) {
   return c;
 }
 
+Object *module_lookup(Module *module, const char name[]) {
+  Class *class = keyedlist_lookup(&module->_classes, name);
+  if (NULL != class && NULL != class->_reflection) {
+    return class->_reflection;
+  }
+  Function *func = keyedlist_lookup(&module->_functions, name);
+  if (NULL != func && NULL != func->_reflection) {
+    return func->_reflection;
+  }
+  return NULL;
+}
+
 inline KL_iter module_functions(Module *module) {
   return keyedlist_iter(&module->_functions);
 }

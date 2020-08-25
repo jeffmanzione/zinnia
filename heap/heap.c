@@ -62,8 +62,8 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   (*entry_pos) = *child;
 }
 
-void object_set_member_obj(Heap *heap, Object *parent, const char key[],
-                           const Object *child) {
+Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
+                              const Object *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
@@ -76,6 +76,7 @@ void object_set_member_obj(Heap *heap, Object *parent, const char key[],
   mgraph_inc(heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
   entry_pos->type = OBJECT;
   entry_pos->obj = (Object *)child;
+  return entry_pos;
 }
 
 Object *_object_create(Heap *heap, const Class *class) {

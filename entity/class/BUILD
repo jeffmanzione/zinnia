@@ -26,6 +26,8 @@ cc_library(
         "//entity/class",
         "//entity/function",
         "//entity/module",
+        "//entity/string",
+        "//entity/tuple",
         "//heap",
         "//vm:intern",
         "@memory-wrapper//debug",

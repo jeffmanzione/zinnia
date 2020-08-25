@@ -296,7 +296,8 @@ int tape_ins_neg(Tape *tape, Op op, const Token *token) {
   sm->col = token->col;
 
   ins->type = INSTRUCTION_PRIMITIVE;
-  ins->val = token_to_primitive(token);
+  Primitive p = token_to_primitive(token);
+  ins->val = primitive_int(-pint(&p));
   return 1;
 }
 

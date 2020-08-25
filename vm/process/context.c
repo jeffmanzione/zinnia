@@ -69,6 +69,16 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   if (NULL != member) {
     return member;
   }
+  member = object_get(ctx->module->_reflection, id);
+  if (NULL != member) {
+    return member;
+  }
+
+  Object *obj = module_lookup(ctx->module, id);
+  if (NULL != obj) {
+    return object_set_member_obj(_context_heap(ctx), ctx->module->_reflection,
+                                 id, obj);
+  }
   return NULL;
 }
 
