@@ -26,7 +26,7 @@ Class *Class_String;
 Class *Class_Tuple;
 // Class *Class_Error;
 
-void init_classes(Heap *heap, Module *builtin) {
+void builtin_classes(Heap *heap, Module *builtin) {
   Class_Object = module_add_class(builtin, OBJECT_NAME, NULL);
   Class_Class = module_add_class(builtin, CLASS_NAME, Class_Object);
   Class_Function = module_add_class(builtin, FUNCTION_NAME, Class_Object);

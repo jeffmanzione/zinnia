@@ -9,6 +9,7 @@
 #include "entity/class/classes.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
+#include "entity/native/builtin.h"
 #include "entity/object.h"
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
@@ -46,7 +47,8 @@ void modulemanager_finalize(ModuleManager *mm) {
 
 void _read_builtin(ModuleManager *mm, Heap *heap) {
   Module_builtin = _read_helper(mm, "lib/builtin.jl");
-  init_classes(heap, Module_builtin);
+  builtin_classes(heap, Module_builtin);
+  builtin_add_native(Module_builtin);
   Module_builtin->_reflection = heap_new(mm->_heap, Class_Module);
   _add_reflection_to_module(mm, Module_builtin);
 }

@@ -37,4 +37,6 @@ z = 'Hello, world!'
 
 a[0]
 
-t.to_s()
+str(t)
+str(5)
+str(None)

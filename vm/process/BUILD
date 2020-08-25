@@ -15,6 +15,7 @@ cc_library(
         "//program:instruction",
         "//program:tape",
         "//vm:intern",
+        "//vm:module_manager",
     ],
 )
 

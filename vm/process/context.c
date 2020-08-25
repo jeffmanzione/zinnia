@@ -8,6 +8,7 @@
 #include "entity/object.h"
 #include "program/tape.h"
 #include "vm/intern.h"
+#include "vm/module_manager.h"
 #include "vm/process/processes.h"
 
 Heap *_context_heap(Context *ctx);
@@ -78,6 +79,17 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   if (NULL != obj) {
     return object_set_member_obj(_context_heap(ctx), ctx->module->_reflection,
                                  id, obj);
+  }
+
+  member = object_get(Module_builtin->_reflection, id);
+  if (NULL != member) {
+    return member;
+  }
+
+  obj = module_lookup(Module_builtin, id);
+  if (NULL != obj) {
+    return object_set_member_obj(_context_heap(ctx),
+                                 Module_builtin->_reflection, id, obj);
   }
   return NULL;
 }

@@ -20,6 +20,6 @@ extern Class* Class_String;
 extern Class* Class_Tuple;
 // extern Class* Class_Error;
 
-void init_classes(Heap* heap, Module* builtin);
+void builtin_classes(Heap* heap, Module* builtin);
 
 #endif /* ENTITY_CLASS_CLASSES_ */

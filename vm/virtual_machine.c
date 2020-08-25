@@ -29,6 +29,8 @@ struct _VM {
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
+void _execute_RNIL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
 void _execute_PNIL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_PEEK(VM *vm, Task *task, Context *context,
@@ -55,6 +57,7 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_TUPL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
+void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins);
 
 bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2);
 
@@ -326,7 +329,8 @@ inline void _execute_RES(VM *vm, Task *task, Context *context,
       break;
     case INSTRUCTION_STRING:
       str = heap_new(task->parent_process->heap, Class_String);
-      __string_init(str, ins->str);
+      // TODO: Maybe precomute the length of the string?
+      __string_init(str, ins->str + 1, strlen(ins->str) - 2);
       *task_mutable_resval(task) = entity_object(str);
       break;
     default:
@@ -375,6 +379,14 @@ inline void _execute_PNIL(VM *vm, Task *task, Context *context,
     ERROR("Invalid arg type=%d for PNIL.", ins->type);
   }
   *task_pushstack(task) = NONE_ENTITY;
+}
+
+inline void _execute_RNIL(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    ERROR("Invalid arg type=%d for RNIL.", ins->type);
+  }
+  *task_mutable_resval(task) = NONE_ENTITY;
 }
 
 inline void _execute_FLD(VM *vm, Task *task, Context *context,
@@ -434,7 +446,7 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
 }
 
-void _call_function_base(Task *task, Context *context, const Function *func,
+bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self) {
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
@@ -443,15 +455,16 @@ void _call_function_base(Task *task, Context *context, const Function *func,
     }
     *task_mutable_resval(task) =
         native_fn(task, context, self, (Entity *)task_get_resval(task));
-    return;
+    return false;
   }
   Task *new_task = process_create_task(task->parent_process);
   new_task->dependent_task = task;
   task_create_context(new_task, self, (Module *)func->_module, func->_ins_pos);
   *task_mutable_resval(new_task) = *task_get_resval(task);
+  return true;
 }
 
-void _call_method(Task *task, Context *context, const Instruction *ins) {
+bool _call_method(Task *task, Context *context, const Instruction *ins) {
   ASSERT(NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   Entity obj = task_popstack(task);
   ASSERT(OBJECT == obj.type);
@@ -465,16 +478,15 @@ void _call_method(Task *task, Context *context, const Instruction *ins) {
     }
     if (NULL == class->_super) {
       ERROR("Method does not exist.");
-      return;
+      return true;
     }
     class = class->_super;
   }
-
-  _call_function_base(task, context, fn, obj.obj);
+  return _call_function_base(task, context, fn, obj.obj);
 }
 
-void _call_function(Task *task, Context *context, Function *func) {
-  _call_function_base(task, context, func, func->_module->_reflection);
+bool _call_function(Task *task, Context *context, Function *func) {
+  return _call_function_base(task, context, func, func->_module->_reflection);
 }
 
 inline bool _execute_CALL(VM *vm, Task *task, Context *context,
@@ -483,8 +495,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     if (CLLN == ins->op) {
       *task_mutable_resval(task) = NONE_ENTITY;
     }
-    _call_method(task, context, ins);
-    return true;
+    return _call_method(task, context, ins);
   }
   ASSERT(INSTRUCTION_NO_ARG == ins->type);
   Entity fn = task_popstack(task);
@@ -503,17 +514,15 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
       if (CLLN == ins->op) {
         *task_mutable_resval(task) = NONE_ENTITY;
       }
-      _call_function_base(task, context, constructor, obj);
-      return true;
+      return _call_function_base(task, context, constructor, obj);
     }
   }
   if (fn.obj->_class == Class_FunctionRef) {
     if (CLLN == ins->op) {
       *task_mutable_resval(task) = NONE_ENTITY;
     }
-    _call_function_base(task, context, function_ref_get_func(fn.obj),
-                        function_ref_get_object(fn.obj));
-    return true;
+    return _call_function_base(task, context, function_ref_get_func(fn.obj),
+                               function_ref_get_object(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
     // TODO: This should be a recoverable error.
@@ -523,8 +532,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
   if (CLLN == ins->op) {
     *task_mutable_resval(task) = NONE_ENTITY;
   }
-  _call_function(task, context, func);
-  return true;
+  return _call_function(task, context, func);
 }
 
 inline void _execute_RET(VM *vm, Task *task, Context *context,
@@ -709,6 +717,38 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
   }
 }
 
+bool _inherits_from(const Class *class, Class *possible_super) {
+  for (;;) {
+    if (NULL == class) {
+      return false;
+    }
+    if (class == possible_super) {
+      return true;
+    }
+    class = class->_super;
+  }
+}
+
+void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    ERROR("Weird type for IS.");
+  }
+  Entity rhs = task_popstack(task);
+  Entity lhs = task_popstack(task);
+  if (OBJECT != rhs.type || Class_Class != rhs.obj->_class) {
+    ERROR("Cannot perform type-check against a non-object type.");
+  }
+  if (lhs.type != OBJECT) {
+    *task_mutable_resval(task) = NONE_ENTITY;
+    return;
+  }
+  if (_inherits_from(lhs.obj->_class, rhs.obj->_class_obj)) {
+    *task_mutable_resval(task) = entity_int(1);
+  } else {
+    *task_mutable_resval(task) = NONE_ENTITY;
+  }
+}
+
 // Please forgive me father, for I have sinned.
 TaskState vm_execute_task(VM *vm, Task *task) {
   task->state = TASK_RUNNING;
@@ -725,6 +765,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     switch (ins->op) {
       case RES:
         _execute_RES(vm, task, context, ins);
+        break;
+      case RNIL:
+        _execute_RNIL(vm, task, context, ins);
         break;
       case PUSH:
         _execute_PUSH(vm, task, context, ins);
@@ -813,6 +856,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case EQ:
       case NEQ:
         _execute_EQ(vm, task, context, ins);
+        break;
+      case IS:
+        _execute_IS(vm, task, context, ins);
         break;
       case NOT:
         _execute_NOT(vm, task, context, ins);

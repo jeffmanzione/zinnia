@@ -40,6 +40,7 @@ cc_library(
         "//entity/class:classes",
         "//entity/function",
         "//entity/module",
+        "//entity/native:builtin",
         "//lang/lexer:file_info",
         "//lang/parser",
         "//lang/semantics",
