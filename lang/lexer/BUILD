@@ -11,8 +11,8 @@ cc_library(
     deps = [
         ":token",
         "//util:file",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//debug",
     ],
 )
 
@@ -25,10 +25,10 @@ cc_library(
         ":token",
         "//struct:q",
         "//util:string",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//alloc/arena",
-        "@memory-wrapper//alloc/arena:intern",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//alloc/arena",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
     ],
 )
 
@@ -38,8 +38,8 @@ cc_library(
     hdrs = ["token.h"],
     deps = [
         "//entity:primitive",
-        "@memory-wrapper//alloc/arena",
-        "@memory-wrapper//alloc/arena:intern",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//alloc/arena",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
     ],
 )

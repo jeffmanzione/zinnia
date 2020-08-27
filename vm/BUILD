@@ -9,7 +9,7 @@ cc_library(
     srcs = ["intern.c"],
     hdrs = ["intern.h"],
     deps = [
-        "@memory-wrapper//alloc/arena:intern",
+        "@memory_wrapper//alloc/arena:intern",
     ],
 )
 

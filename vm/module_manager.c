@@ -49,7 +49,6 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   Module_builtin = _read_helper(mm, "lib/builtin.jl");
   builtin_classes(heap, Module_builtin);
   builtin_add_native(Module_builtin);
-  Module_builtin->_reflection = heap_new(mm->_heap, Class_Module);
   _add_reflection_to_module(mm, Module_builtin);
 }
 
@@ -110,6 +109,7 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
 
 void _add_reflection_to_module(ModuleManager *mm, Module *module) {
   ASSERT(NOT_NULL(mm), NOT_NULL(module));
+  module->_reflection = heap_new(mm->_heap, Class_Module);
   KL_iter funcs = module_functions(module);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
@@ -138,7 +138,6 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   Module *module = _read_helper(mm, fn);
-  module->_reflection = heap_new(mm->_heap, Class_Module);
   _add_reflection_to_module(mm, module);
   return module;
 }

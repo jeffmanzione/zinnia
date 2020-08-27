@@ -35,6 +35,10 @@ void task_init(Task *task) {
 }
 
 void task_finalize(Task *task) {
+  AL_iter iter = alist_iter(&task->context_stack);
+  for (; al_has(&iter); al_inc(&iter)) {
+    context_finalize((Context *)al_value(&iter));
+  }
   alist_finalize(&task->context_stack);
   alist_finalize(&task->entity_stack);
 }

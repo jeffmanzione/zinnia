@@ -8,22 +8,15 @@ cc_library(
         "test.jl",
     ],
     deps = [
-        "//lang/lexer",
-        "//lang/lexer:file_info",
-        "//lang/lexer:token",
         "//lang/parser",
         "//lang/semantics",
-        "//program:instruction",
-        "//program:op",
-        "//program:tape",
         "//vm:module_manager",
         "//vm:virtual_machine",
         "//vm/process",
         "//vm/process:context",
         "//vm/process:processes",
         "//vm/process:task",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//alloc/arena:intern",
+        "@memory_wrapper//alloc",
     ],
 )
 

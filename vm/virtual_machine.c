@@ -625,7 +625,6 @@ void _execute_ANEW(VM *vm, Task *task, Context *context,
     ERROR("Invalid ANEW, ID type.");
   }
   Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
-  Array *array = (Array *)array_obj->_internal_obj;
   *task_mutable_resval(task) = entity_object(array_obj);
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
@@ -636,8 +635,8 @@ void _execute_ANEW(VM *vm, Task *task, Context *context,
   int32_t num_args = pint(&ins->val);
   int i;
   for (i = 0; i < num_args; ++i) {
-    Entity *e = Array_add_last(array);
-    *e = task_popstack(task);
+    Entity e = task_popstack(task);
+    array_add(task->parent_process->heap, array_obj, &e);
   }
 }
 
@@ -703,7 +702,7 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
   }
   int32_t num_args = pint(&ins->val);
   Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
-  Tuple *tuple = (Tuple *)(tuple_obj->_internal_obj = tuple_create(num_args));
+  tuple_obj->_internal_obj = tuple_create(num_args);
   *task_mutable_resval(task) = entity_object(tuple_obj);
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
@@ -713,7 +712,8 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
   }
   int i;
   for (i = 0; i < num_args; ++i) {
-    *tuple_get_mutable(tuple, i) = task_popstack(task);
+    Entity e = task_popstack(task);
+    tuple_set(task->parent_process->heap, tuple_obj, i, &e);
   }
 }
 
@@ -901,6 +901,7 @@ void vm_run_process(VM *vm, Process *process) {
         set_insert(&process->waiting_tasks, task);
         break;
       case TASK_COMPLETE:
+        set_insert(&process->completed_tasks, task);
         if (NULL != task->dependent_task) {
           Q_enqueue(&process->queued_tasks, task->dependent_task);
           set_remove(&process->waiting_tasks, task->dependent_task);

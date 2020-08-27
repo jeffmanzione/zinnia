@@ -53,9 +53,9 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_FunctionRef->_super = Class_Object;
   Class_FunctionRef->_reflection = heap_new(heap, Class_Class);
   Class_FunctionRef->_reflection->_class_obj = Class_FunctionRef;
-  Class_String->_init_fn = __function_ref_create;
-  Class_String->_delete_fn = __function_ref_delete;
-  Class_String->_print_fn = __function_ref_print;
+  Class_FunctionRef->_init_fn = __function_ref_create;
+  Class_FunctionRef->_delete_fn = __function_ref_delete;
+  Class_FunctionRef->_print_fn = __function_ref_print;
 
   Class_Module->_super = Class_Object;
   Class_Module->_reflection = heap_new(heap, Class_Class);

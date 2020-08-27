@@ -37,6 +37,4 @@ z = 'Hello, world!'
 
 a[0]
 
-str(t)
-str(5)
-str(None)
+cat(a, 5, None)

@@ -24,4 +24,7 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
 Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
                               const Object *child);
 
+void array_add(Heap *heap, Object *array, const Entity *child);
+void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child);
+
 #endif /* HEAP_HEAP_H_ */

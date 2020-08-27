@@ -11,7 +11,7 @@ cc_library(
     deps = [
         ":op",
         "//entity:primitive",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )
 
@@ -32,8 +32,8 @@ cc_library(
         "//struct:alist",
         "//struct:keyed_list",
         "//struct:q",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//alloc/arena:intern",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
     ],
 )

@@ -16,6 +16,6 @@ cc_library(
     srcs = ["file.c"],
     hdrs = ["file.h"],
     deps = [
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )

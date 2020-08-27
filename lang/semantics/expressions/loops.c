@@ -133,10 +133,6 @@ ImplProduce(for_statement, Tape *tape) {
       pset_int(&ins->val, body_ins - i - 1);
     }
   }
-
-  DEBUGF("body_ins=%d, condition_ins=%d, inc_ins=%d", body_ins, condition_ins,
-         inc_ins);
-
   num_ins +=
       body_ins + inc_ins +
       tape_ins_int(tape, IFN, body_ins + inc_ins + 1, for_statement->for_token);

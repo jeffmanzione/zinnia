@@ -9,7 +9,9 @@
 #include "alloc/arena/arena.h"
 #include "alloc/memory_graph/memory_graph.h"
 #include "debug/debug.h"
+#include "entity/array/array.h"
 #include "entity/object.h"
+#include "entity/tuple/tuple.h"
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 
@@ -24,6 +26,7 @@ void _object_delete(Object *object, Heap *heap);
 Heap *heap_create(HeapConf *config) {
   ASSERT(NOT_NULL(config));
   Heap *heap = ALLOC2(Heap);
+  config->mgraph_config.ctx = heap;
   heap->mg = mgraph_create(&config->mgraph_config);
   __arena_init(&heap->object_arena, sizeof(Object), "Object");
   return heap;
@@ -39,8 +42,8 @@ void heap_delete(Heap *heap) {
 Object *heap_new(Heap *heap, const Class *class) {
   ASSERT(NOT_NULL(heap), NOT_NULL(class));
   Object *object = _object_create(heap, class);
-  object->_node_ref =
-      mgraph_insert(heap->mg, object, (Deleter)_object_delete);  // Blessed
+  // Blessed
+  object->_node_ref = mgraph_insert(heap->mg, object, (Deleter)_object_delete);
   return object;
 }
 
@@ -97,4 +100,27 @@ void _object_delete(Object *object, Heap *heap) {
   }
   keyedlist_finalize(&object->_members);
   __arena_dealloc(&heap->object_arena, object);
+}
+
+void array_add(Heap *heap, Object *array, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
+  Entity *e = Array_add_last((Array *)array->_internal_obj);
+  *e = *child;
+  if (OBJECT != child->type) {
+    return;
+  }
+  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+}
+
+// Does this need to handle overwrites?
+void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
+  ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
+  // bless
+  Entity *e = (Entity *)tuple_get((Tuple *)array->_internal_obj, index);
+  *e = *child;
+  if (OBJECT != child->type) {
+    return;
+  }
+  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
