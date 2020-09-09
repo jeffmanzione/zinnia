@@ -41,6 +41,7 @@ cc_library(
         "//entity/function",
         "//entity/module",
         "//entity/native:builtin",
+        "//entity/native:io",
         "//lang/lexer:file_info",
         "//lang/parser",
         "//lang/semantics",

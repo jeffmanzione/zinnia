@@ -51,17 +51,17 @@ inline Entity entity_primitive(Primitive p) {
 
 void _primitive_print(const Primitive *p, FILE *file) {
   switch (p->_type) {
-    case CHAR:
-      fprintf(file, "%c", (char)p->_char_val);
-      break;
-    case INT:
-      fprintf(file, "%d", p->_int_val);
-      break;
-    case FLOAT:
-      fprintf(file, "%f", p->_float_val);
-      break;
-    default:
-      ERROR("Unknwn primitive type.");
+  case CHAR:
+    fprintf(file, "%c", (char)p->_char_val);
+    break;
+  case INT:
+    fprintf(file, "%d", p->_int_val);
+    break;
+  case FLOAT:
+    fprintf(file, "%f", p->_float_val);
+    break;
+  default:
+    ERROR("Unknwn primitive type.");
   }
 }
 
@@ -77,17 +77,17 @@ void _object_print(const Object *obj, FILE *file) {
 void entity_print(const Entity *e, FILE *file) {
   ASSERT(NOT_NULL(e), NOT_NULL(file));
   switch (e->type) {
-    case NONE:
-      fprintf(file, "None");
-      break;
-    case PRIMITIVE:
-      _primitive_print(&e->pri, file);
-      break;
-    case OBJECT:
-      _object_print(e->obj, file);
-      break;
-    default:
-      ERROR("Unknown entity type.");
+  case NONE:
+    fprintf(file, "None");
+    break;
+  case PRIMITIVE:
+    _primitive_print(&e->pri, file);
+    break;
+  case OBJECT:
+    _object_print(e->obj, file);
+    break;
+  default:
+    ERROR("Unknown entity type: %d", e->type);
   }
 }
 

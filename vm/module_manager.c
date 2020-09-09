@@ -10,6 +10,7 @@
 #include "entity/function/function.h"
 #include "entity/module/module.h"
 #include "entity/native/builtin.h"
+#include "entity/native/io.h"
 #include "entity/object.h"
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
@@ -17,6 +18,7 @@
 #include "vm/intern.h"
 
 Module *Module_builtin;
+Module *Module_io;
 
 typedef struct {
   Module module;
@@ -46,10 +48,15 @@ void modulemanager_finalize(ModuleManager *mm) {
 }
 
 void _read_builtin(ModuleManager *mm, Heap *heap) {
+  // builtin.jl
   Module_builtin = _read_helper(mm, "lib/builtin.jl");
   builtin_classes(heap, Module_builtin);
   builtin_add_native(Module_builtin);
   _add_reflection_to_module(mm, Module_builtin);
+  // io.jl
+  Module_io = _read_helper(mm, "lib/io.jl");
+  io_add_native(Module_io);
+  _add_reflection_to_module(mm, Module_io);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -110,6 +117,7 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
 void _add_reflection_to_module(ModuleManager *mm, Module *module) {
   ASSERT(NOT_NULL(mm), NOT_NULL(module));
   module->_reflection = heap_new(mm->_heap, Class_Module);
+  module->_reflection->_module_obj = module;
   KL_iter funcs = module_functions(module);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
@@ -140,4 +148,12 @@ Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   Module *module = _read_helper(mm, fn);
   _add_reflection_to_module(mm, module);
   return module;
+}
+
+Module *modulemanager_lookup(ModuleManager *mm, const char fn[]) {
+  ModuleInfo *mi = keyedlist_lookup(&mm->_modules, fn);
+  if (NULL == mi) {
+    return NULL;
+  }
+  return &mi->module;
 }

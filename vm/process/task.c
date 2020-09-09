@@ -70,6 +70,7 @@ Context *task_back_context(Task *task) {
 }
 
 inline Entity task_popstack(Task *task) {
+  ASSERT(alist_len(&task->entity_stack) > 0);
   Entity e = *task_peekstack(task);
   task_dropstack(task);
   return e;

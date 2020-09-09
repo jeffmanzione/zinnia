@@ -63,6 +63,7 @@ struct _Module {
   const Tape *_tape;
   KeyedList _classes;
   KeyedList _functions;
+  bool _is_initialized;
 };
 
 struct _Function {
@@ -70,11 +71,12 @@ struct _Function {
 
   const char *_name;
   const Module *_module;
+  const Class *_parent_class;
 
   bool _is_native;
   union {
     uint32_t _ins_pos;
-    void *_native_fn;  // NativeFn
+    void *_native_fn; // NativeFn
   };
 };
 

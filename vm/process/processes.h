@@ -64,7 +64,7 @@ struct __Process {
 
   __Arena task_arena;
 
-  Task *current_task;
+  // Task *current_task;
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;

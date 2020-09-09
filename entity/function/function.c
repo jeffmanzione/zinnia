@@ -21,6 +21,7 @@ inline void function_init(Function *f, const char name[], const Module *module,
   ASSERT(NOT_NULL(f), NOT_NULL(name));
   f->_name = name;
   f->_module = module;
+  f->_parent_class = NULL;
   f->_ins_pos = ins_pos;
   f->_is_native = false;
   f->_reflection = NULL;

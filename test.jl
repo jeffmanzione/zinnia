@@ -1,5 +1,7 @@
 module test
 
+import io
+
 def test(x) {
   if x == 1 {
     return 1
@@ -29,12 +31,15 @@ for i=5, i>0, i=i-1 {
 
 t = Test()
 
-t.method1(x)[0](x)
+
+io.println(t.method1(x)[0](x))
 
 a = [1, 2, 3, 4, 5]
 
 z = 'Hello, world!'
 
-a[0]
-
-cat(a, 5, None)
+s = str(a)
+io.println(s)
+io.println(a[1])
+io.println(z)
+io.println(cat(a, 5, None))

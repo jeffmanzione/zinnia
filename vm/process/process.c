@@ -47,6 +47,6 @@ Task *process_create_task(Process *process) {
   Task *task = (Task *)__arena_alloc(&process->task_arena);
   task_init(task);
   task->parent_process = process;
-  Q_enqueue(&process->queued_tasks, task);
+  *Q_add_last(&process->queued_tasks) = task;
   return task;
 }

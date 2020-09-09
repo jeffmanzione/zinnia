@@ -117,7 +117,7 @@ void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
   ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
   // bless
-  Entity *e = (Entity *)tuple_get((Tuple *)array->_internal_obj, index);
+  Entity *e = tuple_get_mutable((Tuple *)array->_internal_obj, index);
   *e = *child;
   if (OBJECT != child->type) {
     return;
