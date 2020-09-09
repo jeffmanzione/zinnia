@@ -14,7 +14,6 @@
 void __keyedlist_init(KeyedList *klist, const char type_name[], size_t type_sz,
                       size_t table_sz) {
   ASSERT(NOT_NULL(klist));
-  ASSERT(NOT_NULL(klist));
   __alist_init(&klist->_list, ALLOC_ARRAY_SZ(type_name, type_sz, table_sz),
                type_sz, table_sz);
   map_init_default(&klist->_map);

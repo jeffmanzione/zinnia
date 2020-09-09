@@ -716,7 +716,7 @@ ImplPopulate(conditional_expression, const SyntaxTree *stree) {
 
 void delete_if_else(IfElse *if_else) {
   int i;
-  for (i = 0; alist_len(if_else->conditions); ++i) {
+  for (i = 0; i < alist_len(if_else->conditions); ++i) {
     Conditional *cond = (Conditional *)alist_get(if_else->conditions, i);
     delete_expression(cond->condition);
     delete_expression(cond->body);

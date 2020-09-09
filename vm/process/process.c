@@ -22,16 +22,31 @@ void process_init(Process *process) {
 
 void process_finalize(Process *process) {
   heap_delete(process->heap);
-  __arena_finalize(&process->task_arena);
+
+  Q_iter q_iter = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&q_iter); Q_inc(&q_iter)) {
+    task_finalize((Task *)Q_value(&q_iter));
+  }
   Q_finalize(&process->queued_tasks);
+
+  M_iter m_iter = set_iter(&process->waiting_tasks);
+  for (; has(&m_iter); inc(&m_iter)) {
+    task_finalize((Task *)value(&m_iter));
+  }
   set_finalize(&process->waiting_tasks);
+
+  m_iter = set_iter(&process->completed_tasks);
+  for (; has(&m_iter); inc(&m_iter)) {
+    task_finalize((Task *)value(&m_iter));
+  }
   set_finalize(&process->completed_tasks);
+  __arena_finalize(&process->task_arena);
 }
 
 Task *process_create_task(Process *process) {
   Task *task = (Task *)__arena_alloc(&process->task_arena);
   task_init(task);
   task->parent_process = process;
-  Q_enqueue(&process->queued_tasks, task);
+  *Q_add_last(&process->queued_tasks) = task;
   return task;
 }

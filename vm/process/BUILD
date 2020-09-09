@@ -14,6 +14,8 @@ cc_library(
         "//entity/module",
         "//program:instruction",
         "//program:tape",
+        "//vm:intern",
+        "//vm:module_manager",
     ],
 )
 
@@ -24,8 +26,8 @@ cc_library(
     deps = [
         ":processes",
         ":task",
-        "@memory-wrapper//alloc/arena",
-        "@memory-wrapper//struct:struct_defaults",
+        "@memory_wrapper//alloc/arena",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 
@@ -38,7 +40,7 @@ cc_library(
         "//heap",
         "//program:tape",
         "//struct:alist",
-        "@memory-wrapper//struct:set",
+        "@memory_wrapper//struct:set",
     ],
 )
 
@@ -51,6 +53,6 @@ cc_library(
         ":processes",
         "//entity/class:classes",
         "//struct:alist",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )

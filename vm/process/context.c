@@ -7,13 +7,15 @@
 
 #include "entity/object.h"
 #include "program/tape.h"
+#include "vm/intern.h"
+#include "vm/module_manager.h"
 #include "vm/process/processes.h"
 
 Heap *_context_heap(Context *ctx);
 
 void context_init(Context *ctx, Object *self, Object *member_obj,
                   Module *module, uint32_t instruction_pos) {
-  ctx->self = self;
+  ctx->self = entity_object(self);
   ctx->member_obj = member_obj;
   ctx->module = module;
   ctx->tape = module->_tape;
@@ -33,7 +35,7 @@ inline Heap *_context_heap(Context *ctx) {
 
 inline Object *context_self(Context *ctx) {
   ASSERT(NOT_NULL(ctx));
-  return ctx->self;
+  return ctx->self.obj;
 }
 
 inline Module *context_module(Context *ctx) {
@@ -43,6 +45,9 @@ inline Module *context_module(Context *ctx) {
 
 Entity *context_lookup(Context *ctx, const char id[]) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id));
+  if (SELF == id) {
+    return &ctx->self;
+  }
   Entity *member = object_get(ctx->member_obj, id);
   if (NULL != member) {
     return member;
@@ -61,9 +66,30 @@ Entity *context_lookup(Context *ctx, const char id[]) {
       return member;
     }
   }
-  member = object_get(ctx->self, id);
+  member = object_get(ctx->self.obj, id);
   if (NULL != member) {
     return member;
+  }
+  member = object_get(ctx->module->_reflection, id);
+  if (NULL != member) {
+    return member;
+  }
+
+  Object *obj = module_lookup(ctx->module, id);
+  if (NULL != obj) {
+    return object_set_member_obj(_context_heap(ctx), ctx->module->_reflection,
+                                 id, obj);
+  }
+
+  member = object_get(Module_builtin->_reflection, id);
+  if (NULL != member) {
+    return member;
+  }
+
+  obj = module_lookup(Module_builtin, id);
+  if (NULL != obj) {
+    return object_set_member_obj(_context_heap(ctx),
+                                 Module_builtin->_reflection, id, obj);
   }
   return NULL;
 }
@@ -75,8 +101,8 @@ void context_let(Context *ctx, const char id[], const Entity *e) {
 
 void context_set(Context *ctx, const char id[], const Entity *e) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id), NOT_NULL(e));
-  Entity *member = object_get(ctx->member_obj, id);
-  if (NULL != member) {
+  Entity *member;
+  if (NULL != object_get(ctx->member_obj, id)) {
     object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
     return;
   }
@@ -95,11 +121,10 @@ void context_set(Context *ctx, const char id[], const Entity *e) {
                         parent_context->member_obj, id, e);
       return;
     }
-    member = object_get(ctx->self, id);
-    if (NULL != member) {
-      object_set_member(_context_heap(parent_context), ctx->self, id, e);
-      return;
-    }
+  }
+  if (NULL != object_get(ctx->self.obj, id)) {
+    object_set_member(_context_heap(ctx), ctx->self.obj, id, e);
+    return;
   }
   object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
 }

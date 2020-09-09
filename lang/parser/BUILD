@@ -14,9 +14,9 @@ cc_library(
         "//lang/lexer:file_info",
         "//lang/lexer:token",
         "//struct:q",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//debug",
-        "@memory-wrapper//struct:map",
-        "@memory-wrapper//struct:struct_defaults",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//debug",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )

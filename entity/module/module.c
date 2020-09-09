@@ -11,8 +11,9 @@ void module_init(Module *module, const char name[], Tape *tape) {
   module->_name = name;
   module->_tape = tape;
   module->_reflection = NULL;
-  keyedlist_init(&module->_classes, Class, DEFAULT_ARRAY_SZ);
-  keyedlist_init(&module->_functions, Function, DEFAULT_ARRAY_SZ);
+  module->_is_initialized = false;
+  keyedlist_init(&module->_classes, Class, 16);
+  keyedlist_init(&module->_functions, Function, 16);
 }
 
 void module_finalize(Module *module) {
@@ -29,7 +30,7 @@ void module_finalize(Module *module) {
   }
   keyedlist_finalize(&module->_functions);
   if (module->_tape != NULL) {
-    tape_delete((Tape *)module->_tape);  // Bless
+    tape_delete((Tape *)module->_tape); // Bless
   }
 }
 
@@ -46,28 +47,35 @@ Function *module_add_function(Module *module, const char name[],
   Function *old =
       (Function *)keyedlist_insert(&module->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR(
-        "Adding function %s to module %s that already has a function by this "
-        "name.",
-        name, module->_name);
+    ERROR("Adding function %s to module %s that already has a function by this "
+          "name.",
+          name, module->_name);
   }
   function_init(f, name, module, ins_pos);
   return f;
 }
 
-Class *module_add_class(Module *module, const char name[]) {
+Class *module_add_class(Module *module, const char name[], const Class *super) {
   ASSERT(NOT_NULL(module), NOT_NULL(name));
   Class *c;
   Class *old = (Class *)keyedlist_insert(&module->_classes, name, (void **)&c);
   if (NULL != old) {
-    // ERROR(
-    //     "Adding class %s to module %s that already has a function by this "
-    //     "name.",
-    //     name, module->_name);
     return old;
   }
-  class_init(c, name, NULL, module);
+  class_init(c, name, super, module);
   return c;
+}
+
+Object *module_lookup(Module *module, const char name[]) {
+  Class *class = keyedlist_lookup(&module->_classes, name);
+  if (NULL != class && NULL != class->_reflection) {
+    return class->_reflection;
+  }
+  Function *func = keyedlist_lookup(&module->_functions, name);
+  if (NULL != func && NULL != func->_reflection) {
+    return func->_reflection;
+  }
+  return NULL;
 }
 
 inline KL_iter module_functions(Module *module) {

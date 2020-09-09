@@ -11,7 +11,7 @@ cc_library(
     deps = [
         ":object",
         ":primitive",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )
 
@@ -20,10 +20,12 @@ cc_library(
     srcs = ["object.c"],
     hdrs = ["object.h"],
     deps = [
+        "//lang/lexer:token",
         "//program:tape",
+        "//struct:alist",
         "//struct:keyed_list",
-        "@memory-wrapper//alloc/memory_graph",
-        "@memory-wrapper//struct:map",
+        "@memory_wrapper//alloc/memory_graph",
+        "@memory_wrapper//struct:map",
     ],
 )
 
@@ -32,6 +34,6 @@ cc_library(
     srcs = ["primitive.c"],
     hdrs = ["primitive.h"],
     deps = [
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )

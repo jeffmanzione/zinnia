@@ -9,7 +9,7 @@ cc_library(
     srcs = ["intern.c"],
     hdrs = ["intern.h"],
     deps = [
-        "@memory-wrapper//alloc/arena:intern",
+        "@memory_wrapper//alloc/arena:intern",
     ],
 )
 
@@ -19,6 +19,11 @@ cc_library(
     hdrs = ["virtual_machine.h"],
     deps = [
         ":module_manager",
+        "//entity:object",
+        "//entity/array",
+        "//entity/native",
+        "//entity/string",
+        "//entity/tuple",
         "//vm/process",
         "//vm/process:context",
         "//vm/process:processes",
@@ -35,6 +40,8 @@ cc_library(
         "//entity/class:classes",
         "//entity/function",
         "//entity/module",
+        "//entity/native:builtin",
+        "//entity/native:io",
         "//lang/lexer:file_info",
         "//lang/parser",
         "//lang/semantics",

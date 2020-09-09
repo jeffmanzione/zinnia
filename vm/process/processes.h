@@ -24,7 +24,7 @@ typedef struct {
   Object *member_obj;
 
   bool is_function;
-  Object *self;
+  Entity self;
   Module *module;
   const Tape *tape;
   uint32_t ins;
@@ -64,7 +64,7 @@ struct __Process {
 
   __Arena task_arena;
 
-  Task *current_task;
+  // Task *current_task;
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;

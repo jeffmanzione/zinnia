@@ -91,6 +91,4 @@ inline void *al_value(AL_iter *iter) {
 
 inline void al_inc(AL_iter *iter) { ++iter->_i; }
 
-inline bool al_has(AL_iter *iter) {
-  return (iter->_i + 1) < alist_len(iter->_list);
-}
+inline bool al_has(AL_iter *iter) { return iter->_i < alist_len(iter->_list); }

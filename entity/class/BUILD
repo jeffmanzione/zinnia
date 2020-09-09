@@ -12,7 +12,7 @@ cc_library(
         "//entity:object",
         "//entity/function",
         "//struct:keyed_list",
-        "@memory-wrapper//alloc",
+        "@memory_wrapper//alloc",
     ],
 )
 
@@ -22,11 +22,14 @@ cc_library(
     hdrs = ["classes.h"],
     deps = [
         "//entity:object",
+        "//entity/array",
         "//entity/class",
         "//entity/function",
         "//entity/module",
+        "//entity/string",
+        "//entity/tuple",
         "//heap",
         "//vm:intern",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//debug",
     ],
 )

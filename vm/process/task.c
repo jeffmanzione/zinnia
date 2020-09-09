@@ -35,6 +35,10 @@ void task_init(Task *task) {
 }
 
 void task_finalize(Task *task) {
+  AL_iter iter = alist_iter(&task->context_stack);
+  for (; al_has(&iter); al_inc(&iter)) {
+    context_finalize((Context *)al_value(&iter));
+  }
   alist_finalize(&task->context_stack);
   alist_finalize(&task->entity_stack);
 }
@@ -52,17 +56,21 @@ Context *task_create_context(Task *task, Object *self, Module *module,
 Context *task_back_context(Task *task) {
   Context *last = (Context *)alist_get(&task->context_stack,
                                        alist_len(&task->context_stack) - 1);
+  uint32_t ins = last->ins;
   context_finalize(last);
   alist_remove_last(&task->context_stack);
   // This was the last context.
   if (0 == alist_len(&task->context_stack)) {
     return NULL;
   }
-  return (Context *)alist_get(&task->context_stack,
-                              alist_len(&task->context_stack) - 1);
+  Context *cur = (Context *)alist_get(&task->context_stack,
+                                      alist_len(&task->context_stack) - 1);
+  cur->ins = ins;
+  return cur;
 }
 
 inline Entity task_popstack(Task *task) {
+  ASSERT(alist_len(&task->entity_stack) > 0);
   Entity e = *task_peekstack(task);
   task_dropstack(task);
   return e;

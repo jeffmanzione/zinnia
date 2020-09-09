@@ -9,9 +9,9 @@ cc_library(
     srcs = ["alist.c"],
     hdrs = ["alist.h"],
     deps = [
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//debug",
-        "@memory-wrapper//util",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//debug",
+        "@memory_wrapper//util",
     ],
 )
 
@@ -21,10 +21,10 @@ cc_library(
     hdrs = ["keyed_list.h"],
     deps = [
         ":alist",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//debug",
-        "@memory-wrapper//struct:map",
-        "@memory-wrapper//struct:struct_defaults",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//debug",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 
@@ -32,8 +32,8 @@ cc_library(
     name = "arraylike",
     hdrs = ["arraylike.h"],
     deps = [
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//debug",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//debug",
     ],
 )
 

@@ -11,10 +11,12 @@ cc_library(
     deps = [
         "//entity",
         "//entity:object",
+        "//entity/array",
+        "//entity/tuple",
         "//struct:alist",
         "//struct:keyed_list",
-        "@memory-wrapper//alloc",
-        "@memory-wrapper//alloc/arena",
-        "@memory-wrapper//alloc/memory_graph",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//alloc/arena",
+        "@memory_wrapper//alloc/memory_graph",
     ],
 )
