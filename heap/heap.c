@@ -112,6 +112,22 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
+void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
+  // ASSERT(index >= 0, index < Array_size((Array *)array->_internal_obj));
+  // bless
+  DEBUGF("index=%d", index);
+  Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
+  if (NULL != e && OBJECT == e->type) {
+    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
+  }
+  *e = *child;
+  if (OBJECT != child->type) {
+    return;
+  }
+  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+}
+
 // Does this need to handle overwrites?
 void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));

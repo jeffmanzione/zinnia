@@ -33,6 +33,7 @@ struct _VM {
   Process *main;
 };
 
+void _raise_error(VM *vm, Task *task, Context *context, const char fmt[], ...);
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
@@ -61,6 +62,8 @@ void _execute_NOT(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_ANEW(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_AIDX(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+void _execute_ASET(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_TUPL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
@@ -139,11 +142,15 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_NO_ARG:                                                   \
       second = task_popstack(task);                                            \
       if (PRIMITIVE != second.type) {                                          \
-        ERROR("RHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       first = task_popstack(task);                                             \
       if (PRIMITIVE != first.type) {                                           \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) =                                             \
           entity_primitive(_execute_primitive_##op(&first.pri, &second.pri));  \
@@ -151,11 +158,15 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_ID:                                                       \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id);                               \
       if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
-        ERROR("RHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) = entity_primitive(                           \
           _execute_primitive_##op(&resval->pri, &lookup->pri));                \
@@ -163,12 +174,14 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_PRIMITIVE:                                                \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) =                                             \
           entity_primitive(_execute_primitive_##op(&resval->pri, &ins->val));  \
     default:                                                                   \
-      ERROR("Invalid arg type=%d for RES.", ins->type);                        \
+      ERROR("Invalid arg type=%d for " #op ".", ins->type);                    \
     }                                                                          \
   }
 
@@ -183,11 +196,15 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_NO_ARG:                                                   \
       second = task_popstack(task);                                            \
       if (PRIMITIVE != second.type) {                                          \
-        ERROR("RHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       first = task_popstack(task);                                             \
       if (PRIMITIVE != first.type) {                                           \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&first.pri, &second.pri);               \
       *task_mutable_resval(task) =                                             \
@@ -196,11 +213,15 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_ID:                                                       \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id);                               \
       if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
-        ERROR("RHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &lookup->pri);            \
       *task_mutable_resval(task) =                                             \
@@ -209,13 +230,15 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_PRIMITIVE:                                                \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        ERROR("LHS must be primitive.");                                       \
+        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
+                     #op);                                                     \
+        return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &ins->val);               \
       *task_mutable_resval(task) =                                             \
           _int_of(&result) == 0 ? NONE_ENTITY : entity_primitive(result);      \
     default:                                                                   \
-      ERROR("Invalid arg type=%d for RES.", ins->type);                        \
+      ERROR("Invalid arg type=%d for " #op ".", ins->type);                    \
     }                                                                          \
   }
 
@@ -309,11 +332,13 @@ void _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_NO_ARG:
     second = task_popstack(task);
     if (PRIMITIVE != second.type) {
-      ERROR("RHS must be primitive.");
+      _raise_error(vm, task, context, "RHS for op 'EQ' must be primitive.");
+      return;
     }
     first = task_popstack(task);
     if (PRIMITIVE != first.type) {
-      ERROR("LHS must be primitive.");
+      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      return;
     }
     result = _execute_primitive_EQ(&first.pri, &second.pri);
     *task_mutable_resval(task) =
@@ -325,11 +350,13 @@ void _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_ID:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      ERROR("LHS must be primitive.");
+      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      return;
     }
     lookup = context_lookup(context, ins->id);
     if (NULL != lookup && PRIMITIVE != lookup->type) {
-      ERROR("RHS must be primitive.");
+      _raise_error(vm, task, context, "RHS for op 'EQ' must be primitive.");
+      return;
     }
     result = _execute_primitive_EQ(&first.pri, &lookup->pri);
     *task_mutable_resval(task) =
@@ -341,7 +368,8 @@ void _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_PRIMITIVE:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      ERROR("LHS must be primitive.");
+      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      return;
     }
     result = _execute_primitive_EQ(&resval->pri, &ins->val);
     *task_mutable_resval(task) =
@@ -438,7 +466,8 @@ inline void _execute_FLD(VM *vm, Task *task, Context *context,
   }
   const Entity *resval = task_get_resval(task);
   if (NULL == resval || OBJECT != resval->type) {
-    _raise_error(vm, task, context, "Attempted to get '%s' on non-object.",
+    _raise_error(vm, task, context,
+                 "Attempted to set field '%s' on something not an object.",
                  ins->id);
     return;
   }
@@ -530,8 +559,9 @@ bool _call_method(Task *task, Object *obj, Context *context,
       break;
     }
     if (NULL == class->_super) {
-      ERROR("Method does not exist.");
-      return true;
+      _raise_error(task->parent_process->vm, task, context,
+                   "Failed to find method '%s' on %s", ins->id, class->_name);
+      return false;
     }
     class = class->_super;
   }
@@ -567,8 +597,9 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     fn = task_popstack(task);
   }
   if (fn.type != OBJECT) {
-    // TODO: This should be a recoverable error.
-    ERROR("Invalid fn type=%d for CALL.", fn.type);
+    _raise_error(vm, task, context,
+                 "Attempted to call something not a function.");
+    return false;
   }
   if (fn.obj->_class == Class_Class) {
     Class *class = fn.obj->_class_obj;
@@ -592,8 +623,9 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
                                function_ref_get_object(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
-    // TODO: This should be a recoverable error.
-    ERROR("Invalid fn class type=%d for CALL.", fn.type);
+    _raise_error(vm, task, context,
+                 "Attempted to call something not a function.");
+    return false;
   }
   Function *func = fn.obj->_function_obj;
   if (CLLN == ins->op) {
@@ -715,7 +747,8 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
 
   Entity arr_entity = task_popstack(task);
   if (OBJECT != arr_entity.type) {
-    ERROR("Invalid array index on non-indexable.");
+    _raise_error(vm, task, context, "Invalid array index on non-indexable.");
+    return;
   }
   arr_obj = arr_entity.obj;
   switch (ins->type) {
@@ -723,7 +756,8 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
     tmp = task_get_resval(task);
     if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
         pint(&tmp->pri) < 0) {
-      ERROR("Invalid array index.");
+      _raise_error(vm, task, context, "Invalid array index.");
+      return;
     }
     index = pint(&tmp->pri);
     break;
@@ -731,12 +765,14 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
     tmp = context_lookup(context, ins->id);
     if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
         pint(&tmp->pri) < 0) {
-      ERROR("Invalid array index.");
+      _raise_error(vm, task, context, "Invalid array index.");
+      return;
     }
     break;
   case INSTRUCTION_PRIMITIVE:
     if (INT != ptype(&ins->val) || pint(&ins->val) < 0) {
-      ERROR("Invalid array index.");
+      _raise_error(vm, task, context, "Invalid array index.");
+      return;
     }
     index = pint(&ins->val);
     break;
@@ -746,7 +782,8 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
   if (Class_Array == arr_obj->_class) {
     Array *arr = (Array *)arr_obj->_internal_obj;
     if (index >= Array_size(arr)) {
-      ERROR("Invalid array index.");
+      _raise_error(vm, task, context, "Invalid array index.");
+      return;
     }
     *task_mutable_resval(task) = *Array_get_ref(arr, index);
     return;
@@ -754,12 +791,31 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
   if (Class_Tuple == arr_obj->_class) {
     Tuple *tuple = (Tuple *)arr_obj->_internal_obj;
     if (index >= tuple_size(tuple)) {
-      ERROR("Invalid array index.");
+      _raise_error(vm, task, context, "Invalid array index.");
+      return;
     }
     *task_mutable_resval(task) = *tuple_get(tuple, index);
     return;
   }
-  ERROR("Invalid array index on non-indexable.");
+  _raise_error(vm, task, context, "Invalid array index on non-indexable.");
+  return;
+}
+
+void _execute_ASET(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  Entity arr_entity = task_popstack(task);
+  Entity new_val = task_popstack(task);
+  const Entity *index = task_get_resval(task);
+  if (OBJECT != arr_entity.type || Class_Array != arr_entity.obj->_class) {
+    _raise_error(vm, task, context, "Cannot set index value on non-indexable.");
+    return;
+  }
+  if (NULL == index || PRIMITIVE != index->type || INT != ptype(&index->pri)) {
+    _raise_error(vm, task, context, "Cannot index with non-int.");
+    return;
+  }
+  array_set(task->parent_process->heap, arr_entity.obj, pint(&index->pri),
+            &new_val);
 }
 
 void _execute_TUPL(VM *vm, Task *task, Context *context,
@@ -800,7 +856,8 @@ void _execute_TLEN(VM *vm, Task *task, Context *context,
 void _execute_TGTE(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    ERROR("Invalid TLEN type.");
+    _raise_error(vm, task, context, "Invalid TLEN type.");
+    return;
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
@@ -816,7 +873,8 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
 void _execute_TGET(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    ERROR("Invalid TLEN type.");
+    _raise_error(vm, task, context, "Invalid TGET type.");
+    return;
   }
   int32_t index = pint(&ins->val);
   const Entity *e = task_get_resval(task);
@@ -825,12 +883,16 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
       return;
     }
     *task_mutable_resval(task) = entity_int(-1);
-    ERROR("Attempted to index something not a tuple.");
+    _raise_error(vm, task, context,
+                 "Attempted to index something not a tuple.");
+    return;
   }
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   if (index < 0 || index >= tuple_size(t)) {
-    ERROR("Tuple Index out of bounds. Index=%d, Tuple.len=%d.", index,
-          tuple_size(t));
+    _raise_error(vm, task, context,
+                 "Tuple Index out of bounds. Index=%d, Tuple.len=%d.", index,
+                 tuple_size(t));
+    return;
   }
   *task_mutable_resval(task) = *tuple_get(t, index);
 }
@@ -854,7 +916,9 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
   Entity rhs = task_popstack(task);
   Entity lhs = task_popstack(task);
   if (OBJECT != rhs.type || Class_Class != rhs.obj->_class) {
-    ERROR("Cannot perform type-check against a non-object type.");
+    _raise_error(vm, task, context,
+                 "Cannot perform type-check against a non-object type.");
+    return;
   }
   if (lhs.type != OBJECT) {
     *task_mutable_resval(task) = NONE_ENTITY;
@@ -874,7 +938,8 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   }
   Module *module = modulemanager_lookup(&vm->mm, ins->id);
   if (NULL == module) {
-    ERROR("Module '%s' not found.", ins->id);
+    _raise_error(vm, task, context, "Module '%s' not found.", ins->id);
+    return false;
   }
   object_set_member_obj(task->parent_process->heap,
                         context->module->_reflection, ins->id,
@@ -1050,6 +1115,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       break;
     case AIDX:
       _execute_AIDX(vm, task, context, ins);
+      break;
+    case ASET:
+      _execute_ASET(vm, task, context, ins);
       break;
     case TUPL:
       _execute_TUPL(vm, task, context, ins);

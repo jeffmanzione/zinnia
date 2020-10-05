@@ -20,13 +20,13 @@ def cat(args) {
 
 class Object {
   method to_s() {
-    return cat(self.class().name(), '()')
+    return cat('Instance of ', self.class().name())
   }
 }
 
 class Class {
   method to_s() {
-    return 'Instance of Class'
+    return cat('class ', name())
   }
 }
 
@@ -62,6 +62,19 @@ class Array {
     result = '['
     result.extend(','.join(self))
     result.extend(']')
+    return result
+  }
+  method each(fn) {
+    for i=0, i<len(), i=i+1 {
+      fn(self[i])
+    }
+  }
+  method map(fn) {
+    result = []
+    result[len()-1] = None
+    for i=0, i<len(), i=i+1 {
+      result[i] = fn(self[i])
+    } 
     return result
   }
 }

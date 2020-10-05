@@ -60,3 +60,5 @@ try {
 } catch e {
   io.fprintln(io.ERROR, e)
 }
+
+io.println(Test(), a.map(x -> x*x))
