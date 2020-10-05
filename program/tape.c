@@ -82,10 +82,9 @@ inline void tape_start_func(Tape *tape, const char name[]) {
         (FunctionRef *)keyedlist_insert(&tape->func_refs, name, (void **)&ref);
   }
   if (NULL != old) {
-    ERROR(
-        "Attempting to add function %s, but a function by that name already "
-        "exists.",
-        name);
+    ERROR("Attempting to add function %s, but a function by that name already "
+          "exists.",
+          name);
   }
   ref->name = name;
   ref->index = alist_len(&tape->ins);
@@ -97,10 +96,9 @@ void tape_start_class(Tape *tape, const char name[]) {
   ClassRef *old =
       (ClassRef *)keyedlist_insert(&tape->class_refs, name, (void **)&ref);
   if (NULL != old) {
-    ERROR(
-        "Attempting to add class %s, but a function by that name already "
-        "exists.",
-        name);
+    ERROR("Attempting to add class %s, but a function by that name already "
+          "exists.",
+          name);
   }
   _classref_init(ref, name);
   ref->start_index = alist_len(&tape->ins);
@@ -134,11 +132,11 @@ inline size_t tape_size(const Tape *tape) {
 }
 
 inline KL_iter tape_classes(const Tape *tape) {
-  return keyedlist_iter((KeyedList *)&tape->class_refs);  // bless
+  return keyedlist_iter((KeyedList *)&tape->class_refs); // bless
 }
 
 inline KL_iter tape_functions(const Tape *tape) {
-  return keyedlist_iter((KeyedList *)&tape->func_refs);  // bless
+  return keyedlist_iter((KeyedList *)&tape->func_refs); // bless
 }
 
 inline const char *tape_module_name(const Tape *tape) {
@@ -163,6 +161,7 @@ void tape_write(const Tape *tape, FILE *file) {
   KL_iter cls_func_iter;
   bool in_class = false;
   int i;
+  DEBUGF("%p %d", file, alist_len(&tape->ins));
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
     if (kl_has(&cls_iter)) {
       ClassRef *class_ref = (ClassRef *)kl_value(&cls_iter);
@@ -267,20 +266,20 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
   sm->col = token->col;
 
   switch (token->type) {
-    case INTEGER:
-    case FLOATING:
-      ins->type = INSTRUCTION_PRIMITIVE;
-      ins->val = token_to_primitive(token);
-      break;
-    case STR:
-      ins->type = INSTRUCTION_STRING;
-      ins->str = token->text;
-      break;
-    case WORD:
-    default:
-      ins->type = INSTRUCTION_ID;
-      ins->id = token->text;
-      break;
+  case INTEGER:
+  case FLOATING:
+    ins->type = INSTRUCTION_PRIMITIVE;
+    ins->val = token_to_primitive(token);
+    break;
+  case STR:
+    ins->type = INSTRUCTION_STRING;
+    ins->str = token->text;
+    break;
+  case WORD:
+  default:
+    ins->type = INSTRUCTION_ID;
+    ins->id = token->text;
+    break;
   }
   return 1;
 }

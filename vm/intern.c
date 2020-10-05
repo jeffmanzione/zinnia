@@ -69,6 +69,7 @@ char *ROOT;
 char *SAVED_BLOCKS;
 char *SELF;
 char *STACK;
+char *STACKLINE_NAME;
 char *STACK_SIZE_NAME;
 char *STRING_NAME;
 char *THREADS_KEY;
@@ -139,6 +140,7 @@ void _strings_insert_constants() {
   SAVED_BLOCKS = intern("$saved_blocks");
   SELF = intern("self");
   STACK = intern("$stack");
+  STACKLINE_NAME = intern("StackLine");
   STACK_SIZE_NAME = intern("$stack_size");
   STRING_NAME = intern("String");
   THREADS_KEY = intern("$threads");

@@ -5,11 +5,18 @@
 
 #include "vm/virtual_machine.h"
 
+#include <stdarg.h>
+
+#include "alloc/arena/intern.h"
 #include "entity/array/array.h"
 #include "entity/class/classes.h"
+#include "entity/module/modules.h"
+#include "entity/native/builtin.h"
+#include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
@@ -59,6 +66,8 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins);
 bool _execute_LMDL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
+bool _execute_CTCH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 
 bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2);
@@ -223,11 +232,29 @@ PRIMITIVE_OP(MOD, %, MATH_OP_INT(MOD, %));
 PRIMITIVE_OP(AND, &&, MATH_OP_INT(AND, &&));
 PRIMITIVE_OP(OR, ||, MATH_OP_INT(OR, ||));
 
+Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
+  const FileInfo *fi = modulemanager_get_fileinfo(
+      vm_module_manager(task->parent_process->vm), obj->_module_obj);
+  if (NULL == fi) {
+    return NONE_ENTITY;
+  }
+  return entity_object(string_new(task->parent_process->heap,
+                                  file_info_name(fi),
+                                  strlen(file_info_name(fi))));
+}
+
+void _add_filename_method() {
+  native_method(Class_Module, intern("filename"), _module_filename);
+}
+
 VM *vm_create() {
   VM *vm = ALLOC2(VM);
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
   vm->main = vm_create_process(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
+  // Have to put this here since there was no way else to get around the
+  // circular dependency.
+  _add_filename_method();
   return vm;
 }
 
@@ -246,10 +273,23 @@ void vm_delete(VM *vm) {
 Process *vm_create_process(VM *vm) {
   Process *process = alist_add(&vm->processes);
   process_init(process);
+  process->vm = vm;
   return process;
 }
 
 inline Process *vm_main_process(VM *vm) { return vm->main; }
+
+void _raise_error(VM *vm, Task *task, Context *context, const char fmt[], ...) {
+  va_list args;
+  va_start(args, fmt);
+  char buffer[1024];
+  int num_chars = vsprintf(buffer, fmt, args);
+  va_end(args);
+  Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
+  Object *err = error_new(task, context, error_msg);
+  context->error = err;
+  *task_mutable_resval(task) = entity_object(err);
+}
 
 inline bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2) {
   if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {
@@ -310,7 +350,7 @@ void _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
             ? NONE_ENTITY
             : (result == 0) ? entity_int(1) : entity_int(result);
   default:
-    ERROR("Invalid arg type=%d for RES.", ins->type);
+    ERROR("Invalid arg type=%d for EQ.", ins->type);
   }
 }
 
@@ -331,7 +371,7 @@ inline void _execute_RES(VM *vm, Task *task, Context *context,
     break;
   case INSTRUCTION_STRING:
     str = heap_new(task->parent_process->heap, Class_String);
-    // TODO: Maybe precomute the length of the string?
+    // TODO: Maybe precompute the length of the string?
     __string_init(str, ins->str + 1, strlen(ins->str) - 2);
     *task_mutable_resval(task) = entity_object(str);
     break;
@@ -398,7 +438,9 @@ inline void _execute_FLD(VM *vm, Task *task, Context *context,
   }
   const Entity *resval = task_get_resval(task);
   if (NULL == resval || OBJECT != resval->type) {
-    ERROR("Attempted to get '%s' on non-object.", ins->id);
+    _raise_error(vm, task, context, "Attempted to get '%s' on non-object.",
+                 ins->id);
+    return;
   }
   Entity obj = task_popstack(task);
   object_set_member(task->parent_process->heap, resval->obj, ins->id, &obj);
@@ -433,7 +475,8 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
-    ERROR("Attempting to field a non-object.");
+    _raise_error(vm, task, context, "Attempting to field a non-object.");
+    return;
   }
   const Entity *member = object_get(e->obj, ins->id);
   if (NULL == member) {
@@ -448,14 +491,16 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
 }
 
-void _execute_as_new_task(Task *task, Object *self, Module *m,
-                          uint32_t ins_pos) {
+Context *_execute_as_new_task(Task *task, Object *self, Module *m,
+                              uint32_t ins_pos) {
   Task *new_task = process_create_task(task->parent_process);
   new_task->dependent_task = task;
-  task_create_context(new_task, self, m, ins_pos);
+  Context *ctx = task_create_context(new_task, self, m, ins_pos);
   *task_mutable_resval(new_task) = *task_get_resval(task);
+  return ctx;
 }
 
+// VERY IMPORTANT: context is only necessary for native functions!
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self) {
   if (func->_is_native) {
@@ -467,7 +512,9 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
         native_fn(task, context, self, (Entity *)task_get_resval(task));
     return false;
   }
-  _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
+  Context *fn_ctx =
+      _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
+  context_set_function(fn_ctx, func);
   return true;
 }
 
@@ -602,7 +649,7 @@ inline Context *_execute_BBLK(VM *vm, Task *task, Context *context,
 inline void _execute_JMP(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
-    ERROR("Invalid arg type=%d for IF.", ins->type);
+    ERROR("Invalid arg type=%d for JMP.", ins->type);
   }
   context->ins += ins->val._int_val;
 }
@@ -664,7 +711,7 @@ void _execute_AIDX(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   Object *arr_obj;
   const Entity *tmp;
-  uint32_t index;
+  uint32_t index = 0;
 
   Entity arr_entity = task_popstack(task);
   if (OBJECT != arr_entity.type) {
@@ -843,13 +890,54 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   return true;
 }
 
+bool _execute_CTCH(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_PRIMITIVE != ins->type) {
+    ERROR("Invalid arg type=%d for CTCH.", ins->type);
+  }
+  context->catch_ins = context->ins + ins->val._int_val + 1;
+  return true;
+}
+
+bool _attemp_catch_error(Task *task, Context *ctx) {
+  // *task_mutable_resval(task) = entity_object(ctx->error);
+  while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)))
+    ;
+  // There was no try/catch block.
+  if (NULL == ctx) {
+    task->state = TASK_ERROR;
+    return false;
+  }
+  ctx->ins = ctx->catch_ins;
+  ctx->error = NULL;
+  ctx->catch_ins = -1;
+  return true;
+}
+
 // Please forgive me father, for I have sinned.
 TaskState vm_execute_task(VM *vm, Task *task) {
   task->state = TASK_RUNNING;
   task->wait_reason = NOT_WAITING;
+  // This only happens when an error bubbles up to the main task
+  if (0 == alist_len(&task->context_stack)) {
+    return TASK_COMPLETE;
+  }
   Context *context =
       alist_get(&task->context_stack, alist_len(&task->context_stack) - 1);
+
+  if (task->child_task_has_error) {
+    const Entity *error_e = task_get_resval(task);
+    ASSERT(NOT_NULL(error_e), OBJECT == error_e->type,
+           Class_Error == error_e->obj->_class);
+    context->error = error_e->obj;
+    task->child_task_has_error = false;
+  }
   for (;;) {
+    if (NULL != context->error) {
+      if (!_attemp_catch_error(task, context)) {
+        goto end_of_loop;
+      }
+    }
     const Instruction *ins = context_ins(context);
 #ifdef DEBUG
     instruction_write(ins, stdout);
@@ -975,6 +1063,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     case TGTE:
       _execute_TGTE(vm, task, context, ins);
       break;
+    case CTCH:
+      _execute_CTCH(vm, task, context, ins);
+      break;
     case LMDL:
       if (_execute_LMDL(vm, task, context, ins)) {
         task->state = TASK_WAITING;
@@ -1005,11 +1096,21 @@ void vm_run_process(VM *vm, Process *process) {
 #endif
     DEBUGF("TaskState=%s", task_state_str(task_state));
     switch (task_state) {
-    case TASK_ERROR:
-      ERROR("OH NO!");
-      break;
     case TASK_WAITING:
       set_insert(&process->waiting_tasks, task);
+      break;
+    case TASK_ERROR:
+      if (NULL == task->dependent_task) {
+        Object *errorln = module_lookup(Module_io, intern("errorln"));
+        ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
+        _call_function(task, (Context *)NULL, errorln->_function_obj);
+      } else {
+        task->dependent_task->child_task_has_error = true;
+        *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
+        set_insert(&process->completed_tasks, task);
+        Q_enqueue(&process->queued_tasks, task->dependent_task);
+        set_remove(&process->waiting_tasks, task->dependent_task);
+      }
       break;
     case TASK_COMPLETE:
       set_insert(&process->completed_tasks, task);

@@ -7,6 +7,7 @@
 #define ENTITY_NATIVE_BUILTIN_H_
 
 #include "entity/object.h"
+#include "heap/heap.h"
 
 void builtin_add_native(Module *builtin);
 

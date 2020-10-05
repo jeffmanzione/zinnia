@@ -16,3 +16,11 @@ cc_library(
         "//struct:keyed_list",
     ],
 )
+
+cc_library(
+    name = "modules",
+    hdrs = ["modules.h"],
+    deps = [
+        "//entity:object",
+    ],
+)

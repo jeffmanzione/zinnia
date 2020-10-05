@@ -26,4 +26,8 @@ Entity *task_pushstack(Task *task);
 const Entity *task_get_resval(Task *task);
 Entity *task_mutable_resval(Task *task);
 
+Context *task_get_context_for_index(Task *task, uint32_t index);
+Context *task_get_last_context(Task *task);
+uint32_t task_context_count(const Task *const task);
+
 #endif /* VM_PROCESS_TASK_H_ */

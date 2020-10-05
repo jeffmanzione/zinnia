@@ -68,6 +68,7 @@ extern char *ROOT;
 extern char *SAVED_BLOCKS;
 extern char *SELF;
 extern char *STACK;
+extern char *STACKLINE_NAME;
 extern char *STACK_SIZE_NAME;
 extern char *STRING_NAME;
 extern char *THREADS_KEY;

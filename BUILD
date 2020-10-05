@@ -5,6 +5,7 @@ cc_library(
     srcs = ["test.c"],
     data = [
         "lib/builtin.jl",
+        "lib/error.jl",
         "lib/io.jl",
         "test.jl",
     ],

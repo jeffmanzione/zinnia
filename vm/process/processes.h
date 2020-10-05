@@ -23,11 +23,15 @@ typedef struct {
 
   Object *member_obj;
 
-  bool is_function;
+  // bool is_function;
   Entity self;
   Module *module;
   const Tape *tape;
+  const Function *func;
   uint32_t ins;
+
+  Object *error;
+  int32_t catch_ins;
 } Context;
 
 typedef enum {
@@ -56,6 +60,7 @@ struct __Task {
   AList context_stack;
 
   Task *dependent_task;
+  bool child_task_has_error;
 };
 
 struct __Process {

@@ -20,8 +20,6 @@ typedef struct _Object Object;
 typedef struct _Class Class;
 typedef struct _Module Module;
 typedef struct _Function Function;
-typedef struct _StackLine StackLine;
-typedef struct _Error Error;
 
 typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
@@ -76,21 +74,8 @@ struct _Function {
   bool _is_native;
   union {
     uint32_t _ins_pos;
-    void *_native_fn; // NativeFn
+    void *_native_fn;  // NativeFn
   };
-};
-
-struct _StackLine {
-  Module *module;
-  Function *func;
-  Token *error_token;
-};
-
-struct _Error {
-  Object *_reflection;
-
-  char *msg;
-  AList stacktrace;
 };
 
 #endif /* ENTITY_OBJECT_H_ */

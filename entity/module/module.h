@@ -7,6 +7,7 @@
 void module_init(Module *module, const char name[], Tape *tape);
 void module_finalize(Module *module);
 const char *module_name(const Module *const module);
+const Tape *module_tape(const Module *const module);
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos);

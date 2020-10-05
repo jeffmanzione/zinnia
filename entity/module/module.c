@@ -38,7 +38,9 @@ inline const char *module_name(const Module *const module) {
   return module->_name;
 }
 
-inline const Tape *module_tape(Module *module) { return module->_tape; }
+inline const Tape *module_tape(const Module *const module) {
+  return module->_tape;
+}
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos) {

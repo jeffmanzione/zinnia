@@ -9,7 +9,9 @@
 #include "entity/class/classes.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
+#include "entity/module/modules.h"
 #include "entity/native/builtin.h"
+#include "entity/native/error.h"
 #include "entity/native/io.h"
 #include "entity/object.h"
 #include "lang/lexer/file_info.h"
@@ -17,8 +19,6 @@
 #include "lang/semantics/expression_tree.h"
 #include "vm/intern.h"
 
-Module *Module_builtin;
-Module *Module_io;
 
 typedef struct {
   Module module;
@@ -57,6 +57,10 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   Module_io = _read_helper(mm, "lib/io.jl");
   io_add_native(Module_io);
   _add_reflection_to_module(mm, Module_io);
+  // error.jl
+  Module_error = _read_helper(mm, "lib/error.jl");
+  error_add_native(Module_error);
+  _add_reflection_to_module(mm, Module_error);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -136,7 +140,6 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
   ExpressionTree *etree = populate_expression(&stree);
   Tape *tape = tape_create();
   produce_instructions(etree, tape);
-  // tape_write(tape, stdout);
   ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
   module_info->fi = fi;
   delete_expression(etree);
@@ -151,9 +154,20 @@ Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
 }
 
 Module *modulemanager_lookup(ModuleManager *mm, const char fn[]) {
-  ModuleInfo *mi = keyedlist_lookup(&mm->_modules, fn);
+  ModuleInfo *mi = (ModuleInfo *)keyedlist_lookup(&mm->_modules, fn);
   if (NULL == mi) {
     return NULL;
   }
   return &mi->module;
+}
+
+const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
+                                           const Module *m) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(m->_name));
+  const ModuleInfo *mi =
+      (ModuleInfo *)keyedlist_lookup((KeyedList *)&mm->_modules, m->_name);
+  if (NULL == mi) {
+    return NULL;
+  }
+  return mi->fi;
 }

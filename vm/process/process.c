@@ -25,7 +25,7 @@ void process_finalize(Process *process) {
 
   Q_iter q_iter = Q_iterator(&process->queued_tasks);
   for (; Q_has(&q_iter); Q_inc(&q_iter)) {
-    task_finalize((Task *)Q_value(&q_iter));
+    task_finalize(*(Task **)Q_value(&q_iter));
   }
   Q_finalize(&process->queued_tasks);
 
@@ -49,4 +49,8 @@ Task *process_create_task(Process *process) {
   task->parent_process = process;
   *Q_add_last(&process->queued_tasks) = task;
   return task;
+}
+
+inline Task *process_last_task(Process *process) {
+  return Q_get(&process->queued_tasks, Q_size(&process->queued_tasks) - 1);
 }

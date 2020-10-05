@@ -13,15 +13,11 @@
 #include "entity/object.h"
 #include "entity/primitive.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
+#include "lang/lexer/file_info.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
-
-Object *_string_new(Heap *heap, const char src[], size_t len) {
-  Object *str = heap_new(heap, Class_String);
-  __string_init(str, src, len);
-  return str;
-}
 
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args), PRIMITIVE == args->type);
@@ -42,7 +38,7 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   ASSERT(num_written > 0);
   return entity_object(
-      _string_new(task->parent_process->heap, buffer, num_written));
+      string_new(task->parent_process->heap, buffer, num_written));
 }
 
 Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -79,9 +75,9 @@ Entity _class_module(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _function_name(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_object(_string_new(task->parent_process->heap,
-                                   obj->_function_obj->_name,
-                                   strlen(obj->_function_obj->_name)));
+  return entity_object(string_new(task->parent_process->heap,
+                                  obj->_function_obj->_name,
+                                  strlen(obj->_function_obj->_name)));
 }
 
 Entity _function_module(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -101,21 +97,21 @@ Entity _function_parent_class(Task *task, Context *ctx, Object *obj,
 }
 
 Entity _class_name(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_object(_string_new(task->parent_process->heap,
-                                   obj->_class_obj->_name,
-                                   strlen(obj->_class_obj->_name)));
+  return entity_object(string_new(task->parent_process->heap,
+                                  obj->_class_obj->_name,
+                                  strlen(obj->_class_obj->_name)));
 }
 
 Entity _module_name(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_object(_string_new(task->parent_process->heap,
-                                   obj->_module_obj->_name,
-                                   strlen(obj->_module_obj->_name)));
+  return entity_object(string_new(task->parent_process->heap,
+                                  obj->_module_obj->_name,
+                                  strlen(obj->_module_obj->_name)));
 }
 
 Entity _function_ref_name(Task *task, Context *ctx, Object *obj, Entity *args) {
   const char *name = function_ref_get_func(obj)->_name;
   return entity_object(
-      _string_new(task->parent_process->heap, name, strlen(name)));
+      string_new(task->parent_process->heap, name, strlen(name)));
 }
 
 Entity _function_ref_module(Task *task, Context *ctx, Object *obj,

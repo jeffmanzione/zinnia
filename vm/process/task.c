@@ -32,6 +32,7 @@ void task_init(Task *task) {
   alist_init(&task->context_stack, Context, DEFAULT_ARRAY_SZ);
   alist_init(&task->entity_stack, Entity, DEFAULT_ARRAY_SZ);
   task->dependent_task = NULL;
+  task->child_task_has_error = false;
 }
 
 void task_finalize(Task *task) {
@@ -97,4 +98,12 @@ inline Entity *task_mutable_resval(Task *task) { return &task->resval; }
 Context *task_get_context_for_index(Task *task, uint32_t index) {
   ASSERT(NOT_NULL(task), index >= 0, index < alist_len(&task->context_stack));
   return alist_get(&task->context_stack, index);
+}
+
+Context *task_get_last_context(Task *task) {
+  return task_get_context_for_index(task, alist_len(&task->context_stack) - 1);
+}
+
+inline uint32_t task_context_count(const Task *const task) {
+  return alist_len(&task->context_stack);
 }

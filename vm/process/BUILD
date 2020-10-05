@@ -11,11 +11,13 @@ cc_library(
     deps = [
         ":processes",
         "//entity:object",
+        "//entity/class:classes",
+        "//entity/function",
         "//entity/module",
+        "//entity/module:modules",
         "//program:instruction",
         "//program:tape",
         "//vm:intern",
-        "//vm:module_manager",
     ],
 )
 

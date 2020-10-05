@@ -47,3 +47,11 @@ def print(a) {
 def println(a) {
   fprintln(OUT, a)
 }
+
+def error(a) {
+  fprint(ERROR, a)
+}
+
+def errorln(a) {
+  fprintln(ERROR, a)
+}

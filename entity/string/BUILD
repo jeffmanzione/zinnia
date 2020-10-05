@@ -15,3 +15,16 @@ cc_library(
         "@memory_wrapper//debug",
     ],
 )
+
+cc_library(
+    name = "string_helper",
+    srcs = ["string_helper.c"],
+    hdrs = ["string_helper.h"],
+    deps = [
+        ":string",
+        "//entity:object",
+        "//entity/class:classes",
+        "//heap",
+        "@memory_wrapper//debug",
+    ],
+)

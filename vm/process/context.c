@@ -5,10 +5,12 @@
 
 #include "vm/process/context.h"
 
+#include "entity/class/classes.h"
+#include "entity/function/function.h"
+#include "entity/module/modules.h"
 #include "entity/object.h"
 #include "program/tape.h"
 #include "vm/intern.h"
-#include "vm/module_manager.h"
 #include "vm/process/processes.h"
 
 Heap *_context_heap(Context *ctx);
@@ -19,9 +21,12 @@ void context_init(Context *ctx, Object *self, Object *member_obj,
   ctx->member_obj = member_obj;
   ctx->module = module;
   ctx->tape = module->_tape;
-  ctx->is_function = false;
   ctx->ins = instruction_pos;
+  ctx->func = NULL;
+  ctx->error = NULL;
+  ctx->catch_ins = -1;
 }
+
 void context_finalize(Context *ctx) { ASSERT(NOT_NULL(ctx)); }
 
 inline const Instruction *context_ins(Context *ctx) {
@@ -70,6 +75,15 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   if (NULL != member) {
     return member;
   }
+
+  const Function *f = class_get_function(ctx->self.obj->_class, id);
+  if (NULL != f) {
+    Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
+    __function_ref_init(fn_ref, ctx->self.obj, f);
+    return object_set_member_obj(task->parent_process->heap, ctx->self.obj, id,
+                                 fn_ref);
+  }
+
   member = object_get(ctx->module->_reflection, id);
   if (NULL != member) {
     return member;
@@ -127,4 +141,8 @@ void context_set(Context *ctx, const char id[], const Entity *e) {
     return;
   }
   object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
+}
+
+inline void context_set_function(Context *ctx, const Function *func) {
+  ctx->func = func;
 }
