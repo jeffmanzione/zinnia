@@ -38,7 +38,6 @@ cc_library(
         "//entity/tuple",
         "//heap",
         "//lang/lexer:file_info",
-        # "//vm:module_manager",
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",

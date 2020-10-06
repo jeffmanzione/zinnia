@@ -266,8 +266,20 @@ Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
                                   strlen(file_info_name(fi))));
 }
 
+Entity _stackline_linetext(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  const FileInfo *fi = modulemanager_get_fileinfo(
+      vm_module_manager(task->parent_process->vm), stackline_module(obj));
+  const LineInfo *li = file_info_lookup(fi, stackline_linenum(obj) + 1);
+  return (NULL == li)
+             ? NONE_ENTITY
+             : entity_object(string_new(task->parent_process->heap,
+                                        li->line_text, strlen(li->line_text)));
+}
+
 void _add_filename_method() {
   native_method(Class_Module, intern("filename"), _module_filename);
+  native_method(Class_StackLine, intern("linetext"), _stackline_linetext);
 }
 
 VM *vm_create() {
@@ -504,7 +516,8 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
-    _raise_error(vm, task, context, "Attempting to field a non-object.");
+    _raise_error(vm, task, context, "Attempted to get field '%s' from a %s.",
+                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
   const Entity *member = object_get(e->obj, ins->id);

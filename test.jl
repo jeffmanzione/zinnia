@@ -19,7 +19,7 @@ class Test {
     [method1, self.method1, test]
   }
   method bad() {
-    a.b.c
+    aaa.bbb.ccc
   }
 }
 

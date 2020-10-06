@@ -5,7 +5,10 @@
 
 #include "entity/native/error.h"
 
+#include <stdint.h>
+
 #include "alloc/arena/intern.h"
+#include "debug/debug.h"
 #include "entity/class/classes.h"
 #include "entity/entity.h"
 #include "entity/native/native.h"
@@ -17,7 +20,7 @@
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
-static Class *Class_StackLine;
+Class *Class_StackLine;
 
 typedef struct {
   Module *module;
@@ -25,18 +28,23 @@ typedef struct {
   Token *error_token;
 } _StackLine;
 
-// typedef struct {
-//   TokenType type;
-//   int col, line;
-//   size_t len;
-//   const char *text;
-// } Token;
-
 void _error_init(Object *obj) {}
 void _error_delete(Object *obj) {}
 
 void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC2(_StackLine); }
 void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
+
+uint32_t stackline_linenum(Object *stackline) {
+  ASSERT(NOT_NULL(stackline), Class_StackLine == stackline->_class);
+  _StackLine *sl = (_StackLine *)stackline->_internal_obj;
+  return sl->error_token->line;
+}
+
+Module *stackline_module(Object *stackline) {
+  ASSERT(NOT_NULL(stackline), Class_StackLine == stackline->_class);
+  _StackLine *sl = (_StackLine *)stackline->_internal_obj;
+  return sl->module;
+}
 
 Entity _stackline_module(Task *task, Context *ctx, Object *obj, Entity *args) {
   _StackLine *sl = (_StackLine *)obj->_internal_obj;

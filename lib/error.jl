@@ -31,6 +31,16 @@ class StackLine {
 class Error {
   method to_s() {
     result = cat(self.class().name(), ': ', message, '\n')
+    error_token = stacktrace[0].token()
+    result.extend(str(error_token.line + 1)).extend(':')
+    result.extend(stacktrace[0].linetext())
+    for i=0, i < error_token.col + error_token.line % 10 + 1, i=i+1 {
+      result.extend(' ')
+    }
+    for i=0, i < error_token.text.len(), i=i+1 {
+      result.extend('^')
+    }
+    result.extend('\n')
     for i=0, i<stacktrace.len(), i=i+1 {
       result.extend('  ').extend(str(stacktrace[i])).extend('\n')  
     }
