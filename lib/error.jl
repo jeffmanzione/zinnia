@@ -18,13 +18,18 @@ class StackLine {
   method to_s() {
     tok = token()
     func = function()
+    result = ''.extend(module().name())
     if func {
       if func.is_method() {
-        return cat(module().name(), '.', func.parent_class().name(), '.', func.name(), '(', module().filename(), ':', tok.line + 1, ')')
+        result.extend('.').extend(func.parent_class().name())
       }
-      return cat(module().name(), '.', func.name(), '(', module().filename(), ':', tok.line + 1, ')')
+      result.extend('.').extend(func.name())
     }
-    return cat(module().name(), '(', module().filename(), ':', tok.line + 1, ')')
+    return result.extend('(')
+        .extend(module().filename())
+        .extend(':')
+        .extend(str(tok.line + 1))
+        .extend(')')
   }
 }
 

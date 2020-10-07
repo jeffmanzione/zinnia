@@ -26,9 +26,9 @@ Token *_parser_next_skip_ln(Parser *parser, Token **target);
 #define NO_TARGET(parser) WITH_TARGET(parser, NULL)
 #define SKIP_WITH_TARGET(parser, target) _parser_next_skip_ln(parser, target)
 #define SKIP_NO_TARGET(parser) SKIP_WITH_TARGET(parser, NULL)
-#define parser_next(...) \
+#define parser_next(...)                                                       \
   GET_PARSER(__VA_ARGS__, WITH_TARGET, NO_TARGET)(__VA_ARGS__)
-#define parser_next_skip_ln(...) \
+#define parser_next_skip_ln(...)                                               \
   GET_PARSER(__VA_ARGS__, SKIP_WITH_TARGET, SKIP_NO_TARGET)(__VA_ARGS__)
 
 void parsers_init() { map_init_default(&parse_expressions); }
@@ -75,7 +75,7 @@ bool parser_finalize(Parser *parser) {
   }
   Q_iter iter = Q_iterator(q);
   for (; Q_has(&iter); Q_inc(&iter)) {
-    Token *tok = (Token *)Q_value(&iter);
+    Token *tok = *((Token **)Q_value(&iter));
     fprintf(stderr, "Token(type=%d,line=%d,col=%d,text=%s)\n", tok->type,
             tok->line, tok->col, tok->text);
     token_delete(tok);
@@ -283,88 +283,93 @@ SyntaxTree _match_merge(Parser *parser, SyntaxTree parent, SyntaxTree child) {
   return m;
 }
 
-#define ImplSyntax(name, exp)                        \
-  SyntaxTree name(Parser *parser) {                  \
-    if (NULL == map_lookup(parser->exp_names, name)) \
-      map_insert(parser->exp_names, name, #name);    \
-    /*DEBUGF(#name);*/                               \
-    SyntaxTree m = exp(parser);                      \
-    if (NULL == m.expression) m.expression = name;   \
-    return m;                                        \
+#define ImplSyntax(name, exp)                                                  \
+  SyntaxTree name(Parser *parser) {                                            \
+    if (NULL == map_lookup(parser->exp_names, name))                           \
+      map_insert(parser->exp_names, name, #name);                              \
+    /*DEBUGF(#name);*/                                                         \
+    SyntaxTree m = exp(parser);                                                \
+    if (NULL == m.expression)                                                  \
+      m.expression = name;                                                     \
+    return m;                                                                  \
   }
 #define GET_FUNC(_1, _2, _3, _4, _5, _6, _7, _8, _9, NAME, ...) NAME
-#define Or2(exp1, exp2)                 \
-  ({                                    \
-    SyntaxTree __fn__(Parser *parser) { \
-      SyntaxTree m1 = exp1(parser);     \
-      if (m1.matched) return m1;        \
-      SyntaxTree m2 = exp2(parser);     \
-      if (m2.matched) return m2;        \
-      return _no_match(parser);         \
-    }                                   \
-    __fn__;                             \
+#define Or2(exp1, exp2)                                                        \
+  ({                                                                           \
+    SyntaxTree __fn__(Parser *parser) {                                        \
+      SyntaxTree m1 = exp1(parser);                                            \
+      if (m1.matched)                                                          \
+        return m1;                                                             \
+      SyntaxTree m2 = exp2(parser);                                            \
+      if (m2.matched)                                                          \
+        return m2;                                                             \
+      return _no_match(parser);                                                \
+    }                                                                          \
+    __fn__;                                                                    \
   })
 #define Or3(exp1, exp2, exp3) Or2(exp1, Or2(exp2, exp3))
 #define Or4(exp1, exp2, exp3, exp4) Or2(exp1, Or3(exp2, exp3, exp4))
 #define Or5(exp1, exp2, exp3, exp4, exp5) Or2(exp1, Or4(exp2, exp3, exp4, exp5))
-#define Or6(exp1, exp2, exp3, exp4, exp5, exp6) \
+#define Or6(exp1, exp2, exp3, exp4, exp5, exp6)                                \
   Or2(exp1, Or5(exp2, exp3, exp4, exp5, exp6))
-#define Or7(exp1, exp2, exp3, exp4, exp5, exp6, exp7) \
+#define Or7(exp1, exp2, exp3, exp4, exp5, exp6, exp7)                          \
   Or2(exp1, Or6(exp2, exp3, exp4, exp5, exp6, exp7))
-#define Or8(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8) \
+#define Or8(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8)                    \
   Or2(exp1, Or7(exp2, exp3, exp4, exp5, exp6, exp7, exp8))
-#define Or9(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9) \
+#define Or9(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9)              \
   Or2(exp1, Or8(exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9))
-#define Or(...) \
+#define Or(...)                                                                \
   GET_FUNC(__VA_ARGS__, Or9, Or8, Or7, Or6, Or5, Or4, Or3, Or2)(__VA_ARGS__)
-#define And2(exp1, exp2)                             \
-  ({                                                 \
-    SyntaxTree __fn__(Parser *parser) {              \
-      SyntaxTree m1 = exp1(parser);                  \
-      if (!m1.matched) return _no_match(parser);     \
-      return _match_merge(parser, m1, exp2(parser)); \
-    }                                                \
-    __fn__;                                          \
+#define And2(exp1, exp2)                                                       \
+  ({                                                                           \
+    SyntaxTree __fn__(Parser *parser) {                                        \
+      SyntaxTree m1 = exp1(parser);                                            \
+      if (!m1.matched)                                                         \
+        return _no_match(parser);                                              \
+      return _match_merge(parser, m1, exp2(parser));                           \
+    }                                                                          \
+    __fn__;                                                                    \
   })
 #define And3(exp1, exp2, exp3) And2(exp1, And2(exp2, exp3))
 #define And4(exp1, exp2, exp3, exp4) And2(exp1, And3(exp2, exp3, exp4))
-#define And5(exp1, exp2, exp3, exp4, exp5) \
+#define And5(exp1, exp2, exp3, exp4, exp5)                                     \
   And2(exp1, And4(exp2, exp3, exp4, exp5))
-#define And6(exp1, exp2, exp3, exp4, exp5, exp6) \
+#define And6(exp1, exp2, exp3, exp4, exp5, exp6)                               \
   And2(exp1, And5(exp2, exp3, exp4, exp5, exp6))
-#define And7(exp1, exp2, exp3, exp4, exp5, exp6, exp7) \
+#define And7(exp1, exp2, exp3, exp4, exp5, exp6, exp7)                         \
   And2(exp1, And6(exp2, exp3, exp4, exp5, exp6, exp7))
-#define And8(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8) \
+#define And8(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8)                   \
   And2(exp1, And7(exp2, exp3, exp4, exp5, exp6, exp7, exp8))
-#define And9(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9) \
+#define And9(exp1, exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9)             \
   And2(exp1, And8(exp2, exp3, exp4, exp5, exp6, exp7, exp8, exp9))
-#define And(...)                                                        \
-  GET_FUNC(__VA_ARGS__, And9, And8, And7, And6, And5, And4, And3, And2) \
+#define And(...)                                                               \
+  GET_FUNC(__VA_ARGS__, And9, And8, And7, And6, And5, And4, And3, And2)        \
   (__VA_ARGS__)
-#define Type(tok_type)                            \
-  ({                                              \
-    SyntaxTree __fn__(Parser *parser) {           \
-      Token *tok = parser_next(parser);           \
-      if (NULL == tok || tok_type != tok->type) { \
-        return _no_match(parser);                 \
-      }                                           \
-      return _match(parser);                      \
-    }                                             \
-    __fn__;                                       \
+#define Type(tok_type)                                                         \
+  ({                                                                           \
+    SyntaxTree __fn__(Parser *parser) {                                        \
+      Token *tok = parser_next(parser);                                        \
+      if (NULL == tok || tok_type != tok->type) {                              \
+        return _no_match(parser);                                              \
+      }                                                                        \
+      return _match(parser);                                                   \
+    }                                                                          \
+    __fn__;                                                                    \
   })
-#define Opt(exp)                        \
-  ({                                    \
-    SyntaxTree __fn__(Parser *parser) { \
-      SyntaxTree m = exp(parser);       \
-      if (m.matched) return m;          \
-      return _match_epsilon(parser);    \
-    }                                   \
-    __fn__;                             \
+#define Opt(exp)                                                               \
+  ({                                                                           \
+    SyntaxTree __fn__(Parser *parser) {                                        \
+      SyntaxTree m = exp(parser);                                              \
+      if (m.matched)                                                           \
+        return m;                                                              \
+      return _match_epsilon(parser);                                           \
+    }                                                                          \
+    __fn__;                                                                    \
   })
-#define Epsilon                                                          \
-  ({                                                                     \
-    SyntaxTree __fn__(Parser *parser) { return _match_epsilon(parser); } \
-    __fn__;                                                              \
+#define Epsilon                                                                \
+  ({                                                                           \
+    SyntaxTree __fn__(Parser *parser) { return _match_epsilon(parser); }       \
+    __fn__;                                                                    \
   })
 #define Ln(exp) And(exp, Opt(Type(ENDLINE)))
 #define TypeLn(tok_type) Ln(Type(tok_type))

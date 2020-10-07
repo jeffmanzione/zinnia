@@ -23,12 +23,12 @@ int main(int arc, char *args[]) {
   VM *vm = vm_create();
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = modulemanager_read(mm, "test.jl");
-  FILE *ins_out = fopen("/usr/src/jeff-vm/test.jc", "w");
-  if (!ins_out) {
-    perror("File open fail.");
-  }
-  tape_write(module_tape(main_module), ins_out);
-  fclose(ins_out);
+  // FILE *ins_out = fopen("/usr/src/jeff-vm/test.jc", "w");
+  // if (!ins_out) {
+  //   perror("File open fail.");
+  // }
+  // tape_write(module_tape(main_module), ins_out);
+  // fclose(ins_out);
 
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
