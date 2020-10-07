@@ -39,7 +39,7 @@ class Error {
     error_token = stacktrace[0].token()
     result.extend(str(error_token.line + 1)).extend(':')
     result.extend(stacktrace[0].linetext())
-    for i=0, i < error_token.col + error_token.line % 10 + 1, i=i+1 {
+    for i=0, i < error_token.col + (error_token.line / 10) + 1, i=i+1 {
       result.extend(' ')
     }
     for i=0, i < error_token.text.len(), i=i+1 {

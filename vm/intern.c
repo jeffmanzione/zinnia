@@ -95,7 +95,7 @@ void _strings_insert_constants() {
   CURRENT_BLOCK = intern("$block");
   EMPTY_TUPLE_KEY = intern("$empty_tuple");
   DECONSTRUCTOR_KEY = intern("$deconstructor");
-  EQ_FN_NAME = intern("eq");
+  EQ_FN_NAME = intern("__eq__");
   ERROR_KEY = intern("$has_error");
   ERROR_NAME = intern("Error");
   EXTERNAL_FUNCTION_NAME = intern("ExternalFunction");
@@ -125,7 +125,7 @@ void _strings_insert_constants() {
   MODULE_KEY = intern("module");
   MODULE_NAME = intern("Module");
   NAME_KEY = intern("name");
-  NEQ_FN_NAME = intern("neq");
+  NEQ_FN_NAME = intern("__neq__");
   NEXT_FN_NAME = intern("next");
   NIL_KEYWORD = intern("None");
   OBJECT_NAME = intern("Object");

@@ -62,7 +62,7 @@ ImplProduce(string_literal, Tape *tape) {
 }
 
 ImplPopulate(tuple_expression, const SyntaxTree *stree) {
-  tuple_expression->token = stree->second->first->token;  // First comma.
+  tuple_expression->token = stree->second->first->token; // First comma.
   tuple_expression->list = alist_create(ExpressionTree *, DEFAULT_ARRAY_SZ);
   APPEND_TREE(tuple_expression->list, stree->first);
   DECLARE_IF_TYPE(tuple1, tuple_expression1, stree->second);
@@ -154,10 +154,27 @@ ImplPopulate(primary_expression, const SyntaxTree *stree) {
   ERROR("Unknown primary_expression.");
 }
 
+ImplPopulate(primary_expression_no_constants, const SyntaxTree *stree) {
+  if (IS_TOKEN(stree->first, LPAREN)) {
+    primary_expression_no_constants->token = stree->first->token;
+    // Inside parenthesis.
+    primary_expression_no_constants->exp =
+        populate_expression(stree->second->first);
+    return;
+  }
+  ERROR("Unknown primary_expression_no_constants.");
+}
+
 ImplDelete(primary_expression) { delete_expression(primary_expression->exp); }
+ImplDelete(primary_expression_no_constants) {
+  delete_expression(primary_expression_no_constants->exp);
+}
 
 ImplProduce(primary_expression, Tape *tape) {
   return produce_instructions(primary_expression->exp, tape);
+}
+ImplProduce(primary_expression_no_constants, Tape *tape) {
+  return produce_instructions(primary_expression_no_constants->exp, tape);
 }
 
 void postfix_helper(const SyntaxTree *suffix, AList *suffixes);
@@ -235,23 +252,23 @@ void postfix_helper(const SyntaxTree *suffix, AList *suffixes) {
   }
   const SyntaxTree *ext = suffix->first;
   switch (ext->token->type) {
-    case PERIOD:
-      postfix_period(ext, suffix->second, suffixes);
-      break;
-    case LPAREN:
-      postfix_surround_helper(suffix, suffixes, Postfix_fncall, LPAREN, RPAREN);
-      break;
-    case LBRAC:
-      postfix_surround_helper(suffix, suffixes, Postfix_array_index, LBRAC,
-                              RBRAC);
-      break;
-    case INCREMENT:
-    case DECREMENT:
-      postfix_increment(ext, suffixes);
-      postfix_helper(suffix->second, suffixes);
-      break;
-    default:
-      ERROR("Unknown postfix.");
+  case PERIOD:
+    postfix_period(ext, suffix->second, suffixes);
+    break;
+  case LPAREN:
+    postfix_surround_helper(suffix, suffixes, Postfix_fncall, LPAREN, RPAREN);
+    break;
+  case LBRAC:
+    postfix_surround_helper(suffix, suffixes, Postfix_array_index, LBRAC,
+                            RBRAC);
+    break;
+  case INCREMENT:
+  case DECREMENT:
+    postfix_increment(ext, suffixes);
+    postfix_helper(suffix->second, suffixes);
+    break;
+  default:
+    ERROR("Unknown postfix.");
   }
 }
 
@@ -378,16 +395,16 @@ ImplProduce(range_expression, Tape *tape) {
 
 UnaryType unary_token_to_type(const Token *token) {
   switch (token->type) {
-    case TILDE:
-      return Unary_not;
-    case EXCLAIM:
-      return Unary_notc;
-    case MINUS:
-      return Unary_negate;
-    case CONST_T:
-      return Unary_const;
-    default:
-      ERROR("Unknown unary: %s", token->text);
+  case TILDE:
+    return Unary_not;
+  case EXCLAIM:
+    return Unary_notc;
+  case MINUS:
+    return Unary_negate;
+  case CONST_T:
+    return Unary_const;
+  default:
+    ERROR("Unknown unary: %s", token->text);
   }
   return Unary_unknown;
 }
@@ -409,158 +426,158 @@ ImplProduce(unary_expression, Tape *tape) {
   }
   num_ins += produce_instructions(unary_expression->exp, tape);
   switch (unary_expression->type) {
-    case Unary_not:
-      num_ins += tape_ins_no_arg(tape, NOT, unary_expression->token);
-      break;
-    case Unary_notc:
-      num_ins += tape_ins_no_arg(tape, NOTC, unary_expression->token);
-      break;
-    case Unary_negate:
-      num_ins += tape_ins_no_arg(tape, PUSH, unary_expression->token) +
-                 tape_ins_int(tape, PUSH, -1, unary_expression->token) +
-                 tape_ins_no_arg(tape, MULT, unary_expression->token);
-      break;
-    case Unary_const:
-      num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
-      break;
-    default:
-      ERROR("Unknown unary: %s", unary_expression->token);
+  case Unary_not:
+    num_ins += tape_ins_no_arg(tape, NOT, unary_expression->token);
+    break;
+  case Unary_notc:
+    num_ins += tape_ins_no_arg(tape, NOTC, unary_expression->token);
+    break;
+  case Unary_negate:
+    num_ins += tape_ins_no_arg(tape, PUSH, unary_expression->token) +
+               tape_ins_int(tape, PUSH, -1, unary_expression->token) +
+               tape_ins_no_arg(tape, MULT, unary_expression->token);
+    break;
+  case Unary_const:
+    num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
+    break;
+  default:
+    ERROR("Unknown unary: %s", unary_expression->token);
   }
   return num_ins;
 }
 
 BiType relational_type_for_token(const Token *token) {
   switch (token->type) {
-    case STAR:
-      return Mult_mult;
-    case FSLASH:
-      return Mult_div;
-    case PERCENT:
-      return Mult_mod;
-    case PLUS:
-      return Add_add;
-    case MINUS:
-      return Add_sub;
-    case LTHAN:
-      return Rel_lt;
-    case GTHAN:
-      return Rel_gt;
-    case LTHANEQ:
-      return Rel_lte;
-    case GTHANEQ:
-      return Rel_gte;
-    case EQUIV:
-      return Rel_eq;
-    case NEQUIV:
-      return Rel_neq;
-    case AND_T:
-      return And_and;
-    case CARET:
-      return And_xor;
-    case OR_T:
-      return And_or;
-    default:
-      ERROR("Unknown type: %s", token->text);
+  case STAR:
+    return Mult_mult;
+  case FSLASH:
+    return Mult_div;
+  case PERCENT:
+    return Mult_mod;
+  case PLUS:
+    return Add_add;
+  case MINUS:
+    return Add_sub;
+  case LTHAN:
+    return Rel_lt;
+  case GTHAN:
+    return Rel_gt;
+  case LTHANEQ:
+    return Rel_lte;
+  case GTHANEQ:
+    return Rel_gte;
+  case EQUIV:
+    return Rel_eq;
+  case NEQUIV:
+    return Rel_neq;
+  case AND_T:
+    return And_and;
+  case CARET:
+    return And_xor;
+  case OR_T:
+    return And_or;
+  default:
+    ERROR("Unknown type: %s", token->text);
   }
   return BiType_unknown;
 }
 
 Op bi_to_ins(BiType type) {
   switch (type) {
-    case Mult_mult:
-      return MULT;
-    case Mult_div:
-      return DIV;
-    case Mult_mod:
-      return MOD;
-    case Add_add:
-      return ADD;
-    case Add_sub:
-      return SUB;
-    case Rel_lt:
-      return LT;
-    case Rel_gt:
-      return GT;
-    case Rel_lte:
-      return LTE;
-    case Rel_gte:
-      return GTE;
-    case Rel_eq:
-      return EQ;
-    case Rel_neq:
-      return NEQ;
-    case And_and:
-      return AND;
-    case And_xor:
-      return XOR;
-    case And_or:
-      return OR;
-    default:
-      ERROR("Unknown type: %s", type);
+  case Mult_mult:
+    return MULT;
+  case Mult_div:
+    return DIV;
+  case Mult_mod:
+    return MOD;
+  case Add_add:
+    return ADD;
+  case Add_sub:
+    return SUB;
+  case Rel_lt:
+    return LT;
+  case Rel_gt:
+    return GT;
+  case Rel_lte:
+    return LTE;
+  case Rel_gte:
+    return GTE;
+  case Rel_eq:
+    return EQ;
+  case Rel_neq:
+    return NEQ;
+  case And_and:
+    return AND;
+  case And_xor:
+    return XOR;
+  case And_or:
+    return OR;
+  default:
+    ERROR("Unknown type: %s", type);
   }
   return NOP;
 }
 
-#define BiExpressionPopulate(expr, stree)                               \
-  {                                                                     \
-    expr->exp = populate_expression(stree->first);                      \
-    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);         \
-    SyntaxTree *cur_suffix = stree->second;                             \
-    while (true) {                                                      \
-      EXPECT_TYPE(cur_suffix, expr##1);                                 \
-      BiSuffix suffix = {                                               \
-          .token = cur_suffix->first->token,                            \
-          .type = relational_type_for_token(cur_suffix->first->token)}; \
-      SyntaxTree *second_exp = cur_suffix->second;                      \
-      if (second_exp->expression == stree->expression) {                \
-        suffix.exp = populate_expression(second_exp->first);            \
-        alist_append(suffixes, &suffix);                                \
-        cur_suffix = second_exp->second;                                \
-      } else {                                                          \
-        suffix.exp = populate_expression(second_exp);                   \
-        alist_append(suffixes, &suffix);                                \
-        break;                                                          \
-      }                                                                 \
-    }                                                                   \
-    expr->suffixes = suffixes;                                          \
+#define BiExpressionPopulate(expr, stree)                                      \
+  {                                                                            \
+    expr->exp = populate_expression(stree->first);                             \
+    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);                \
+    SyntaxTree *cur_suffix = stree->second;                                    \
+    while (true) {                                                             \
+      EXPECT_TYPE(cur_suffix, expr##1);                                        \
+      BiSuffix suffix = {                                                      \
+          .token = cur_suffix->first->token,                                   \
+          .type = relational_type_for_token(cur_suffix->first->token)};        \
+      SyntaxTree *second_exp = cur_suffix->second;                             \
+      if (second_exp->expression == stree->expression) {                       \
+        suffix.exp = populate_expression(second_exp->first);                   \
+        alist_append(suffixes, &suffix);                                       \
+        cur_suffix = second_exp->second;                                       \
+      } else {                                                                 \
+        suffix.exp = populate_expression(second_exp);                          \
+        alist_append(suffixes, &suffix);                                       \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    expr->suffixes = suffixes;                                                 \
   }
 
-#define BiExpressionDelete(expr)                            \
-  {                                                         \
-    delete_expression(expr->exp);                           \
-    void delete_expression_inner(void *ptr) {               \
-      BiSuffix *suffix = (BiSuffix *)ptr;                   \
-      delete_expression(suffix->exp);                       \
-    }                                                       \
-    alist_iterate(expr->suffixes, delete_expression_inner); \
-    alist_delete(expr->suffixes);                           \
+#define BiExpressionDelete(expr)                                               \
+  {                                                                            \
+    delete_expression(expr->exp);                                              \
+    void delete_expression_inner(void *ptr) {                                  \
+      BiSuffix *suffix = (BiSuffix *)ptr;                                      \
+      delete_expression(suffix->exp);                                          \
+    }                                                                          \
+    alist_iterate(expr->suffixes, delete_expression_inner);                    \
+    alist_delete(expr->suffixes);                                              \
   }
 
-#define BiExpressionProduce(expr, tape)                                  \
-  {                                                                      \
-    int num_ins = 0;                                                     \
-    num_ins += produce_instructions(expr->exp, tape);                    \
-    void iterate_mult(void *ptr) {                                       \
-      BiSuffix *suffix = (BiSuffix *)ptr;                                \
-      num_ins +=                                                         \
-          tape_ins_no_arg(tape, PUSH, suffix->token) +                   \
-          produce_instructions(suffix->exp, tape) +                      \
-          tape_ins_no_arg(tape, PUSH, suffix->token) +                   \
-          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token); \
-    }                                                                    \
-    alist_iterate(expr->suffixes, iterate_mult);                         \
-    return num_ins;                                                      \
+#define BiExpressionProduce(expr, tape)                                        \
+  {                                                                            \
+    int num_ins = 0;                                                           \
+    num_ins += produce_instructions(expr->exp, tape);                          \
+    void iterate_mult(void *ptr) {                                             \
+      BiSuffix *suffix = (BiSuffix *)ptr;                                      \
+      num_ins +=                                                               \
+          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
+          produce_instructions(suffix->exp, tape) +                            \
+          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
+          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token);       \
+    }                                                                          \
+    alist_iterate(expr->suffixes, iterate_mult);                               \
+    return num_ins;                                                            \
   }
 
-#define ImplBiExpression(expr)                \
-  ImplPopulate(expr, const SyntaxTree *stree) \
-      BiExpressionPopulate(expr, stree);      \
-  ImplDelete(expr) BiExpressionDelete(expr);  \
+#define ImplBiExpression(expr)                                                 \
+  ImplPopulate(expr, const SyntaxTree *stree)                                  \
+      BiExpressionPopulate(expr, stree);                                       \
+  ImplDelete(expr) BiExpressionDelete(expr);                                   \
   ImplProduce(expr, Tape *tape) BiExpressionProduce(expr, tape)
 
-#define ImplBiExpressionNoProduce(expr)       \
-  ImplPopulate(expr, const SyntaxTree *stree) \
-      BiExpressionPopulate(expr, stree);      \
+#define ImplBiExpressionNoProduce(expr)                                        \
+  ImplPopulate(expr, const SyntaxTree *stree)                                  \
+      BiExpressionPopulate(expr, stree);                                       \
   ImplDelete(expr) BiExpressionDelete(expr);
 
 ImplBiExpression(multiplicative_expression);
@@ -682,9 +699,9 @@ void populate_if_else(IfElse *if_else, const SyntaxTree *stree) {
   ASSERT(stree->first->token->type == IF_T);
   SyntaxTree *if_tree = (SyntaxTree *)stree, *else_body = NULL;
   while (true) {
-    Conditional cond = {
-        .condition = populate_expression(if_tree->second->first),
-        .if_token = if_tree->first->token};
+    Conditional cond = {.condition =
+                            populate_expression(if_tree->second->first),
+                        .if_token = if_tree->first->token};
     SyntaxTree *if_body = IS_TOKEN(if_tree->second->second->first, THEN)
                               ? if_tree->second->second->second
                               : if_tree->second->second;
@@ -771,10 +788,10 @@ int produce_if_else(IfElse *if_else, Tape *tape) {
 
     tape_append(tape, condition);
     if (i == num_conds - 1) {
-      tape_ins_int(
-          tape, IFN,
-          num_body_ins + num_conds + (NULL == if_else->else_exp ? -1 : 0),
-          cond->if_token);
+      tape_ins_int(tape, IFN,
+                   num_body_ins + num_conds +
+                       (NULL == if_else->else_exp ? -1 : 0),
+                   cond->if_token);
     } else {
       tape_ins_int(tape, IF,
                    num_cond_ins + num_body_jump + 2 * (num_conds - i - 1),

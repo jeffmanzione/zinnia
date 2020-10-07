@@ -1,5 +1,6 @@
 module io
 
+self.IN = FileReader('__STDIN__', True)
 self.OUT = FileWriter('__STDOUT__', True)
 self.ERROR = FileWriter('__STDERR__', True)
 
@@ -15,8 +16,23 @@ class _FileInternal {
     }
     file = __File(fn, mode)
   }
+  method gets(n) file.__gets(n)
+  method getline() file.__getline()
+  method getall() file.__getall()
   method puts(s) file.__puts(s)
   method close() file.__close()
+}
+
+class FileReader {
+  field fi
+  new(fn, binary=False) {
+    fi = _FileInternal(fn, 'r', False, binary)
+  }
+  method close() fi.close()
+  method gets(n) fi.gets(n)
+  method getline() fi.getline()
+  method getlines() fi.getlines()
+  method getall() fi.getall()
 }
 
 class FileWriter {

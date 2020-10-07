@@ -432,7 +432,8 @@ ImplSyntax(primary_expression_no_constants,
               identifier,
               string_literal,
               array_declaration,
-              map_declaration));
+              map_declaration,
+              And(Type(LPAREN), tuple_expression, Type(RPAREN))));
 
 DefineSyntax(assignment_expression);
 
@@ -818,7 +819,12 @@ ImplSyntax(function_definition,
                statement));
 
 ImplSyntax(method_identifier,
-           And(Type(METHOD), identifier));
+           And(Type(METHOD),
+               Or(identifier,
+                  Type(EQUIV),
+                  Type(NEQUIV),
+                  And(Type(LBRAC), Type(RBRAC), Type(EQUALS)),
+                  And(Type(LBRAC), Type(RBRAC)))));
 
 ImplSyntax(method_signature_nonconst,
            And(method_identifier, function_arguments));

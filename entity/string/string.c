@@ -19,7 +19,8 @@ void __string_create(Object *obj) { obj->_internal_obj = NULL; }
 
 void __string_init(Object *obj, const char *str, size_t size) {
   // What is the runtime of strlen?
-  String *string = String_create_copy(str, size);
+  String *string =
+      (NULL == str) ? String_create_sz(size) : String_create_copy(str, size);
   obj->_internal_obj = string;
 }
 

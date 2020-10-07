@@ -86,6 +86,7 @@ FunctionDef populate_function_variant(
     FuncArgumentsPopulator args_populator) {
   FunctionDef func = {.def_token = NULL,
                       .fn_name = NULL,
+                      .special_method = SpecialMethod__NONE,
                       .const_token = NULL,
                       .has_args = false,
                       .is_const = false,
@@ -241,9 +242,27 @@ int produce_arguments(Arguments *args, Tape *tape) {
   return num_ins;
 }
 
+int produce_function_name(FunctionDef *func, Tape *tape) {
+  switch (func->special_method) {
+  case SpecialMethod__NONE:
+    return tape_label(tape, func->fn_name);
+  case SpecialMethod__EQUIV:
+    return tape_label_text(tape, EQ_FN_NAME);
+  case SpecialMethod__NEQUIV:
+    return tape_label_text(tape, NEQ_FN_NAME);
+  case SpecialMethod__ARRAY_INDEX:
+    return tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
+  case SpecialMethod__ARRAY_SET:
+    return tape_label_text(tape, ARRAYLIKE_SET_KEY);
+  default:
+    ERROR("Unknown SpecialMethod.");
+  }
+  return 0;
+}
+
 int produce_function(FunctionDef *func, Tape *tape) {
   int num_ins = 0;
-  num_ins += tape_label(tape, func->fn_name);
+  num_ins += produce_function_name(func, tape);
   if (func->has_args) {
     num_ins += produce_arguments(&func->args, tape);
   }

@@ -24,9 +24,18 @@ typedef struct {
   AList *args;
 } Arguments;
 
+typedef enum {
+  SpecialMethod__NONE,
+  SpecialMethod__EQUIV,
+  SpecialMethod__NEQUIV,
+  SpecialMethod__ARRAY_INDEX,
+  SpecialMethod__ARRAY_SET
+} SpecialMethod;
+
 typedef struct {
   const Token *def_token;
   const Token *fn_name;
+  SpecialMethod special_method;
   const Token *const_token;
   bool has_args, is_const;
   Arguments args;

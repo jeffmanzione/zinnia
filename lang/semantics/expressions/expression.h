@@ -36,10 +36,15 @@ DefineExpression(tuple_expression) {
 DefineExpression(array_declaration) {
   Token *token;
   bool is_empty;
-  ExpressionTree *exp;  // A tuple expression.
+  ExpressionTree *exp; // A tuple expression.
 };
 
 DefineExpression(primary_expression) {
+  Token *token;
+  ExpressionTree *exp;
+};
+
+DefineExpression(primary_expression_no_constants) {
   Token *token;
   ExpressionTree *exp;
 };
@@ -103,10 +108,10 @@ typedef struct {
   ExpressionTree *exp;
 } BiSuffix;
 
-#define BiDefineExpression(expr) \
-  DefineExpression(expr) {       \
-    ExpressionTree *exp;         \
-    AList *suffixes;             \
+#define BiDefineExpression(expr)                                               \
+  DefineExpression(expr) {                                                     \
+    ExpressionTree *exp;                                                       \
+    AList *suffixes;                                                           \
   }
 
 BiDefineExpression(multiplicative_expression);

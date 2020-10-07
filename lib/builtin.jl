@@ -49,6 +49,24 @@ class String {
 }
 
 class Tuple {
+  method ==(other) {
+    if (len() != other.len()) return False
+    for i=0, i<len(), i=i+1 {
+      if (self[i] != other[i]) {
+        return False
+      }
+    }
+    return True
+  }
+  method !=(other) {
+    if (len() != other.len()) return True
+    for i=0, i<len(), i=i+1 {
+      if (self[i] != other[i]) {
+        return True
+      }
+    }
+    return False
+  }
   method to_s() {
     result = '('
     result.extend(','.join(self))
@@ -58,6 +76,24 @@ class Tuple {
 }
 
 class Array {
+  method ==(other) {
+    if (len() != other.len()) return False
+    for i=0, i<len(), i=i+1 {
+      if (self[i] != other[i]) {
+        return False
+      }
+    }
+    return True
+  }
+  method !=(other) {
+    if (len() != other.len()) return True
+    for i=0, i<len(), i=i+1 {
+      if (self[i] != other[i]) {
+        return True
+      }
+    }
+    return False
+  }
   method to_s() {
     result = '['
     result.extend(','.join(self))
