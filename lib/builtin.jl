@@ -18,9 +18,20 @@ def cat(args) {
   return result
 }
 
+def hash(x) {
+  if x is Object {
+    return x.hash()
+  }
+  return Int(x)
+}
+
 class Object {
   method to_s() {
-    return cat('Instance of ', self.class().name())
+    return cat(
+        'Instance of ',
+        self.class().module().name(),
+        '.',
+        self.class().name())
   }
 }
 
@@ -129,4 +140,22 @@ class FunctionRef {
   method to_s() {
     cat('FunctionRef(obj=', self.obj(), ',func=', self.func(), ')')
   }
+}
+
+class Range {
+  method to_s() {
+    cat(start(), ':', inc(), ':', end())
+  }
+}
+
+def range(params) {
+  start = params[0]
+  if params.len() == 3 {
+    inc = params[1]
+    end = params[2]
+  } else {
+    inc = 1
+    end = params[1]
+  }
+  Range(start, inc, end)
 }

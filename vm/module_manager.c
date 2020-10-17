@@ -61,6 +61,9 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   Module_error = _read_helper(mm, "lib/error.jl");
   error_add_native(Module_error);
   _add_reflection_to_module(mm, Module_error);
+  // struct.jl
+  Module_struct = _read_helper(mm, "lib/struct.jl");
+  _add_reflection_to_module(mm, Module_struct);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -106,6 +109,9 @@ void _add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
 void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   if (NULL == class->_reflection) {
     class->_reflection = heap_new(heap, Class_Class);
+  }
+  if (NULL == class->_super && class != Class_Object) {
+    class->_super = Class_Object;
   }
   class->_reflection->_class_obj = class;
   object_set_member_obj(heap, module->_reflection, class->_name,

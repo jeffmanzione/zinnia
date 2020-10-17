@@ -45,6 +45,8 @@ void _execute_PNIL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_PEEK(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
+void _execute_DUP(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
 void _execute_FLD(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
@@ -447,6 +449,15 @@ inline void _execute_PEEK(VM *vm, Task *task, Context *context,
   }
 }
 
+inline void _execute_DUP(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    ERROR("Invalid arg type=%d for DUP.", ins->type);
+  }
+  Entity peek = *task_peekstack(task);
+  *task_pushstack(task) = peek;
+}
+
 inline void _execute_PUSH(VM *vm, Task *task, Context *context,
                           const Instruction *ins) {
   Entity *member;
@@ -604,7 +615,10 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = NONE_ENTITY;
     }
     Entity obj = task_popstack(task);
-    ASSERT(OBJECT == obj.type);
+    if (OBJECT != obj.type) {
+      _raise_error(vm, task, context, "Calling function on non-object.");
+      return false;
+    }
     if (Class_Module == obj.obj->_class) {
       Module *m = obj.obj->_module_obj;
       ASSERT(NOT_NULL(m));
@@ -766,8 +780,7 @@ void _execute_ANEW(VM *vm, Task *task, Context *context,
 bool _execute_AIDX(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   Object *arr_obj;
-  const Entity *tmp;
-  uint32_t index = 0;
+  Entity index;
 
   Entity arr_entity = task_popstack(task);
   if (OBJECT != arr_entity.type) {
@@ -777,48 +790,60 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   arr_obj = arr_entity.obj;
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
-    tmp = task_get_resval(task);
-    if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
-        pint(&tmp->pri) < 0) {
-      _raise_error(vm, task, context, "Invalid array index.");
-      return false;
-    }
-    index = pint(&tmp->pri);
+    index = *task_get_resval(task);
+    // if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
+    //     pint(&tmp->pri) < 0) {
+    //   _raise_error(vm, task, context, "Invalid array index.");
+    //   return false;
+    // }
+    // index = pint(&tmp->pri);
     break;
   case INSTRUCTION_ID:
-    tmp = context_lookup(context, ins->id);
-    if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
-        pint(&tmp->pri) < 0) {
-      _raise_error(vm, task, context, "Invalid array index.");
-      return false;
-    }
+    index = *context_lookup(context, ins->id);
+    // if (NULL == tmp || PRIMITIVE != tmp->type || INT != ptype(&tmp->pri) ||
+    //     pint(&tmp->pri) < 0) {
+    //   _raise_error(vm, task, context, "Invalid array index.");
+    //   return false;
+    // }
     break;
   case INSTRUCTION_PRIMITIVE:
     if (INT != ptype(&ins->val) || pint(&ins->val) < 0) {
       _raise_error(vm, task, context, "Invalid array index.");
       return false;
     }
-    index = pint(&ins->val);
+    index = entity_primitive(ins->val);
     break;
   default:
     ERROR("Invalid arg type=%d for AIDX.", ins->type);
   }
   if (Class_Array == arr_obj->_class) {
     Array *arr = (Array *)arr_obj->_internal_obj;
-    if (index >= Array_size(arr)) {
+    if (PRIMITIVE != index.type || INT != ptype(&index.pri) ||
+        pint(&index.pri) < 0) {
       _raise_error(vm, task, context, "Invalid array index.");
       return false;
     }
-    *task_mutable_resval(task) = *Array_get_ref(arr, index);
+    int32_t i_index = pint(&index.pri);
+    if (i_index >= Array_size(arr)) {
+      _raise_error(vm, task, context, "Invalid array index.");
+      return false;
+    }
+    *task_mutable_resval(task) = *Array_get_ref(arr, i_index);
     return false;
   }
   if (Class_Tuple == arr_obj->_class) {
     Tuple *tuple = (Tuple *)arr_obj->_internal_obj;
-    if (index >= tuple_size(tuple)) {
-      _raise_error(vm, task, context, "Invalid array index.");
+    if (PRIMITIVE != index.type || INT != ptype(&index.pri) ||
+        pint(&index.pri) < 0) {
+      _raise_error(vm, task, context, "Invalid tuple index.");
       return false;
     }
-    *task_mutable_resval(task) = *tuple_get(tuple, index);
+    int32_t i_index = pint(&index.pri);
+    if (i_index >= tuple_size(tuple)) {
+      _raise_error(vm, task, context, "Invalid tuple index.");
+      return false;
+    }
+    *task_mutable_resval(task) = *tuple_get(tuple, i_index);
     return false;
   }
 
@@ -937,7 +962,7 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   if (index < 0 || index >= tuple_size(t)) {
     _raise_error(vm, task, context,
-                 "Tuple Index out of bounds. Index=%d, Tuple.len=%d.", index,
+                 "Tuple index out of bounds. Index=%d, Tuple.len=%d.", index,
                  tuple_size(t));
     return;
   }
@@ -1071,6 +1096,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       break;
     case PEEK:
       _execute_PEEK(vm, task, context, ins);
+      break;
+    case DUP:
+      _execute_DUP(vm, task, context, ins);
       break;
     case FLD:
       _execute_FLD(vm, task, context, ins);

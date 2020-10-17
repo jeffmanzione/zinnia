@@ -41,6 +41,7 @@ cc_library(
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
+        "@memory_wrapper//util",
     ],
 )
 
