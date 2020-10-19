@@ -142,6 +142,10 @@ class FunctionRef {
   }
 }
 
+class Iterator {
+  new(field has_next, field next) {}
+}
+
 class Range {
   method to_s() {
     cat(start(), ':', inc(), ':', end())

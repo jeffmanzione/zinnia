@@ -29,45 +29,37 @@ const char *wait_reason_str(WaitReason reason) { return _wait_reasons[reason]; }
 void task_init(Task *task) {
   task->state = TASK_NEW;
   task->state = WAITING_TO_START;
-  alist_init(&task->context_stack, Context, DEFAULT_ARRAY_SZ);
   alist_init(&task->entity_stack, Entity, DEFAULT_ARRAY_SZ);
   task->dependent_task = NULL;
   task->child_task_has_error = false;
+  task->current = NULL;
 }
 
 void task_finalize(Task *task) {
-  AL_iter iter = alist_iter(&task->context_stack);
-  for (; al_has(&iter); al_inc(&iter)) {
-    context_finalize((Context *)al_value(&iter));
-  }
-  alist_finalize(&task->context_stack);
   alist_finalize(&task->entity_stack);
 }
 
 Context *task_create_context(Task *task, Object *self, Module *module,
                              uint32_t instruction_pos) {
-  Context *ctx = (Context *)alist_add(&task->context_stack);
+  Context *ctx = (Context *)__arena_alloc(&task->parent_process->context_arena);
   Object *members_obj = heap_new(task->parent_process->heap, Class_Object);
   context_init(ctx, self, members_obj, module, instruction_pos);
-  ctx->index = alist_len(&task->context_stack) - 1;
   ctx->parent_task = task;
+  ctx->previous_context = task->current;
+  task->current = ctx;
   return ctx;
 }
 
 Context *task_back_context(Task *task) {
-  Context *last = (Context *)alist_get(&task->context_stack,
-                                       alist_len(&task->context_stack) - 1);
-  uint32_t ins = last->ins;
-  context_finalize(last);
-  alist_remove_last(&task->context_stack);
+  uint32_t ins = task->current->ins;
+  context_finalize(task->current);
+  task->current = task->current->previous_context;
   // This was the last context.
-  if (0 == alist_len(&task->context_stack)) {
+  if (NULL == task->current) {
     return NULL;
   }
-  Context *cur = (Context *)alist_get(&task->context_stack,
-                                      alist_len(&task->context_stack) - 1);
-  cur->ins = ins;
-  return cur;
+  task->current->ins = ins;
+  return task->current;
 }
 
 inline Entity task_popstack(Task *task) {
@@ -94,16 +86,3 @@ inline Entity *task_pushstack(Task *task) {
 inline const Entity *task_get_resval(Task *task) { return &task->resval; }
 
 inline Entity *task_mutable_resval(Task *task) { return &task->resval; }
-
-Context *task_get_context_for_index(Task *task, uint32_t index) {
-  ASSERT(NOT_NULL(task), index >= 0, index < alist_len(&task->context_stack));
-  return alist_get(&task->context_stack, index);
-}
-
-Context *task_get_last_context(Task *task) {
-  return task_get_context_for_index(task, alist_len(&task->context_stack) - 1);
-}
-
-inline uint32_t task_context_count(const Task *const task) {
-  return alist_len(&task->context_stack);
-}

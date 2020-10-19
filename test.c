@@ -23,6 +23,7 @@ int main(int arc, char *args[]) {
   VM *vm = vm_create();
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = modulemanager_read(mm, "test.jl");
+  heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
   FILE *ins_out = fopen("/usr/src/jeff-vm/test.jc", "w");
   if (!ins_out) {
     perror("File open fail.");

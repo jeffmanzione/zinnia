@@ -34,7 +34,7 @@ struct _VM {
 };
 
 bool _call_function_base(Task *task, Context *context, const Function *func,
-                         Object *self);
+                         Object *self, Context *parent_context);
 void _raise_error(VM *vm, Task *task, Context *context, const char fmt[], ...);
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
@@ -45,8 +45,7 @@ void _execute_PNIL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_PEEK(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
-void _execute_DUP(VM *vm, Task *task, Context *context,
-                   const Instruction *ins);
+void _execute_DUP(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_FLD(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
@@ -353,7 +352,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
         *task_mutable_resval(task) = second;
-        return _call_function_base(task, context, f, first.obj);
+        return _call_function_base(task, context, f, first.obj, context);
       }
     }
     if (PRIMITIVE != second.type) {
@@ -450,7 +449,7 @@ inline void _execute_PEEK(VM *vm, Task *task, Context *context,
 }
 
 inline void _execute_DUP(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+                         const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     ERROR("Invalid arg type=%d for DUP.", ins->type);
   }
@@ -547,7 +546,7 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
     const Function *f = class_get_function(e->obj->_class, ins->id);
     if (NULL != f) {
       Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
-      __function_ref_init(fn_ref, e->obj, f);
+      __function_ref_init(fn_ref, e->obj, f, NULL);
       member = object_set_member_obj(task->parent_process->heap, e->obj,
                                      ins->id, fn_ref);
     }
@@ -566,7 +565,7 @@ Context *_execute_as_new_task(Task *task, Object *self, Module *m,
 
 // VERY IMPORTANT: context is only necessary for native functions!
 bool _call_function_base(Task *task, Context *context, const Function *func,
-                         Object *self) {
+                         Object *self, Context *parent_context) {
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
@@ -579,6 +578,9 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   Context *fn_ctx =
       _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
   context_set_function(fn_ctx, func);
+  if (func->_is_anon) {
+    fn_ctx->previous_context = parent_context;
+  }
   return true;
 }
 
@@ -600,11 +602,12 @@ bool _call_method(Task *task, Object *obj, Context *context,
     }
     class = class->_super;
   }
-  return _call_function_base(task, context, fn, obj);
+  return _call_function_base(task, context, fn, obj, context);
 }
 
 bool _call_function(Task *task, Context *context, Function *func) {
-  return _call_function_base(task, context, func, func->_module->_reflection);
+  return _call_function_base(task, context, func, func->_module->_reflection,
+                             context);
 }
 
 inline bool _execute_CALL(VM *vm, Task *task, Context *context,
@@ -650,7 +653,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
       if (CLLN == ins->op) {
         *task_mutable_resval(task) = NONE_ENTITY;
       }
-      return _call_function_base(task, context, constructor, obj);
+      return _call_function_base(task, context, constructor, obj, context);
     }
   }
   if (fn.obj->_class == Class_FunctionRef) {
@@ -658,7 +661,8 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = NONE_ENTITY;
     }
     return _call_function_base(task, context, function_ref_get_func(fn.obj),
-                               function_ref_get_object(fn.obj));
+                               function_ref_get_object(fn.obj),
+                               function_ref_get_parent_context(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
     _raise_error(vm, task, context,
@@ -850,7 +854,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   const Function *aidx_fn =
       class_get_function(arr_obj->_class, ARRAYLIKE_INDEX_KEY);
   if (NULL != aidx_fn) {
-    return _call_function_base(task, context, aidx_fn, arr_obj);
+    return _call_function_base(task, context, aidx_fn, arr_obj, context);
   }
 
   _raise_error(vm, task, context, "Invalid array index on non-indexable.");
@@ -884,7 +888,7 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
     *tuple_get_mutable(t, 0) = *index;
     *tuple_get_mutable(t, 1) = new_val;
     *task_mutable_resval(task) = entity_object(args);
-    return _call_function_base(task, context, aset_fn, arr_entity.obj);
+    return _call_function_base(task, context, aset_fn, arr_entity.obj, context);
   }
   _raise_error(vm, task, context, "Cannot set index value on non-indexable.");
   return false;
@@ -1056,11 +1060,10 @@ TaskState vm_execute_task(VM *vm, Task *task) {
   task->state = TASK_RUNNING;
   task->wait_reason = NOT_WAITING;
   // This only happens when an error bubbles up to the main task
-  if (0 == alist_len(&task->context_stack)) {
+  if (NULL == task->current) {
     return TASK_COMPLETE;
   }
-  Context *context =
-      alist_get(&task->context_stack, alist_len(&task->context_stack) - 1);
+  Context *context = task->current;
 
   if (task->child_task_has_error) {
     const Entity *error_e = task_get_resval(task);

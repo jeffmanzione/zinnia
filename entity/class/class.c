@@ -40,7 +40,7 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
           "name.",
           name, cls->_name);
   }
-  function_init(f, name, cls->_module, ins_pos);
+  function_init(f, name, cls->_module, ins_pos, is_anon(name));
   f->_parent_class = cls;
   return f;
 }

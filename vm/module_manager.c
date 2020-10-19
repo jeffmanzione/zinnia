@@ -53,17 +53,21 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   builtin_classes(heap, Module_builtin);
   builtin_add_native(Module_builtin);
   _add_reflection_to_module(mm, Module_builtin);
+  heap_make_root(heap, Module_builtin->_reflection);
   // io.jl
   Module_io = _read_helper(mm, "lib/io.jl");
   io_add_native(Module_io);
   _add_reflection_to_module(mm, Module_io);
+  heap_make_root(heap, Module_io->_reflection);
   // error.jl
   Module_error = _read_helper(mm, "lib/error.jl");
   error_add_native(Module_error);
   _add_reflection_to_module(mm, Module_error);
+  heap_make_root(heap, Module_error->_reflection);
   // struct.jl
   Module_struct = _read_helper(mm, "lib/struct.jl");
   _add_reflection_to_module(mm, Module_struct);
+  heap_make_root(heap, Module_struct->_reflection);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {

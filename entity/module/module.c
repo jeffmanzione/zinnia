@@ -53,7 +53,7 @@ Function *module_add_function(Module *module, const char name[],
           "name.",
           name, module->_name);
   }
-  function_init(f, name, module, ins_pos);
+  function_init(f, name, module, ins_pos, is_anon(name));
   return f;
 }
 

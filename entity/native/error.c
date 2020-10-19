@@ -84,12 +84,10 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   Object *stacktrace = heap_new(task->parent_process->heap, Class_Array);
   Task *t = task;
-  // printf("context_count=%d tok=\n", task_context_count(task), ctx->);
   while (NULL != t) {
-    for (int i = task_context_count(task) - 1; i >= 0; --i) {
+    for (Context *c = t->current; c != NULL; c = c->previous_context) {
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
-      Context *c = task_get_context_for_index(t, i);
       sl->module = c->module;
       sl->func = (Function *)c->func; // blessed
       sl->error_token =

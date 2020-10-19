@@ -57,6 +57,12 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(0);
 }
 
+Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Heap *heap = task->parent_process->heap;
+  uint32_t deleted_nodes_count = heap_collect_garbage(heap);
+  return entity_int(deleted_nodes_count);
+}
+
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args), PRIMITIVE == args->type);
   Primitive val = args->pri;
@@ -269,6 +275,7 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_Range, intern("inc"), _range_inc);
   native_method(Class_Range, intern("end"), _range_end);
 
+  native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);
   native_function(builtin, intern("__stringify"), _stringify);
   native_method(Class_String, intern("extend"), _string_extend);

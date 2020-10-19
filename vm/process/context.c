@@ -58,18 +58,12 @@ Entity *context_lookup(Context *ctx, const char id[]) {
     return member;
   }
   Task *task = ctx->parent_task;
-  int32_t index = ctx->index - 1;
-  if (index >= 0) {
-    Context *parent_context = task_get_context_for_index(task, index);
-    while (NULL == (member = object_get(parent_context->member_obj, id))) {
-      if (index == 0) {
-        break;
-      }
-      parent_context = task_get_context_for_index(task, --index);
-    }
-    if (NULL != member) {
-      return member;
-    }
+  Context *parent_context = ctx->previous_context;
+  while (NULL != parent_context && NULL == (member = object_get(parent_context->member_obj, id))) {
+    parent_context = parent_context->previous_context;
+  }
+  if (NULL != member) {
+    return member;
   }
   member = object_get(ctx->self.obj, id);
   if (NULL != member) {
@@ -79,7 +73,7 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   const Function *f = class_get_function(ctx->self.obj->_class, id);
   if (NULL != f) {
     Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
-    __function_ref_init(fn_ref, ctx->self.obj, f);
+    __function_ref_init(fn_ref, ctx->self.obj, f, f->_is_anon ? ctx : NULL);
     return object_set_member_obj(task->parent_process->heap, ctx->self.obj, id,
                                  fn_ref);
   }
@@ -115,26 +109,19 @@ void context_let(Context *ctx, const char id[], const Entity *e) {
 
 void context_set(Context *ctx, const char id[], const Entity *e) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id), NOT_NULL(e));
-  Entity *member;
+  Entity *member = NULL;
   if (NULL != object_get(ctx->member_obj, id)) {
     object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
     return;
   }
-  Task *task = ctx->parent_task;
-  int32_t index = ctx->index - 1;
-  if (index >= 0) {
-    Context *parent_context = task_get_context_for_index(task, index);
-    while (NULL == (member = object_get(parent_context->member_obj, id))) {
-      if (index == 0) {
-        break;
-      }
-      parent_context = task_get_context_for_index(task, --index);
-    }
-    if (NULL != member) {
-      object_set_member(_context_heap(parent_context),
-                        parent_context->member_obj, id, e);
-      return;
-    }
+  Context *parent_context = ctx->previous_context;
+  while (NULL != parent_context && NULL == (member = object_get(parent_context->member_obj, id))) {
+    parent_context = parent_context->previous_context;
+  }
+  if (NULL != member) {
+    object_set_member(_context_heap(parent_context),
+                      parent_context->member_obj, id, e);
+    return;
   }
   if (NULL != object_get(ctx->self.obj, id)) {
     object_set_member(_context_heap(ctx), ctx->self.obj, id, e);
