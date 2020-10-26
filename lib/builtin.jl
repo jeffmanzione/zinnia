@@ -1,5 +1,8 @@
 module builtin
 
+import io
+import struct
+
 def str(input) {
   if ~input return 'None'
   if input is Object return input.to_s()
@@ -32,6 +35,12 @@ class Object {
         self.class().module().name(),
         '.',
         self.class().name())
+  }
+}
+
+class Module {
+  method to_s() {
+    return cat('Module(', name(), ')')
   }
 }
 
@@ -107,9 +116,14 @@ class Array {
   }
   method to_s() {
     result = '['
-    result.extend(','.join(self))
-    result.extend(']')
-    return result
+    result.extend(','.join(map((elt) {
+      if (elt is String) {
+        return '\''.extend(elt).extend('\'')
+      } else {
+        return str(elt)
+      }
+    })))
+    return result.extend(']')
   }
   method each(fn) {
     for i=0, i<len(), i=i+1 {
@@ -124,12 +138,19 @@ class Array {
     } 
     return result
   }
+  method iter() {
+    return IndexIterator(self)
+  }
 }
 
 class Function {
   method to_s() {
     if self.is_method() {
-      return cat('Method(', self.module().name(), '.', self.parent_class().name(), '.', self.name(), ')')
+      return cat(
+          'Method(',
+          self.module().name(),
+          '.', self.parent_class().name(),
+          '.', self.name(), ')')
     } else {
       return cat('Function(', self.module().name(), '.', self.name(), ')')
     }
@@ -144,6 +165,44 @@ class FunctionRef {
 
 class Iterator {
   new(field has_next, field next) {}
+  method iter() {
+    return self
+  }
+}
+
+class IndexIterator : Iterator {
+  field indexable, start, end, i, index
+  new(args) {
+    if (args is Array) or (args is String) {
+      indexable = args
+      start = 0
+      end = args.len()
+    } else if args is Tuple {
+      (indexable, start, end) = args
+    } else {
+      raise Error(concat('Strange input: ', args))
+    }
+    i = -1
+    index = start - 1
+    super()(
+        () -> index < (end - 1),
+        () {
+          i = i + 1
+          index = index + 1
+          (i, indexable[index])
+        })
+  }
+}
+
+class KVIterator : Iterator {
+  new(field key_iter, field container) {
+    super()(
+        key_iter.has_next,
+        () {
+          k = key_iter.next()[1]
+          return (k, container[k]) ; return required.
+        })
+  }
 }
 
 class Range {
@@ -162,4 +221,17 @@ def range(params) {
     end = params[1]
   }
   Range(start, inc, end)
+}
+
+def memoize(fn) {
+  cache = {}
+  memoized_fn = (args) {
+    result = cache[args]
+    if ~result {
+      result = fn(args)
+      cache[args] = result
+    }
+    return result
+  }
+  return memoized_fn
 }

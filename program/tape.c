@@ -161,7 +161,6 @@ void tape_write(const Tape *tape, FILE *file) {
   KL_iter cls_func_iter;
   bool in_class = false;
   int i;
-  DEBUGF("%p %d", file, alist_len(&tape->ins));
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
     if (kl_has(&cls_iter)) {
       ClassRef *class_ref = (ClassRef *)kl_value(&cls_iter);
@@ -344,19 +343,6 @@ int tape_ins_no_arg(Tape *tape, Op op, const Token *token) {
   ins->type = INSTRUCTION_NO_ARG;
   return 1;
 }
-
-// void insert_label_index(Tape *const tape, const char key[], int index) {
-//   if (Q_size(&tape_class_prefs) < 1) {
-//     map_insert(&tape_refs, key, (void *)index);
-//     return;
-//   }
-//   Map *methods = map_lookup(&tape_classes, Q_peek(&tape_class_prefs));
-//   map_insert(methods, key, (void *)index);
-// }
-
-// void insert_label(Tape *const tape, const char key[]) {
-//   insert_label_index(tape, key, expando_len(tape->instructions));
-// }
 
 int tape_label(Tape *tape, const Token *token) {
   tape_start_func(tape, token->text);

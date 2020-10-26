@@ -75,6 +75,7 @@ char *STACK;
 char *STACKLINE_NAME;
 char *STACK_SIZE_NAME;
 char *STRING_NAME;
+char *SUPER_KEY;
 char *THREADS_KEY;
 char *TMP_VAL;
 char *TRUE_KEYWORD;
@@ -149,6 +150,7 @@ void _strings_insert_constants() {
   STACKLINE_NAME = intern("StackLine");
   STACK_SIZE_NAME = intern("$stack_size");
   STRING_NAME = intern("String");
+  SUPER_KEY = intern("super");
   THREADS_KEY = intern("$threads");
   TMP_VAL = intern("$tmp");
   TRUE_KEYWORD = intern("True");

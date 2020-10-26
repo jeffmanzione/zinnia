@@ -13,6 +13,7 @@ Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos);
 Class *module_add_class(Module *module, const char name[], const Class *super);
 Object *module_lookup(Module *module, const char name[]);
+const Class *module_lookup_class(const Module *module, const char name[]);
 
 KL_iter module_functions(Module *module);
 KL_iter module_classes(Module *module);

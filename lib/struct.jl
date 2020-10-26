@@ -47,4 +47,17 @@ class Map {
     }
     return None
   }
+  method iter() {
+    return KVIterator(keys.iter(), self)
+  }
+  method each(f) {
+    for (k, v) in self {
+      f(k, v)
+    }
+  }
+  method to_s() {
+    kvs = []
+    each((k, v) -> kvs.append(cat(k, ': ', v)))
+    return cat('{', ', '.join(kvs), '}')
+  }
 }

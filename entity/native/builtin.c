@@ -16,9 +16,9 @@
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "lang/lexer/file_info.h"
+#include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
-#include "util/util.h"
 
 #define min(x, y) ((x) > (y) ? (y) : (x))
 
@@ -35,26 +35,33 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_int(0);
-    case OBJECT:
-      // Is this the right way to handle this?
-      return entity_int(0);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_int(pchar(&args->pri));
-        case INT:
-          return *args;
-        case FLOAT:
-          return entity_int(pfloat(&args->pri));
-        default:
-          ERROR("Unknown primitive type.");
-      }
+  case NONE:
+    return entity_int(0);
+  case OBJECT:
+    // Is this the right way to handle this?
+    return entity_int(0);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_int(pchar(&args->pri));
+    case INT:
+      return *args;
+    case FLOAT:
+      return entity_int(pfloat(&args->pri));
     default:
-      ERROR("Unknown type.");
+      ERROR("Unknown primitive type.");
+    }
+  default:
+    ERROR("Unknown type.");
   }
   return entity_int(0);
+}
+
+Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
+                               Context *ctx) {
+  Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
+  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL);
+  return fn_ref;
 }
 
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -70,15 +77,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-    case INT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-      break;
-    case FLOAT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-      break;
-    default /*CHAR*/:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-      break;
+  case INT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    break;
+  case FLOAT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+    break;
+  default /*CHAR*/:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+    break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -268,8 +275,24 @@ Entity _range_end(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(((_Range *)obj->_internal_obj)->end);
 }
 
+Entity _class_super(Task *task, Context *ctx, Object *obj, Entity *args) {
+  return (NULL == obj->_class->_super)
+             ? NONE_ENTITY
+             : entity_object(obj->_class->_super->_reflection);
+}
+
+Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
+  const Class *super = obj->_class->_super;
+  const Function *constructor = class_get_function(super, CONSTRUCTOR_KEY);
+  if (NULL != constructor) {
+    return entity_object(_wrap_function_in_ref2(constructor, obj, task, ctx));
+  }
+  return NONE_ENTITY;
+}
+
 void builtin_add_native(Module *builtin) {
-  Class_Range = native_class(builtin, RANGE_CLASS_NAME, _range_init, _range_delete);
+  Class_Range =
+      native_class(builtin, RANGE_CLASS_NAME, _range_init, _range_delete);
   native_method(Class_Range, CONSTRUCTOR_KEY, _range_constructor);
   native_method(Class_Range, intern("start"), _range_start);
   native_method(Class_Range, intern("inc"), _range_inc);
@@ -301,4 +324,6 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_FunctionRef, intern("func"), _function_ref_func);
   native_method(Class_Class, NAME_KEY, _class_name);
   native_method(Class_Module, NAME_KEY, _module_name);
+  native_method(Class_Class, SUPER_KEY, _class_super);
+  native_method(Class_Object, SUPER_KEY, _object_super);
 }

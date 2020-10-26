@@ -115,11 +115,15 @@ Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
     ERROR("Invalid input to gets.");
   }
   char *buf = ALLOC_ARRAY2(char, pint(&args->pri) + 1);
-  fgets(buf, pint(&args->pri), f->fp);
-  Object *string =
-      string_new(task->parent_process->heap, buf, pint(&args->pri));
+  Entity string;
+  if (fgets(buf, pint(&args->pri), f->fp)) {
+    string = entity_object(
+        string_new(task->parent_process->heap, buf, pint(&args->pri)));
+  } else {
+    string = NONE_ENTITY;
+  }
   DEALLOC(buf);
-  return entity_object(string);
+  return string;
 }
 
 Entity _file_getline(Task *task, Context *ctx, Object *obj, Entity *args) {

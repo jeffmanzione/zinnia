@@ -48,7 +48,14 @@ inline Module *context_module(Context *ctx) {
   return ctx->module;
 }
 
-Entity *context_lookup(Context *ctx, const char id[]) {
+Object *wrap_function_in_ref(const Function *f, Object *obj, Task *task,
+                             Context *ctx) {
+  Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
+  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL);
+  return fn_ref;
+}
+
+Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id));
   if (SELF == id) {
     return &ctx->self;
@@ -59,7 +66,8 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   }
   Task *task = ctx->parent_task;
   Context *parent_context = ctx->previous_context;
-  while (NULL != parent_context && NULL == (member = object_get(parent_context->member_obj, id))) {
+  while (NULL != parent_context &&
+         NULL == (member = object_get(parent_context->member_obj, id))) {
     parent_context = parent_context->previous_context;
   }
   if (NULL != member) {
@@ -67,17 +75,21 @@ Entity *context_lookup(Context *ctx, const char id[]) {
   }
   member = object_get(ctx->self.obj, id);
   if (NULL != member) {
+    if (OBJECT == member->type && Class_Function == member->obj->_class &&
+        member->obj->_function_obj->_is_anon) {
+      *tmp = entity_object(wrap_function_in_ref(member->obj->_function_obj,
+                                                ctx->self.obj, task, ctx));
+      return tmp;
+    }
     return member;
   }
 
   const Function *f = class_get_function(ctx->self.obj->_class, id);
   if (NULL != f) {
-    Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
-    __function_ref_init(fn_ref, ctx->self.obj, f, f->_is_anon ? ctx : NULL);
+    Object *f_ref = wrap_function_in_ref(f, ctx->self.obj, task, ctx);
     return object_set_member_obj(task->parent_process->heap, ctx->self.obj, id,
-                                 fn_ref);
+                                 f_ref);
   }
-
   member = object_get(ctx->module->_reflection, id);
   if (NULL != member) {
     return member;
@@ -85,6 +97,11 @@ Entity *context_lookup(Context *ctx, const char id[]) {
 
   Object *obj = module_lookup(ctx->module, id);
   if (NULL != obj) {
+    if (Class_Function == obj->_class && obj->_function_obj->_is_anon) {
+      *tmp = entity_object(
+          wrap_function_in_ref(obj->_function_obj, ctx->self.obj, task, ctx));
+      return tmp;
+    }
     return object_set_member_obj(_context_heap(ctx), ctx->module->_reflection,
                                  id, obj);
   }
@@ -115,12 +132,13 @@ void context_set(Context *ctx, const char id[], const Entity *e) {
     return;
   }
   Context *parent_context = ctx->previous_context;
-  while (NULL != parent_context && NULL == (member = object_get(parent_context->member_obj, id))) {
+  while (NULL != parent_context &&
+         NULL == (member = object_get(parent_context->member_obj, id))) {
     parent_context = parent_context->previous_context;
   }
   if (NULL != member) {
-    object_set_member(_context_heap(parent_context),
-                      parent_context->member_obj, id, e);
+    object_set_member(_context_heap(parent_context), parent_context->member_obj,
+                      id, e);
     return;
   }
   if (NULL != object_get(ctx->self.obj, id)) {

@@ -19,7 +19,6 @@
 #include "lang/semantics/expression_tree.h"
 #include "vm/intern.h"
 
-
 typedef struct {
   Module module;
   FileInfo *fi;
@@ -91,8 +90,15 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
     // TODO: Handle subclasses.
-    Class *class = module_add_class(module, cref->name, Class_Object);
-
+    const Class *super = NULL;
+    if (alist_len(&cref->supers) > 0) {
+      super =
+          module_lookup_class(module, *((char **)alist_get(&cref->supers, 0)));
+    }
+    if (NULL == super) {
+      super = Class_Object;
+    }
+    Class *class = module_add_class(module, cref->name, super);
     KL_iter funcs = keyedlist_iter(&cref->func_refs);
     for (; kl_has(&funcs); kl_inc(&funcs)) {
       FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
@@ -102,7 +108,7 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   return module_info;
 }
 
-void _add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
+void add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
   if (NULL == func->_reflection) {
     func->_reflection = heap_new(heap, Class_Function);
   }
@@ -124,7 +130,7 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   KL_iter funcs = class_functions(class);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
-    _add_reflection_to_function(heap, class->_reflection, func);
+    add_reflection_to_function(heap, class->_reflection, func);
   }
 }
 
@@ -135,7 +141,7 @@ void _add_reflection_to_module(ModuleManager *mm, Module *module) {
   KL_iter funcs = module_functions(module);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
-    _add_reflection_to_function(mm->_heap, func->_module->_reflection, func);
+    add_reflection_to_function(mm->_heap, func->_module->_reflection, func);
   }
   KL_iter classes = module_classes(module);
   for (; kl_has(&classes); kl_inc(&classes)) {

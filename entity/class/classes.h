@@ -20,6 +20,9 @@ extern Class* Class_String;
 extern Class* Class_Tuple;
 extern Class* Class_Error;
 
+extern Class* Class_Process;
+extern Class* Class_Task;
+
 void builtin_classes(Heap* heap, Module* builtin);
 
 #endif /* ENTITY_CLASS_CLASSES_ */

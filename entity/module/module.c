@@ -68,6 +68,10 @@ Class *module_add_class(Module *module, const char name[], const Class *super) {
   return c;
 }
 
+const Class *module_lookup_class(const Module *module, const char name[]) {
+  return keyedlist_lookup((KeyedList *)&module->_classes, name); // blessed.
+}
+
 Object *module_lookup(Module *module, const char name[]) {
   Class *class = keyedlist_lookup(&module->_classes, name);
   if (NULL != class && NULL != class->_reflection) {

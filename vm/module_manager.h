@@ -25,4 +25,6 @@ Module *modulemanager_lookup(ModuleManager *mm, const char fn[]);
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m);
 
+void add_reflection_to_function(Heap *heap, Object *parent, Function *func);
+
 #endif /* VM_MODULE_MANAGER_H_ */

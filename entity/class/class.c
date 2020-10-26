@@ -50,5 +50,14 @@ inline KL_iter class_functions(Class *cls) {
 }
 
 const Function *class_get_function(const Class *cls, const char name[]) {
-  return (Function *)keyedlist_lookup((KeyedList *)&cls->_functions, name);
+  const Class *class = cls;
+  while (NULL != class) {
+    const Function *f =
+        (Function *)keyedlist_lookup((KeyedList *)&class->_functions, name);
+    if (NULL != f) {
+      return f;
+    }
+    class = class->_super;
+  }
+  return NULL;
 }

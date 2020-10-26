@@ -74,6 +74,7 @@ extern char *STACK;
 extern char *STACKLINE_NAME;
 extern char *STACK_SIZE_NAME;
 extern char *STRING_NAME;
+extern char *SUPER_KEY;
 extern char *THREADS_KEY;
 extern char *TMP_VAL;
 extern char *TRUE_KEYWORD;
