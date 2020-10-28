@@ -3,6 +3,8 @@
 // Created on: Oct 28, 2020
 //     Author: Jeff Manzione
 
+#include "compile/compile.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -11,8 +13,10 @@
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
+#include "program/tape.h"
 #include "struct/map.h"
 #include "struct/set.h"
+#include "struct/struct_defaults.h"
 #include "util/args/commandline.h"
 #include "util/args/commandlines.h"
 #include "util/args/lib_finder.h"
@@ -20,7 +24,7 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-Tape *read_file(const char fn[]) {
+Tape *_read_file(const char fn[]) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
@@ -31,7 +35,7 @@ Tape *read_file(const char fn[]) {
   return tape;
 }
 
-void write_tape(const char fn[], Tape *tape, bool out_jm,
+void write_tape(const char fn[], const Tape *tape, bool out_jm,
                 const char machine_dir[]) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
@@ -46,7 +50,7 @@ void write_tape(const char fn[], Tape *tape, bool out_jm,
   // TODO: Handle outputting .jb.
 }
 
-void compile(const Set *source_files, const ArgStore *store) {
+Map *compile(const Set *source_files, const ArgStore *store) {
   parsers_init();
   semantics_init();
 
@@ -55,17 +59,19 @@ void compile(const Set *source_files, const ArgStore *store) {
       argstore_lookup_string(store, ArgKey__MACHINE_OUT_DIR);
 
   M_iter srcs = set_iter((Set *)source_files);
+  Map *src_map = map_create_default();
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    Tape *tape = read_file(src);
+    Tape *tape = _read_file(src);
+    map_insert(src_map, src, tape);
     write_tape(src, tape, out_jm, machine_dir);
-    tape_delete(tape);
   }
   semantics_finalize();
   parsers_finalize();
+  return src_map;
 }
 
-int main(int argc, const char *argv[]) {
+int jlc(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 
@@ -73,7 +79,12 @@ int main(int argc, const char *argv[]) {
   argconfig_compile(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
-  compile(argstore_sources(store), store);
+  Map *src_map = compile(argstore_sources(store), store);
+  M_iter tapes = map_iter(src_map);
+  for (; has(&tapes); inc(&tapes)) {
+    tape_delete(value(&tapes));
+  }
+  map_delete(src_map);
 
   strings_finalize();
   token_finalize_all();
