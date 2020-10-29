@@ -19,9 +19,9 @@ typedef enum {
   LET,
   PUSH,
   PEEK,
-  PSRS,  // PUSH+RES
-  NOT,   // where !1 == Nil
-  NOTC,  // C-like NOT, where !1 == 0
+  PSRS, // PUSH+RES
+  NOT,  // where !1 == Nil
+  NOTC, // C-like NOT, where !1 == 0
   GT,
   LT,
   EQ,
@@ -58,9 +58,9 @@ typedef enum {
   PRNT,
   LMDL,
   GET,
-  GTSH,  // GET+PUSH
-  RNIL,  // RES Nil
-  PNIL,  // PUSH Nil
+  GTSH, // GET+PUSH
+  RNIL, // RES Nil
+  PNIL, // PUSH Nil
   FLD,
   FLDC,
   IS,
@@ -81,5 +81,6 @@ typedef enum {
 } Op;
 
 const char *op_to_str(Op op);
+Op str_to_op(const char op_str[]);
 
 #endif /* PROGRAM_OP_H_ */

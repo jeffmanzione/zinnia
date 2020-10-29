@@ -25,8 +25,8 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  uint32_t start_index;  // inclusive
-  uint32_t end_index;    // exclusive
+  uint32_t start_index; // inclusive
+  uint32_t end_index;   // exclusive
   KeyedList func_refs;
   AList supers;
 } ClassRef;
@@ -55,6 +55,7 @@ void tape_end_class(Tape *tape);
 void tape_append(Tape *head, Tape *tail);
 
 void tape_write(const Tape *tape, FILE *file);
+void tape_read(Tape *const tape, Q *tokens);
 
 // **********************
 // Specialized functions.
@@ -63,7 +64,7 @@ int tape_ins(Tape *tape, Op op, const Token *token);
 int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token);
 
 DEB_FN(int, tape_ins_int, Tape *tape, Op op, int val, const Token *token);
-#define tape_ins_int(tape, op, val, token) \
+#define tape_ins_int(tape, op, val, token)                                     \
   CALL_FN(tape_ins_int__, tape, op, val, token)
 
 // int tape_ins_int(Tape *tape, Op op, int val, const Token *token);

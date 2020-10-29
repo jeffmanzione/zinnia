@@ -156,4 +156,6 @@
   res   'def'   ; line=31, col=11
   call          ; line=31, col=14
   call  println ; line=31, col=4
+  res   a       ; line=32, col=1
+  get   b       ; line=32, col=3
   exit  0       ; line=0, col=1

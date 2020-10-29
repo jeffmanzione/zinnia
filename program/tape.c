@@ -16,6 +16,9 @@
 
 #define DEFAULT_TAPE_SZ 64
 
+#define CLASS_KEYWORD "class"
+#define CLASSEND_KEYWORD "endclass"
+#define MODULE_KEYWORD "module"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
 
@@ -248,6 +251,92 @@ void tape_append(Tape *head, Tape *tail) {
   keyedlist_finalize(&tail->class_refs);
   keyedlist_finalize(&tail->func_refs);
   DEALLOC(tail);
+}
+
+Token *_q_peek(Q *tokens) {
+  if (Q_size(tokens) <= 0) {
+    return NULL;
+  }
+  return Q_get(tokens, 0);
+}
+
+Token *_next_token_skip_ln(Q *queue) {
+  ASSERT_NOT_NULL(queue);
+  ASSERT(Q_size(queue) > 0);
+  Token *first = (Token *)Q_remove(queue, 0);
+  ASSERT_NOT_NULL(first);
+  while (first->type == ENDLINE) {
+    first = (Token *)_q_peek(queue);
+    if (NULL == first) {
+      return NULL;
+    }
+    Q_remove(queue, 0);
+  }
+  return first;
+}
+
+void tape_read_ins(Tape *const tape, Q *tokens) {
+  ASSERT_NOT_NULL(tokens);
+  if (Q_size(tokens) < 1) {
+    return;
+  }
+  Token *first = _next_token_skip_ln(tokens);
+  if (NULL == first) {
+    return;
+  }
+  if (AT == first->type) {
+    Token *fn_name = Q_remove(tokens, 0);
+    if (ENDLINE != ((Token *)_q_peek(tokens))->type) {
+      ERROR("Invalid token after @def.");
+    }
+    tape_label(tape, fn_name);
+    return;
+  }
+  if (0 == strcmp(CLASS_KEYWORD, first->text)) {
+    Token *class_name = Q_remove(tokens, 0);
+    if (ENDLINE == ((Token *)_q_peek(tokens))->type) {
+      tape_class(tape, class_name);
+      return;
+    }
+    Q parents;
+    Q_init(&parents);
+    while (COMMA == ((Token *)_q_peek(tokens))->type) {
+      Q_remove(tokens, 0);
+      *Q_add_last(&parents) = (char *)((Token *)Q_remove(tokens, 0))->text;
+    }
+    tape_class_with_parents(tape, class_name, &parents);
+    Q_finalize(&parents);
+    return;
+  }
+  if (0 == strcmp(CLASSEND_KEYWORD, first->text)) {
+    tape_endclass(tape, first);
+    return;
+  }
+  Op op = str_to_op(first->text);
+  Token *next = (Token *)_q_peek(tokens);
+  if (ENDLINE == next->type || POUND == next->type) {
+    tape_ins_no_arg(tape, op, first);
+  } else if (MINUS == next->type) {
+    Q_remove(tokens, 0);
+    tape_ins_neg(tape, op, Q_remove(tokens, 0));
+  } else {
+    Q_remove(tokens, 0);
+    tape_ins(tape, op, next);
+  }
+}
+
+void tape_read(Tape *const tape, Q *tokens) {
+  ASSERT(NOT_NULL(tape), NOT_NULL(tokens));
+  if (0 == strcmp(MODULE_KEYWORD, ((Token *)_q_peek(tokens))->text)) {
+    Q_remove(tokens, 0);
+    Token *module_name = (Token *)Q_remove(tokens, 0);
+    tape->module_name = module_name->text;
+  } else {
+    tape->module_name = intern("$");
+  }
+  while (Q_size(tokens) > 0) {
+    tape_read_ins(tape, tokens);
+  }
 }
 
 // **********************

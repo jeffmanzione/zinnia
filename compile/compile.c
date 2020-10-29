@@ -32,6 +32,7 @@ Tape *_read_file(const char fn[]) {
   produce_instructions(etree, tape);
   delete_expression(etree);
   syntax_tree_delete(&stree);
+  file_info_delete(fi);
   return tape;
 }
 
@@ -86,6 +87,8 @@ int jlc(int argc, const char *argv[]) {
   }
   map_delete(src_map);
 
+  argstore_delete(store);
+  argconfig_delete(config);
   strings_finalize();
   token_finalize_all();
   alloc_finalize();

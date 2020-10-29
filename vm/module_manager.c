@@ -17,6 +17,7 @@
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
+#include "util/string.h"
 #include "vm/intern.h"
 
 typedef struct {
@@ -150,7 +151,7 @@ void _add_reflection_to_module(ModuleManager *mm, Module *module) {
   }
 }
 
-Module *_read_helper(ModuleManager *mm, const char fn[]) {
+Module *_read_jl(ModuleManager *mm, const char fn[]) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
@@ -161,6 +162,32 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
   delete_expression(etree);
   syntax_tree_delete(&stree);
   return &module_info->module;
+}
+
+Module *_read_jm(ModuleManager *mm, const char fn[]) {
+  FileInfo *fi = file_info(fn);
+  Lexer lexer;
+  lexer_init(&lexer, fi, true);
+  Q *tokens = lex(&lexer);
+
+  Tape *tape = tape_create();
+  tape_read(tape, tokens);
+  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  module_info->fi = fi;
+
+  lexer_finalize(&lexer);
+  return &module_info->module;
+}
+
+Module *_read_helper(ModuleManager *mm, const char fn[]) {
+  if (ends_with(fn, ".jm")) {
+    return _read_jm(mm, fn);
+  } else if (ends_with(fn, ".jl")) {
+    return _read_jl(mm, fn);
+  } else {
+    ERROR("Unknown file type.");
+  }
+  return NULL;
 }
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {

@@ -30,3 +30,4 @@ io.println(fn('abc'))
 io.println(fn('abc'))
 io.println(fn('def'))
 io.println(fn('def'))
+a.b
