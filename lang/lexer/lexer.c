@@ -17,24 +17,6 @@
 #include "struct/q.h"
 #include "util/string.h"
 
-// void _read_word_from_stream(FILE *stream, char *buff) {
-//   int i = 0;
-//   while ('\0' != (buff[i++] = fgetc(stream)))
-//     ;
-// }
-
-// void _advance_to_next(char **ptr, const char c) {
-//   while (c != **ptr) {
-//     (*ptr)++;
-//   }
-// }
-
-// // Ex: class Doge:fields{age,breed,}methods{new(2),speak(0),}
-// void fill_str(char buff[], char *start, char *end) {
-//   buff[0] = '\0';
-//   strncat(buff, start, end - start);
-// }
-
 TokenType _resolve_type(const char word[], int word_len, int *in_comment) {
   TokenType type;
   if (0 == word_len) {
@@ -42,101 +24,101 @@ TokenType _resolve_type(const char word[], int word_len, int *in_comment) {
     *in_comment = false;
   } else {
     switch (word[0]) {
-      case '(':
-        type = LPAREN;
-        break;
-      case ')':
-        type = RPAREN;
-        break;
-      case '{':
-        type = LBRCE;
-        break;
-      case '}':
-        type = RBRCE;
-        break;
-      case '[':
-        type = LBRAC;
-        break;
-      case ']':
-        type = RBRAC;
-        break;
-      case '+':
-        type = word[1] == '+' ? INCREMENT : PLUS;
-        break;
-      case '-':
-        type = word[1] == '>' ? RARROW : (word[1] == '-' ? DECREMENT : MINUS);
-        break;
-      case '*':
-        type = STAR;
-        break;
-      case '/':
-        type = FSLASH;
-        break;
-      case '\\':
-        type = BSLASH;
-        break;
-      case '%':
-        type = PERCENT;
-        break;
-      case '&':
-        type = AMPER;
-        break;
-      case '|':
-        type = PIPE;
-        break;
-      case '^':
-        type = CARET;
-        break;
-      case '~':
-        type = TILDE;
-        break;
-      case '!':
-        type = word[1] == '=' ? NEQUIV : EXCLAIM;
-        break;
-      case '?':
-        type = QUESTION;
-        break;
-      case '@':
-        type = AT;
-        break;
-      case '#':
-        type = POUND;
-        break;
-      case '<':
-        type = word[1] == '-' ? LARROW : (word[1] == '=' ? LTHANEQ : LTHAN);
-        break;
-      case '>':
-        type = word[1] == '=' ? GTHANEQ : GTHAN;
-        break;
-      case '=':
-        type = word[1] == '=' ? EQUIV : EQUALS;
-        break;
-      case ',':
-        type = COMMA;
-        break;
-      case ':':
-        type = COLON;
-        break;
-      case '.':
-        type = PERIOD;
-        break;
-      case '\'':
-        type = STR;
-        break;
-      case CODE_COMMENT_CH:
-        type = SEMICOLON;
-        *in_comment = true;
-        break;
-      default:
-        if (is_number(word[0])) {
-          if (ends_with(word, "f") || contains_char(word, '.')) {
-            type = FLOATING;
-          } else {
-            type = INTEGER;
-          }
+    case '(':
+      type = LPAREN;
+      break;
+    case ')':
+      type = RPAREN;
+      break;
+    case '{':
+      type = LBRCE;
+      break;
+    case '}':
+      type = RBRCE;
+      break;
+    case '[':
+      type = LBRAC;
+      break;
+    case ']':
+      type = RBRAC;
+      break;
+    case '+':
+      type = word[1] == '+' ? INCREMENT : PLUS;
+      break;
+    case '-':
+      type = word[1] == '>' ? RARROW : (word[1] == '-' ? DECREMENT : MINUS);
+      break;
+    case '*':
+      type = STAR;
+      break;
+    case '/':
+      type = FSLASH;
+      break;
+    case '\\':
+      type = BSLASH;
+      break;
+    case '%':
+      type = PERCENT;
+      break;
+    case '&':
+      type = AMPER;
+      break;
+    case '|':
+      type = PIPE;
+      break;
+    case '^':
+      type = CARET;
+      break;
+    case '~':
+      type = TILDE;
+      break;
+    case '!':
+      type = word[1] == '=' ? NEQUIV : EXCLAIM;
+      break;
+    case '?':
+      type = QUESTION;
+      break;
+    case '@':
+      type = AT;
+      break;
+    case '#':
+      type = POUND;
+      break;
+    case '<':
+      type = word[1] == '-' ? LARROW : (word[1] == '=' ? LTHANEQ : LTHAN);
+      break;
+    case '>':
+      type = word[1] == '=' ? GTHANEQ : GTHAN;
+      break;
+    case '=':
+      type = word[1] == '=' ? EQUIV : EQUALS;
+      break;
+    case ',':
+      type = COMMA;
+      break;
+    case ':':
+      type = COLON;
+      break;
+    case '.':
+      type = PERIOD;
+      break;
+    case '\'':
+      type = STR;
+      break;
+    case CODE_COMMENT_CH:
+      type = SEMICOLON;
+      *in_comment = true;
+      break;
+    default:
+      if (is_number(word[0])) {
+        if (ends_with(word, "f") || contains_char(word, '.')) {
+          type = FLOATING;
         } else {
-          type = word_type(word, word_len);
+          type = INTEGER;
         }
+      } else {
+        type = word_type(word, word_len);
+      }
     }
   }
   return type;
@@ -145,26 +127,32 @@ TokenType _resolve_type(const char word[], int word_len, int *in_comment) {
 bool is_complex(const char seq[]) {
   const char sec = seq[1];
   switch (seq[0]) {
-    case '+':
-      if (sec == '+' || sec == '=') return true;
-      return false;
-    case '-':
-      if (sec == '-' || sec == '=' || sec == '>') return true;
-      return false;
-    case '<':
-      if (sec == '-' || sec == '=' || sec == '<' || sec == '>') return true;
-      return false;
-    case '>':
-      if (sec == '=' || sec == '>') return true;
-      return false;
-    case '=':
-      if (sec == '=') return true;
-      return false;
-    case '!':
-      if (sec == '=') return true;
-      return false;
-    default:
-      return false;
+  case '+':
+    if (sec == '+' || sec == '=')
+      return true;
+    return false;
+  case '-':
+    if (sec == '-' || sec == '=' || sec == '>')
+      return true;
+    return false;
+  case '<':
+    if (sec == '-' || sec == '=' || sec == '<' || sec == '>')
+      return true;
+    return false;
+  case '>':
+    if (sec == '=' || sec == '>')
+      return true;
+    return false;
+  case '=':
+    if (sec == '=')
+      return true;
+    return false;
+  case '!':
+    if (sec == '=')
+      return true;
+    return false;
+  default:
+    return false;
   }
 }
 
@@ -264,7 +252,7 @@ bool lex_line(Lexer *lexer) {
     return false;
   }
 
-  col_num = 1;
+  col_num = 0;
   index = line;
 
   LineInfo *li = file_info_append(lexer_file(lexer), line);
