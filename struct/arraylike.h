@@ -47,6 +47,7 @@
   type name##_dequeue(name *const);                                            \
   type *name##_add_last(name *const);                                          \
   void name##_set(name *const, uint32_t, type);                                \
+  type *name##_set_ref(name *const array, uint32_t index);                     \
   type name##_get(name *const, uint32_t);                                      \
   type name##_last(name *const);                                               \
   type *name##_get_ref(name *const, uint32_t);                                 \
@@ -212,6 +213,14 @@
       array->num_elts = index + 1;                                             \
     }                                                                          \
     array->table[index] = elt;                                                 \
+  }                                                                            \
+  inline type *name##_set_ref(name *const array, uint32_t index) {             \
+    ASSERT(NOT_NULL(array), index >= 0);                                       \
+    if (index >= array->num_elts) {                                            \
+      name##_maybe_realloc(array, index + 1);                                  \
+      array->num_elts = index + 1;                                             \
+    }                                                                          \
+    return &array->table[index];                                               \
   }                                                                            \
                                                                                \
   inline type name##_get(name *const array, uint32_t index) {                  \

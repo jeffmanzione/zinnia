@@ -24,6 +24,7 @@ struct ExpressionTree_ {
     Expression_array_declaration array_declaration;
     Expression_map_declaration map_declaration;
     Expression_primary_expression primary_expression;
+    Expression_primary_expression_no_constants primary_expression_no_constants;
     Expression_postfix_expression postfix_expression;
     Expression_range_expression range_expression;
     Expression_unary_expression unary_expression;

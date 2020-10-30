@@ -38,7 +38,9 @@ inline const char *module_name(const Module *const module) {
   return module->_name;
 }
 
-inline const Tape *module_tape(Module *module) { return module->_tape; }
+inline const Tape *module_tape(const Module *const module) {
+  return module->_tape;
+}
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos) {
@@ -51,7 +53,7 @@ Function *module_add_function(Module *module, const char name[],
           "name.",
           name, module->_name);
   }
-  function_init(f, name, module, ins_pos);
+  function_init(f, name, module, ins_pos, is_anon(name));
   return f;
 }
 
@@ -64,6 +66,10 @@ Class *module_add_class(Module *module, const char name[], const Class *super) {
   }
   class_init(c, name, super, module);
   return c;
+}
+
+const Class *module_lookup_class(const Module *module, const char name[]) {
+  return keyedlist_lookup((KeyedList *)&module->_classes, name); // blessed.
 }
 
 Object *module_lookup(Module *module, const char name[]) {

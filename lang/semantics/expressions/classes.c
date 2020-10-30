@@ -113,7 +113,25 @@ Arguments set_constructor_args(const SyntaxTree *stree, const Token *token) {
 void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   ASSERT(IS_SYNTAX(fn_identifier, method_identifier));
   func->def_token = fn_identifier->first->token;
-  func->fn_name = fn_identifier->second->token;
+  const SyntaxTree *fn_name = fn_identifier->second;
+  if (IS_SYNTAX(fn_name, identifier)) {
+    func->fn_name = fn_name->token;
+    func->special_method = SpecialMethod__NONE;
+  } else if (IS_TOKEN(fn_name, EQUIV)) {
+    func->fn_name = fn_name->token;
+    func->special_method = SpecialMethod__EQUIV;
+  } else if (IS_TOKEN(fn_name, NEQUIV)) {
+    func->fn_name = fn_name->token;
+    func->special_method = SpecialMethod__NEQUIV;
+  } else if (IS_TOKEN2(fn_name, LBRAC, RBRAC)) {
+    func->fn_name = fn_name->first->token;
+    func->special_method = SpecialMethod__ARRAY_INDEX;
+  } else if (IS_TOKEN3(fn_name, LBRAC, RBRAC, EQUALS)) {
+    func->fn_name = fn_name->first->token;
+    func->special_method = SpecialMethod__ARRAY_SET;
+  } else {
+    ERROR("Unknown method name type.");
+  }
 }
 
 FunctionDef populate_method(const SyntaxTree *stree) {

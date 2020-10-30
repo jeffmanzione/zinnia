@@ -9,16 +9,15 @@
 #include "entity/class/classes.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
+#include "entity/module/modules.h"
 #include "entity/native/builtin.h"
+#include "entity/native/error.h"
 #include "entity/native/io.h"
 #include "entity/object.h"
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "vm/intern.h"
-
-Module *Module_builtin;
-Module *Module_io;
 
 typedef struct {
   Module module;
@@ -53,10 +52,21 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   builtin_classes(heap, Module_builtin);
   builtin_add_native(Module_builtin);
   _add_reflection_to_module(mm, Module_builtin);
+  heap_make_root(heap, Module_builtin->_reflection);
   // io.jl
   Module_io = _read_helper(mm, "lib/io.jl");
   io_add_native(Module_io);
   _add_reflection_to_module(mm, Module_io);
+  heap_make_root(heap, Module_io->_reflection);
+  // error.jl
+  Module_error = _read_helper(mm, "lib/error.jl");
+  error_add_native(Module_error);
+  _add_reflection_to_module(mm, Module_error);
+  heap_make_root(heap, Module_error->_reflection);
+  // struct.jl
+  Module_struct = _read_helper(mm, "lib/struct.jl");
+  _add_reflection_to_module(mm, Module_struct);
+  heap_make_root(heap, Module_struct->_reflection);
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -80,8 +90,15 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
     // TODO: Handle subclasses.
-    Class *class = module_add_class(module, cref->name, Class_Object);
-
+    const Class *super = NULL;
+    if (alist_len(&cref->supers) > 0) {
+      super =
+          module_lookup_class(module, *((char **)alist_get(&cref->supers, 0)));
+    }
+    if (NULL == super) {
+      super = Class_Object;
+    }
+    Class *class = module_add_class(module, cref->name, super);
     KL_iter funcs = keyedlist_iter(&cref->func_refs);
     for (; kl_has(&funcs); kl_inc(&funcs)) {
       FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
@@ -91,7 +108,7 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   return module_info;
 }
 
-void _add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
+void add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
   if (NULL == func->_reflection) {
     func->_reflection = heap_new(heap, Class_Function);
   }
@@ -103,6 +120,9 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   if (NULL == class->_reflection) {
     class->_reflection = heap_new(heap, Class_Class);
   }
+  if (NULL == class->_super && class != Class_Object) {
+    class->_super = Class_Object;
+  }
   class->_reflection->_class_obj = class;
   object_set_member_obj(heap, module->_reflection, class->_name,
                         class->_reflection);
@@ -110,7 +130,7 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   KL_iter funcs = class_functions(class);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
-    _add_reflection_to_function(heap, class->_reflection, func);
+    add_reflection_to_function(heap, class->_reflection, func);
   }
 }
 
@@ -121,7 +141,7 @@ void _add_reflection_to_module(ModuleManager *mm, Module *module) {
   KL_iter funcs = module_functions(module);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
-    _add_reflection_to_function(mm->_heap, func->_module->_reflection, func);
+    add_reflection_to_function(mm->_heap, func->_module->_reflection, func);
   }
   KL_iter classes = module_classes(module);
   for (; kl_has(&classes); kl_inc(&classes)) {
@@ -136,7 +156,6 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
   ExpressionTree *etree = populate_expression(&stree);
   Tape *tape = tape_create();
   produce_instructions(etree, tape);
-  // tape_write(tape, stdout);
   ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
   module_info->fi = fi;
   delete_expression(etree);
@@ -151,9 +170,20 @@ Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
 }
 
 Module *modulemanager_lookup(ModuleManager *mm, const char fn[]) {
-  ModuleInfo *mi = keyedlist_lookup(&mm->_modules, fn);
+  ModuleInfo *mi = (ModuleInfo *)keyedlist_lookup(&mm->_modules, fn);
   if (NULL == mi) {
     return NULL;
   }
   return &mi->module;
+}
+
+const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
+                                           const Module *m) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(m->_name));
+  const ModuleInfo *mi =
+      (ModuleInfo *)keyedlist_lookup((KeyedList *)&mm->_modules, m->_name);
+  if (NULL == mi) {
+    return NULL;
+  }
+  return mi->fi;
 }

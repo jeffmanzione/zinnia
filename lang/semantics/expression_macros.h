@@ -100,6 +100,13 @@ void delete_expression(ExpressionTree *tree);
 #define IS_LEAF(tree) ((tree)->token != NULL)
 #define IS_TOKEN(tree, token_type)                                             \
   (IS_LEAF(tree) && ((tree)->token->type == (token_type)))
+#define IS_TOKEN2(tree, token_type1, token_type2)                              \
+  (!IS_LEAF(tree) && IS_TOKEN((tree)->first, token_type1) &&                   \
+   IS_TOKEN((tree)->second, token_type2))
+#define IS_TOKEN3(tree, token_type1, token_type2, token_type3)                 \
+  (!IS_LEAF(tree) && IS_TOKEN((tree)->first, token_type1) &&                   \
+   !IS_LEAF((tree)->second) && IS_TOKEN((tree)->second->first, token_type2) && \
+   IS_TOKEN((tree)->second->second, token_type3))
 
 ExpressionTree *__extract_tree(AList *alist_of_tree, int index);
 

@@ -29,6 +29,7 @@ void semantics_init() {
   Register(array_declaration);
   Register(map_declaration);
   Register(primary_expression);
+  Register(primary_expression_no_constants);
   Register(postfix_expression);
   Register(range_expression);
   Register(unary_expression);

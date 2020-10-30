@@ -5,6 +5,8 @@
 
 #include "heap/heap.h"
 
+#include <stdint.h>
+
 #include "alloc/alloc.h"
 #include "alloc/arena/arena.h"
 #include "alloc/memory_graph/memory_graph.h"
@@ -39,12 +41,23 @@ void heap_delete(Heap *heap) {
   DEALLOC(heap);
 }
 
+uint32_t heap_collect_garbage(Heap *heap) {
+  printf("Start deletion.\n");
+  uint32_t deleted_nodes_count = mgraph_collect_garbage(heap->mg);
+  printf("deleted_nodes_count=%d\n", deleted_nodes_count);
+  return deleted_nodes_count;
+}
+
 Object *heap_new(Heap *heap, const Class *class) {
   ASSERT(NOT_NULL(heap), NOT_NULL(class));
   Object *object = _object_create(heap, class);
   // Blessed
   object->_node_ref = mgraph_insert(heap->mg, object, (Deleter)_object_delete);
   return object;
+}
+
+void heap_make_root(Heap *heap, Object *obj) {
+  mgraph_root(heap->mg, (Node *)obj->_node_ref);
 }
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
@@ -95,7 +108,16 @@ Object *_object_create(Heap *heap, const Class *class) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  if (NULL != object && NULL != object->_class->_delete_fn) {
+  // if (0 == strcmp(object->_class->_name, "Class")) {
+  //   printf("DELETING a Class('%s')\n", object->_class_obj->_name);
+  // } else if (0 == strcmp(object->_class->_name, "Module")) {
+  //   printf("DELETING a Module('%s')\n", object->_module_obj->_name);
+  // } else if (0 == strcmp(object->_class->_name, "Function")) {
+  //   printf("DELETING a Function('%s')\n", object->_function_obj->_name);
+  // } else {
+  //   printf("DELETING a '%s'\n", object->_class->_name);
+  // }
+  if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
   keyedlist_finalize(&object->_members);
@@ -112,11 +134,24 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
+void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
+  // ASSERT(index >= 0, index < Array_size((Array *)array->_internal_obj));
+  Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
+  if (NULL != e && OBJECT == e->type) {
+    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
+  }
+  *e = *child;
+  if (OBJECT != child->type) {
+    return;
+  }
+  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+}
+
 // Does this need to handle overwrites?
 void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
   ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
-  // bless
   Entity *e = tuple_get_mutable((Tuple *)array->_internal_obj, index);
   *e = *child;
   if (OBJECT != child->type) {

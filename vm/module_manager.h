@@ -8,11 +8,9 @@
 
 #include "entity/module/module.h"
 #include "heap/heap.h"
+#include "lang/lexer/file_info.h"
 #include "program/tape.h"
 #include "struct/keyed_list.h"
-
-extern Module *Module_builtin;
-extern Module *Module_io;
 
 typedef struct {
   Heap *_heap;
@@ -23,5 +21,10 @@ void modulemanager_init(ModuleManager *mm, Heap *heap);
 void modulemanager_finalize(ModuleManager *mm);
 Module *modulemanager_read(ModuleManager *mm, const char fn[]);
 Module *modulemanager_lookup(ModuleManager *mm, const char fn[]);
+
+const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
+                                           const Module *m);
+
+void add_reflection_to_function(Heap *heap, Object *parent, Function *func);
 
 #endif /* VM_MODULE_MANAGER_H_ */

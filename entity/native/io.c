@@ -6,12 +6,14 @@
 
 #include <stdio.h>
 
+#include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
 #include "entity/class/classes.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "vm/intern.h"
 
@@ -73,6 +75,9 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
     } else if (0 == strncmp("__STDERR__",
                             ((String *)e_fn->obj->_internal_obj)->table, 10)) {
       f->fp = stderr;
+    } else if (0 == strncmp("__STDIN__",
+                            ((String *)e_fn->obj->_internal_obj)->table, 9)) {
+      f->fp = stdin;
     } else {
       const Entity *e_mode = tuple_get(tup, 1);
       if (NULL == e_mode || OBJECT != e_mode->type ||
@@ -103,6 +108,61 @@ Entity _file_close(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
+  _File *f = (_File *)obj->_internal_obj;
+  ASSERT(NOT_NULL(f), NOT_NULL(f->fp));
+  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+    ERROR("Invalid input to gets.");
+  }
+  char *buf = ALLOC_ARRAY2(char, pint(&args->pri) + 1);
+  Entity string;
+  if (fgets(buf, pint(&args->pri), f->fp)) {
+    string = entity_object(
+        string_new(task->parent_process->heap, buf, pint(&args->pri)));
+  } else {
+    string = NONE_ENTITY;
+  }
+  DEALLOC(buf);
+  return string;
+}
+
+Entity _file_getline(Task *task, Context *ctx, Object *obj, Entity *args) {
+  _File *f = (_File *)obj->_internal_obj;
+  ASSERT(NOT_NULL(f), NOT_NULL(f->fp));
+  char *line = NULL;
+  size_t len = 0;
+  int nread = getline(&line, &len, f->fp);
+  Entity string;
+  if (-1 == nread) {
+    string = NONE_ENTITY;
+  } else {
+    string = entity_object(string_new(task->parent_process->heap, line, nread));
+  }
+  if (line != NULL) {
+    DEALLOC(line);
+  }
+  return string;
+}
+
+// This is vulnerable to files with \0 inside them.
+Entity _file_getall(Task *task, Context *ctx, Object *obj, Entity *args) {
+  _File *f = (_File *)obj->_internal_obj;
+  // Get length of file to realloc size and avoid buffer reallocs.
+  fseek(f->fp, 0, SEEK_END);
+  long fsize = ftell(f->fp);
+  rewind(f->fp);
+  // Create string and copy the file into it.
+  Object *str = string_new(task->parent_process->heap, NULL, fsize);
+  String *string = (String *)str->_internal_obj;
+  String_set(string, fsize - 1, '\0');
+  // Can be less than read on Windows because \r gets dropped.
+  int actually_read = fread(string->table, sizeof(char), fsize, f->fp);
+  // If this happens then something is really wrong.
+  ASSERT(actually_read <= fsize);
+  String_rshrink(string, fsize - actually_read);
+  return entity_object(str);
+}
+
 Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
   ASSERT(NOT_NULL(f));
@@ -121,5 +181,8 @@ void io_add_native(Module *io) {
   Class *file = native_class(io, intern("__File"), __file_init, __file_delete);
   native_method(file, CONSTRUCTOR_KEY, _file_constructor);
   native_method(file, intern("__close"), _file_close);
+  native_method(file, intern("__gets"), _file_gets);
+  native_method(file, intern("__getline"), _file_getline);
+  native_method(file, intern("__getall"), _file_getall);
   native_method(file, intern("__puts"), _file_puts);
 }

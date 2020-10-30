@@ -16,6 +16,9 @@ cc_library(
     srcs = ["file.c"],
     hdrs = ["file.h"],
     deps = [
+        ":string",
+        "@memory_wrapper//alloc",
+        "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
     ],
 )

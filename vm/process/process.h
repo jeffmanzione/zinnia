@@ -11,5 +11,6 @@
 void process_init(Process *process);
 void process_finalize(Process *process);
 Task *process_create_task(Process *process);
+Task *process_last_task(Process *process);
 
 #endif /* VM_PROCESS_PROCESS_H_ */

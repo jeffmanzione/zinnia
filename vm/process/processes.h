@@ -14,21 +14,25 @@
 #include "struct/set.h"
 
 typedef struct _VM VM;
+typedef struct __Context Context;
 typedef struct __Task Task;
 typedef struct __Process Process;
 
-typedef struct {
+struct __Context {
   Task *parent_task;
-  uint32_t index;
+  Context *previous_context;
 
   Object *member_obj;
 
-  bool is_function;
   Entity self;
   Module *module;
   const Tape *tape;
+  const Function *func;
   uint32_t ins;
-} Context;
+
+  Object *error;
+  int32_t catch_ins;
+};
 
 typedef enum {
   TASK_NEW,
@@ -50,12 +54,13 @@ struct __Task {
   WaitReason wait_reason;
 
   Process *parent_process;
+  Context *current;
 
   Entity resval;
   AList entity_stack;
-  AList context_stack;
 
   Task *dependent_task;
+  bool child_task_has_error;
 };
 
 struct __Process {
@@ -63,8 +68,8 @@ struct __Process {
   Heap *heap;
 
   __Arena task_arena;
+  __Arena context_arena;
 
-  // Task *current_task;
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;

@@ -24,7 +24,9 @@ Class *Class_Module;
 Class *Class_Array;
 Class *Class_String;
 Class *Class_Tuple;
-// Class *Class_Error;
+Class *Class_Error;
+Class *Class_Process;
+Class *Class_Task;
 
 void builtin_classes(Heap *heap, Module *builtin) {
   Class_Object = module_add_class(builtin, OBJECT_NAME, NULL);
@@ -36,7 +38,9 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Array = module_add_class(builtin, ARRAY_NAME, Class_Object);
   Class_String = module_add_class(builtin, STRING_NAME, Class_Object);
   Class_Tuple = module_add_class(builtin, TUPLE_NAME, Class_Object);
-  // Class_Error = module_add_class(builtin, ERROR_NAME);
+  Class_Error = NULL;
+  Class_Process = NULL;
+  Class_Task = NULL;
 
   Class_Object->_super = NULL;
   Class_Object->_reflection = heap_new(heap, Class_Class);
@@ -81,8 +85,4 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Tuple->_init_fn = __tuple_create;
   Class_Tuple->_delete_fn = __tuple_delete;
   Class_Tuple->_print_fn = __tuple_print;
-
-  // Class_Error->_super = Class_Object;
-  // Class_Error->_reflection = heap_new(heap, Class_Class);
-  // Class_Error->_reflection->_class_obj = Class_Error;
 }

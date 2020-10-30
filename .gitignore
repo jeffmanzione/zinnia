@@ -54,3 +54,5 @@ dkms.conf
 # Bazel
 bazel*
 .bazelrc
+
+test.jc
