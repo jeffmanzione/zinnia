@@ -1,30 +1,14 @@
 module test
 
-import error
 import io
-import struct
 
-io.println([1,2,3,4,5].map(x -> x*x))
-for (i, x) in [1, 2, 3, 4, 5] {
-  io.println(i, x)
-}
 
-map = {
-  'abc': 123,
-  'def': 456,
-  'ghi': 789
-}
+io.println('abcqqabcqqabc'.find('abc'))
+io.println('abcqqabcqqabc'.find('abc', 1))
+io.println('abcqqabcqqabc'.find('abc', 6))
+io.println('abcqqabcqqabc'.find_all('abc'))
 
-io.println(map)
+test = 'aqcdef'
+test[1] = 'b'
+io.println(test)
 
-io.println(['abc', 'def', 'ghi'])
-
-fn = memoize((x) {
-  io.println('Test', x)
-  return x
-})
-
-io.println(fn('abc'))
-io.println(fn('abc'))
-io.println(fn('def'))
-io.println(fn('def'))
