@@ -24,7 +24,7 @@ bazel build -c opt //runner:jlr
 
 ## Compiling your jeff-vm program and outputs my_program.ja (assembly) and my_program.jb (bytecode).
 ```
-./bazel-bin/compile/jlc -m -b my_program.jl
+./bazel-bin/compile/jlc -a -b my_program.jl
 ```
 
 ## Running your jeff-vm program
