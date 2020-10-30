@@ -73,7 +73,7 @@ SourceMapping *tape_add_source(Tape *tape, Instruction *ins) {
   return (SourceMapping *)alist_get(&tape->source_map, index);
 }
 
-inline void tape_start_func(Tape *tape, const char name[]) {
+void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index) {
   ASSERT(NOT_NULL(tape), NOT_NULL(name));
   FunctionRef *ref, *old;
   // In a class.
@@ -90,10 +90,15 @@ inline void tape_start_func(Tape *tape, const char name[]) {
           name);
   }
   ref->name = name;
-  ref->index = alist_len(&tape->ins);
+  ref->index = index;
 }
 
-void tape_start_class(Tape *tape, const char name[]) {
+void tape_start_func(Tape *tape, const char name[]) {
+  tape_start_func_at_index(tape, name, alist_len(&tape->ins));
+}
+
+ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
+                                    uint32_t index) {
   ASSERT(NOT_NULL(tape), NOT_NULL(name));
   ClassRef *ref;
   ClassRef *old =
@@ -104,14 +109,23 @@ void tape_start_class(Tape *tape, const char name[]) {
           name);
   }
   _classref_init(ref, name);
-  ref->start_index = alist_len(&tape->ins);
+  ref->start_index = index;
   tape->current_class = ref;
+  return ref;
+}
+
+void tape_end_class_at_index(Tape *tape, uint32_t index) {
+  ASSERT(NOT_NULL(tape), NOT_NULL(tape->current_class));
+  tape->current_class->end_index = index;
+  tape->current_class = NULL;
+}
+
+void tape_start_class(Tape *tape, const char name[]) {
+  tape_start_class_at_index(tape, name, alist_len(&tape->ins));
 }
 
 void tape_end_class(Tape *tape) {
-  ASSERT(NOT_NULL(tape), NOT_NULL(tape->current_class));
-  tape->current_class->end_index = alist_len(&tape->ins);
-  tape->current_class = NULL;
+  tape_end_class_at_index(tape, alist_len(&tape->ins));
 }
 
 inline const Instruction *tape_get(const Tape *tape, uint32_t index) {
@@ -134,8 +148,16 @@ inline size_t tape_size(const Tape *tape) {
   return alist_len(&tape->ins);
 }
 
+inline uint32_t tape_class_count(const Tape *tape) {
+  return alist_len(&tape->class_refs._list);
+}
+
 inline KL_iter tape_classes(const Tape *tape) {
   return keyedlist_iter((KeyedList *)&tape->class_refs); // bless
+}
+
+inline uint32_t tape_func_count(const Tape *tape) {
+  return alist_len(&tape->func_refs._list);
 }
 
 inline KL_iter tape_functions(const Tape *tape) {
@@ -342,6 +364,14 @@ void tape_read(Tape *const tape, Q *tokens) {
 // **********************
 // Specialized functions.
 // **********************
+
+int tape_ins_raw(Tape *tape, Instruction *ins) {
+  ASSERT(NOT_NULL(tape));
+  Instruction *new_ins = tape_add(tape);
+  *new_ins = *ins;
+  tape_add_source(tape, new_ins);
+  return 1;
+}
 
 int tape_ins(Tape *tape, Op op, const Token *token) {
   ASSERT(NOT_NULL(tape), NOT_NULL(token));

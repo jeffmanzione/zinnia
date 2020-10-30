@@ -17,6 +17,7 @@
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
+#include "program/tape_binary.h"
 #include "util/string.h"
 #include "vm/intern.h"
 
@@ -42,7 +43,9 @@ void modulemanager_finalize(ModuleManager *mm) {
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
     module_finalize(&module_info->module);
-    file_info_delete(module_info->fi);
+    if (NULL != module_info->fi) {
+      file_info_delete(module_info->fi);
+    }
   }
   keyedlist_finalize(&mm->_modules);
 }
@@ -179,8 +182,21 @@ Module *_read_jm(ModuleManager *mm, const char fn[]) {
   return &module_info->module;
 }
 
+Module *_read_jb(ModuleManager *mm, const char fn[]) {
+  FILE *file = fopen(fn, "rb");
+  if (NULL == file) {
+    ERROR("Cannot open file '%s'. Exiting...", fn);
+  }
+  Tape *tape = tape_create();
+  tape_read_binary(tape, file);
+  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  return &module_info->module;
+}
+
 Module *_read_helper(ModuleManager *mm, const char fn[]) {
-  if (ends_with(fn, ".jm")) {
+  if (ends_with(fn, ".jb")) {
+    return _read_jb(mm, fn);
+  } else if (ends_with(fn, ".jm")) {
     return _read_jm(mm, fn);
   } else if (ends_with(fn, ".jl")) {
     return _read_jl(mm, fn);

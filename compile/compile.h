@@ -12,7 +12,8 @@
 
 Map *compile(const Set *source_files, const ArgStore *store);
 void write_tape(const char fn[], const Tape *tape, bool out_jm,
-                const char machine_dir[]);
+                const char machine_dir[], bool out_jb,
+                const char bytecode_dir[]);
 int jlc(int argc, const char *argv[]);
 
 #endif /* COMPILE_COMPILE_H_ */

@@ -38,8 +38,13 @@ const Instruction *tape_get(const Tape *tape, uint32_t index);
 Instruction *tape_get_mutable(Tape *tape, uint32_t index);
 const SourceMapping *tape_get_source(const Tape *tape, uint32_t index);
 size_t tape_size(const Tape *tape);
+
+uint32_t tape_class_count(const Tape *tape);
 KL_iter tape_classes(const Tape *tape);
+
+uint32_t tape_func_count(const Tape *tape);
 KL_iter tape_functions(const Tape *tape);
+
 const char *tape_module_name(const Tape *tape);
 
 // Build-related functions.
@@ -49,8 +54,12 @@ Instruction *tape_add(Tape *tape);
 SourceMapping *tape_add_source(Tape *tape, Instruction *ins);
 
 void tape_start_func(Tape *tape, const char name[]);
+void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index);
 void tape_start_class(Tape *tape, const char name[]);
 void tape_end_class(Tape *tape);
+ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
+                                    uint32_t index);
+void tape_end_class_at_index(Tape *tape, uint32_t index);
 
 void tape_append(Tape *head, Tape *tail);
 
@@ -60,6 +69,7 @@ void tape_read(Tape *const tape, Q *tokens);
 // **********************
 // Specialized functions.
 // **********************
+int tape_ins_raw(Tape *tape, Instruction *ins);
 int tape_ins(Tape *tape, Op op, const Token *token);
 int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token);
 

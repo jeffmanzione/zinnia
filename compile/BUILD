@@ -11,6 +11,8 @@ cc_library(
     deps = [
         "//lang/parser",
         "//lang/semantics",
+        "//program:tape",
+        "//program:tape_binary",
         "//util:file",
         "//util:string",
         "//util/args:commandline",

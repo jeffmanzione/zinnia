@@ -14,6 +14,7 @@
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
 #include "program/tape.h"
+#include "program/tape_binary.h"
 #include "struct/map.h"
 #include "struct/set.h"
 #include "struct/struct_defaults.h"
@@ -37,7 +38,8 @@ Tape *_read_file(const char fn[]) {
 }
 
 void write_tape(const char fn[], const Tape *tape, bool out_jm,
-                const char machine_dir[]) {
+                const char machine_dir[], bool out_jb,
+                const char bytecode_dir[]) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
@@ -46,6 +48,13 @@ void write_tape(const char fn[], const Tape *tape, bool out_jm,
     FILE *file =
         FILE_FN(combine_path_file(machine_dir, file_name, ".jm"), "wb");
     tape_write(tape, file);
+    fclose(file);
+  }
+  if (out_jb && !ends_with(fn, ".jb")) {
+    make_dir_if_does_not_exist(bytecode_dir);
+    FILE *file =
+        FILE_FN(combine_path_file(bytecode_dir, file_name, ".jb"), "wb");
+    tape_write_binary(tape, file);
     fclose(file);
   }
   // TODO: Handle outputting .jb.
@@ -58,6 +67,8 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   const bool out_jm = argstore_lookup_bool(store, ArgKey__OUT_MACHINE);
   const char *machine_dir =
       argstore_lookup_string(store, ArgKey__MACHINE_OUT_DIR);
+  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
+  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
 
   M_iter srcs = set_iter((Set *)source_files);
   Map *src_map = map_create_default();
@@ -65,7 +76,7 @@ Map *compile(const Set *source_files, const ArgStore *store) {
     const char *src = value(&srcs);
     Tape *tape = _read_file(src);
     map_insert(src_map, src, tape);
-    write_tape(src, tape, out_jm, machine_dir);
+    write_tape(src, tape, out_jm, machine_dir, out_jb, bytecode_dir);
   }
   semantics_finalize();
   parsers_finalize();
