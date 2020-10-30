@@ -5,10 +5,11 @@ package(
 )
 
 cc_library(
-    name = "compile",
-    srcs = ["compile.c"],
-    hdrs = ["compile.h"],
+    name = "run",
+    srcs = ["run.c"],
+    hdrs = ["run.h"],
     deps = [
+        "//compile",
         "//lang/parser",
         "//lang/semantics",
         "//util:file",
@@ -18,16 +19,16 @@ cc_library(
         "//util/args:lib_finder",
         "//vm:module_manager",
         "//vm:virtual_machine",
+        "//vm/process",
+        "//vm/process:processes",
+        "//vm/process:task",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
-        "@memory_wrapper//struct:map",
-        "@memory_wrapper//struct:set",
-        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 
 cc_binary(
-    name = "jlc",
-    srcs = ["jlc.c"],
-    deps = [":compile"],
+    name = "jlr",
+    srcs = ["jlr.c"],
+    deps = [":run"],
 )
