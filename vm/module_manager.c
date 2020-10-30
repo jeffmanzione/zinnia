@@ -167,7 +167,7 @@ Module *_read_jl(ModuleManager *mm, const char fn[]) {
   return &module_info->module;
 }
 
-Module *_read_jm(ModuleManager *mm, const char fn[]) {
+Module *_read_ja(ModuleManager *mm, const char fn[]) {
   FileInfo *fi = file_info(fn);
   Lexer lexer;
   lexer_init(&lexer, fi, true);
@@ -196,8 +196,8 @@ Module *_read_jb(ModuleManager *mm, const char fn[]) {
 Module *_read_helper(ModuleManager *mm, const char fn[]) {
   if (ends_with(fn, ".jb")) {
     return _read_jb(mm, fn);
-  } else if (ends_with(fn, ".jm")) {
-    return _read_jm(mm, fn);
+  } else if (ends_with(fn, ".ja")) {
+    return _read_ja(mm, fn);
   } else if (ends_with(fn, ".jl")) {
     return _read_jl(mm, fn);
   } else {

@@ -37,16 +37,16 @@ Tape *_read_file(const char fn[]) {
   return tape;
 }
 
-void write_tape(const char fn[], const Tape *tape, bool out_jm,
+void write_tape(const char fn[], const Tape *tape, bool out_ja,
                 const char machine_dir[], bool out_jb,
                 const char bytecode_dir[]) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
-  if (out_jm && ends_with(fn, ".jl")) {
+  if (out_ja && ends_with(fn, ".jl")) {
     make_dir_if_does_not_exist(machine_dir);
     FILE *file =
-        FILE_FN(combine_path_file(machine_dir, file_name, ".jm"), "wb");
+        FILE_FN(combine_path_file(machine_dir, file_name, ".ja"), "wb");
     tape_write(tape, file);
     fclose(file);
   }
@@ -64,9 +64,9 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   parsers_init();
   semantics_init();
 
-  const bool out_jm = argstore_lookup_bool(store, ArgKey__OUT_MACHINE);
+  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__MACHINE_OUT_DIR);
+      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
   const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
 
@@ -76,7 +76,7 @@ Map *compile(const Set *source_files, const ArgStore *store) {
     const char *src = value(&srcs);
     Tape *tape = _read_file(src);
     map_insert(src_map, src, tape);
-    write_tape(src, tape, out_jm, machine_dir, out_jb, bytecode_dir);
+    write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
   semantics_finalize();
   parsers_finalize();

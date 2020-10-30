@@ -35,13 +35,10 @@ void tape_read_binary(Tape *const tape, FILE *file) {
   uint16_t num_refs;
   deserialize_type(file, uint16_t, &num_refs);
   for (i = 0; i < num_refs; ++i) {
-    DEBUGF("HERE2");
     uint16_t ref_name_index, ref_index;
     deserialize_type(file, uint16_t, &ref_name_index);
     deserialize_type(file, uint16_t, &ref_index);
-    DEBUGF("HERE2 %x %x", ref_name_index, ref_index);
     char *ref_name = *((char **)alist_get(&strings, (uint32_t)ref_name_index));
-    DEBUGF("func: %s, %x, %x", ref_name, ref_name_index, ref_index);
     tape_start_func_at_index(tape, ref_name, ref_index);
   }
   uint16_t num_classes;
@@ -139,7 +136,6 @@ void _serialize_function_ref(const FunctionRef *fref, WBuffer *buffer,
                              const AList *strings, Map *string_index) {
   uint16_t ref_name_index =
       (uint16_t)(uintptr_t)map_lookup(string_index, fref->name);
-  printf("func=%s, name_index=%d\n", fref->name, ref_name_index);
 
   uint16_t ref_index = (uint16_t)fref->index;
   serialize_type(buffer, uint16_t, ref_name_index);
