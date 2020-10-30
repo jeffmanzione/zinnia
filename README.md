@@ -30,8 +30,8 @@ bazel build -c opt //runner:jlr
 ## Running your jeff-vm program
 ```
 ./bazel-bin/run/jlr my_program.jl
-# Or
+# or
 ./bazel-bin/run/jlr my_program.ja
-#Or
+# or
 ./bazel-bin/run/jlr my_program.jb
 ```
