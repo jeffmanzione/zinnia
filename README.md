@@ -24,10 +24,10 @@ bazel build -c opt //runner:jlr
 
 ## Compiling your jeff-vm program
 ```
-./bazel-bin/jlc -m my_program.jl
+./bazel-bin/compile/jlc -m my_program.jl
 ```
 
 ## Running your jeff-vm program
 ```
-./bazel-bin/jlr my_program.jm
+./bazel-bin/run/jlr my_program.jm
 ```
