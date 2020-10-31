@@ -19,7 +19,7 @@ cd jeff-vm
 bazel build -c opt //compile:jlc
 
 # Builds the runner.
-bazel build -c opt //runner:jlr
+bazel build -c opt //run:jlr
 ```
 
 ## Compiling your jeff-vm program
