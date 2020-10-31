@@ -29,7 +29,6 @@ void tape_read_binary(Tape *const tape, FILE *file) {
     char *str = intern(buf);
     *((char **)alist_add(&strings)) = str;
   }
-  DEBUGF("HERE");
   Token fake = {.text = *((char **)alist_get(&strings, 0))};
   tape_module(tape, &fake);
   uint16_t num_refs;
@@ -124,7 +123,7 @@ void _intern_all_strings(const Tape *tape, AList *strings, Map *string_index) {
 
 void _serialize_all_strings(const AList *strings, const Map *string_index,
                             WBuffer *buffer) {
-  uint16_t num_strings = (uint16_t)map_size(string_index);
+  uint16_t num_strings = (uint16_t)alist_len(strings);
   serialize_type(buffer, uint16_t, num_strings);
   int i;
   for (i = 0; i < alist_len(strings); ++i) {
@@ -136,7 +135,6 @@ void _serialize_function_ref(const FunctionRef *fref, WBuffer *buffer,
                              const AList *strings, Map *string_index) {
   uint16_t ref_name_index =
       (uint16_t)(uintptr_t)map_lookup(string_index, fref->name);
-
   uint16_t ref_index = (uint16_t)fref->index;
   serialize_type(buffer, uint16_t, ref_name_index);
   serialize_type(buffer, uint16_t, ref_index);
