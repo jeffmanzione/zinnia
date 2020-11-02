@@ -14,6 +14,7 @@
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
 #include "program/tape.h"
+#include "program/tape_binary.h"
 #include "struct/map.h"
 #include "struct/set.h"
 #include "struct/struct_defaults.h"
@@ -32,19 +33,28 @@ Tape *_read_file(const char fn[]) {
   produce_instructions(etree, tape);
   delete_expression(etree);
   syntax_tree_delete(&stree);
+  file_info_delete(fi);
   return tape;
 }
 
-void write_tape(const char fn[], const Tape *tape, bool out_jm,
-                const char machine_dir[]) {
+void write_tape(const char fn[], const Tape *tape, bool out_ja,
+                const char machine_dir[], bool out_jb,
+                const char bytecode_dir[]) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
-  if (out_jm && ends_with(fn, ".jl")) {
+  if (out_ja && ends_with(fn, ".jl")) {
     make_dir_if_does_not_exist(machine_dir);
     FILE *file =
-        FILE_FN(combine_path_file(machine_dir, file_name, ".jm"), "wb");
+        FILE_FN(combine_path_file(machine_dir, file_name, ".ja"), "wb");
     tape_write(tape, file);
+    fclose(file);
+  }
+  if (out_jb && !ends_with(fn, ".jb")) {
+    make_dir_if_does_not_exist(bytecode_dir);
+    FILE *file =
+        FILE_FN(combine_path_file(bytecode_dir, file_name, ".jb"), "wb");
+    tape_write_binary(tape, file);
     fclose(file);
   }
   // TODO: Handle outputting .jb.
@@ -54,9 +64,11 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   parsers_init();
   semantics_init();
 
-  const bool out_jm = argstore_lookup_bool(store, ArgKey__OUT_MACHINE);
+  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__MACHINE_OUT_DIR);
+      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
+  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
+  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
 
   M_iter srcs = set_iter((Set *)source_files);
   Map *src_map = map_create_default();
@@ -64,7 +76,7 @@ Map *compile(const Set *source_files, const ArgStore *store) {
     const char *src = value(&srcs);
     Tape *tape = _read_file(src);
     map_insert(src_map, src, tape);
-    write_tape(src, tape, out_jm, machine_dir);
+    write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
   semantics_finalize();
   parsers_finalize();
@@ -86,6 +98,8 @@ int jlc(int argc, const char *argv[]) {
   }
   map_delete(src_map);
 
+  argstore_delete(store);
+  argconfig_delete(config);
   strings_finalize();
   token_finalize_all();
   alloc_finalize();

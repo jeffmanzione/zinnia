@@ -37,3 +37,20 @@ cc_library(
         "@memory_wrapper//debug",
     ],
 )
+
+cc_library(
+    name = "tape_binary",
+    srcs = ["tape_binary.c"],
+    hdrs = ["tape_binary.h"],
+    deps = [
+        ":tape",
+        "//program/serialization:buffer",
+        "//program/serialization:deserialize",
+        "//program/serialization:serialize",
+        "//struct:alist",
+        "//struct:keyed_list",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
+    ],
+)

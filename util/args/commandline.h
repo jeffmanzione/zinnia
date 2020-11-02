@@ -9,7 +9,7 @@
 #include "struct/set.h"
 #include "util/args/commandline_arg.h"
 
-#define ARGSTORE_TEMPLATE_RETVAL(type, retval) \
+#define ARGSTORE_TEMPLATE_RETVAL(type, retval)                                 \
   retval argstore_lookup_##type(const ArgStore *store, ArgKey key)
 
 #define ARGSTORE_TEMPLATE(type) ARGSTORE_TEMPLATE_RETVAL(type, type)
@@ -17,16 +17,9 @@
 typedef enum {
   ArgKey__NONE = 0,
   ArgKey__OUT_BINARY,
-  ArgKey__OUT_MACHINE,
-  ArgKey__OUT_UNOPTIMIZED,
-  ArgKey__OPTIMIZE,
-  ArgKey__EXECUTE,
-  ArgKey__INTERPRETER,
-  ArgKey__BUILTIN_DIR,
-  ArgKey__BUILTIN_FILES,
+  ArgKey__OUT_ASSEMBLY,
   ArgKey__BIN_OUT_DIR,
-  ArgKey__MACHINE_OUT_DIR,
-  ArgKey__UNOPTIMIZED_OUT_DIR,
+  ArgKey__ASSEMBLY_OUT_DIR,
   ArgKey__END,
 } ArgKey;
 

@@ -32,9 +32,14 @@
 #include "vm/virtual_machine.h"
 
 void run(const Set *source_files, ArgStore *store) {
-  const bool out_jm = argstore_lookup_bool(store, ArgKey__OUT_MACHINE);
+  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__MACHINE_OUT_DIR);
+      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
+  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
+  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
+
+  parsers_init();
+  semantics_init();
 
   VM *vm = vm_create();
   ModuleManager *mm = vm_module_manager(vm);
@@ -45,13 +50,18 @@ void run(const Set *source_files, ArgStore *store) {
     const char *src = value(&srcs);
     Module *module = modulemanager_read(mm, src);
 
-    write_tape(src, module_tape(module), out_jm, machine_dir);
+    write_tape(src, module_tape(module), out_ja, machine_dir, out_jb,
+               bytecode_dir);
 
     if (NULL == main_module) {
       main_module = module;
       heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
     }
   }
+
+  semantics_finalize();
+  parsers_finalize();
+
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
   vm_run_process(vm, vm_main_process(vm));
@@ -62,8 +72,6 @@ void run(const Set *source_files, ArgStore *store) {
 int jlr(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
-  parsers_init();
-  semantics_init();
 
   ArgConfig *config = argconfig_create();
   argconfig_compile(config);
@@ -72,8 +80,9 @@ int jlr(int argc, const char *argv[]) {
 
   run(argstore_sources(store), store);
 
-  semantics_finalize();
-  parsers_finalize();
+  argstore_delete(store);
+  argconfig_delete(config);
+
   strings_finalize();
   token_finalize_all();
   alloc_finalize();

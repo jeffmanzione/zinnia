@@ -52,6 +52,8 @@ cc_library(
         "//lang/parser",
         "//lang/semantics",
         "//program:tape",
+        "//program:tape_binary",
         "//struct:keyed_list",
+        "//util:string",
     ],
 )
