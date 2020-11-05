@@ -34,6 +34,19 @@ void _error_delete(Object *obj) {}
 void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC2(_StackLine); }
 void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
+Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
+  va_list args;
+  va_start(args, fmt);
+  char buffer[1024];
+  int num_chars = vsprintf(buffer, fmt, args);
+  va_end(args);
+  Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
+  Object *err = error_new(task, context, error_msg);
+  context->error = err;
+  *task_mutable_resval(task) = entity_object(err);
+  return entity_object(err);
+}
+
 uint32_t stackline_linenum(Object *stackline) {
   ASSERT(NOT_NULL(stackline), Class_StackLine == stackline->_class);
   _StackLine *sl = (_StackLine *)stackline->_internal_obj;
@@ -77,7 +90,7 @@ Entity _stackline_token(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_String != args->obj->_class) {
-    ERROR("Error argument is not a String.");
+    return raise_error(task, ctx, "Error argument is not a String.");
   }
   object_set_member_obj(task->parent_process->heap, obj, intern("message"),
                         args->obj);

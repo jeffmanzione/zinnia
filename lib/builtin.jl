@@ -66,6 +66,25 @@ class String {
     }
     return result
   }
+  method substr(start_index, num_chars=None) {
+    if ~num_chars {
+      num_chars = len() - start_index
+    }
+    end_index = start_index + num_chars
+    if start_index <= end_index {
+      return __substr(start_index, end_index)
+    }
+    return __substr(end_index, start_index)
+  }
+  method find(sub, index=0) {
+    __find(sub, index)
+  }
+  method find_all(sub, index=0) {
+    __find_all(sub, index)
+  }
+  method __in__(sub) {
+    find(sub) != None
+  }
 }
 
 class Tuple {

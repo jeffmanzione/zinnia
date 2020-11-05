@@ -42,3 +42,18 @@ bool contains_char(const char str[], char c) {
   }
   return false;
 }
+
+char *find_str(char *haystack, size_t haystack_len, const char *needle,
+               size_t needle_len) {
+  int i, j;
+  for (i = 0; i <= (haystack_len - needle_len); ++i) {
+    for (j = 0; j < needle_len; ++j) {
+      if (haystack[i + j] != needle[j]) {
+        break;
+      } else if (j == (needle_len - 1)) {
+        return haystack + i;
+      }
+    }
+  }
+  return NULL;
+}

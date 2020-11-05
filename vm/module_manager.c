@@ -1,4 +1,4 @@
-// module_manager.h
+// module_manager.c
 //
 // Created on: Jul 10, 2020
 //     Author: Jeff Manzione

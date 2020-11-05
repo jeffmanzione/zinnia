@@ -25,6 +25,7 @@ cc_library(
     srcs = ["builtin.c"],
     hdrs = ["builtin.h"],
     deps = [
+        ":error",
         ":native",
         "//entity",
         "//entity:object",
@@ -50,6 +51,7 @@ cc_library(
     srcs = ["io.c"],
     hdrs = ["io.h"],
     deps = [
+        ":error",
         ":native",
         "//entity",
         "//entity:object",

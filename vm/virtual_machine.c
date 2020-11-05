@@ -35,7 +35,6 @@ struct _VM {
 
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context);
-void _raise_error(VM *vm, Task *task, Context *context, const char fmt[], ...);
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
@@ -145,14 +144,12 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_NO_ARG:                                                   \
       second = task_popstack(task);                                            \
       if (PRIMITIVE != second.type) {                                          \
-        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       first = task_popstack(task);                                             \
       if (PRIMITIVE != first.type) {                                           \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) =                                             \
@@ -161,14 +158,12 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_ID:                                                       \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
       if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
-        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) = entity_primitive(                           \
@@ -177,8 +172,7 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_PRIMITIVE:                                                \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       *task_mutable_resval(task) =                                             \
@@ -199,14 +193,12 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_NO_ARG:                                                   \
       second = task_popstack(task);                                            \
       if (PRIMITIVE != second.type) {                                          \
-        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       first = task_popstack(task);                                             \
       if (PRIMITIVE != first.type) {                                           \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&first.pri, &second.pri);               \
@@ -216,14 +208,12 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_ID:                                                       \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
       if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
-        _raise_error(vm, task, context, "RHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &lookup->pri);            \
@@ -233,8 +223,7 @@ int8_t _char_of(const Primitive *p) {
     case INSTRUCTION_PRIMITIVE:                                                \
       resval = task_get_resval(task);                                          \
       if (NULL != resval && PRIMITIVE != resval->type) {                       \
-        _raise_error(vm, task, context, "LHS for op '%s' must be primitive.",  \
-                     #op);                                                     \
+        raise_error(task, context, "LHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &ins->val);               \
@@ -323,18 +312,6 @@ Process *vm_create_process(VM *vm) {
 
 inline Process *vm_main_process(VM *vm) { return vm->main; }
 
-void _raise_error(VM *vm, Task *task, Context *context, const char fmt[], ...) {
-  va_list args;
-  va_start(args, fmt);
-  char buffer[1024];
-  int num_chars = vsprintf(buffer, fmt, args);
-  va_end(args);
-  Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
-  Object *err = error_new(task, context, error_msg);
-  context->error = err;
-  *task_mutable_resval(task) = entity_object(err);
-}
-
 inline bool _execute_primitive_EQ(const Primitive *p1, const Primitive *p2) {
   if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {
     return _float_of(p1) == _float_of(p2);
@@ -362,11 +339,11 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
       }
     }
     if (PRIMITIVE != second.type) {
-      _raise_error(vm, task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
       return false;
     }
     if (PRIMITIVE != first.type) {
-      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
       return false;
     }
     result = _execute_primitive_EQ(&first.pri, &second.pri);
@@ -379,12 +356,12 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_ID:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
       return false;
     }
     lookup = context_lookup(context, ins->id, &tmp);
     if (NULL != lookup && PRIMITIVE != lookup->type) {
-      _raise_error(vm, task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
       return false;
     }
     result = _execute_primitive_EQ(&first.pri, &lookup->pri);
@@ -397,7 +374,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_PRIMITIVE:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      _raise_error(vm, task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
       return false;
     }
     result = _execute_primitive_EQ(&resval->pri, &ins->val);
@@ -508,9 +485,9 @@ inline void _execute_FLD(VM *vm, Task *task, Context *context,
   }
   const Entity *resval = task_get_resval(task);
   if (NULL == resval || OBJECT != resval->type) {
-    _raise_error(vm, task, context,
-                 "Attempted to set field '%s' on something not an object.",
-                 ins->id);
+    raise_error(task, context,
+                "Attempted to set field '%s' on something not an object.",
+                ins->id);
     return;
   }
   Entity obj = task_popstack(task);
@@ -566,8 +543,8 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
-    _raise_error(vm, task, context, "Attempted to get field '%s' from a %s.",
-                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
+    raise_error(task, context, "Attempted to get field '%s' from a %s.",
+                ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
   *task_mutable_resval(task) =
@@ -611,20 +588,19 @@ bool _call_method(Task *task, Object *obj, Context *context,
 
   Entity method = _object_get_maybe_wrap(obj, ins->id, task, context);
   if (NONE == method.type) {
-    _raise_error(task->parent_process->vm, task, context,
-                 "Failed to find method '%s' on %s", ins->id, class->_name);
+    raise_error(task, context, "Failed to find method '%s' on %s", ins->id,
+                class->_name);
     return false;
   }
   if (OBJECT != method.type) {
-    _raise_error(task->parent_process->vm, task, context,
-                 "Attempted to treat '%s' on %s as a method.", ins->id,
-                 class->_name);
+    raise_error(task, context, "Attempted to treat '%s' on %s as a method.",
+                ins->id, class->_name);
     return false;
   }
   if (Class_FunctionRef != method.obj->_class) {
-    _raise_error(task->parent_process->vm, task, context,
-                 "Attempted to treat '%s' of type '' on %s as a method.",
-                 ins->id, method.obj->_class->_name, class->_name);
+    raise_error(task, context,
+                "Attempted to treat '%s' of type '' on %s as a method.",
+                ins->id, method.obj->_class->_name, class->_name);
     return false;
   }
   return _call_function_base(task, context, function_ref_get_func(method.obj),
@@ -646,7 +622,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     }
     Entity obj = task_popstack(task);
     if (OBJECT != obj.type) {
-      _raise_error(vm, task, context, "Calling function on non-object.");
+      raise_error(task, context, "Calling function on non-object.");
       return false;
     }
     if (Class_Module == obj.obj->_class) {
@@ -665,8 +641,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     fn = task_popstack(task);
   }
   if (fn.type != OBJECT) {
-    _raise_error(vm, task, context,
-                 "Attempted to call something not a function.");
+    raise_error(task, context, "Attempted to call something not a function.");
     return false;
   }
   if (fn.obj->_class == Class_Class) {
@@ -692,8 +667,7 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
                                function_ref_get_parent_context(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
-    _raise_error(vm, task, context,
-                 "Attempted to call something not a function.");
+    raise_error(task, context, "Attempted to call something not a function.");
     return false;
   }
   Function *func = fn.obj->_function_obj;
@@ -817,7 +791,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
 
   Entity arr_entity = task_popstack(task);
   if (OBJECT != arr_entity.type) {
-    _raise_error(vm, task, context, "Invalid array index on non-indexable.");
+    raise_error(task, context, "Invalid array index on non-indexable.");
     return false;
   }
   arr_obj = arr_entity.obj;
@@ -830,7 +804,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     break;
   case INSTRUCTION_PRIMITIVE:
     if (INT != ptype(&ins->val) || pint(&ins->val) < 0) {
-      _raise_error(vm, task, context, "Invalid array index.");
+      raise_error(task, context, "Invalid array index.");
       return false;
     }
     index_e = entity_primitive(ins->val);
@@ -840,19 +814,19 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     ERROR("Invalid arg type=%d for AIDX.", ins->type);
   }
   if (NULL == index) {
-    _raise_error(vm, task, context, "Invalid array index.");
+    raise_error(task, context, "Invalid array index.");
     return false;
   }
   if (Class_Array == arr_obj->_class) {
     Array *arr = (Array *)arr_obj->_internal_obj;
     if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
-      _raise_error(vm, task, context, "Invalid array index.");
+      raise_error(task, context, "Invalid array index.");
       return false;
     }
     int32_t i_index = pint(&index->pri);
     if (i_index >= Array_size(arr)) {
-      _raise_error(vm, task, context, "Invalid array index.");
+      raise_error(task, context, "Invalid array index.");
       return false;
     }
     *task_mutable_resval(task) = *Array_get_ref(arr, i_index);
@@ -862,12 +836,12 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     Tuple *tuple = (Tuple *)arr_obj->_internal_obj;
     if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
-      _raise_error(vm, task, context, "Invalid tuple index.");
+      raise_error(task, context, "Invalid tuple index.");
       return false;
     }
     int32_t i_index = pint(&index->pri);
     if (i_index >= tuple_size(tuple)) {
-      _raise_error(vm, task, context, "Invalid tuple index.");
+      raise_error(task, context, "Invalid tuple index.");
       return false;
     }
     *task_mutable_resval(task) = *tuple_get(tuple, i_index);
@@ -880,7 +854,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     return _call_function_base(task, context, aidx_fn, arr_obj, context);
   }
 
-  _raise_error(vm, task, context, "Invalid array index on non-indexable.");
+  raise_error(task, context, "Invalid array index on non-indexable.");
   return false;
 }
 
@@ -890,14 +864,14 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
   Entity new_val = task_popstack(task);
   const Entity *index = task_get_resval(task);
   if (OBJECT != arr_entity.type) {
-    _raise_error(vm, task, context, "Cannot set index value on non-indexable.");
+    raise_error(task, context, "Cannot set index value on non-indexable.");
     return false;
   }
 
   if (Class_Array == arr_entity.obj->_class) {
     if (NULL == index || PRIMITIVE != index->type ||
         INT != ptype(&index->pri)) {
-      _raise_error(vm, task, context, "Cannot index with non-int.");
+      raise_error(task, context, "Cannot index with non-int.");
       return false;
     }
     array_set(task->parent_process->heap, arr_entity.obj, pint(&index->pri),
@@ -915,7 +889,7 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = entity_object(args);
     return _call_function_base(task, context, aset_fn, arr_entity.obj, context);
   }
-  _raise_error(vm, task, context, "Cannot set index value on non-indexable.");
+  raise_error(task, context, "Cannot set index value on non-indexable.");
   return false;
 }
 
@@ -949,6 +923,7 @@ void _execute_TLEN(VM *vm, Task *task, Context *context,
   const Entity *e = task_peekstack(task);
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
     *task_mutable_resval(task) = entity_int(-1);
+    return;
   }
   *task_mutable_resval(task) =
       entity_int(tuple_size((Tuple *)e->obj->_internal_obj));
@@ -957,7 +932,7 @@ void _execute_TLEN(VM *vm, Task *task, Context *context,
 void _execute_TGTE(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    _raise_error(vm, task, context, "Invalid TLEN type.");
+    raise_error(task, context, "Invalid TLEN type.");
     return;
   }
   const Entity *e = task_get_resval(task);
@@ -968,13 +943,13 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   uint32_t tlen = tuple_size(t);
   *task_mutable_resval(task) =
-      tlen > pint(&ins->val) ? entity_int(1) : NONE_ENTITY;
+      tlen >= pint(&ins->val) ? entity_int(1) : NONE_ENTITY;
 }
 
 void _execute_TGET(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    _raise_error(vm, task, context, "Invalid TGET type.");
+    raise_error(task, context, "Invalid TGET type.");
     return;
   }
   int32_t index = pint(&ins->val);
@@ -984,15 +959,14 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
       return;
     }
     *task_mutable_resval(task) = entity_int(-1);
-    _raise_error(vm, task, context,
-                 "Attempted to index something not a tuple.");
+    raise_error(task, context, "Attempted to index something not a tuple.");
     return;
   }
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   if (index < 0 || index >= tuple_size(t)) {
-    _raise_error(vm, task, context,
-                 "Tuple index out of bounds. Index=%d, Tuple.len=%d.", index,
-                 tuple_size(t));
+    raise_error(task, context,
+                "Tuple index out of bounds. Index=%d, Tuple.len=%d.", index,
+                tuple_size(t));
     return;
   }
   *task_mutable_resval(task) = *tuple_get(t, index);
@@ -1017,8 +991,8 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
   Entity rhs = task_popstack(task);
   Entity lhs = task_popstack(task);
   if (OBJECT != rhs.type || Class_Class != rhs.obj->_class) {
-    _raise_error(vm, task, context,
-                 "Cannot perform type-check against a non-object type.");
+    raise_error(task, context,
+                "Cannot perform type-check against a non-object type.");
     return;
   }
   if (lhs.type != OBJECT) {
@@ -1039,7 +1013,7 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   }
   Module *module = modulemanager_lookup(&vm->mm, ins->id);
   if (NULL == module) {
-    _raise_error(vm, task, context, "Module '%s' not found.", ins->id);
+    raise_error(task, context, "Module '%s' not found.", ins->id);
     return false;
   }
   object_set_member_obj(task->parent_process->heap,

@@ -6,6 +6,8 @@
 #ifndef ENTITY_NATIVE_ERROR_H_
 #define ENTITY_NATIVE_ERROR_H_
 
+#include <stdarg.h>
+
 #include "entity/object.h"
 #include "vm/process/processes.h"
 
@@ -16,5 +18,7 @@ void error_add_native(Module *error);
 
 uint32_t stackline_linenum(Object *stackline);
 Module *stackline_module(Object *stackline);
+
+Entity raise_error(Task *task, Context *context, const char fmt[], ...);
 
 #endif /* ENTITY_NATIVE_ERROR_H_ */

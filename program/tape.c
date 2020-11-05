@@ -181,6 +181,9 @@ inline void _classref_finalize(ClassRef *ref) {
 
 void tape_write(const Tape *tape, FILE *file) {
   ASSERT(NOT_NULL(tape), NOT_NULL(file));
+  if (tape->module_name && 0 != strcmp("$", tape->module_name)) {
+    fprintf(file, "module %s\n", tape->module_name);
+  }
   KL_iter cls_iter = keyedlist_iter((KeyedList *)&tape->class_refs);
   KL_iter func_iter = keyedlist_iter((KeyedList *)&tape->func_refs);
   KL_iter cls_func_iter;

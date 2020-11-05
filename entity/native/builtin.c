@@ -9,6 +9,7 @@
 #include "entity/array/array.h"
 #include "entity/class/classes.h"
 #include "entity/entity.h"
+#include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
 #include "entity/primitive.h"
@@ -16,6 +17,7 @@
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "lang/lexer/file_info.h"
+#include "util/string.h"
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
@@ -49,10 +51,10 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     case FLOAT:
       return entity_int(pfloat(&args->pri));
     default:
-      ERROR("Unknown primitive type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
     }
   default:
-    ERROR("Unknown type.");
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -95,7 +97,8 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_String != args->obj->_class) {
-    ERROR("Cannot extend a string with something not a string.");
+    return raise_error(task, ctx,
+                       "Cannot extend a string with something not a string.");
   }
   String_append((String *)obj->_internal_obj,
                 (String *)args->obj->_internal_obj);
@@ -129,12 +132,12 @@ Entity _string_neq(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_index(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args));
   if (PRIMITIVE != args->type || INT != ptype(&args->pri)) {
-    ERROR("Bad string index input");
+    return raise_error(task, ctx, "Bad string index input");
   }
   String *self = (String *)obj->_internal_obj;
   int32_t index = pint(&args->pri);
   if (index < 0 || index >= String_size(self)) {
-    ERROR("Index out of bounds.");
+    return raise_error(task, ctx, "Index out of bounds.");
   }
   return entity_char(String_get(self, index));
 }
@@ -147,6 +150,273 @@ Entity _string_hash(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   return entity_int(String_size(str));
+}
+
+#define IS_TUPLE(entity)                                                       \
+  ((NULL != entity) && (OBJECT == entity->type) &&                             \
+   (Class_Tuple == entity->obj->_class))
+
+Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "Expected tuple input.");
+  }
+  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
+  if (2 != tuple_size(tupl_args)) {
+    return raise_error(task, ctx,
+                       "Ïnvalid number of arguments, expected 2, got %d",
+                       tuple_size(tupl_args));
+  }
+  const Entity *index = tuple_get(tupl_args, 0);
+  const Entity *val = tuple_get(tupl_args, 1);
+
+  if (NULL == index || PRIMITIVE != index->type || INT != ptype(&index->pri)) {
+    return raise_error(task, ctx,
+                       "Cannot index a string with something not an int.");
+  }
+  if (NULL != val && PRIMITIVE == val->type && CHAR == ptype(&val->pri)) {
+    String_set(str, pint(&index->pri), pchar(&val->pri));
+  } else if (NULL != val && OBJECT == val->type &&
+             Class_String == val->obj->_class &&
+             1 == String_size(val->obj->_internal_obj)) {
+    String_set(str, pint(&index->pri),
+               ((String *)val->obj->_internal_obj)->table[0]);
+  } else {
+    return raise_error(task, ctx, "Bad string index.");
+  }
+  return NONE_ENTITY;
+}
+
+#define IS_OBJECT_CLASS(e, class)                                              \
+  ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
+
+#define IS_VALUE_TYPE(e, valtype)                                              \
+  (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
+
+Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "Expected more than one arg.");
+  }
+  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
+  if (tuple_size(tupl_args) != 2) {
+    return raise_error(task, ctx, "Expected 2 arguments.");
+  }
+  const Entity *string_arg = tuple_get(tupl_args, 0);
+  const Entity *index = tuple_get(tupl_args, 1);
+  if (!IS_OBJECT_CLASS(string_arg, Class_String)) {
+    return raise_error(task, ctx, "Only a String can be in a String.");
+  }
+  if (!IS_VALUE_TYPE(index, INT)) {
+    return raise_error(task, ctx, "Expected a starting index.");
+  }
+  String *substr = (String *)string_arg->obj->_internal_obj;
+
+  int32_t index_int = pint(&index->pri);
+  if (index_int < 0) {
+    return raise_error(task, ctx,
+                       "Index out of bounds. Was %d, array length is %d.",
+                       index_int, String_size(str));
+  }
+  if ((index_int + String_size(substr)) > String_size(str)) {
+    return NONE_ENTITY;
+  }
+  char *start_index = str->table + index_int;
+  size_t size_after_start = String_size(str) - index_int;
+
+  char *found_index = find_str(start_index, size_after_start, substr->table,
+                               String_size(substr));
+  if (NULL == found_index) {
+    return NONE_ENTITY;
+  }
+  return entity_int(found_index - start_index);
+}
+
+Entity _string_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "Expected more than one arg.");
+  }
+  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
+  if (tuple_size(tupl_args) != 2) {
+    return raise_error(task, ctx, "Expected 2 arguments.");
+  }
+  const Entity *string_arg = tuple_get(tupl_args, 0);
+  const Entity *index = tuple_get(tupl_args, 1);
+  if (!IS_OBJECT_CLASS(string_arg, Class_String)) {
+    return raise_error(task, ctx, "Only a String can be in a String.");
+  }
+  if (!IS_VALUE_TYPE(index, INT)) {
+    return raise_error(task, ctx, "Expected a starting index.");
+  }
+  String *substr = (String *)string_arg->obj->_internal_obj;
+
+  int32_t index_int = pint(&index->pri);
+  if (index_int < 0) {
+    return raise_error(task, ctx,
+                       "Index out of bounds. Was %d, array length is %d.",
+                       index_int, String_size(str));
+  }
+  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  if ((index_int + String_size(substr)) > String_size(str)) {
+    return entity_object(array_obj);
+  }
+
+  size_t chars_remaining = String_size(str) - index_int;
+  char *i_index = str->table + index_int;
+  const char *c_substr = substr->table;
+  const int substr_len = String_size(substr);
+  while (chars_remaining >= substr_len &&
+         NULL != (i_index = find_str(i_index, chars_remaining, c_substr,
+                                     substr_len))) {
+    int index = i_index - str->table;
+    Entity index_e = entity_int(index);
+    array_add(task->parent_process->heap, array_obj, &index_e);
+    i_index++;
+    chars_remaining = String_size(str) - index - 1;
+  }
+  return entity_object(array_obj);
+}
+
+Entity _string_substr(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "Expected more than one arg.");
+  }
+  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
+  if (tuple_size(tupl_args) != 2) {
+    return raise_error(task, ctx, "Expected 2 arguments.");
+  }
+  const Entity *index_start = tuple_get(tupl_args, 0);
+  if (INT != ptype(&index_start->pri)) {
+    return raise_error(task, ctx, "Expected start_index to be Int.");
+  }
+
+  const Entity *index_end = tuple_get(tupl_args, 1);
+  if (INT != ptype(&index_end->pri)) {
+    return raise_error(task, ctx, "Expected end_index to be an Int.");
+  }
+
+  int64_t start = pint(&index_start->pri);
+  int64_t end = pint(&index_end->pri);
+
+  if (start < 0 || start > String_size(str)) {
+    return raise_error(task, ctx, "start_index out of bounds.");
+  }
+  if (end < 0 || end > String_size(str)) {
+    return raise_error(task, ctx, "end_index out of bounds.");
+  }
+  if (end < start) {
+    return raise_error(task, ctx, "start_index > end_index.");
+  }
+  return entity_object(
+      string_new(task->parent_process->heap, str->table + start, end - start));
+}
+
+Entity _string_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  return entity_object(
+      string_new(task->parent_process->heap, str->table, String_size(str)));
+}
+
+Entity _string_ltrim(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  int i = 0;
+  while (is_any_space(str->table[i])) {
+    ++i;
+  }
+  String_lshrink(str, i);
+  return entity_object(obj);
+}
+
+Entity _string_rtrim(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  int i = 0;
+  while (is_any_space(str->table[String_size(str) - 1 - i])) {
+    ++i;
+  }
+  String_rshrink(str, i);
+  return entity_object(obj);
+}
+
+Entity _string_trim(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  int i = 0;
+  while (is_any_space(str->table[i])) {
+    ++i;
+  }
+  String_lshrink(str, i);
+  i = 0;
+  while (is_any_space(str->table[String_size(str) - 1 - i])) {
+    ++i;
+  }
+  String_rshrink(str, i);
+  return entity_object(obj);
+}
+
+Entity _string_lshrink(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+    return raise_error(task, ctx, "Trimming String with something not an Int.");
+  }
+  int32_t index = pint(&args->pri);
+  if (index > String_size(str)) {
+    return raise_error(task, ctx, "Cannot shrink more than the entire size.");
+  }
+  String_lshrink(str, index);
+  return entity_object(obj);
+}
+
+Entity _string_rshrink(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+    return raise_error(task, ctx, "Trimming String with something not an Int.");
+  }
+  int32_t index = pint(&args->pri);
+  if (index > String_size(str)) {
+    return raise_error(task, ctx, "Cannot shrink more than the entire size.");
+  }
+  String_rshrink(str, index);
+  return entity_object(obj);
+}
+
+Entity _string_clear(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  String_clear(str);
+  return entity_object(obj);
+}
+
+Entity _string_split(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  if (NULL == args || OBJECT != args->type ||
+      Class_String != args->obj->_class) {
+    return raise_error(task, ctx,
+                       "Argument to String.split() must be a String.");
+  }
+  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+
+  int str_len = String_size(str);
+  String *delim = (String *)args->obj->_internal_obj;
+  int delim_len = String_size(delim);
+  int i, last_delim_end = 0;
+  for (i = 0; i < str_len; ++i) {
+    if (0 == strncmp(str->table + i, delim->table, delim_len)) {
+      Entity part = entity_object(string_new(task->parent_process->heap,
+                                             str->table + last_delim_end,
+                                             i - last_delim_end));
+      array_add(task->parent_process->heap, array_obj, &part);
+      i += delim_len;
+      last_delim_end = i;
+    }
+  }
+  if (last_delim_end < str_len - delim_len) {
+    Entity part = entity_object(string_new(task->parent_process->heap,
+                                           str->table + last_delim_end,
+                                           str_len - last_delim_end));
+    array_add(task->parent_process->heap, array_obj, &part);
+  }
+  return entity_object(array_obj);
 }
 
 Entity _array_len(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -238,23 +508,24 @@ void _range_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 Entity _range_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_Tuple != args->obj->_class) {
-    ERROR("Input to range() is not a tuple.");
+    return raise_error(task, ctx, "Input to range() is not a tuple.");
   }
   Tuple *t = (Tuple *)args->obj->_internal_obj;
   if (3 != tuple_size(t)) {
-    ERROR("Invalid tuple size for range(). Was %d", tuple_size(t));
+    return raise_error(task, ctx, "Invalid tuple size for range(). Was %d",
+                       tuple_size(t));
   }
   const Entity *first = tuple_get(t, 0);
   const Entity *second = tuple_get(t, 1);
   const Entity *third = tuple_get(t, 2);
   if (PRIMITIVE != first->type || INT != ptype(&first->pri)) {
-    ERROR("Input to range() is invalid.");
+    return raise_error(task, ctx, "Input to range() is invalid.");
   }
   if (PRIMITIVE != first->type || INT != ptype(&second->pri)) {
-    ERROR("Input to range() is invalid.");
+    return raise_error(task, ctx, "Input to range() is invalid.");
   }
   if (PRIMITIVE != first->type || INT != ptype(&third->pri)) {
-    ERROR("Input to range() is invalid.");
+    return raise_error(task, ctx, "Input to range() is invalid.");
   }
   _Range *range = (_Range *)obj->_internal_obj;
   range->start = pint(&first->pri);
@@ -306,8 +577,19 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_String, EQ_FN_NAME, _string_eq);
   native_method(Class_String, NEQ_FN_NAME, _string_neq);
   native_method(Class_String, ARRAYLIKE_INDEX_KEY, _string_index);
+  native_method(Class_String, ARRAYLIKE_SET_KEY, _string_set);
+  native_method(Class_String, intern("__find"), _string_find);
+  native_method(Class_String, intern("__find_all"), _string_find_all);
   native_method(Class_String, intern("len"), _string_len);
   native_method(Class_String, HASH_KEY, _string_hash);
+  native_method(Class_String, intern("__substr"), _string_substr);
+  native_method(Class_String, intern("copy"), _string_copy);
+  native_method(Class_String, intern("ltrim"), _string_ltrim);
+  native_method(Class_String, intern("rtrim"), _string_rtrim);
+  native_method(Class_String, intern("trim"), _string_trim);
+  native_method(Class_String, intern("lshrink"), _string_lshrink);
+  native_method(Class_String, intern("rshrink"), _string_rshrink);
+  native_method(Class_String, intern("split"), _string_split);
   native_method(Class_Array, intern("len"), _array_len);
   native_method(Class_Array, intern("append"), _array_append);
   native_method(Class_Tuple, intern("len"), _tuple_len);
