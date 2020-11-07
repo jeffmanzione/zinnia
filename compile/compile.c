@@ -26,7 +26,7 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-Tape *_read_file(const char fn[]) {
+Tape *_read_file(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
@@ -36,7 +36,9 @@ Tape *_read_file(const char fn[]) {
   syntax_tree_delete(&stree);
   file_info_delete(fi);
 
-  tape = optimize(tape);
+  if (opt) {
+    tape = optimize(tape);
+  }
 
   return tape;
 }
@@ -73,12 +75,13 @@ Map *compile(const Set *source_files, const ArgStore *store) {
       argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
   const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
+  const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
 
   M_iter srcs = set_iter((Set *)source_files);
   Map *src_map = map_create_default();
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    Tape *tape = _read_file(src);
+    Tape *tape = _read_file(src, opt);
     map_insert(src_map, src, tape);
     write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
