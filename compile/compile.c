@@ -13,6 +13,7 @@
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
+#include "program/optimization/optimize.h"
 #include "program/tape.h"
 #include "program/tape_binary.h"
 #include "struct/map.h"
@@ -34,6 +35,9 @@ Tape *_read_file(const char fn[]) {
   delete_expression(etree);
   syntax_tree_delete(&stree);
   file_info_delete(fi);
+
+  tape = optimize(tape);
+
   return tape;
 }
 
@@ -57,12 +61,12 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
     tape_write_binary(tape, file);
     fclose(file);
   }
-  // TODO: Handle outputting .jb.
 }
 
 Map *compile(const Set *source_files, const ArgStore *store) {
   parsers_init();
   semantics_init();
+  optimize_init();
 
   const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
@@ -78,6 +82,8 @@ Map *compile(const Set *source_files, const ArgStore *store) {
     map_insert(src_map, src, tape);
     write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
+
+  optimize_finalize();
   semantics_finalize();
   parsers_finalize();
   return src_map;

@@ -6,7 +6,9 @@
 #ifndef ENTITY_PRIMITIVE_H_
 #define ENTITY_PRIMITIVE_H_
 
+#include <stdbool.h>
 #include <stdint.h>
+
 
 // Contains a primitive type, i.e.,
 //    char: int8_t
@@ -39,5 +41,10 @@ void pset_float(Primitive *p, double val);
 Primitive primitive_int(int32_t val);
 Primitive primitive_char(int8_t val);
 Primitive primitive_float(double val);
+
+double float_of(const Primitive *p);
+int32_t int_of(const Primitive *p);
+int8_t char_of(const Primitive *p);
+bool primitive_equals(const Primitive *p1, const Primitive *p2);
 
 #endif /* ENTITY_PRIMITIVE_H_ */

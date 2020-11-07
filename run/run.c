@@ -16,6 +16,7 @@
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
+#include "program/optimization/optimize.h"
 #include "program/tape.h"
 #include "struct/map.h"
 #include "struct/set.h"
@@ -40,6 +41,7 @@ void run(const Set *source_files, ArgStore *store) {
 
   parsers_init();
   semantics_init();
+  optimize_init();
 
   VM *vm = vm_create();
   ModuleManager *mm = vm_module_manager(vm);
@@ -59,6 +61,7 @@ void run(const Set *source_files, ArgStore *store) {
     }
   }
 
+  optimize_finalize();
   semantics_finalize();
   parsers_finalize();
 

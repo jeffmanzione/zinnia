@@ -9,14 +9,14 @@ class Map {
     table[sz] = None
     keys = []
   }
-  method hash__(k) {
+  method __hash(k) {
     hval = builtin.hash(k)
     pos = hval % sz
     if pos < 0 pos = -pos
     return pos
   }
   method []=(k, v) {
-    pos = hash__(k)
+    pos = __hash(k)
     entries = table[pos]
     if ~entries {
       table[pos] = [(k,v)]
@@ -35,7 +35,7 @@ class Map {
     return None
   }
   method [](k) {
-    pos = hash__(k)
+    pos = __hash(k)
     entries = table[pos]
     if ~entries {
       return None

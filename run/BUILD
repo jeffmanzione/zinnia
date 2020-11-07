@@ -12,6 +12,7 @@ cc_library(
         "//compile",
         "//lang/parser",
         "//lang/semantics",
+        "//program/optimization:optimize",
         "//util:file",
         "//util:string",
         "//util/args:commandline",
