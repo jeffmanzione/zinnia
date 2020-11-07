@@ -197,8 +197,6 @@ void tape_write(const Tape *tape, FILE *file) {
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
     if (al_has(&cls_iter)) {
       ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
-      // DEBUGF("class=%s %d %d", class_ref->name, class_ref->start_index,
-      //        class_ref->end_index);
       if (in_class && class_ref->end_index == i) {
         in_class = false;
         fprintf(file, "endclass  ; %s\n", class_ref->name);

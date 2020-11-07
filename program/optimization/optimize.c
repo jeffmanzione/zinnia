@@ -154,7 +154,9 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       for (j = insert->start; j < insert->end; j++) {
         alist_append(new_index, &new_len);
         alist_append(old_index, &j);
-        *tape_add(new_tape) = *tape_get(t, j);
+        Instruction *new_ins = tape_add(new_tape);
+        *new_ins = *tape_get(t, j);
+        *tape_add_source(new_tape, new_ins) = *tape_get_source(t, j);
       }
     }
     Adjustment *a = map_lookup(&oh->i_to_adj, _as_ptr(i));
@@ -167,7 +169,9 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     }
     alist_append(old_index, &i);
     if (NULL == a) {
-      *tape_add(new_tape) = *ins;
+      Instruction *new_ins = tape_add(new_tape);
+      *new_ins = *ins;
+      *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
       continue;
     }
     Instruction c_new = *ins;
@@ -180,7 +184,9 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     } else if (REPLACE == a->type) {
       c_new = a->ins;
     }
-    *tape_add(new_tape) = c_new;
+    Instruction *new_ins = tape_add(new_tape);
+    *new_ins = c_new;
+    *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
   }
   int new_len = tape_size(new_tape);
   for (i = 0; i < new_len; i++) {
