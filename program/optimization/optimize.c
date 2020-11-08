@@ -230,14 +230,6 @@ void register_optimizer(const char name[], const Optimizer o) {
   alist_append(optimizers, &o);
 }
 
-// void Instruction_swap(AList * const e, void *x, void *y) {
-//  Instruction *insx = x;
-//  Instruction *insy = y;
-//  Instruction tmp = *cx;
-//  *cx = *cy;
-//  *cy = tmp;
-//}
-
 void Int32_swap(void *x, void *y) {
   int32_t *cx = x;
   int32_t *cy = y;
