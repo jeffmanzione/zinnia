@@ -17,6 +17,7 @@
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
+#include "program/optimization/optimize.h"
 #include "program/tape_binary.h"
 #include "util/string.h"
 #include "vm/intern.h"
@@ -158,12 +159,15 @@ Module *_read_jl(ModuleManager *mm, const char fn[]) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
+
   Tape *tape = tape_create();
   produce_instructions(etree, tape);
-  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
-  module_info->fi = fi;
   delete_expression(etree);
   syntax_tree_delete(&stree);
+
+  tape = optimize(tape);
+  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  module_info->fi = fi;
   return &module_info->module;
 }
 

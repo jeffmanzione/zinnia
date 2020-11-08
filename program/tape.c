@@ -156,6 +156,11 @@ inline KL_iter tape_classes(const Tape *tape) {
   return keyedlist_iter((KeyedList *)&tape->class_refs); // bless
 }
 
+inline const ClassRef *tape_get_class(const Tape *tape,
+                                      const char class_name[]) {
+  return keyedlist_lookup((KeyedList *)&tape->class_refs, class_name);
+}
+
 inline uint32_t tape_func_count(const Tape *tape) {
   return alist_len(&tape->func_refs._list);
 }
@@ -184,34 +189,39 @@ void tape_write(const Tape *tape, FILE *file) {
   if (tape->module_name && 0 != strcmp("$", tape->module_name)) {
     fprintf(file, "module %s\n", tape->module_name);
   }
-  KL_iter cls_iter = keyedlist_iter((KeyedList *)&tape->class_refs);
-  KL_iter func_iter = keyedlist_iter((KeyedList *)&tape->func_refs);
-  KL_iter cls_func_iter;
+  AL_iter cls_iter = alist_iter((AList *)&tape->class_refs._list);
+  AL_iter func_iter = alist_iter((AList *)&tape->func_refs._list);
+  AL_iter cls_func_iter;
   bool in_class = false;
   int i;
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
-    if (kl_has(&cls_iter)) {
-      ClassRef *class_ref = (ClassRef *)kl_value(&cls_iter);
+    if (al_has(&cls_iter)) {
+      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
       if (in_class && class_ref->end_index == i) {
         in_class = false;
         fprintf(file, "endclass  ; %s\n", class_ref->name);
-      } else if (!in_class && class_ref->start_index == i) {
+        al_inc(&cls_iter);
+      }
+    }
+    if (al_has(&cls_iter)) {
+      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
+      if (!in_class && class_ref->start_index == i) {
         in_class = true;
-        cls_func_iter = keyedlist_iter((KeyedList *)&class_ref->func_refs);
+        cls_func_iter = alist_iter((AList *)&class_ref->func_refs._list);
         fprintf(file, "class %s\n", class_ref->name);
       }
     }
-    if (in_class && kl_has(&cls_func_iter)) {
-      FunctionRef *func_ref = (FunctionRef *)kl_value(&cls_func_iter);
+    if (in_class && al_has(&cls_func_iter)) {
+      FunctionRef *func_ref = (FunctionRef *)al_value(&cls_func_iter);
       if (func_ref->index == i) {
         fprintf(file, "@%s\n", func_ref->name);
-        kl_inc(&cls_func_iter);
+        al_inc(&cls_func_iter);
       }
-    } else if (kl_has(&func_iter)) {
-      FunctionRef *func_ref = (FunctionRef *)kl_value(&func_iter);
+    } else if (al_has(&func_iter)) {
+      FunctionRef *func_ref = (FunctionRef *)al_value(&func_iter);
       if (func_ref->index == i) {
         fprintf(file, "@%s\n", func_ref->name);
-        kl_inc(&func_iter);
+        al_inc(&func_iter);
       }
     }
     if (i < alist_len(&tape->ins)) {

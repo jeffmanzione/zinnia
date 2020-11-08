@@ -55,4 +55,9 @@ dkms.conf
 bazel*
 .bazelrc
 
+# Test
 test.*
+
+# JL
+*.ja
+*.jb

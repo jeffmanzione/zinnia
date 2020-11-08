@@ -13,6 +13,7 @@
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
+#include "program/optimization/optimize.h"
 #include "program/tape.h"
 #include "program/tape_binary.h"
 #include "struct/map.h"
@@ -25,7 +26,7 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-Tape *_read_file(const char fn[]) {
+Tape *_read_file(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
@@ -34,6 +35,11 @@ Tape *_read_file(const char fn[]) {
   delete_expression(etree);
   syntax_tree_delete(&stree);
   file_info_delete(fi);
+
+  if (opt) {
+    tape = optimize(tape);
+  }
+
   return tape;
 }
 
@@ -57,27 +63,30 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
     tape_write_binary(tape, file);
     fclose(file);
   }
-  // TODO: Handle outputting .jb.
 }
 
 Map *compile(const Set *source_files, const ArgStore *store) {
   parsers_init();
   semantics_init();
+  optimize_init();
 
   const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
       argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
   const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
+  const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
 
   M_iter srcs = set_iter((Set *)source_files);
   Map *src_map = map_create_default();
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    Tape *tape = _read_file(src);
+    Tape *tape = _read_file(src, opt);
     map_insert(src_map, src, tape);
     write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
+
+  optimize_finalize();
   semantics_finalize();
   parsers_finalize();
   return src_map;

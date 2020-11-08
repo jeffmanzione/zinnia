@@ -20,6 +20,7 @@ typedef enum {
   ArgKey__OUT_ASSEMBLY,
   ArgKey__BIN_OUT_DIR,
   ArgKey__ASSEMBLY_OUT_DIR,
+  ArgKey__OPTIMIZE,
   ArgKey__END,
 } ArgKey;
 

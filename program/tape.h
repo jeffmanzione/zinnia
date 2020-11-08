@@ -88,6 +88,7 @@ int tape_anon_label(Tape *tape, const Token *token);
 
 int tape_module(Tape *tape, const Token *token);
 int tape_class(Tape *tape, const Token *token);
+const ClassRef *tape_get_class(const Tape *tape, const char class_name[]);
 int tape_class_with_parents(Tape *tape, const Token *token, Q *tokens);
 int tape_endclass(Tape *tape, const Token *token);
 
