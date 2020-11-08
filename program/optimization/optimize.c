@@ -44,8 +44,6 @@ void optimize_init() {
   register_optimizer("SimpleMath", optimizer_SimpleMath);
   register_optimizer("GetPush", optimizer_GetPush);
   register_optimizer("Nil", optimizer_Nil);
-
-  //  register_optimizer("Increment", optimizer_Increment);
 }
 
 void optimize_finalize() { alist_delete(optimizers); }
