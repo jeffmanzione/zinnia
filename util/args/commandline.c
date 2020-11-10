@@ -142,25 +142,25 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
   map_init_default(&args);
   parse_args_inner(argc, argv, &store->src_files, &args);
 
-  void insert_arg(Pair * kv) {
-    const char *key = (char *)kv->key;
-    const char *value = (char *)kv->value;
-    ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, key);
+  M_iter args_iter = map_iter(&args);
+  for (; has(&args_iter); inc(&args_iter)) {
+    const char *k = key(&args_iter);
+    const char *v = value(&args_iter);
+    ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, k);
     if (ArgKey__NONE == arg_key) {
-      ERROR("Unknown Arg name: %s", key);
+      ERROR("Unknown Arg name: %s", k);
     }
     Arg arg = config->args[arg_key];
     if (ArgType__none == arg.type) {
-      ERROR("Unknown Arg type: %s", key);
+      ERROR("Unknown Arg type: %s", k);
     }
-    store->args[arg_key] = arg_parse(arg.type, value);
+    store->args[arg_key] = arg_parse(arg.type, v);
     if (store->args[arg_key].type != arg.type) {
       ERROR(
           "ArgType of input does not match preset type. Was: %d, Expected: %d.",
           store->args[arg_key].type, arg.type);
     }
   }
-  map_iterate(&args, insert_arg);
   map_finalize(&args);
   return store;
 }
