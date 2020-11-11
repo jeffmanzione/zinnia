@@ -13,6 +13,7 @@
 #include "debug/debug.h"
 #include "entity/array/array.h"
 #include "entity/object.h"
+#include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
@@ -42,10 +43,7 @@ void heap_delete(Heap *heap) {
 }
 
 uint32_t heap_collect_garbage(Heap *heap) {
-  printf("Start deletion.\n");
-  uint32_t deleted_nodes_count = mgraph_collect_garbage(heap->mg);
-  printf("deleted_nodes_count=%d\n", deleted_nodes_count);
-  return deleted_nodes_count;
+  return mgraph_collect_garbage(heap->mg);
 }
 
 Object *heap_new(Heap *heap, const Class *class) {
@@ -114,6 +112,11 @@ void _object_delete(Object *object, Heap *heap) {
   //   printf("DELETING a Module('%s')\n", object->_module_obj->_name);
   // } else if (0 == strcmp(object->_class->_name, "Function")) {
   //   printf("DELETING a Function('%s')\n", object->_function_obj->_name);
+  // } else if (0 == strcmp(object->_class->_name, "String")) {
+  //   printf("DELETING a String('%.*s', %p, %p)\n",
+  //          String_size(((String *)object->_internal_obj)),
+  //          ((String *)object->_internal_obj)->table, object->_internal_obj,
+  //          object);
   // } else {
   //   printf("DELETING a '%s'\n", object->_class->_name);
   // }
