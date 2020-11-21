@@ -20,17 +20,31 @@ Instruction _for_op(Op op) {
   return ins;
 }
 
+bool _overwrites_res(Op op) {
+  switch (op) {
+  case RES:
+    // case CLLN:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
 void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
                        int end) {
   int i;
-  for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+  for (i = start + 2; i < end; i++) {
+    const Instruction *first = tape_get(tape, i - 2);
+    const Instruction *second = tape_get(tape, i - 1);
+    const Instruction *third = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_NO_ARG != first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
+        _overwrites_res((Op)third->op) &&
+        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
-      o_Remove(oh, i);
-      o_SetOp(oh, i - 1, PUSH);
+      o_Remove(oh, i - 1);
+      o_SetOp(oh, i - 2, PUSH);
     }
   }
 }

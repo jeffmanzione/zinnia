@@ -127,6 +127,16 @@ void _object_delete(Object *object, Heap *heap) {
   __arena_dealloc(&heap->object_arena, object);
 }
 
+void heap_inc_edge(Heap *heap, Object *parent, Object *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
+  mgraph_inc(heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+}
+
+void heap_dec_edge(Heap *heap, Object *parent, Object *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
+  mgraph_dec(heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+}
+
 void array_add(Heap *heap, Object *array, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
   Entity *e = Array_add_last((Array *)array->_internal_obj);
@@ -139,7 +149,6 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
 
 void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
-  // ASSERT(index >= 0, index < Array_size((Array *)array->_internal_obj));
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
     mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);

@@ -61,6 +61,8 @@ struct __Task {
 
   Task *dependent_task;
   bool child_task_has_error;
+
+  Object *_reflection;
 };
 
 struct __Process {
@@ -73,6 +75,8 @@ struct __Process {
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;
+
+  Object *_reflection;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

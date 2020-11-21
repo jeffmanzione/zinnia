@@ -54,6 +54,7 @@ cc_library(
         ":context",
         ":processes",
         "//entity/class:classes",
+        "//heap",
         "//struct:alist",
         "@memory_wrapper//debug",
     ],

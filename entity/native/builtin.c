@@ -561,7 +561,17 @@ Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+void _process_init(Object *obj) {}
+void _process_delete(Object *obj) {}
+
+void _task_init(Object *obj) {}
+void _task_delete(Object *obj) {}
+
 void builtin_add_native(Module *builtin) {
+  Class_Process =
+      native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
+  Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+
   Class_Range =
       native_class(builtin, RANGE_CLASS_NAME, _range_init, _range_delete);
   native_method(Class_Range, CONSTRUCTOR_KEY, _range_constructor);
