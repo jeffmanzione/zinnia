@@ -49,6 +49,8 @@ void _execute_FLD(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_LET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_SET(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_GET(VM *vm, Task *task, Context *context, const Instruction *ins);
+void _execute_GTSH(VM *vm, Task *task, Context *context,
+                   const Instruction *ins);
 bool _execute_CALL(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
 void _execute_RET(VM *vm, Task *task, Context *context, const Instruction *ins);
@@ -246,14 +248,28 @@ void _add_filename_method(VM *vm) {
                              Class_StackLine->_reflection, linename);
 }
 
+Process *_create_process_no_reflection(VM *vm) {
+  Process *process = alist_add(&vm->processes);
+  process_init(process);
+  process->vm = vm;
+  return process;
+}
+
+void _add_reflection_to_process(Process *process) {
+  process->_reflection = heap_new(process->heap, Class_Process);
+  process->_reflection->_internal_obj = process;
+  heap_make_root(process->heap, process->_reflection);
+}
+
 VM *vm_create() {
   VM *vm = ALLOC2(VM);
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
-  vm->main = vm_create_process(vm);
+  vm->main = _create_process_no_reflection(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
   // Have to put this here since there was no way else to get around the
   // circular dependency.
   _add_filename_method(vm);
+  _add_reflection_to_process(vm->main);
   return vm;
 }
 
@@ -270,9 +286,8 @@ void vm_delete(VM *vm) {
 }
 
 Process *vm_create_process(VM *vm) {
-  Process *process = alist_add(&vm->processes);
-  process_init(process);
-  process->vm = vm;
+  Process *process = _create_process_no_reflection(vm);
+  _add_reflection_to_process(process);
   return process;
 }
 
@@ -398,6 +413,7 @@ inline void _execute_DUP(VM *vm, Task *task, Context *context,
 
 inline void _execute_PUSH(VM *vm, Task *task, Context *context,
                           const Instruction *ins) {
+  // DEBUGF("TEST");
   Object *str;
   Entity *member;
   Entity tmp;
@@ -421,6 +437,7 @@ inline void _execute_PUSH(VM *vm, Task *task, Context *context,
   default:
     ERROR("Invalid arg type=%d for PUSH.", ins->type);
   }
+  // DEBUGF("TEST2");
 }
 
 inline void _execute_PNIL(VM *vm, Task *task, Context *context,
@@ -510,6 +527,21 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
   }
   *task_mutable_resval(task) =
       _object_get_maybe_wrap(e->obj, ins->id, task, context);
+}
+
+inline void _execute_GTSH(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  if (INSTRUCTION_ID != ins->type) {
+    ERROR("Invalid arg type=%d for GTSH.", ins->type);
+  }
+  const Entity *e = task_get_resval(task);
+  if (NULL == e || OBJECT != e->type) {
+    raise_error(task, context, "Attempted to get field '%s' from a %s.",
+                ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
+    return;
+  }
+  Entity get_result = _object_get_maybe_wrap(e->obj, ins->id, task, context);
+  *task_pushstack(task) = get_result;
 }
 
 Context *_execute_as_new_task(Task *task, Object *self, Module *m,
@@ -602,7 +634,8 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     fn = task_popstack(task);
   }
   if (fn.type != OBJECT) {
-    raise_error(task, context, "Attempted to call something not a function.");
+    raise_error(task, context,
+                "Attempted to call something not a function (not an object).");
     return false;
   }
   if (fn.obj->_class == Class_Class) {
@@ -628,7 +661,9 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
                                function_ref_get_parent_context(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
-    raise_error(task, context, "Attempted to call something not a function.");
+    raise_error(task, context,
+                "Attempted to call something not a function (class=%s).",
+                fn.obj->_class->_name);
     return false;
   }
   Function *func = fn.obj->_function_obj;
@@ -1075,6 +1110,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     case GET:
       _execute_GET(vm, task, context, ins);
       break;
+    case GTSH:
+      _execute_GTSH(vm, task, context, ins);
+      break;
     case CALL:
     case CLLN:
       if (_execute_CALL(vm, task, context, ins)) {
@@ -1209,6 +1247,7 @@ inline ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
 void vm_run_process(VM *vm, Process *process) {
   while (Q_size(&process->queued_tasks) > 0) {
     Task *task = Q_dequeue(&process->queued_tasks);
+    process->current_task = task;
     TaskState task_state = vm_execute_task(vm, task);
 #ifdef DEBUG
     fprintf(stdout, "<-- ");

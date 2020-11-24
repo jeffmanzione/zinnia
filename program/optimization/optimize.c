@@ -28,7 +28,7 @@ static AList *optimizers = NULL;
 
 void optimize_init() {
   optimizers = alist_create(Optimizer, 64);
-  register_optimizer("ResPush", optimizer_ResPush);
+  // register_optimizer("ResPush", optimizer_ResPush);
   register_optimizer("SetRes", optimizer_SetRes);
   register_optimizer("SetPush", optimizer_SetPush);
   register_optimizer("JmpRes", optimizer_JmpRes);
@@ -145,6 +145,8 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       break;
     }
     const Instruction *ins = tape_get(t, i);
+    // instruction_write(ins, stdout);
+    // printf(" <-- o\n");
     int new_len = tape_size(new_tape);
     Adjustment *insert = map_lookup(&oh->inserts, _as_ptr(i));
     if (NULL != insert) {
@@ -162,29 +164,23 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       int new_index_val = new_len - 1;
       alist_append(new_index, &new_index_val);
       continue;
-    } else {
-      alist_append(new_index, &new_len);
     }
+    alist_append(new_index, &new_len);
     alist_append(old_index, &i);
-    if (NULL == a) {
-      Instruction *new_ins = tape_add(new_tape);
-      *new_ins = *ins;
-      *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
-      continue;
-    }
-    Instruction c_new = *ins;
-    if (SET_OP == a->type) {
-      c_new.op = a->op;
-    } else if (SET_VAL == a->type) {
-      c_new.op = a->op;
-      c_new.type = INSTRUCTION_PRIMITIVE;
-      c_new.val = a->val;
-    } else if (REPLACE == a->type) {
-      c_new = a->ins;
-    }
     Instruction *new_ins = tape_add(new_tape);
-    *new_ins = c_new;
-    *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
+    *new_ins = *ins;
+    if (NULL != a) {
+      if (SET_OP == a->type) {
+        new_ins->op = a->op;
+      } else if (SET_VAL == a->type) {
+        new_ins->op = a->op;
+        new_ins->type = INSTRUCTION_PRIMITIVE;
+        new_ins->val = a->val;
+      } else if (REPLACE == a->type) {
+        *new_ins = a->ins;
+      }
+      *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
+    }
   }
   int new_len = tape_size(new_tape);
   for (i = 0; i < new_len; i++) {

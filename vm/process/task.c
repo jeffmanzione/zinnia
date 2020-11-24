@@ -7,6 +7,7 @@
 
 #include "debug/debug.h"
 #include "entity/class/classes.h"
+#include "heap/heap.h"
 #include "struct/alist.h"
 #include "vm/process/context.h"
 #include "vm/process/processes.h"
@@ -33,10 +34,15 @@ void task_init(Task *task) {
   task->dependent_task = NULL;
   task->child_task_has_error = false;
   task->current = NULL;
+  task->_reflection = NULL;
 }
 
 void task_finalize(Task *task) {
   alist_finalize(&task->entity_stack);
+  if (NULL != task->parent_process) {
+    heap_dec_edge(task->parent_process->heap, task->parent_process->_reflection,
+                  task->_reflection);
+  }
 }
 
 Context *task_create_context(Task *task, Object *self, Module *module,
