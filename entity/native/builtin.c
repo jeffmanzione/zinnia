@@ -66,9 +66,72 @@ Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
   return fn_ref;
 }
 
+void _task_inc_all_context(Heap *heap, Task *task) {
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_inc_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_inc_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_inc_edge(heap, task->_reflection, ctx->member_obj);
+    ctx = ctx->previous_context;
+  }
+}
+
+void _task_dec_all_context(Heap *heap, Task *task) {
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_dec_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_dec_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_dec_edge(heap, task->_reflection, ctx->member_obj);
+    ctx = ctx->previous_context;
+  }
+}
+
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Heap *heap = task->parent_process->heap;
+  Process *process = task->parent_process;
+  Heap *heap = process->heap;
+
+  _task_inc_all_context(heap, process->current_task);
+  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = (Task *)Q_value(&queued_tasks);
+    _task_inc_all_context(heap, queued_task);
+  }
+  M_iter waiting_tasks = set_iter(&process->waiting_tasks);
+  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+    Task *waiting_task = (Task *)value(&waiting_tasks);
+    _task_inc_all_context(heap, waiting_task);
+  }
+
   uint32_t deleted_nodes_count = heap_collect_garbage(heap);
+
+  _task_dec_all_context(heap, process->current_task);
+  queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = (Task *)Q_value(&queued_tasks);
+    _task_dec_all_context(heap, queued_task);
+  }
+  waiting_tasks = set_iter(&process->waiting_tasks);
+  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+    Task *waiting_task = (Task *)value(&waiting_tasks);
+    _task_dec_all_context(heap, waiting_task);
+  }
+
   return entity_int(deleted_nodes_count);
 }
 

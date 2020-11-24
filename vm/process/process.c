@@ -24,8 +24,6 @@ void process_init(Process *process) {
 }
 
 void process_finalize(Process *process) {
-  heap_delete(process->heap);
-
   Q_iter q_iter = Q_iterator(&process->queued_tasks);
   for (; Q_has(&q_iter); Q_inc(&q_iter)) {
     task_finalize(*(Task **)Q_value(&q_iter));
@@ -45,6 +43,7 @@ void process_finalize(Process *process) {
   set_finalize(&process->completed_tasks);
   __arena_finalize(&process->task_arena);
   __arena_finalize(&process->context_arena);
+  heap_delete(process->heap);
 }
 
 void _task_add_reflection(Process *process, Task *task) {
@@ -58,6 +57,7 @@ Task *process_create_task(Process *process) {
   task->parent_process = process;
   *Q_add_last(&process->queued_tasks) = task;
   _task_add_reflection(process, task);
+  heap_inc_edge(process->heap, process->_reflection, task->_reflection);
   return task;
 }
 

@@ -413,6 +413,7 @@ inline void _execute_DUP(VM *vm, Task *task, Context *context,
 
 inline void _execute_PUSH(VM *vm, Task *task, Context *context,
                           const Instruction *ins) {
+  // DEBUGF("TEST");
   Object *str;
   Entity *member;
   Entity tmp;
@@ -436,6 +437,7 @@ inline void _execute_PUSH(VM *vm, Task *task, Context *context,
   default:
     ERROR("Invalid arg type=%d for PUSH.", ins->type);
   }
+  // DEBUGF("TEST2");
 }
 
 inline void _execute_PNIL(VM *vm, Task *task, Context *context,
@@ -1245,6 +1247,7 @@ inline ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
 void vm_run_process(VM *vm, Process *process) {
   while (Q_size(&process->queued_tasks) > 0) {
     Task *task = Q_dequeue(&process->queued_tasks);
+    process->current_task = task;
     TaskState task_state = vm_execute_task(vm, task);
 #ifdef DEBUG
     fprintf(stdout, "<-- ");

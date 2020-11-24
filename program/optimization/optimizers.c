@@ -34,17 +34,14 @@ bool _overwrites_res(Op op) {
 void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
                        int end) {
   int i;
-  for (i = start + 2; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 2);
-    const Instruction *second = tape_get(tape, i - 1);
-    const Instruction *third = tape_get(tape, i);
+  for (i = start + 1; i < end; i++) {
+    const Instruction *first = tape_get(tape, i - 1);
+    const Instruction *second = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_NO_ARG != first->type &&
-        PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
-        _overwrites_res((Op)third->op) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
-      o_Remove(oh, i - 1);
-      o_SetOp(oh, i - 2, PUSH);
+        PUSH == second->op && INSTRUCTION_NO_ARG == second->type) {
+      o_SetOp(oh, i - 1, PUSH);
+      o_Remove(oh, i);
+      ++i;
     }
   }
 }
@@ -143,8 +140,8 @@ void optimizer_PushRes(OptimizeHelper *oh, const Tape *const tape, int start,
         continue;
       }
     }
-    o_Remove(oh, i);
     o_SetOp(oh, i - 1, PSRS);
+    o_Remove(oh, i);
   }
 }
 
@@ -157,8 +154,8 @@ void optimizer_ResPush2(OptimizeHelper *oh, const Tape *const tape, int start,
     if (RES == first->op && INSTRUCTION_NO_ARG == first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
-      o_Remove(oh, i);
       o_SetOp(oh, i - 1, PEEK);
+      o_Remove(oh, i);
     }
   }
 }
@@ -215,10 +212,10 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 3))) {
-      o_Remove(oh, i);
-      o_Remove(oh, i - 1);
-      o_Remove(oh, i - 2);
       o_SetOp(oh, i - 3, ADD == third->op ? INC : DEC);
+      o_Remove(oh, i - 2);
+      o_Remove(oh, i - 1);
+      o_Remove(oh, i);
     }
   }
 
@@ -238,9 +235,9 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2))) {
-      o_Remove(oh, i);
-      o_Remove(oh, i - 1);
       o_SetOp(oh, i - 2, ADD == second->op ? INC : DEC);
+      o_Remove(oh, i - 1);
+      o_Remove(oh, i);
     }
   }
 }
@@ -299,8 +296,8 @@ void optimizer_PushRes2(OptimizeHelper *oh, const Tape *const tape, int start,
     if (PUSH == first->op && RES == second->op && first->type == second->type &&
         first->type == INSTRUCTION_NO_ARG &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i))) {
-      o_Remove(oh, i);
       o_Remove(oh, i - 1);
+      o_Remove(oh, i);
     }
   }
 }
