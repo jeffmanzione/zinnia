@@ -10,6 +10,7 @@
 #include "entity/function/function.h"
 #include "entity/module/module.h"
 #include "entity/module/modules.h"
+#include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/io.h"
@@ -68,6 +69,11 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   error_add_native(Module_error);
   _add_reflection_to_module(mm, Module_error);
   heap_make_root(heap, Module_error->_reflection);
+  // async.jl
+  Module_async = _read_helper(mm, "lib/async.jl");
+  async_add_native(Module_async);
+  _add_reflection_to_module(mm, Module_async);
+  heap_make_root(heap, Module_async->_reflection);
   // struct.jl
   Module_struct = _read_helper(mm, "lib/struct.jl");
   _add_reflection_to_module(mm, Module_struct);
@@ -88,7 +94,8 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   KL_iter funcs = tape_functions(tape);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
-    module_add_function(module, fref->name, fref->index);
+    module_add_function(module, fref->name, fref->index, fref->is_const,
+                        fref->is_async);
   }
 
   KL_iter classes = tape_classes(tape);
@@ -107,7 +114,8 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
     KL_iter funcs = keyedlist_iter(&cref->func_refs);
     for (; kl_has(&funcs); kl_inc(&funcs)) {
       FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
-      class_add_function(class, fref->name, fref->index);
+      class_add_function(class, fref->name, fref->index, fref->is_const,
+                         fref->is_async);
     }
   }
   return module_info;

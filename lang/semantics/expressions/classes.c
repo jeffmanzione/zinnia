@@ -136,9 +136,10 @@ void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
 
 FunctionDef populate_method(const SyntaxTree *stree) {
   return populate_function_variant(
-      stree, method_definition, method_signature_const,
-      method_signature_nonconst, method_identifier, function_arguments_no_args,
-      function_arguments_present, set_method_def, set_function_args);
+      stree, method_definition, method_signature_with_qualifier,
+      method_signature_no_qualifier, method_identifier,
+      function_arguments_no_args, function_arguments_present, set_method_def,
+      set_function_args);
 }
 
 void set_new_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
@@ -284,9 +285,10 @@ int produce_constructor(ClassDef *class, Tape *tape) {
     FunctionDef *func = &class->constructor;
     num_ins += produce_instructions(func->body, tape);
     num_ins += tape_ins_text(tape, RES, SELF, func->fn_name);
-    if (func->is_const) {
-      num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
-    }
+    // TODO: Uncomment when const is implemented.
+    // if (func->is_const) {
+    //   num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
+    // }
     num_ins += tape_ins_no_arg(tape, RET, func->def_token);
   } else {
     num_ins += tape_ins_text(tape, RES, SELF, class->def.name.token);

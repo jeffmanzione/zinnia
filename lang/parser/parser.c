@@ -377,7 +377,7 @@ SyntaxTree _match_merge(Parser *parser, SyntaxTree parent, SyntaxTree child) {
 // clang-format off
 
 DefineSyntax(tuple_expression);
-ImplSyntax(identifier, Or(Type(WORD), Type(CLASS), Type(MODULE_T)));
+ImplSyntax(identifier, Or(Type(WORD), Type(CLASS), Type(MODULE_T), Type(ASYNC)));
 ImplSyntax(new_expression, Type(NEW));
 ImplSyntax(constant, Or(Type(INTEGER), Type(FLOATING)));
 ImplSyntax(string_literal, Type(STR));
@@ -472,6 +472,7 @@ ImplSyntax(range_expression,
 //    ++ unary_expression
 //    -- unary_expression
 //    const unary_expression
+//    await unary_expression
 ImplSyntax(unary_expression,
            Or(And(Type(TILDE), unary_expression),
               And(Type(EXCLAIM), unary_expression),
@@ -479,6 +480,7 @@ ImplSyntax(unary_expression,
               //       And(Type(INC), unary_expression),
               //       And(Type(DEC), unary_expression),
               And(Type(CONST_T), unary_expression),
+              And(Type(AWAIT), unary_expression),
               range_expression));
 
 // multiplicative_expression
@@ -804,15 +806,24 @@ ImplSyntax(function_arguments,
 ImplSyntax(def_identifier,
            And(Type(DEF), identifier));
 
-ImplSyntax(function_signature_nonconst,
+ImplSyntax(function_signature_no_qualifier,
            And(def_identifier, function_arguments));
 
-ImplSyntax(function_signature_const,
-           And(function_signature_nonconst, TypeLn(CONST_T)));
+ImplSyntax(function_qualifier, Or(TypeLn(ASYNC), TypeLn(CONST_T)));
+
+ImplSyntax(function_qualifier_list1,
+           Or(And(function_qualifier, function_qualifier_list1),
+              Epsilon));
+
+ImplSyntax(function_qualifier_list,
+           And(function_qualifier, function_qualifier_list1));
+
+ImplSyntax(function_signature_with_qualifier,
+           And(function_signature_no_qualifier, function_qualifier_list));
 
 ImplSyntax(function_signature,
-           Or(function_signature_const,
-              function_signature_nonconst));
+           Or(function_signature_with_qualifier,
+              function_signature_no_qualifier));
 
 ImplSyntax(function_definition,
            And(function_signature,
@@ -826,15 +837,15 @@ ImplSyntax(method_identifier,
                   And(Type(LBRAC), Type(RBRAC), Type(EQUALS)),
                   And(Type(LBRAC), Type(RBRAC)))));
 
-ImplSyntax(method_signature_nonconst,
+ImplSyntax(method_signature_no_qualifier,
            And(method_identifier, function_arguments));
 
-ImplSyntax(method_signature_const,
-           And(method_signature_nonconst, TypeLn(CONST_T)));
+ImplSyntax(method_signature_with_qualifier,
+           And(method_signature_no_qualifier, function_qualifier_list));
 
 ImplSyntax(method_signature,
-           Or(method_signature_const,
-               method_signature_nonconst));
+           Or(method_signature_with_qualifier,
+               method_signature_no_qualifier));
 
 ImplSyntax(method_definition,
            And(method_signature,
@@ -897,15 +908,15 @@ ImplSyntax(new_definition,
            And(new_signature,
                statement));
 
-ImplSyntax(anon_signature_nonconst,
+ImplSyntax(anon_signature_no_qualifier,
            function_arguments);
 
-ImplSyntax(anon_signature_const,
-           And(anon_signature_nonconst, TypeLn(CONST_T)));
+ImplSyntax(anon_signature_with_qualifier,
+           And(anon_signature_no_qualifier, function_qualifier_list));
 
 ImplSyntax(anon_signature,
-           Or(anon_signature_const,
-              anon_signature_nonconst));
+           Or(anon_signature_with_qualifier,
+              anon_signature_no_qualifier));
 
 
 ImplSyntax(anon_function_lambda_lhs,

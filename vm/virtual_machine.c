@@ -11,6 +11,7 @@
 #include "entity/array/array.h"
 #include "entity/class/classes.h"
 #include "entity/module/modules.h"
+#include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
@@ -571,6 +572,11 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   if (func->_is_anon) {
     fn_ctx->previous_context = parent_context;
   }
+  if (func->_is_async) {
+    *task_mutable_resval(task) =
+        entity_object(future_create(fn_ctx->parent_task));
+    return false;
+  }
   return true;
 }
 
@@ -671,6 +677,23 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = NONE_ENTITY;
   }
   return _call_function(task, context, func);
+}
+
+inline bool _execute_WAIT(VM *vm, Task *task, Context *context,
+                          const Instruction *ins) {
+  const Entity *resval = task_get_resval(task);
+  // Only wait for futures.
+  if (NULL == resval || OBJECT != resval->type ||
+      Class_Future != resval->obj->_class) {
+    return false;
+  }
+  Future *future = (Future *)resval->obj->_internal_obj;
+  if (TASK_COMPLETE != future->task->state &&
+      TASK_ERROR != future->task->state) {
+    return true;
+  }
+  *task_mutable_resval(task) = *task_get_resval(future->task);
+  return false;
 }
 
 inline void _execute_RET(VM *vm, Task *task, Context *context,
@@ -1233,6 +1256,14 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         goto end_of_loop;
       }
       break;
+    case WAIT:
+      if (_execute_WAIT(vm, task, context, ins)) {
+        task->state = TASK_WAITING;
+        task->wait_reason = WAITING_ON_FUTURE;
+        context->ins++;
+        goto end_of_loop;
+      }
+      break;
     default:
       ERROR("Unknown instruction: %s", op_to_str(ins->op));
     }
@@ -1274,7 +1305,9 @@ void vm_run_process(VM *vm, Process *process) {
       break;
     case TASK_COMPLETE:
       set_insert(&process->completed_tasks, task);
-      if (NULL != task->dependent_task) {
+      // Only requeue parent task if it is waiting.
+      if (NULL != task->dependent_task &&
+          TASK_WAITING == task->dependent_task->state) {
         Q_enqueue(&process->queued_tasks, task->dependent_task);
         set_remove(&process->waiting_tasks, task->dependent_task);
       }

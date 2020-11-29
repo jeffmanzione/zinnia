@@ -18,7 +18,7 @@ char *keyword_to_type[] = {
     "if",    "then",  "else",  "def",   "new",      "field",  "method",
     "class", "while", "for",   "break", "continue", "return", "as",
     "is",    "try",   "catch", "raise", "import",   "module", "exit",
-    "in",    "notin", "const", "and",   "or"};
+    "in",    "notin", "const", "and",   "or",       "async",  "await"};
 
 inline char *keyword(TokenType type) {
   return keyword_to_type[type - KEYWORD_TOKEN_OFFSET];
@@ -68,36 +68,36 @@ inline Token *token_copy(Token *tok) {
 
 bool is_special_char(const char c) {
   switch (c) {
-    case '(':
-    case ')':
-    case '{':
-    case '}':
-    case '[':
-    case ']':
-    case '+':
-    case '-':
-    case '*':
-    case '/':
-    case '\\':
-    case '%':
-    case '&':
-    case '|':
-    case '^':
-    case '~':
-    case '!':
-    case '?':
-    case '@':
-    case '#':
-    case '<':
-    case '>':
-    case '=':
-    case ',':
-    case ':':
-    case '.':
-    case '\'':
-      return true;
-    default:
-      return false;
+  case '(':
+  case ')':
+  case '{':
+  case '}':
+  case '[':
+  case ']':
+  case '+':
+  case '-':
+  case '*':
+  case '/':
+  case '\\':
+  case '%':
+  case '&':
+  case '|':
+  case '^':
+  case '~':
+  case '!':
+  case '?':
+  case '@':
+  case '#':
+  case '<':
+  case '>':
+  case '=':
+  case ',':
+  case ':':
+  case '.':
+  case '\'':
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -115,13 +115,13 @@ inline bool is_alphanumeric(const char c) {
 
 bool is_any_space(const char c) {
   switch (c) {
-    case ' ':
-    case '\t':
-    case '\n':
-    case '\r':
-      return true;
-    default:
-      return false;
+  case ' ':
+  case '\t':
+  case '\n':
+  case '\r':
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -131,30 +131,30 @@ inline bool is_whitespace(const char c) {
 
 char char_unesc(char u) {
   switch (u) {
-    case 'a':
-      return '\a';
-    case 'b':
-      return '\b';
-    case 'f':
-      return '\f';
-    case 'n':
-      return '\n';
-    case 'r':
-      return '\r';
-    case 't':
-      return '\t';
-    case 'v':
-      return '\v';
-    case '\\':
-      return '\\';
-    case '\'':
-      return '\'';
-    case '\"':
-      return '\"';
-    case '\?':
-      return '\?';
-    default:
-      return u;
+  case 'a':
+    return '\a';
+  case 'b':
+    return '\b';
+  case 'f':
+    return '\f';
+  case 'n':
+    return '\n';
+  case 'r':
+    return '\r';
+  case 't':
+    return '\t';
+  case 'v':
+    return '\v';
+  case '\\':
+    return '\\';
+  case '\'':
+    return '\'';
+  case '\"':
+    return '\"';
+  case '\?':
+    return '\?';
+  default:
+    return u;
   }
 }
 
@@ -175,16 +175,16 @@ Primitive token_to_primitive(const Token *tok) {
   ASSERT_NOT_NULL(tok);
   Primitive val;
   switch (tok->type) {
-    case INTEGER:
-      val._type = INT;
-      val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
-      break;
-    case FLOATING:
-      val._type = FLOAT;
-      val._float_val = strtod(tok->text, NULL);
-      break;
-    default:
-      ERROR("Attempted to create a Value from '%s'.", tok->text);
+  case INTEGER:
+    val._type = INT;
+    val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
+    break;
+  case FLOATING:
+    val._type = FLOAT;
+    val._float_val = strtod(tok->text, NULL);
+    break;
+  default:
+    ERROR("Attempted to create a Value from '%s'.", tok->text);
   }
   return val;
 }

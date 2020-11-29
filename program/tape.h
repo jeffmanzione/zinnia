@@ -6,6 +6,8 @@
 #ifndef PROGRAM_TAPE_H_
 #define PROGRAM_TAPE_H_
 
+#include <stdbool.h>
+
 #include "debug/debug.h"
 #include "lang/lexer/token.h"
 #include "program/instruction.h"
@@ -21,6 +23,7 @@ typedef struct {
 typedef struct {
   const char *name;
   uint32_t index;
+  bool is_const, is_async;
 } FunctionRef;
 
 typedef struct {
@@ -53,8 +56,8 @@ void tape_delete(Tape *tape);
 Instruction *tape_add(Tape *tape);
 SourceMapping *tape_add_source(Tape *tape, Instruction *ins);
 
-void tape_start_func(Tape *tape, const char name[]);
-void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index);
+void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
+                              bool is_async);
 void tape_start_class(Tape *tape, const char name[]);
 void tape_end_class(Tape *tape);
 ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
@@ -78,13 +81,19 @@ DEB_FN(int, tape_ins_int, Tape *tape, Op op, int val, const Token *token);
   CALL_FN(tape_ins_int__, tape, op, val, token)
 
 // int tape_ins_int(Tape *tape, Op op, int val, const Token *token);
-int tape_ins_no_arg(Tape *tape, Op op, const Token *token);
+DEB_FN(int, tape_ins_no_arg, Tape *tape, Op op, const Token *token);
+#define tape_ins_no_arg(tape, op, token)                                       \
+  CALL_FN(tape_ins_no_arg__, tape, op, token)
+
 int tape_ins_anon(Tape *tape, Op op, const Token *token);
 int tape_ins_neg(Tape *tape, Op op, const Token *token);
 
 int tape_label(Tape *tape, const Token *token);
+int tape_label_async(Tape *tape, const Token *token);
 int tape_label_text(Tape *tape, const char text[]);
+int tape_label_text_async(Tape *tape, const char text[]);
 int tape_anon_label(Tape *tape, const Token *token);
+int tape_anon_label_async(Tape *tape, const Token *token);
 
 int tape_module(Tape *tape, const Token *token);
 int tape_class(Tape *tape, const Token *token);

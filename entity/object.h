@@ -72,9 +72,11 @@ struct _Function {
 
   bool _is_native;
   bool _is_anon;
+  bool _is_async;
+  bool _is_const;
   union {
     uint32_t _ins_pos;
-    void *_native_fn;  // NativeFn
+    void *_native_fn; // NativeFn
   };
 };
 

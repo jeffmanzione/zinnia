@@ -10,7 +10,7 @@
 #include "entity/class/classes.h"
 
 Function *native_method(Class *class, const char name[], NativeFn native_fn) {
-  Function *fn = class_add_function(class, name, 0);
+  Function *fn = class_add_function(class, name, 0, false, false);
   fn->_is_native = true;
   fn->_native_fn = native_fn;
   return fn;
@@ -18,7 +18,7 @@ Function *native_method(Class *class, const char name[], NativeFn native_fn) {
 
 Function *native_function(Module *module, const char name[],
                           NativeFn native_fn) {
-  Function *fn = module_add_function(module, name, 0);
+  Function *fn = module_add_function(module, name, 0, false, false);
   fn->_is_native = true;
   fn->_native_fn = native_fn;
   return fn;

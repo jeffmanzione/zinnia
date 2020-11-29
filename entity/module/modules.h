@@ -8,4 +8,5 @@
 Module *Module_builtin;
 Module *Module_io;
 Module *Module_error;
+Module *Module_async;
 Module *Module_struct;

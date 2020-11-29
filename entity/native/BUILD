@@ -21,6 +21,21 @@ cc_library(
 )
 
 cc_library(
+    name = "async",
+    srcs = ["async.c"],
+    hdrs = ["async.h"],
+    deps = [
+        ":native",
+        "//entity",
+        "//entity:object",
+        "//entity/class:classes",
+        "//heap",
+        "//vm/process:processes",
+        "@memory_wrapper//debug",
+    ],
+)
+
+cc_library(
     name = "builtin",
     srcs = ["builtin.c"],
     hdrs = ["builtin.h"],

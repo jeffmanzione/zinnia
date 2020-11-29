@@ -36,6 +36,7 @@ char *FILE_NAME;
 char *FUNCTION_NAME;
 char *FUNCTION_REF_NAME;
 char *FUNCTIONS_KEY;
+char *FUTURE_NAME;
 char *HAS_NEXT_FN_NAME;
 char *HASH_KEY;
 char *INITIALIZED;
@@ -113,6 +114,7 @@ void _strings_insert_constants() {
   FUNCTION_NAME = intern("Function");
   FUNCTION_REF_NAME = intern("FunctionRef");
   FUNCTIONS_KEY = intern("functions");
+  FUTURE_NAME = intern("Future");
   HAS_NEXT_FN_NAME = intern("has_next");
   HASH_KEY = intern("hash");
   INITIALIZED = intern("$initialized");

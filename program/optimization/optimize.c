@@ -70,7 +70,7 @@ void _tape_populate_mappings(const Tape *tape, Map *i_to_refs,
   KL_iter refs_iter = tape_functions(tape);
   for (; kl_has(&refs_iter); kl_inc(&refs_iter)) {
     const FunctionRef *fref = (const FunctionRef *)kl_value(&refs_iter);
-    map_insert(i_to_refs, _as_ptr(fref->index), fref->name);
+    map_insert(i_to_refs, _as_ptr(fref->index), fref);
   }
 
   KL_iter class_iter = tape_classes(tape);
@@ -81,7 +81,7 @@ void _tape_populate_mappings(const Tape *tape, Map *i_to_refs,
     KL_iter methods_iter = keyedlist_iter((KeyedList *)&cref->func_refs);
     for (; kl_has(&methods_iter); kl_inc(&methods_iter)) {
       const FunctionRef *fref = (const FunctionRef *)kl_value(&methods_iter);
-      map_insert(i_to_refs, _as_ptr(fref->index), fref->name);
+      map_insert(i_to_refs, _as_ptr(fref->index), fref);
     }
   }
 }
@@ -135,10 +135,13 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
         Q_finalize(&q_parents);
       }
     }
-    if (NULL != (text = map_lookup(&oh->i_to_refs, _as_ptr(i)))) {
-      Token tok;
-      token_fill(&tok, WORD, 0, 0, text);
-      tape_label(new_tape, &tok);
+    FunctionRef *fref;
+    if (NULL != (fref = map_lookup(&oh->i_to_refs, _as_ptr(i)))) {
+      if (fref->is_async) {
+        tape_label_text_async(new_tape, fref->name);
+      } else {
+        tape_label_text(new_tape, fref->name);
+      }
     }
     // Prevents out of bounds.
     if (i >= old_len) {
