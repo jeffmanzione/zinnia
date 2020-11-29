@@ -171,6 +171,7 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     alist_append(new_index, &new_len);
     alist_append(old_index, &i);
     Instruction *new_ins = tape_add(new_tape);
+    *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
     *new_ins = *ins;
     if (NULL != a) {
       if (SET_OP == a->type) {
@@ -182,7 +183,6 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       } else if (REPLACE == a->type) {
         *new_ins = a->ins;
       }
-      *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
     }
   }
   int new_len = tape_size(new_tape);

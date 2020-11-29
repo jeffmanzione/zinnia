@@ -2,35 +2,31 @@ module test
 
 import io
 
-;io.println('abcqqabcqqabc'.find('abc'))
-;io.println('abcqqabcqqabc'.find('abc', 1))
-;io.println('abcqqabcqqabc'.find('abc', 6))
-;io.println('abcqqabcqqabc'.find_all('abc'))
-
-;io.println(cat('Collected ', __collect_garbage(), ' objects.'))
-
-;test = 'aqcdef'
-;test[1] = 'b'
-;io.println(test);
-
-def add1(x, y) async {
-  io.println('add1')
-  x + y
+def test1() async {
+  io.println('test1')
 }
-add2 = (x, y) async {
-  io.println('add2')
-   x + y
+def test2() async {
+  io.println('test2')
 }
 
-add3 = (x, y) async {
-  io.println('add3')
-   x + y
+def test3() async {
+  io.println('test3')
 }
 
-a = await add1(1, 2)
-io.println('A', a)
-io.println('B', a)
-add2(3, 4)
+io.println(test1())
+
+io.println('A')
+
+test2()
+
+io.println('B')
+
+test3()
+
 io.println('C')
-add3(5, 6)
-io.println('D')
+
+def add(x, y) async {
+  return x + y
+}
+
+io.println(await add(3.1412, 50.1))
