@@ -27,6 +27,7 @@ Class *Class_Tuple;
 Class *Class_Error;
 Class *Class_Process;
 Class *Class_Task;
+Class *Class_Future;
 
 void builtin_classes(Heap *heap, Module *builtin) {
   Class_Object = module_add_class(builtin, OBJECT_NAME, NULL);
@@ -41,6 +42,7 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Error = NULL;
   Class_Process = NULL;
   Class_Task = NULL;
+  Class_Future = NULL;
 
   Class_Object->_super = NULL;
   Class_Object->_reflection = heap_new(heap, Class_Class);

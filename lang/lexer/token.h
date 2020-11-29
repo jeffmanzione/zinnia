@@ -100,6 +100,8 @@ typedef enum {
   CONST_T,
   AND_T,
   OR_T,
+  ASYNC,
+  AWAIT,
 } TokenType;
 
 typedef struct {

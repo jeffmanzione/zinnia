@@ -14,16 +14,15 @@
 typedef struct {
   Object *obj;
   const Function *func;
-  void *parent_context;  // To avoid circular dependency.
+  void *parent_context; // To avoid circular dependency.
 } _FunctionRef;
-
 
 inline bool is_anon(const char name[]) {
   return 0 == strncmp("$anon_", name, 6);
 }
 
 inline void function_init(Function *f, const char name[], const Module *module,
-                          uint32_t ins_pos, bool is_anon) {
+                          uint32_t ins_pos, bool is_anon, bool is_const, bool is_async) {
   ASSERT(NOT_NULL(f), NOT_NULL(name));
   f->_name = name;
   f->_module = module;
@@ -31,6 +30,8 @@ inline void function_init(Function *f, const char name[], const Module *module,
   f->_ins_pos = ins_pos;
   f->_is_native = false;
   f->_is_anon = is_anon;
+  f->_is_const = is_const;
+  f->_is_async = is_async;
   f->_reflection = NULL;
 }
 

@@ -70,7 +70,8 @@ typedef enum {
   Unary_not,
   Unary_notc,
   Unary_negate,
-  Unary_const
+  Unary_const,
+  Unary_await
 } UnaryType;
 
 DefineExpression(unary_expression) {

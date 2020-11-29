@@ -43,7 +43,7 @@ inline const Tape *module_tape(const Module *const module) {
 }
 
 Function *module_add_function(Module *module, const char name[],
-                              uint32_t ins_pos) {
+                              uint32_t ins_pos, bool is_const, bool is_async) {
   ASSERT(NOT_NULL(module), NOT_NULL(name));
   Function *f;
   Function *old =
@@ -53,7 +53,7 @@ Function *module_add_function(Module *module, const char name[],
           "name.",
           name, module->_name);
   }
-  function_init(f, name, module, ins_pos, is_anon(name));
+  function_init(f, name, module, ins_pos, is_anon(name), is_const, is_async);
   return f;
 }
 

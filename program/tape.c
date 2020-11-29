@@ -73,7 +73,8 @@ SourceMapping *tape_add_source(Tape *tape, Instruction *ins) {
   return (SourceMapping *)alist_get(&tape->source_map, index);
 }
 
-void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index) {
+void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
+                              bool is_async) {
   ASSERT(NOT_NULL(tape), NOT_NULL(name));
   FunctionRef *ref, *old;
   // In a class.
@@ -91,10 +92,13 @@ void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index) {
   }
   ref->name = name;
   ref->index = index;
+  // TODO: Implement const functions.
+  ref->is_const = false;
+  ref->is_async = is_async;
 }
 
-void tape_start_func(Tape *tape, const char name[]) {
-  tape_start_func_at_index(tape, name, alist_len(&tape->ins));
+void _tape_start_func(Tape *tape, const char name[], bool is_async) {
+  tape_start_func_at_index(tape, name, alist_len(&tape->ins), is_async);
 }
 
 ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
@@ -321,7 +325,16 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   }
   if (AT == first->type) {
     Token *fn_name = Q_remove(tokens, 0);
-    if (ENDLINE != ((Token *)_q_peek(tokens))->type) {
+    if (COLON == _q_peek(tokens)->type) {
+      Q_remove(tokens, 0);
+      Token *async_keyword = Q_remove(tokens, 0);
+      if (0 != strcmp("async", async_keyword->text)) {
+        ERROR("Invalid function qualifier '%s' on '%s'.", async_keyword->text,
+              fn_name->text);
+      }
+      tape_label_async(tape, fn_name);
+    }
+    if (ENDLINE != _q_peek(tokens)->type) {
       ERROR("Invalid token after @def.");
     }
     tape_label(tape, fn_name);
@@ -329,13 +342,13 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   }
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
     Token *class_name = Q_remove(tokens, 0);
-    if (ENDLINE == ((Token *)_q_peek(tokens))->type) {
+    if (ENDLINE == _q_peek(tokens)->type) {
       tape_class(tape, class_name);
       return;
     }
     Q parents;
     Q_init(&parents);
-    while (COMMA == ((Token *)_q_peek(tokens))->type) {
+    while (COMMA == _q_peek(tokens)->type) {
       Q_remove(tokens, 0);
       *Q_add_last(&parents) = (char *)((Token *)Q_remove(tokens, 0))->text;
     }
@@ -462,7 +475,7 @@ DEB_FN(int, tape_ins_int, Tape *tape, Op op, int val, const Token *token) {
   return 1;
 }
 
-int tape_ins_no_arg(Tape *tape, Op op, const Token *token) {
+DEB_FN(int, tape_ins_no_arg, Tape *tape, Op op, const Token *token) {
   ASSERT(NOT_NULL(tape), NOT_NULL(token));
   Instruction *ins = tape_add(tape);
   SourceMapping *sm = tape_add_source(tape, ins);
@@ -477,12 +490,22 @@ int tape_ins_no_arg(Tape *tape, Op op, const Token *token) {
 }
 
 int tape_label(Tape *tape, const Token *token) {
-  tape_start_func(tape, token->text);
+  _tape_start_func(tape, token->text, /*is_async=*/false);
+  return 0;
+}
+
+int tape_label_async(Tape *tape, const Token *token) {
+  _tape_start_func(tape, token->text, /*is_async=*/true);
   return 0;
 }
 
 int tape_label_text(Tape *tape, const char text[]) {
-  tape_start_func(tape, text);
+  _tape_start_func(tape, text, /*is_async=*/false);
+  return 0;
+}
+
+int tape_label_text_async(Tape *tape, const char text[]) {
+  _tape_start_func(tape, text, /*is_async=*/true);
   return 0;
 }
 
@@ -498,6 +521,12 @@ char *anon_fn_for_token(const Token *token) {
 int tape_anon_label(Tape *tape, const Token *token) {
   char *label = anon_fn_for_token(token);
   tape_label_text(tape, label);
+  return 0;
+}
+
+int tape_anon_label_async(Tape *tape, const Token *token) {
+  char *label = anon_fn_for_token(token);
+  tape_label_text_async(tape, label);
   return 0;
 }
 

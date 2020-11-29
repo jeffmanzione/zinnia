@@ -35,6 +35,7 @@ extern char *FILE_NAME;
 extern char *FUNCTION_NAME;
 extern char *FUNCTION_REF_NAME;
 extern char *FUNCTIONS_KEY;
+extern char *FUTURE_NAME;
 extern char *HAS_NEXT_FN_NAME;
 extern char *HASH_KEY;
 extern char *INITIALIZED;

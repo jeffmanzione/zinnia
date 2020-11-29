@@ -33,10 +33,10 @@ ImplDelete(identifier) {}
 ImplProduce(identifier, Tape *tape) {
   return (identifier->id->text == TRUE_KEYWORD)
              ? tape_ins_int(tape, RES, 1, identifier->id)
-             : (identifier->id->text == FALSE_KEYWORD ||
-                identifier->id->text == NIL_KEYWORD)
-                   ? tape_ins_no_arg(tape, RNIL, identifier->id)
-                   : tape_ins(tape, RES, identifier->id);
+         : (identifier->id->text == FALSE_KEYWORD ||
+            identifier->id->text == NIL_KEYWORD)
+             ? tape_ins_no_arg(tape, RNIL, identifier->id)
+             : tape_ins(tape, RES, identifier->id);
 }
 
 ImplPopulate(constant, const SyntaxTree *stree) {
@@ -403,6 +403,8 @@ UnaryType unary_token_to_type(const Token *token) {
     return Unary_negate;
   case CONST_T:
     return Unary_const;
+  case AWAIT:
+    return Unary_await;
   default:
     ERROR("Unknown unary: %s", token->text);
   }
@@ -437,8 +439,12 @@ ImplProduce(unary_expression, Tape *tape) {
                tape_ins_int(tape, PUSH, -1, unary_expression->token) +
                tape_ins_no_arg(tape, MULT, unary_expression->token);
     break;
-  case Unary_const:
-    num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
+  // TODO: Uncomment when const is implemented.
+  // case Unary_const:
+  //   num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
+  //   break;
+  case Unary_await:
+    num_ins += tape_ins_no_arg(tape, WAIT, unary_expression->token);
     break;
   default:
     ERROR("Unknown unary: %s", unary_expression->token);
@@ -838,20 +844,25 @@ FunctionDef populate_anon_function(const SyntaxTree *stree) {
   ASSERT(IS_SYNTAX(stree, anon_function_definition));
 
   const SyntaxTree *func_arg_tuple;
-  if (IS_SYNTAX(stree->first, anon_signature_const)) {
+  if (IS_SYNTAX(stree->first, anon_signature_with_qualifier)) {
     func_arg_tuple = stree->first->first;
-    func.is_const = true;
-    func.const_token = stree->first->second->token;
+    populate_function_qualifiers(stree->first->second, &func.is_const,
+                                 &func.const_token, &func.is_async,
+                                 &func.async_token);
     func.def_token = func_arg_tuple->first->token;
   } else if (IS_SYNTAX(stree->first, identifier)) {
     func_arg_tuple = stree->first;
     func.is_const = false;
+    func.is_async = false;
     func.const_token = NULL;
+    func.async_token = NULL;
     func.def_token = func_arg_tuple->token;
   } else {
     func_arg_tuple = stree->first;
     func.is_const = false;
+    func.is_async = false;
     func.const_token = NULL;
+    func.async_token = NULL;
     func.def_token = func_arg_tuple->first->token;
   }
   func.fn_name = NULL;
@@ -888,13 +899,14 @@ int produce_anon_function(FunctionDef *func, Tape *tape) {
     func_ins += produce_arguments(&func->args, tmp);
   }
   func_ins += produce_instructions(func->body, tmp);
-  if (func->is_const) {
-    func_ins += tape_ins_no_arg(tmp, CNST, func->const_token);
-  }
+  // TODO: Uncomment when const is implemented.
+  // if (func->is_const) {
+  //   func_ins += tape_ins_no_arg(tmp, CNST, func->const_token);
+  // }
   func_ins += tape_ins_no_arg(tmp, RET, func->def_token);
-
   num_ins += tape_ins_int(tape, JMP, func_ins, func->def_token) +
-             tape_anon_label(tape, func->def_token);
+             (func->is_async ? tape_anon_label_async(tape, func->def_token)
+                             : tape_anon_label(tape, func->def_token));
   tape_append(tape, tmp);
   num_ins += func_ins + tape_ins_anon(tape, RES, func->def_token);
 

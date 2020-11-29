@@ -78,31 +78,66 @@ void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->fn_name = fn_identifier->second->token;
 }
 
+void _populate_function_qualifier(const SyntaxTree *fn_qualifier,
+                                  bool *is_const, const Token **const_token,
+                                  bool *is_async, const Token **async_token) {
+  ASSERT(IS_SYNTAX(fn_qualifier, function_qualifier));
+  if (IS_TOKEN(fn_qualifier, CONST_T)) {
+    *is_const = true;
+    *const_token = fn_qualifier->token;
+  } else if (IS_TOKEN(fn_qualifier, ASYNC)) {
+    *is_async = true;
+    *async_token = fn_qualifier->token;
+  } else {
+    ERROR("Unknown function qualifier.");
+  }
+}
+
+void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
+                                  bool *is_const, const Token **const_token,
+                                  bool *is_async, const Token **async_token) {
+  if (IS_SYNTAX(fn_qualifiers, function_qualifier)) {
+    _populate_function_qualifier(fn_qualifiers, is_const, const_token, is_async,
+                                 async_token);
+  } else if (IS_SYNTAX(fn_qualifiers, function_qualifier_list)) {
+    ASSERT(IS_SYNTAX(fn_qualifiers->first, function_qualifier));
+    ASSERT(IS_SYNTAX(fn_qualifiers->second, function_qualifier));
+    _populate_function_qualifier(fn_qualifiers->first, is_const, const_token,
+                                 is_async, async_token);
+    _populate_function_qualifier(fn_qualifiers->second, is_const, const_token,
+                                 is_async, async_token);
+  } else {
+    ERROR("unknown function qualifier list.");
+  }
+}
+
 FunctionDef populate_function_variant(
     const SyntaxTree *stree, ParseExpression def,
-    ParseExpression signature_const, ParseExpression signature_nonconst,
-    ParseExpression fn_identifier, ParseExpression function_arguments_no_args,
+    ParseExpression signature_with_qualifier,
+    ParseExpression signature_no_qualifier, ParseExpression fn_identifier,
+    ParseExpression function_arguments_no_args,
     ParseExpression function_arguments_present, FuncDefPopulator def_populator,
     FuncArgumentsPopulator args_populator) {
   FunctionDef func = {.def_token = NULL,
                       .fn_name = NULL,
                       .special_method = SpecialMethod__NONE,
-                      .const_token = NULL,
                       .has_args = false,
                       .is_const = false,
+                      .const_token = NULL,
+                      .is_async = false,
+                      .async_token = NULL,
                       .body = NULL};
   ASSERT(IS_SYNTAX(stree, def));
 
   const SyntaxTree *func_sig;
-  if (IS_SYNTAX(stree->first, signature_const)) {
+  if (IS_SYNTAX(stree->first, signature_with_qualifier)) {
     func_sig = stree->first->first;
-    func.is_const = true;
-    func.const_token = stree->first->second->token;
+    populate_function_qualifiers(stree->first->second, &func.is_const,
+                                 &func.const_token, &func.is_async,
+                                 &func.async_token);
   } else {
-    ASSERT(IS_SYNTAX(stree->first, signature_nonconst));
+    ASSERT(IS_SYNTAX(stree->first, signature_no_qualifier));
     func_sig = stree->first;
-    func.is_const = false;
-    func.const_token = NULL;
   }
 
   ASSERT(IS_SYNTAX(func_sig->first, fn_identifier));
@@ -120,9 +155,10 @@ FunctionDef populate_function_variant(
 
 FunctionDef populate_function(const SyntaxTree *stree) {
   return populate_function_variant(
-      stree, function_definition, function_signature_const,
-      function_signature_nonconst, def_identifier, function_arguments_no_args,
-      function_arguments_present, set_function_def, set_function_args);
+      stree, function_definition, function_signature_with_qualifier,
+      function_signature_no_qualifier, def_identifier,
+      function_arguments_no_args, function_arguments_present, set_function_def,
+      set_function_args);
 }
 
 void delete_argument(Argument *arg) {
@@ -243,9 +279,11 @@ int produce_arguments(Arguments *args, Tape *tape) {
 }
 
 int produce_function_name(FunctionDef *func, Tape *tape) {
+  // TODO: Handle async special functions.
   switch (func->special_method) {
   case SpecialMethod__NONE:
-    return tape_label(tape, func->fn_name);
+    return func->is_async ? tape_label_async(tape, func->fn_name)
+                          : tape_label(tape, func->fn_name);
   case SpecialMethod__EQUIV:
     return tape_label_text(tape, EQ_FN_NAME);
   case SpecialMethod__NEQUIV:
@@ -267,9 +305,10 @@ int produce_function(FunctionDef *func, Tape *tape) {
     num_ins += produce_arguments(&func->args, tape);
   }
   num_ins += produce_instructions(func->body, tape);
-  if (func->is_const) {
-    num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
-  }
+  // TODO: Uncomment when const is implemented.
+  // if (func->is_const) {
+  //   num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
+  // }
   num_ins += tape_ins_no_arg(tape, RET, func->def_token);
   return num_ins;
 }

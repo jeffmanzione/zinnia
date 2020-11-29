@@ -107,15 +107,18 @@ DefineSyntax(function_argument_list);
 DefineSyntax(function_arguments);
 DefineSyntax(function_definition);
 DefineSyntax(def_identifier);
-DefineSyntax(function_signature_nonconst);
-DefineSyntax(function_signature_const);
+DefineSyntax(function_signature_no_qualifier);
+DefineSyntax(function_qualifier);
+DefineSyntax(function_qualifier_list1);
+DefineSyntax(function_qualifier_list);
+DefineSyntax(function_signature_with_qualifier);
 DefineSyntax(function_signature);
 DefineSyntax(function_arguments_present);
 DefineSyntax(function_arguments_no_args);
 
 DefineSyntax(method_identifier);
-DefineSyntax(method_signature_nonconst);
-DefineSyntax(method_signature_const);
+DefineSyntax(method_signature_no_qualifier);
+DefineSyntax(method_signature_with_qualifier);
 DefineSyntax(method_signature);
 DefineSyntax(method_definition);
 
@@ -139,8 +142,8 @@ DefineSyntax(new_signature);
 DefineSyntax(new_definition);
 
 DefineSyntax(anon_identifier);
-DefineSyntax(anon_signature_nonconst);
-DefineSyntax(anon_signature_const);
+DefineSyntax(anon_signature_no_qualifier);
+DefineSyntax(anon_signature_with_qualifier);
 DefineSyntax(anon_signature);
 DefineSyntax(anon_function_definition);
 DefineSyntax(anon_function_lambda_rhs);

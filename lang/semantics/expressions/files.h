@@ -36,8 +36,8 @@ typedef struct {
   const Token *def_token;
   const Token *fn_name;
   SpecialMethod special_method;
-  const Token *const_token;
-  bool has_args, is_const;
+  const Token *const_token, *async_token;
+  bool has_args, is_const, is_async;
   Arguments args;
   ExpressionTree *body;
 } FunctionDef;
@@ -51,12 +51,13 @@ void add_arg(Arguments *args, Argument *arg);
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 Arguments set_function_args(const SyntaxTree *stree, const Token *token);
 
+void populate_function_qualifiers(const SyntaxTree *fn_qualifiers, bool *is_const, const Token **const_token, bool *is_async, const Token **async_token);
 int produce_function(FunctionDef *func, Tape *tape);
 void delete_function(FunctionDef *func);
 
 FunctionDef populate_function_variant(
     const SyntaxTree *stree, ParseExpression def,
-    ParseExpression signature_const, ParseExpression signature_nonconst,
+    ParseExpression signature_with_qualifier, ParseExpression signature_no_qualifier,
     ParseExpression fn_identifier, ParseExpression function_arguments_no_args,
     ParseExpression function_arguments_present, FuncDefPopulator def_populator,
     FuncArgumentsPopulator args_populator);

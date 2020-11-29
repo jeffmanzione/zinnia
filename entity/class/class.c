@@ -30,7 +30,7 @@ void class_finalize(Class *cls) {
   keyedlist_finalize(&cls->_functions);
 }
 
-Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
+Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos, bool is_const, bool is_async) {
   ASSERT(NOT_NULL(cls), NOT_NULL(name));
   Function *f;
   Function *old =
@@ -40,7 +40,7 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos) {
           "name.",
           name, cls->_name);
   }
-  function_init(f, name, cls->_module, ins_pos, is_anon(name));
+  function_init(f, name, cls->_module, ins_pos, is_anon(name), is_const, is_async);
   f->_parent_class = cls;
   return f;
 }

@@ -38,7 +38,7 @@ void tape_read_binary(Tape *const tape, FILE *file) {
     deserialize_type(file, uint16_t, &ref_name_index);
     deserialize_type(file, uint16_t, &ref_index);
     char *ref_name = *((char **)alist_get(&strings, (uint32_t)ref_name_index));
-    tape_start_func_at_index(tape, ref_name, ref_index);
+    tape_start_func_at_index(tape, ref_name, ref_index, false);
   }
   uint16_t num_classes;
   deserialize_type(file, uint16_t, &num_classes);
@@ -68,7 +68,7 @@ void tape_read_binary(Tape *const tape, FILE *file) {
       char *method_name =
           *((char **)alist_get(&strings, (uint32_t)method_name_index));
       deserialize_type(file, uint16_t, &method_index);
-      tape_start_func_at_index(tape, method_name, method_index);
+      tape_start_func_at_index(tape, method_name, method_index, false);
     }
     tape_end_class_at_index(tape, class_end);
   }

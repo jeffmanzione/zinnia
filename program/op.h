@@ -67,15 +67,17 @@ typedef enum {
   ADR,
   RAIS,
   CTCH,
-  // ARRAYS
+  // Arrays
   ANEW,
   AIDX,
   ASET,
-  //
+  // Const
   CNST,
   SETC,
   LETC,
   SGET,
+  // Async
+  WAIT,
   // NOT A REAL OP
   OP_BOUND,
 } Op;

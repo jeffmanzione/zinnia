@@ -15,7 +15,7 @@
 bool is_anon(const char name[]);
 
 void function_init(Function *f, const char name[], const Module *module,
-                   uint32_t ins_pos, bool is_anon);
+                          uint32_t ins_pos, bool is_anon, bool is_const, bool is_async);
 void function_finalize(Function *f);
 
 void __function_ref_create(Object *obj);
