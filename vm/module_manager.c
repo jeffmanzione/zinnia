@@ -14,6 +14,7 @@
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/io.h"
+#include "entity/native/math.h"
 #include "entity/object.h"
 #include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
@@ -35,7 +36,7 @@ void _add_reflection_to_module(ModuleManager *mm, Module *module);
 void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ASSERT(NOT_NULL(mm));
   mm->_heap = heap;
-  keyedlist_init(&mm->_modules, ModuleInfo, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&mm->_modules, ModuleInfo, 25);
   _read_builtin(mm, heap);
 }
 
@@ -74,6 +75,11 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   async_add_native(Module_async);
   _add_reflection_to_module(mm, Module_async);
   heap_make_root(heap, Module_async->_reflection);
+  // math.jl
+  Module_math = _read_helper(mm, "lib/math.jl");
+  math_add_native(Module_math);
+  _add_reflection_to_module(mm, Module_math);
+  heap_make_root(heap, Module_math->_reflection);
   // struct.jl
   Module_struct = _read_helper(mm, "lib/struct.jl");
   _add_reflection_to_module(mm, Module_struct);

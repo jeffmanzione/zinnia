@@ -106,3 +106,22 @@ cc_library(
         "@memory_wrapper//debug",
     ],
 )
+
+cc_library(
+    name = "math",
+    srcs = ["math.c"],
+    hdrs = ["math.h"],
+    deps = [
+        ":error",
+        ":native",
+        "//entity",
+        "//entity:object",
+        "//entity:primitive",
+        "//entity/class",
+        "//entity/class:classes",
+        "//entity/tuple",
+        "//vm/process:processes",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
+    ],
+)

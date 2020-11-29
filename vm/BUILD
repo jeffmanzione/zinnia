@@ -50,6 +50,7 @@ cc_library(
         "//entity/native:builtin",
         "//entity/native:error",
         "//entity/native:io",
+        "//entity/native:math",
         "//lang/lexer:file_info",
         "//lang/parser",
         "//lang/semantics",

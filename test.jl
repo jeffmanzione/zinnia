@@ -1,6 +1,7 @@
 module test
 
 import io
+import math
 
 def test1() async {
   io.println('test1')
@@ -30,3 +31,5 @@ def add(x, y) async {
 }
 
 io.println(await add(3.1412, 50.1))
+
+io.println(math.pow(1.5, 1.5))
