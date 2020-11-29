@@ -57,5 +57,6 @@ cc_library(
         "//heap",
         "//struct:alist",
         "@memory_wrapper//debug",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )

@@ -59,9 +59,8 @@ struct __Task {
   Entity resval;
   AList entity_stack;
 
-  // TODO: Break this into creator_task and a set of dependent tasks to handle
-  // multiple tasks waiting for the same task.
-  Task *dependent_task;
+  Task *parent_task;
+  Set dependent_tasks;
 
   bool child_task_has_error;
 

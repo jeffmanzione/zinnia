@@ -27,8 +27,9 @@ add3 = (x, y) async {
    x + y
 }
 
-io.println('A', await add1(1, 2))
-io.println('B')
+a = await add1(1, 2)
+io.println('A', a)
+io.println('B', a)
 add2(3, 4)
 io.println('C')
 add3(5, 6)

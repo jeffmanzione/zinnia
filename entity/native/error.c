@@ -108,7 +108,7 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }
-    t = t->dependent_task;
+    t = t->parent_task;
   }
   object_set_member_obj(task->parent_process->heap, obj, intern("stacktrace"),
                         stacktrace);

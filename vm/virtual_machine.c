@@ -548,7 +548,7 @@ inline void _execute_GTSH(VM *vm, Task *task, Context *context,
 Context *_execute_as_new_task(Task *task, Object *self, Module *m,
                               uint32_t ins_pos) {
   Task *new_task = process_create_task(task->parent_process);
-  new_task->dependent_task = task;
+  new_task->parent_task = task;
   Context *ctx = task_create_context(new_task, self, m, ins_pos);
   *task_mutable_resval(new_task) = *task_get_resval(task);
   return ctx;
@@ -576,6 +576,8 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
     *task_mutable_resval(task) =
         entity_object(future_create(fn_ctx->parent_task));
     return false;
+  } else {
+    set_insert(&fn_ctx->parent_task->dependent_tasks, task);
   }
   return true;
 }
@@ -690,6 +692,7 @@ inline bool _execute_WAIT(VM *vm, Task *task, Context *context,
   Future *future = (Future *)resval->obj->_internal_obj;
   if (TASK_COMPLETE != future->task->state &&
       TASK_ERROR != future->task->state) {
+    set_insert(&future->task->dependent_tasks, task);
     return true;
   }
   *task_mutable_resval(task) = *task_get_resval(future->task);
@@ -699,19 +702,18 @@ inline bool _execute_WAIT(VM *vm, Task *task, Context *context,
 inline void _execute_RET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   Entity tmp;
-  if (NULL == task->dependent_task) {
-    return;
-  }
+  // if (NULL == task->parent_task) {
+  //   return;
+  // }
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
-    *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
+    // *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
     break;
   case INSTRUCTION_ID:
-    *task_mutable_resval(task->dependent_task) =
-        *context_lookup(context, ins->id, &tmp);
+    *task_mutable_resval(task) = *context_lookup(context, ins->id, &tmp);
     break;
   case INSTRUCTION_PRIMITIVE:
-    *task_mutable_resval(task->dependent_task) = entity_primitive(ins->val);
+    *task_mutable_resval(task) = entity_primitive(ins->val);
     break;
   default:
     ERROR("Invalid arg type=%d for RET.", ins->type);
@@ -1045,7 +1047,8 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   if (NULL == task_get_resval(task)) {
     *task_mutable_resval(task) = NONE_ENTITY;
   }
-  _execute_as_new_task(task, module->_reflection, module, 0);
+  Context *new_ctx = _execute_as_new_task(task, module->_reflection, module, 0);
+  set_insert(&new_ctx->parent_task->dependent_tasks, task);
   return true;
 }
 
@@ -1291,25 +1294,37 @@ void vm_run_process(VM *vm, Process *process) {
       set_insert(&process->waiting_tasks, task);
       break;
     case TASK_ERROR:
-      if (NULL == task->dependent_task) {
+      if (NULL == task->parent_task) {
         Object *errorln = module_lookup(Module_io, intern("errorln"));
         ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
         _call_function(task, (Context *)NULL, errorln->_function_obj);
       } else {
-        task->dependent_task->child_task_has_error = true;
-        *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
+        task->parent_task->child_task_has_error = true;
         set_insert(&process->completed_tasks, task);
-        Q_enqueue(&process->queued_tasks, task->dependent_task);
-        set_remove(&process->waiting_tasks, task->dependent_task);
+        M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+        for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+          Task *dependent_task = (Task *)value(&dependent_tasks);
+          if (TASK_WAITING != dependent_task->state) {
+            continue;
+          }
+          *task_mutable_resval(dependent_task) = *task_get_resval(task);
+          Q_enqueue(&process->queued_tasks, dependent_task);
+          set_remove(&process->waiting_tasks, dependent_task);
+        }
       }
       break;
     case TASK_COMPLETE:
       set_insert(&process->completed_tasks, task);
       // Only requeue parent task if it is waiting.
-      if (NULL != task->dependent_task &&
-          TASK_WAITING == task->dependent_task->state) {
-        Q_enqueue(&process->queued_tasks, task->dependent_task);
-        set_remove(&process->waiting_tasks, task->dependent_task);
+      M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+      for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+        Task *dependent_task = (Task *)value(&dependent_tasks);
+        if (TASK_WAITING != dependent_task->state) {
+          continue;
+        }
+        *task_mutable_resval(dependent_task) = *task_get_resval(task);
+        Q_enqueue(&process->queued_tasks, dependent_task);
+        set_remove(&process->waiting_tasks, dependent_task);
       }
       break;
     default:
