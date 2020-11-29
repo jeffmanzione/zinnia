@@ -279,9 +279,11 @@ int produce_arguments(Arguments *args, Tape *tape) {
 }
 
 int produce_function_name(FunctionDef *func, Tape *tape) {
+  // TODO: Handle async special functions.
   switch (func->special_method) {
   case SpecialMethod__NONE:
-    return tape_label(tape, func->fn_name);
+    return func->is_async ? tape_label_async(tape, func->fn_name)
+                          : tape_label(tape, func->fn_name);
   case SpecialMethod__EQUIV:
     return tape_label_text(tape, EQ_FN_NAME);
   case SpecialMethod__NEQUIV:

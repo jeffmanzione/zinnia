@@ -13,7 +13,7 @@ import io
 ;test[1] = 'b'
 ;io.println(test);
 
-add1 = (x, y) async {
+def add1(x, y) async {
   io.println('add1')
   x + y
 }
