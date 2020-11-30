@@ -112,6 +112,9 @@ class Tuple {
     result.extend(')')
     return result
   }
+  method iter() {
+    return IndexIterator(self, 0, len())
+  }
 }
 
 class Array {

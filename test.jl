@@ -3,33 +3,9 @@ module test
 import io
 import math
 
-def test1() async {
-  io.println('test1')
-}
-def test2() async {
-  io.println('test2')
-}
-
-def test3() async {
-  io.println('test3')
-}
-
-io.println(test1())
-
-io.println('A')
-
-test2()
-
-io.println('B')
-
-test3()
-
-io.println('C')
-
-def add(x, y) async {
-  return x + y
-}
-
-io.println(await add(3.1412, 50.1))
-
-io.println(math.pow(1.5, 1.5))
+io.println(cat('pi=', math.PI, ', e=', math.E))
+io.println(math.max(1, 2, 3, 4, 5), math.min(1, 2, 3, 4, 5))
+io.println(math.pow(2, 4))
+io.println(math.abs(-5), math.abs(4))
+io.println(math.ceil(1.1), math.floor(1.1))
+io.println(math.mod(10.2, 3), 11 % 3)
