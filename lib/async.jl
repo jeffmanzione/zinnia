@@ -11,6 +11,7 @@ import io
 ; do_something(completer)
 ; io.println(await completer.as_future())
 ; ```
+;
 class Completer {
   field completed, _value, _future
 
