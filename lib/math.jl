@@ -31,9 +31,9 @@ self.E = exp(1)
 ; Returns the comparatively smalles number from [sequence].
 def min(sequence) {
 	m = sequence[0]
-  for (_, i) in sequence {
-    if (i < m) {
-      m = i
+  for i=1, i < sequence.len(), i=i+1 {
+    if sequence[i] < m {
+      m = sequence[i]
     }
   }
   m
@@ -42,9 +42,9 @@ def min(sequence) {
 ; Returns the comparatively largest number from [sequence].
 def max(sequence) {
 	m = sequence[0]
-  for (_, i) in sequence {
-    if (i > m) {
-      m = i
+  for i=1, i < sequence.len(), i=i+1 {
+    if sequence[i] > m {
+      m = sequence[i]
     }
   }
   m
@@ -69,12 +69,12 @@ def log(x, base=math.E) {
 
 ; Returns the natural logarithm of the specified valued [x].
 def ln(x) {
-  __log(x)
+  log(x)
 }
 
 ; Returns the base-10 logarithm of the specified value [x].
 def log10(x) {
-  log(10, x)
+  log(x, 10)
 }
 
 ; Returns the square root of [x].

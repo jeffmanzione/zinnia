@@ -39,9 +39,8 @@ Entity _log_tuple(Task *task, Context *ctx, Tuple *tuple) {
   if (tuple_size(tuple) != 2) {
     return raise_error(task, ctx, "Invalid tuple arg to __log.");
   }
-  const Entity *base = tuple_get(tuple, 0);
-  const Entity *num = tuple_get(tuple, 1);
-
+  const Entity *num = tuple_get(tuple, 0);
+  const Entity *base = tuple_get(tuple, 1);
   if (base->type != PRIMITIVE) {
     return raise_error(task, ctx,
                        "Cannot perform __log with non-numeric base.");
