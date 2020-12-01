@@ -6,7 +6,7 @@ import io
 ;
 ; Example:
 ; ```
-; do_something = (c) async { c.complete('Hello') }
+; do_something = (c) async -> c.complete('Hello')
 ; completer = async.Completer()
 ; do_something(completer)
 ; io.println(await completer.as_future())
