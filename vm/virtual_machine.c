@@ -1280,7 +1280,7 @@ inline ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
 
 void vm_run_process(VM *vm, Process *process) {
   while (Q_size(&process->queued_tasks) > 0) {
-    Task *task = Q_dequeue(&process->queued_tasks);
+    Task *task = Q_pop(&process->queued_tasks);
     process->current_task = task;
     TaskState task_state = vm_execute_task(vm, task);
 #ifdef DEBUG
