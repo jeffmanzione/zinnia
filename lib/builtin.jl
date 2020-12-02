@@ -257,3 +257,34 @@ def memoize(fn) {
   }
   return memoized_fn
 }
+
+def _partition(seq, l, h) {
+  x = seq[h]
+  i = l - 1
+  for j = l, j < h, j = j + 1 {
+    if seq[j] < x {
+      i = i + 1
+      tmp = seq[i]
+      seq[i] = seq[j]
+      seq[j] = tmp
+    }
+  }
+  i = i + 1
+  tmp = seq[i]
+  seq[i] = seq[h]
+  seq[h] = tmp
+  return i - 1
+}
+
+def _quick_sort(seq, l, h) {
+  if l < h {
+    p = _partition(seq, l, h)
+    _quick_sort(seq, l, p)
+    _quick_sort(seq, p + 1, h)
+  }
+  seq
+}
+
+def sort(seq) {
+  _quick_sort(seq, 0, seq.len()-1)
+}
