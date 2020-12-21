@@ -2,6 +2,21 @@ module async
 
 import io
 
+; Wraps [value] in a future.
+; TODO: Replace this with voodoo to avoid having to call a function.
+def immediate(value) {
+  (() async -> value)()
+}
+
+; Represents the state of an ansynchronous piece of work.
+class Future {
+  ; Returns a future to the value of the result of this future with [fn]
+  ; applied.
+  method then(fn) async {
+    return fn(await self)
+  }
+}
+
 ; Allows for the manual completion of a future.
 ;
 ; Example:

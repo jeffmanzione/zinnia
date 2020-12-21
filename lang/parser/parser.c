@@ -377,7 +377,7 @@ SyntaxTree _match_merge(Parser *parser, SyntaxTree parent, SyntaxTree child) {
 // clang-format off
 
 DefineSyntax(tuple_expression);
-ImplSyntax(identifier, Or(Type(WORD), Type(CLASS), Type(MODULE_T), Type(ASYNC)));
+ImplSyntax(identifier, Or(Type(WORD), Type(CLASS), Type(MODULE_T), Type(ASYNC), Type(THEN)));
 ImplSyntax(new_expression, Type(NEW));
 ImplSyntax(constant, Or(Type(INTEGER), Type(FLOATING)));
 ImplSyntax(string_literal, Type(STR));

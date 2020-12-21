@@ -10,17 +10,17 @@
 #include "vm/intern.h"
 
 void _future_init(Object *obj) {
-  obj->_internal_obj = ALLOC2(Future);
+  Future *f = ALLOC2(Future);
+  f->task = NULL;
+  obj->_internal_obj = f;
 }
 
-void _future_delete(Object *obj) {
-  DEALLOC(obj->_internal_obj);
-}
+void _future_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
 Object *future_create(Task *task) {
   Heap *heap = task->parent_process->heap;
   Object *future_obj = heap_new(heap, Class_Future);
-  Future *future = (Future *) future_obj->_internal_obj;
+  Future *future = (Future *)future_obj->_internal_obj;
   future->task = task;
   return future_obj;
 }
