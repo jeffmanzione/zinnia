@@ -83,6 +83,7 @@ char *THREADS_KEY;
 char *TMP_VAL;
 char *TRUE_KEYWORD;
 char *TUPLE_NAME;
+char *VALUE_KEY;
 
 void _strings_insert_constants() {
   ADDRESS_KEY = intern("$adr");
@@ -161,6 +162,7 @@ void _strings_insert_constants() {
   TMP_VAL = intern("$tmp");
   TRUE_KEYWORD = intern("True");
   TUPLE_NAME = intern("Tuple");
+  VALUE_KEY = intern("value");
 }
 
 void strings_init() {

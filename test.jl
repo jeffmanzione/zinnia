@@ -8,4 +8,4 @@ completer = async.Completer()
 do_something(completer)
 io.println(await completer.as_future())
 
-io.println(await async.immediate('Hello').then(x -> cat(x, ', world!')))
+io.println(await async.value('Hello').then(x -> cat(x, ', world!')))

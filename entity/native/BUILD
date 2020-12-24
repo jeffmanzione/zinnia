@@ -31,6 +31,7 @@ cc_library(
         "//entity/class:classes",
         "//heap",
         "//vm/process:processes",
+        "//vm/process:task",
         "@memory_wrapper//debug",
     ],
 )

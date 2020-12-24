@@ -82,6 +82,7 @@ extern char *THREADS_KEY;
 extern char *TMP_VAL;
 extern char *TRUE_KEYWORD;
 extern char *TUPLE_NAME;
+extern char *VALUE_KEY;
 
 void strings_init();
 void strings_finalize();
