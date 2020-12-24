@@ -1,8 +1,6 @@
 module async
 
-import io
-
-; Represents the state of an ansynchronous piece of work.
+; Represents the state of an asynchronous piece of work.
 class Future {
   ; Returns a future to the value of the result of this future with [fn]
   ; applied.
