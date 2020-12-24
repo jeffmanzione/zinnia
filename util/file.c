@@ -104,10 +104,8 @@ void make_dir_if_does_not_exist(const char path[]) {
 void split_path_file(const char path_file[], char **path, char **file_name,
                      char **ext) {
   char *slash = (char *)path_file, *next;
-  while ((next = strpbrk(slash + 1, "\\/")))
-    slash = next;
-  if (path_file != slash)
-    slash++;
+  while ((next = strpbrk(slash + 1, "\\/"))) slash = next;
+  if (path_file != slash) slash++;
   int path_len = slash - path_file;
   *path = intern_range(path_file, 0, path_len);
   char *dot = (ext == NULL) ? NULL : strchr(slash + 1, '.');
@@ -138,4 +136,59 @@ char *combine_path_file(const char path[], const char file_name[],
   char *result = intern_range(tmp, 0, full_len);
   DEALLOC(tmp);
   return result;
+}
+
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
+  char *bufptr = NULL;
+  char *p = bufptr;
+  size_t size;
+  int c;
+
+  if (lineptr == NULL) {
+    return -1;
+  }
+  if (stream == NULL) {
+    return -1;
+  }
+  if (n == NULL) {
+    return -1;
+  }
+  bufptr = *lineptr;
+  size = *n;
+
+  c = fgetc(stream);
+  if (c == EOF) {
+    return -1;
+  }
+  if (bufptr == NULL) {
+    bufptr = ALLOC_ARRAY2(char, 128);
+    if (bufptr == NULL) {
+      return -1;
+    }
+    size = 128;
+  }
+  p = bufptr;
+  while (c != EOF) {
+    if ((p - bufptr) > (size - 1)) {
+      size = size + 128;
+      // Handle realloc
+      int offset = p - bufptr;
+      bufptr = REALLOC(bufptr, char, size);
+      if (bufptr == NULL) {
+        return -1;
+      }
+      p = bufptr + offset;
+    }
+    *(p++) = c;
+    if (c == '\n') {
+      break;
+    }
+    c = fgetc(stream);
+  }
+
+  *(p++) = '\0';
+  *lineptr = bufptr;
+  *n = size;
+
+  return p - bufptr - 1;
 }

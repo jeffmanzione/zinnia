@@ -16,6 +16,7 @@
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
+#include "util/file.h"
 #include "vm/intern.h"
 
 typedef struct {

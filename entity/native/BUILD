@@ -79,6 +79,7 @@ cc_library(
         "//entity/string",
         "//entity/string:string_helper",
         "//entity/tuple",
+        "//util:file",
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
