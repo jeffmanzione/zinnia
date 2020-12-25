@@ -10,6 +10,7 @@ cc_library(
     hdrs = ["function.h"],
     deps = [
         "//entity:object",
+        "//heap",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
         "@memory_wrapper//struct:map",

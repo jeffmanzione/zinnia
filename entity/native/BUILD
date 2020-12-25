@@ -58,6 +58,8 @@ cc_library(
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
         "@memory_wrapper//util",
     ],
 )

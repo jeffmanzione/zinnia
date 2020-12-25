@@ -61,3 +61,5 @@ test.*
 # JL
 *.ja
 *.jb
+
+compile_commands.json

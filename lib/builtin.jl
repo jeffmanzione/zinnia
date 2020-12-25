@@ -211,7 +211,7 @@ class IndexIterator : Iterator {
         () {
           i = i + 1
           index = index + 1
-          (i, indexable[index])
+          return (i, indexable[index])
         })
   }
 }

@@ -26,6 +26,7 @@ Function *native_function(Module *module, const char name[],
 
 Class *native_class(Module *module, const char name[], ObjInitFn init_fn,
                     ObjDelFn del_fn) {
+  DEBUGF("TEST %s", name);
   Class *cls = module_add_class(module, name, Class_Object);
   cls->_init_fn = init_fn;
   cls->_delete_fn = del_fn;

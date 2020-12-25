@@ -29,6 +29,7 @@ cc_library(
         "//entity/string",
         "//entity/tuple",
         "//heap",
+        "//heap:copy_fns",
         "//vm:intern",
         "@memory_wrapper//debug",
     ],

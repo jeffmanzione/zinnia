@@ -17,6 +17,8 @@
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "lang/lexer/file_info.h"
+#include "struct/map.h"
+#include "struct/struct_defaults.h"
 #include "util/string.h"
 #include "util/util.h"
 #include "vm/intern.h"
@@ -624,6 +626,15 @@ Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+Entity _object_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Entity e = entity_object(obj);
+  Map cpy_map;
+  map_init_default(&cpy_map);
+  Entity to_return = entity_copy(task->parent_process->heap, &cpy_map, &e);
+  map_finalize(&cpy_map);
+  return to_return;
+}
+
 void _process_init(Object *obj) {}
 void _process_delete(Object *obj) {}
 
@@ -679,6 +690,7 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_FunctionRef, intern("func"), _function_ref_func);
   native_method(Class_Class, NAME_KEY, _class_name);
   native_method(Class_Module, NAME_KEY, _module_name);
-  native_method(Class_Class, SUPER_KEY, _class_super);
   native_method(Class_Object, SUPER_KEY, _object_super);
+  native_method(Class_Class, SUPER_KEY, _class_super);
+  native_method(Class_Object, intern("copy"), _object_copy);
 }

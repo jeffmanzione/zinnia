@@ -25,6 +25,8 @@ typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
 // TODO: This should only be temporary until to_s() is supported.
 typedef void (*ObjPrintFn)(const Object *, FILE *);
+typedef void (*ObjCopyFn)(void *heap, Map *cpy_map, Object *target,
+                          Object *src);
 
 // Represents an object with properties.
 struct _Object {
@@ -51,6 +53,7 @@ struct _Class {
   ObjInitFn _init_fn;
   ObjDelFn _delete_fn;
   ObjPrintFn _print_fn;
+  ObjCopyFn _copy_fn;
 };
 
 struct _Module {

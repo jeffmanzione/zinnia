@@ -171,3 +171,33 @@ void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
   }
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
+
+Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
+  ASSERT(NOT_NULL(e));
+  switch (e->type) {
+  case NONE:
+  case PRIMITIVE:
+    return *e;
+  default:
+    ASSERT(OBJECT == e->type);
+  }
+  Object *obj = e->obj;
+  // Guarantee only one copied version of each object.
+  Object *cpy = (Object *)map_lookup(copy_map, obj);
+  if (NULL != cpy) {
+    return entity_object(cpy);
+  }
+  cpy = heap_new(heap, obj->_class);
+  map_insert(copy_map, obj, cpy);
+
+  if (NULL != obj->_class->_copy_fn) {
+    obj->_class->_copy_fn(heap, copy_map, cpy, obj);
+  }
+
+  KL_iter members = keyedlist_iter(&obj->_members);
+  for (; kl_has(&members); kl_inc(&members)) {
+    Entity member_cpy = entity_copy(heap, copy_map, kl_value(&members));
+    object_set_member(heap, cpy, kl_key(&members), &member_cpy);
+  }
+  return entity_object(cpy);
+}

@@ -86,6 +86,29 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   heap_make_root(heap, Module_struct->_reflection);
 }
 
+bool _hydrate_class(Module *module, ClassRef *cref) {
+  ASSERT(NOT_NULL(module), NOT_NULL(cref));
+  const Class *super = NULL;
+  if (alist_len(&cref->supers) > 0) {
+    super =
+        module_lookup_class(module, *((char **)alist_get(&cref->supers, 0)));
+    // Need to reprocess this later since its super is not yet processed.
+    if (NULL == super) {
+      return false;
+    }
+  } else {
+    super = Class_Object;
+  }
+  Class *class = module_add_class(module, cref->name, super);
+  KL_iter funcs = keyedlist_iter(&cref->func_refs);
+  for (; kl_has(&funcs); kl_inc(&funcs)) {
+    FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
+    class_add_function(class, fref->name, fref->index, fref->is_const,
+                       fref->is_async);
+  }
+  return true;
+}
+
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   ASSERT(NOT_NULL(mm), NOT_NULL(tape));
   ModuleInfo *module_info;
@@ -105,25 +128,21 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   }
 
   KL_iter classes = tape_classes(tape);
+  Q classes_to_process;
+  Q_init(&classes_to_process);
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    // TODO: Handle subclasses.
-    const Class *super = NULL;
-    if (alist_len(&cref->supers) > 0) {
-      super =
-          module_lookup_class(module, *((char **)alist_get(&cref->supers, 0)));
-    }
-    if (NULL == super) {
-      super = Class_Object;
-    }
-    Class *class = module_add_class(module, cref->name, super);
-    KL_iter funcs = keyedlist_iter(&cref->func_refs);
-    for (; kl_has(&funcs); kl_inc(&funcs)) {
-      FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
-      class_add_function(class, fref->name, fref->index, fref->is_const,
-                         fref->is_async);
+    if (!_hydrate_class(module, cref)) {
+      *Q_add_last(&classes_to_process) = cref;
     }
   }
+  while (Q_size(&classes_to_process) > 0) {
+    ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
+    if (!_hydrate_class(module, cref)) {
+      *Q_add_last(&classes_to_process) = cref;
+    }
+  }
+  Q_finalize(&classes_to_process);
   return module_info;
 }
 

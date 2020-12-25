@@ -73,6 +73,7 @@ void _strings_insert_constants() {
   OBJ_KEY = intern("obj");
   PARENT_CLASS = intern("parent_class");
   PROCESS_NAME = intern("Process");
+  RANGE_CLASS_NAME = intern("Range");
   RESULT_VAL = intern("$resval");
   SELF = intern("self");
   STACKLINE_NAME = intern("StackLine");
