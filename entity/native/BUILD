@@ -31,6 +31,7 @@ cc_library(
         "//entity/class:classes",
         "//heap",
         "//vm/process:processes",
+        "//vm/process:task",
         "@memory_wrapper//debug",
     ],
 )
@@ -78,6 +79,7 @@ cc_library(
         "//entity/string",
         "//entity/string:string_helper",
         "//entity/tuple",
+        "//util:file",
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",

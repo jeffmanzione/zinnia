@@ -10,11 +10,12 @@
 #include "heap/heap.h"
 #include "vm/process/processes.h"
 
-typedef struct {
-  Task *task;
-} Future;
+typedef struct _Future Future;
 
 Object *future_create(Task *task);
+bool future_is_complete(Future *f);
+const Entity *future_get_value(Heap *heap, Object *obj);
+Task *future_get_task(Future *f);
 
 void async_add_native(Module *async);
 
