@@ -100,13 +100,14 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   Object *stacktrace = heap_new(task->parent_process->heap, Class_Array);
   Task *t = task;
   while (NULL != t) {
-    for (Context *c = t->current; c != NULL; c = c->previous_context) {
+    Context *c;
+    for (c = t->current; c != NULL; c = c->previous_context) {
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
       sl->module = c->module;
-      sl->func = (Function *)c->func; // blessed
+      sl->func = (Function *)c->func;  // blessed
       sl->error_token =
-          (Token *)tape_get_source(c->tape, c->ins)->token; // blessed
+          (Token *)tape_get_source(c->tape, c->ins)->token;  // blessed
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }

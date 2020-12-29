@@ -8,7 +8,6 @@ cc_library(
     name = "parser",
     srcs = ["parser.c"],
     hdrs = ["parser.h"],
-    copts = ["-std=gnu99"],  # For nested anonymous functions.
     deps = [
         "//lang/lexer",
         "//lang/lexer:file_info",

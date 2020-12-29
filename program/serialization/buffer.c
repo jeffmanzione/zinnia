@@ -10,7 +10,9 @@
 #include "alloc/alloc.h"
 #include "debug/debug.h"
 
+#ifndef min
 #define min(a, b) (((a) > (b)) ? (b) : (a))
+#endif
 
 WBuffer *buffer_init(WBuffer *const buffer, FILE *file, size_t size) {
   buffer->file = file;

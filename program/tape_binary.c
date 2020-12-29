@@ -15,6 +15,8 @@
 
 #define MAX_STIRNG_SZ 1024
 
+#define _CONST_CHAR_POINTER(ptr) ((const char *)(ptr))
+
 void tape_read_binary(Tape *const tape, FILE *file) {
   ASSERT(NOT_NULL(tape), NOT_NULL(file));
   AList strings;
@@ -29,7 +31,8 @@ void tape_read_binary(Tape *const tape, FILE *file) {
     char *str = intern(buf);
     *((char **)alist_add(&strings)) = str;
   }
-  Token fake = {.text = *((char **)alist_get(&strings, 0))};
+  Token fake;
+  fake.text = *((char **)alist_get(&strings, 0));
   tape_module(tape, &fake);
   uint16_t num_refs;
   deserialize_type(file, uint16_t, &num_refs);
