@@ -21,7 +21,8 @@ Mutex mutex_create() {
   return CreateMutex(NULL, false, NULL);
 #else
   Mutex lock = ALLOC2(pthread_mutex_t);
-  return pthread_mutex_init(lock, NULL);
+  pthread_mutex_init(lock, NULL);
+  return lock;
 #endif
 }
 
