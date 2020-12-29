@@ -34,6 +34,7 @@ extern char *OBJ_KEY;
 extern char *PARENT_CLASS;
 extern char *PROCESS_NAME;
 extern char *RANGE_CLASS_NAME;
+extern char *REMOTE_CLASS_NAME;
 extern char *RESULT_VAL;
 extern char *SELF;
 extern char *STACKLINE_NAME;

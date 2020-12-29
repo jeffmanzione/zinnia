@@ -11,13 +11,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#ifdef _WIN32
-#define F_OK 0
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
-
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"

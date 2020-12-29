@@ -9,6 +9,16 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+
+#ifdef _WIN32
+#define F_OK 0
+#include <io.h>
+#define ssize_t int
+#else
+#include <unistd.h>
+#endif
+
+
 #define FILE_FN(fn, op_type) file_fn(fn, op_type, __LINE__, __func__, __FILE__)
 #define FILE_OP(file, operation)                                         \
   file_op(file, ({ void __fn__ operation __fn__; }), __LINE__, __func__, \

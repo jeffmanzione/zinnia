@@ -20,3 +20,6 @@ m2['d'] = 4
 
 io.println(m1)
 io.println(m2)
+
+
+Test().start()

@@ -22,3 +22,9 @@ cc_library(
         "@memory_wrapper//debug",
     ],
 )
+
+cc_library(
+    name = "platform",
+    hdrs = ["platform.h"],
+    deps = [],
+)

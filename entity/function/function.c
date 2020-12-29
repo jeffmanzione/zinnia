@@ -6,6 +6,7 @@
 #include "entity/function/function.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "alloc/alloc.h"
 #include "debug/debug.h"
