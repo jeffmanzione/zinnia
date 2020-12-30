@@ -18,6 +18,8 @@ cc_library(
         "//util/args:commandline",
         "//util/args:commandlines",
         "//util/args:lib_finder",
+        "//util/sync:constants",
+        "//util/sync:thread",
         "//vm:module_manager",
         "//vm:virtual_machine",
         "//vm/process",

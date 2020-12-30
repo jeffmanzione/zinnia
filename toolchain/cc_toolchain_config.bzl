@@ -5,14 +5,10 @@ load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
     "artifact_name_pattern",
-    "feature",
-    "flag_group",
-    "flag_set",
     "tool_path",
 )
 
 all_link_actions = [
-    # NEW
     ACTION_NAMES.cpp_link_executable,
     ACTION_NAMES.cpp_link_dynamic_library,
     ACTION_NAMES.cpp_link_nodeps_dynamic_library,
@@ -55,7 +51,6 @@ def _impl(ctx):
     ]
 
     features = [
-        # NEW
         feature(
             name = "default_linker_flags",
             enabled = True,
@@ -76,13 +71,13 @@ def _impl(ctx):
 
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
-        features = features,  # NEW
+        features = features,
         cxx_builtin_include_directories = [
             "C:/MinGW/include",
             "C:/MinGW/mingw32/include",
-            "C:/MinGW/lib/gcc/mingw32/4.7.2/include-fixed",
-            "C:/MinGW/lib/gcc/mingw32/4.7.2/include",
-            "C:/MinGW/lib/gcc/mingw32/4.7.2",
+            "C:/MinGW/lib/gcc/mingw32/*/include-fixed",
+            "C:/MinGW/lib/gcc/mingw32/*/include",
+            "C:/MinGW/lib/gcc/mingw32/*",
         ],
         toolchain_identifier = "local",
         host_system_name = "local",

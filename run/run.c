@@ -25,6 +25,8 @@
 #include "util/args/lib_finder.h"
 #include "util/file.h"
 #include "util/string.h"
+#include "util/sync/constants.h"
+#include "util/sync/thread.h"
 #include "vm/intern.h"
 #include "vm/module_manager.h"
 #include "vm/process/process.h"
@@ -67,7 +69,7 @@ void run(const Set *source_files, ArgStore *store) {
 
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
-  vm_run_process(vm, vm_main_process(vm));
+  process_run(vm_main_process(vm));
 
   vm_delete(vm);
 }

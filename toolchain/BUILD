@@ -6,7 +6,7 @@ package(default_visibility = ["//visibility:public"])
 cc_toolchain_suite(
     name = "toolchains",
     toolchains = {
-        "k8": ":mingw_toolchain",
+        "x64_windows": ":mingw_toolchain",
     },
 )
 

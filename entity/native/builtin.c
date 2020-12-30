@@ -43,24 +43,24 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_int(0);
-    case OBJECT:
-      // Is this the right way to handle this?
-      return entity_int(0);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_int(pchar(&args->pri));
-        case INT:
-          return *args;
-        case FLOAT:
-          return entity_int(pfloat(&args->pri));
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_int(0);
+  case OBJECT:
+    // Is this the right way to handle this?
+    return entity_int(0);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_int(pchar(&args->pri));
+    case INT:
+      return *args;
+    case FLOAT:
+      return entity_int(pfloat(&args->pri));
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -111,33 +111,35 @@ void _task_dec_all_context(Heap *heap, Task *task) {
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Process *process = task->parent_process;
   Heap *heap = process->heap;
+  uint32_t deleted_nodes_count;
 
-  _task_inc_all_context(heap, process->current_task);
-  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
-  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-    Task *queued_task = (Task *)Q_value(&queued_tasks);
-    _task_inc_all_context(heap, queued_task);
-  }
-  M_iter waiting_tasks = set_iter(&process->waiting_tasks);
-  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-    Task *waiting_task = (Task *)value(&waiting_tasks);
-    _task_inc_all_context(heap, waiting_task);
-  }
+  SYNCHRONIZED(process->task_queue_lock, {
+    _task_inc_all_context(heap, process->current_task);
+    Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_inc_all_context(heap, queued_task);
+    }
+    M_iter waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_inc_all_context(heap, waiting_task);
+    }
 
-  uint32_t deleted_nodes_count = heap_collect_garbage(heap);
+    deleted_nodes_count = heap_collect_garbage(heap);
 
-  _task_dec_all_context(heap, process->current_task);
-  queued_tasks = Q_iterator(&process->queued_tasks);
-  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-    Task *queued_task = (Task *)Q_value(&queued_tasks);
-    _task_dec_all_context(heap, queued_task);
-  }
-  waiting_tasks = set_iter(&process->waiting_tasks);
-  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-    Task *waiting_task = (Task *)value(&waiting_tasks);
-    _task_dec_all_context(heap, waiting_task);
-  }
-
+    _task_dec_all_context(heap, process->current_task);
+    queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_dec_all_context(heap, queued_task);
+    }
+    waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_dec_all_context(heap, waiting_task);
+    }
+  });
   return entity_int(deleted_nodes_count);
 }
 
@@ -147,15 +149,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-    case INT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-      break;
-    case FLOAT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-      break;
-    default /*CHAR*/:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-      break;
+  case INT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    break;
+  case FLOAT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+    break;
+  default /*CHAR*/:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+    break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -220,8 +222,8 @@ Entity _string_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(String_size(str));
 }
 
-#define IS_TUPLE(entity)                           \
-  ((NULL != entity) && (OBJECT == entity->type) && \
+#define IS_TUPLE(entity)                                                       \
+  ((NULL != entity) && (OBJECT == entity->type) &&                             \
    (Class_Tuple == entity->obj->_class))
 
 Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -255,10 +257,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class) \
+#define IS_OBJECT_CLASS(e, class)                                              \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype) \
+#define IS_VALUE_TYPE(e, valtype)                                              \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {

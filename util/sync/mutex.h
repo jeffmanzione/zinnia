@@ -7,6 +7,7 @@
 #define UTIL_SYNC_MUTEX_H_
 
 #include "util/platform.h"
+#include "util/sync/constants.h"
 
 #ifdef OS_WINDOWS
 typedef void *Mutex;
@@ -15,11 +16,16 @@ typedef void *Mutex;
 typedef pthread_mutex_t *Mutex;
 #endif
 
-typedef unsigned long WaitStatus;
+#define SYNCHRONIZED(mutex, block)                                             \
+  {                                                                            \
+    mutex_lock(mutex);                                                         \
+    { block; }                                                                 \
+    mutex_unlock(mutex);                                                       \
+  }
 
 Mutex mutex_create();
-WaitStatus mutex_await(Mutex id, unsigned long duration);
-void mutex_release(Mutex id);
-void mutex_close(Mutex id);
+WaitStatus mutex_lock(Mutex mutex);
+void mutex_unlock(Mutex mutex);
+void mutex_close(Mutex mutex);
 
 #endif /* UTIL_SYNC_MUTEX_H_ */
