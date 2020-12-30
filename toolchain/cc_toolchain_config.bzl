@@ -5,8 +5,20 @@ load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
     "artifact_name_pattern",
+    "feature",
+    "flag_group",
+    "flag_set",
     "tool_path",
 )
+
+def mingw_directories(mingw_version):
+    return [
+        "C:/MinGW/include",
+        "C:/MinGW/mingw32/include",
+        "C:/MinGW/lib/gcc/mingw32/%s/include-fixed" % mingw_version,
+        "C:/MinGW/lib/gcc/mingw32/%s/include" % mingw_version,
+        "C:/MinGW/lib/gcc/mingw32/%s" % mingw_version,
+    ]
 
 all_link_actions = [
     ACTION_NAMES.cpp_link_executable,
@@ -15,6 +27,7 @@ all_link_actions = [
 ]
 
 def _impl(ctx):
+    cxx_builtin_include_directories = ctx.attr.builtin_include_directories
     tool_paths = [
         tool_path(
             name = "gcc",
@@ -72,13 +85,7 @@ def _impl(ctx):
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
         features = features,
-        cxx_builtin_include_directories = [
-            "C:/MinGW/include",
-            "C:/MinGW/mingw32/include",
-            "C:/MinGW/lib/gcc/mingw32/*/include-fixed",
-            "C:/MinGW/lib/gcc/mingw32/*/include",
-            "C:/MinGW/lib/gcc/mingw32/*",
-        ],
+        cxx_builtin_include_directories = cxx_builtin_include_directories,
         toolchain_identifier = "local",
         host_system_name = "local",
         target_system_name = "local",
@@ -99,6 +106,10 @@ def _impl(ctx):
 
 cc_toolchain_config = rule(
     implementation = _impl,
-    attrs = {},
+    attrs = {
+        "builtin_include_directories": attr.string_list(
+            doc = "Default include paths",
+        ),
+    },
     provides = [CcToolchainConfigInfo],
 )
