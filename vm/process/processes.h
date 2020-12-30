@@ -12,6 +12,7 @@
 #include "program/tape.h"
 #include "struct/alist.h"
 #include "struct/set.h"
+#include "util/sync/mutex.h"
 
 typedef struct _VM VM;
 typedef struct __Context Context;
@@ -73,6 +74,9 @@ struct __Process {
 
   __Arena task_arena;
   __Arena context_arena;
+  Mutex task_create_lock;
+  Mutex task_queue_lock;
+  Mutex task_waiting_lock;
 
   Task *current_task;
   Q queued_tasks;

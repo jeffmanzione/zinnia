@@ -6,6 +6,7 @@
 #ifndef VM_VIRTUAL_MACHINE_H_
 #define VM_VIRTUAL_MACHINE_H_
 
+#include "util/sync/thread.h"
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
 
@@ -16,7 +17,9 @@ void vm_delete(VM *vm);
 
 Process *vm_main_process(VM *vm);
 
-void vm_run_process(VM *vm, Process *process);
+void process_run(Process *process);
+ThreadHandle process_run_in_new_thread(Process *process);
+
 TaskState vm_execute_task(VM *vm, Task *task);
 
 Process *vm_create_process(VM *vm);

@@ -16,36 +16,37 @@
 
 #include "alloc/alloc.h"
 
-Mutex mutex_create() {
+inline Mutex mutex_create() {
 #ifdef OS_WINDOWS
   return CreateMutex(NULL, false, NULL);
 #else
-  Mutex lock = ALLOC2(pthread_mutex_t);
-  return pthread_mutex_init(lock, NULL);
+  Mutex mutex = ALLOC2(pthread_mutex_t);
+  pthread_mutex_init(mutex, NULL);
+  return mutex;
 #endif
 }
 
-WaitStatus mutex_await(Mutex id, unsigned long duration) {
+inline WaitStatus mutex_lock(Mutex mutex) {
 #ifdef OS_WINDOWS
-  return WaitForSingleObject(id, duration);
+  return WaitForSingleObject(mutex, INFINITE);
 #else
-  return pthread_mutex_lock(id);
+  return pthread_mutex_lock(mutex);
 #endif
 }
 
-void mutex_release(Mutex id) {
+inline void mutex_unlock(Mutex mutex) {
 #ifdef OS_WINDOWS
-  ReleaseMutex(id);
+  ReleaseMutex(mutex);
 #else
-  pthread_mutex_unlock(id);
+  pthread_mutex_unlock(mutex);
 #endif
 }
 
-void mutex_close(Mutex id) {
+inline void mutex_close(Mutex mutex) {
 #ifdef OS_WINDOWS
-  CloseHandle(id);
+  CloseHandle(mutex);
 #else
-  pthread_mutex_destroy(id);
-  DEALLOC(id);
+  pthread_mutex_destroy(mutex);
+  DEALLOC(mutex);
 #endif
 }

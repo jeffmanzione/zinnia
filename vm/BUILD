@@ -28,6 +28,8 @@ cc_library(
         "//entity/string",
         "//entity/string:string_helper",
         "//entity/tuple",
+        "//util/sync:mutex",
+        "//util/sync:thread",
         "//vm/process",
         "//vm/process:context",
         "//vm/process:processes",

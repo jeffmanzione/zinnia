@@ -8,6 +8,6 @@
 
 #include "entity/object.h"
 
-void process_add_native(Module *math);
+void process_add_native(Module *process);
 
 #endif /* ENTITY_NATIVE_PROCESS_H_ */
