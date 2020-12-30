@@ -13,7 +13,7 @@ typedef unsigned int ThreadId;
 
 #ifdef OS_WINDOWS
 #include <stdint.h>
-typedef void *ThreadHandle;
+typedef unsigned long ThreadHandle;
 typedef unsigned __stdcall (*VoidFn)(void *);
 #else
 #include <pthread.h>
