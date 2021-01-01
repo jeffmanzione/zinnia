@@ -7,6 +7,12 @@ git_repository(
     remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
 )
 
+git_repository(
+    name = "file_utils",
+    branch = "main",
+    remote = "https://github.com/jeffreymanzione/file-utils.git",
+)
+
 http_archive(
     name = "com_grail_bazel_compdb",
     strip_prefix = "bazel-compilation-database-master",

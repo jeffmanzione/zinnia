@@ -8,9 +8,10 @@
 
 #include "entity/module/module.h"
 #include "heap/heap.h"
-#include "lang/lexer/file_info.h"
 #include "program/tape.h"
 #include "struct/keyed_list.h"
+#include "util/file/file_info.h"
+
 
 typedef struct {
   Heap *_heap;

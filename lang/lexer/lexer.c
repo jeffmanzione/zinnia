@@ -12,10 +12,11 @@
 #include "alloc/arena/arena.h"
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
-#include "lang/lexer/file_info.h"
 #include "lang/lexer/token.h"
 #include "struct/q.h"
+#include "util/file/file_info.h"
 #include "util/string.h"
+
 
 TokenType _resolve_type(const char word[], int word_len, int *in_comment) {
   TokenType type;
@@ -241,21 +242,21 @@ inline Q *lexer_tokens(Lexer *lexer) {
 
 bool lex_line(Lexer *lexer) {
   ASSERT(NOT_NULL(lexer));
-  char line[MAX_LINE_LEN];
   char word[MAX_LINE_LEN];
   char *index;
   int in_comment = false;
   TokenType type;
   int col_num = 0, word_len = 0, chars_consumed;
 
-  if (NULL == fgets(line, MAX_LINE_LEN, file_info_fp(lexer_file(lexer)))) {
+  LineInfo *li = file_info_getline(lexer_file(lexer));
+  if (NULL == li) {
     return false;
   }
 
+  char *line = li->line_text;
+
   col_num = 0;
   index = line;
-
-  LineInfo *li = file_info_append(lexer_file(lexer), line);
 
   while (true) {
     chars_consumed = _read_word(&index, word, &word_len);

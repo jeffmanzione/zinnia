@@ -30,8 +30,8 @@ Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
                               const Object *child);
 
 void array_add(Heap *heap, Object *array, const Entity *child);
-void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child);
-void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child);
+void array_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child);
 
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e);
 

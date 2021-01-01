@@ -8,8 +8,9 @@
 
 #include <stdbool.h>
 
-#include "lang/lexer/file_info.h"
 #include "struct/q.h"
+#include "util/file/file_info.h"
+
 
 #define CODE_DELIM " \t"
 #define CODE_COMMENT_CH ';'

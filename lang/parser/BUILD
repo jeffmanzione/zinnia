@@ -10,9 +10,9 @@ cc_library(
     hdrs = ["parser.h"],
     deps = [
         "//lang/lexer",
-        "//lang/lexer:file_info",
         "//lang/lexer:token",
         "//struct:q",
+        "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
         "@memory_wrapper//struct:map",

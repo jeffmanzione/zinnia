@@ -4,11 +4,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "lang/lexer/file_info.h"
 #include "lang/lexer/lexer.h"
 #include "lang/lexer/token.h"
 #include "struct/map.h"
 #include "struct/q.h"
+#include "util/file/file_info.h"
+
 
 typedef struct _Parser Parser;
 typedef struct _SyntaxTree SyntaxTree;

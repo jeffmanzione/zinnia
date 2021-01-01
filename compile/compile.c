@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 #include "alloc/alloc.h"
-#include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
@@ -22,7 +21,8 @@
 #include "util/args/commandline.h"
 #include "util/args/commandlines.h"
 #include "util/args/lib_finder.h"
-#include "util/file.h"
+#include "util/file/file_info.h"
+#include "util/file/file_util.h"
 #include "util/string.h"
 #include "vm/intern.h"
 

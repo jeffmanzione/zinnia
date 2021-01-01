@@ -16,13 +16,14 @@
 #include "entity/native/io.h"
 #include "entity/native/math.h"
 #include "entity/object.h"
-#include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "program/optimization/optimize.h"
 #include "program/tape_binary.h"
+#include "util/file/file_info.h"
 #include "util/string.h"
 #include "vm/intern.h"
+
 
 typedef struct {
   Module module;
@@ -82,6 +83,10 @@ void _read_builtin(ModuleManager *mm, Heap *heap) {
   heap_make_root(heap, Module_math->_reflection);
   // struct.jl
   Module_struct = _read_helper(mm, "lib/struct.jl");
+  _add_reflection_to_module(mm, Module_struct);
+  heap_make_root(heap, Module_struct->_reflection);
+  // classes.jl
+  Module_struct = _read_helper(mm, "lib/classes.jl");
   _add_reflection_to_module(mm, Module_struct);
   heap_make_root(heap, Module_struct->_reflection);
 }

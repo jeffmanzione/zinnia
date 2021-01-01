@@ -14,7 +14,6 @@ cc_library(
         "//lang/semantics",
         "//program/optimization:optimize",
         "//util:file",
-        "//util:string",
         "//util/args:commandline",
         "//util/args:commandlines",
         "//util/args:lib_finder",
@@ -25,6 +24,7 @@ cc_library(
         "//vm/process",
         "//vm/process:processes",
         "//vm/process:task",
+        "@file_utils//util:string",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
     ],
@@ -33,5 +33,7 @@ cc_library(
 cc_binary(
     name = "jlr",
     srcs = ["jlr.c"],
-    deps = [":run"],
+    deps = [
+        ":run",
+    ],
 )
