@@ -9,8 +9,7 @@
 #include "util/sync/thread.h"
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
-
-typedef struct _VM VM;
+#include "vm/vm.h"
 
 VM *vm_create();
 void vm_delete(VM *vm);
@@ -23,7 +22,5 @@ ThreadHandle process_run_in_new_thread(Process *process);
 TaskState vm_execute_task(VM *vm, Task *task);
 
 Process *vm_create_process(VM *vm);
-
-ModuleManager *vm_module_manager(VM *vm);
 
 #endif /* VM_VIRTUAL_MACHINE_H_ */

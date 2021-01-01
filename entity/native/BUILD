@@ -129,3 +129,30 @@ cc_library(
         "@memory_wrapper//debug",
     ],
 )
+
+cc_library(
+    name = "classes",
+    srcs = ["classes.c"],
+    hdrs = ["classes.h"],
+    deps = [
+        ":error",
+        "//entity",
+        "//entity:object",
+        "//entity/class",
+        "//entity/class:classes",
+        "//entity/string",
+        "//entity/tuple",
+        "//heap",
+        "//lang/parser",
+        "//lang/semantics",
+        "//struct:keyed_list",
+        "//vm",
+        "//vm:module_manager",
+        "//vm/process:processes",
+        "@file_utils//util/file:file_info",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
+    ],
+)

@@ -14,11 +14,25 @@ cc_library(
 )
 
 cc_library(
+    name = "vm",
+    srcs = ["vm.c"],
+    hdrs = ["vm.h"],
+    deps = [
+        ":module_manager",
+        "//struct:alist",
+        "//util/sync:mutex",
+        "//vm/process:processes",
+    ],
+)
+
+cc_library(
     name = "virtual_machine",
     srcs = ["virtual_machine.c"],
     hdrs = ["virtual_machine.h"],
     deps = [
+        ":builtin_modules",
         ":module_manager",
+        ":vm",
         "//entity:object",
         "//entity/array",
         "//entity/native",
@@ -47,12 +61,6 @@ cc_library(
         "//entity/class:classes",
         "//entity/function",
         "//entity/module",
-        "//entity/module:modules",
-        "//entity/native:async",
-        "//entity/native:builtin",
-        "//entity/native:error",
-        "//entity/native:io",
-        "//entity/native:math",
         "//lang/parser",
         "//lang/semantics",
         "//program:tape",
@@ -61,5 +69,23 @@ cc_library(
         "//struct:keyed_list",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",
+    ],
+)
+
+cc_library(
+    name = "builtin_modules",
+    srcs = ["builtin_modules.c"],
+    hdrs = ["builtin_modules.h"],
+    deps = [
+        ":module_manager",
+        "//entity/class:classes",
+        "//entity/module",
+        "//entity/module:modules",
+        "//entity/native:async",
+        "//entity/native:builtin",
+        "//entity/native:classes",
+        "//entity/native:error",
+        "//entity/native:io",
+        "//entity/native:math",
     ],
 )

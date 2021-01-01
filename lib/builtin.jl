@@ -154,6 +154,9 @@ class Array {
   }
   method map(fn) {
     result = []
+    if len() == 0 {
+      return result
+    }
     result[len()-1] = None
     for i=0, i<len(), i=i+1 {
       result[i] = fn(self[i])

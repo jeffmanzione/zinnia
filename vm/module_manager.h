@@ -12,7 +12,6 @@
 #include "struct/keyed_list.h"
 #include "util/file/file_info.h"
 
-
 typedef struct {
   Heap *_heap;
   KeyedList _modules; // ModuleInfo
@@ -26,6 +25,11 @@ Module *modulemanager_lookup(ModuleManager *mm, const char fn[]);
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m);
 
+Module *mm_read_helper(ModuleManager *mm, const char fn[]);
+
+void add_reflection_to_module(ModuleManager *mm, Module *module);
 void add_reflection_to_function(Heap *heap, Object *parent, Function *func);
+void modulemanager_update_module(ModuleManager *mm, Module *m,
+                                 Map *new_classes);
 
 #endif /* VM_MODULE_MANAGER_H_ */

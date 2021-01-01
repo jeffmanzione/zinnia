@@ -9,12 +9,6 @@
 #include "entity/class/classes.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
-#include "entity/module/modules.h"
-#include "entity/native/async.h"
-#include "entity/native/builtin.h"
-#include "entity/native/error.h"
-#include "entity/native/io.h"
-#include "entity/native/math.h"
 #include "entity/object.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
@@ -24,21 +18,17 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-
 typedef struct {
   Module module;
   FileInfo *fi;
 } ModuleInfo;
 
-void _read_builtin(ModuleManager *mm, Heap *heap);
-Module *_read_helper(ModuleManager *mm, const char fn[]);
-void _add_reflection_to_module(ModuleManager *mm, Module *module);
+void add_reflection_to_module(ModuleManager *mm, Module *module);
 
 void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ASSERT(NOT_NULL(mm));
   mm->_heap = heap;
   keyedlist_init(&mm->_modules, ModuleInfo, 25);
-  _read_builtin(mm, heap);
 }
 
 void modulemanager_finalize(ModuleManager *mm) {
@@ -52,43 +42,6 @@ void modulemanager_finalize(ModuleManager *mm) {
     }
   }
   keyedlist_finalize(&mm->_modules);
-}
-
-void _read_builtin(ModuleManager *mm, Heap *heap) {
-  // builtin.jl
-  Module_builtin = _read_helper(mm, "lib/builtin.jl");
-  builtin_classes(heap, Module_builtin);
-  builtin_add_native(Module_builtin);
-  _add_reflection_to_module(mm, Module_builtin);
-  heap_make_root(heap, Module_builtin->_reflection);
-  // io.jl
-  Module_io = _read_helper(mm, "lib/io.jl");
-  io_add_native(Module_io);
-  _add_reflection_to_module(mm, Module_io);
-  heap_make_root(heap, Module_io->_reflection);
-  // error.jl
-  Module_error = _read_helper(mm, "lib/error.jl");
-  error_add_native(Module_error);
-  _add_reflection_to_module(mm, Module_error);
-  heap_make_root(heap, Module_error->_reflection);
-  // async.jl
-  Module_async = _read_helper(mm, "lib/async.jl");
-  async_add_native(Module_async);
-  _add_reflection_to_module(mm, Module_async);
-  heap_make_root(heap, Module_async->_reflection);
-  // math.jl
-  Module_math = _read_helper(mm, "lib/math.jl");
-  math_add_native(Module_math);
-  _add_reflection_to_module(mm, Module_math);
-  heap_make_root(heap, Module_math->_reflection);
-  // struct.jl
-  Module_struct = _read_helper(mm, "lib/struct.jl");
-  _add_reflection_to_module(mm, Module_struct);
-  heap_make_root(heap, Module_struct->_reflection);
-  // classes.jl
-  Module_struct = _read_helper(mm, "lib/classes.jl");
-  _add_reflection_to_module(mm, Module_struct);
-  heap_make_root(heap, Module_struct->_reflection);
 }
 
 bool _hydrate_class(Module *module, ClassRef *cref) {
@@ -177,7 +130,7 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   }
 }
 
-void _add_reflection_to_module(ModuleManager *mm, Module *module) {
+void add_reflection_to_module(ModuleManager *mm, Module *module) {
   ASSERT(NOT_NULL(mm), NOT_NULL(module));
   module->_reflection = heap_new(mm->_heap, Class_Module);
   module->_reflection->_module_obj = module;
@@ -235,7 +188,7 @@ Module *_read_jb(ModuleManager *mm, const char fn[]) {
   return &module_info->module;
 }
 
-Module *_read_helper(ModuleManager *mm, const char fn[]) {
+Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
   if (ends_with(fn, ".jb")) {
     return _read_jb(mm, fn);
   } else if (ends_with(fn, ".ja")) {
@@ -249,8 +202,8 @@ Module *_read_helper(ModuleManager *mm, const char fn[]) {
 }
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
-  Module *module = _read_helper(mm, fn);
-  _add_reflection_to_module(mm, module);
+  Module *module = mm_read_helper(mm, fn);
+  add_reflection_to_module(mm, module);
   return module;
 }
 
@@ -271,4 +224,36 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
     return NULL;
   }
   return mi->fi;
+}
+
+void modulemanager_update_module(ModuleManager *mm, Module *m,
+                                 Map *new_classes) {
+  Tape *tape = (Tape *)m->_tape; // bless
+
+  KL_iter classes = tape_classes(tape);
+  Q classes_to_process;
+  Q_init(&classes_to_process);
+  for (; kl_has(&classes); kl_inc(&classes)) {
+    ClassRef *cref = (ClassRef *)kl_value(&classes);
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    if (NULL != c) {
+      continue;
+    }
+    if (_hydrate_class(m, cref)) {
+      map_insert(new_classes, cref->name, c);
+      _add_reflection_to_class(mm->_heap, m, c);
+    } else {
+      *Q_add_last(&classes_to_process) = cref;
+    }
+  }
+  while (Q_size(&classes_to_process) > 0) {
+    ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    if (_hydrate_class(m, cref)) {
+      map_insert(new_classes, cref->name, c);
+      _add_reflection_to_class(mm->_heap, m, c);
+    } else {
+      *Q_add_last(&classes_to_process) = cref;
+    }
+  }
 }

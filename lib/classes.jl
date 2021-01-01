@@ -113,6 +113,10 @@ class _ClassBuilder {
     return m
   }
 
+  method build() {
+    return __load_class_from_text(module, to_s().extend('\nNone\n'))
+  }
+
   method to_s() {
     class_text = cat('class ', class_name, ' {\n')
     if fields.len() > 0 {

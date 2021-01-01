@@ -16,6 +16,7 @@
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
+#include "heap/heap.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
