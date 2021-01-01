@@ -1,5 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_toolchain", "cc_toolchain_suite")
-load(":cc_toolchain_config.bzl", "cc_toolchain_config")
+load(":cc_toolchain_config.bzl", "cc_toolchain_config", "mingw_directories")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -25,4 +25,7 @@ cc_toolchain(
     toolchain_identifier = "mingw-toolchain",
 )
 
-cc_toolchain_config(name = "mingw_toolchain_config")
+cc_toolchain_config(
+    name = "mingw_toolchain_config",
+    builtin_include_directories = mingw_directories("4.7.2"),
+)

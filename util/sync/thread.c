@@ -25,7 +25,7 @@ ThreadHandle thread_create(VoidFn fn, void *arg) {
 
 WaitStatus thread_join(ThreadHandle thread, unsigned long duration) {
 #ifdef OS_WINDOWS
-  return WaitForSingleObject(thread, duration);
+  return WaitForSingleObject((HANDLE)thread, duration);
 #else
   return pthread_join(thread, NULL);
 #endif
@@ -33,7 +33,7 @@ WaitStatus thread_join(ThreadHandle thread, unsigned long duration) {
 
 void thread_close(ThreadHandle thread) {
 #ifdef OS_WINDOWS
-  CloseHandle(thread);
+  CloseHandle((HANDLE)thread);
 #else
   pthread_cancel(thread);
 #endif

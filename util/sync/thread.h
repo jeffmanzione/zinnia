@@ -13,13 +13,15 @@ typedef unsigned int ThreadId;
 
 #ifdef OS_WINDOWS
 #include <stdint.h>
-typedef uintptr_t ThreadHandle;
+typedef unsigned long ThreadHandle;
 typedef unsigned __stdcall (*VoidFn)(void *);
 #else
 #include <pthread.h>
 typedef pthread_t ThreadHandle;
 typedef void *(*VoidFn)(void *);
 #endif
+
+#define AS_VOID_FN(fn) ((VoidFn)fn)
 
 ThreadHandle thread_create(VoidFn fn, void *arg);
 WaitStatus thread_join(ThreadHandle thread, unsigned long duration);
