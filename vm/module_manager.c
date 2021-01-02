@@ -113,6 +113,7 @@ void add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
 }
 
 void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(module), NOT_NULL(class));
   if (NULL == class->_reflection) {
     class->_reflection = heap_new(heap, Class_Class);
   }
@@ -228,11 +229,13 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
   Tape *tape = (Tape *)m->_tape; // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
   Q_init(&classes_to_process);
+
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
     Class *c = (Class *)module_lookup_class(m, cref->name); // bless
@@ -240,6 +243,7 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
       continue;
     }
     if (_hydrate_class(m, cref)) {
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -250,6 +254,7 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
     Class *c = (Class *)module_lookup_class(m, cref->name); // bless
     if (_hydrate_class(m, cref)) {
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {

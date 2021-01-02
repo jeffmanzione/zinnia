@@ -65,25 +65,24 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
 
   SFILE *file = sfile_open(c_str_text);
 
+  Tape *tape = (Tape *)m->_tape; // bless
   FileInfo *fi = file_info_sfile(file);
+  FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
+      vm_module_manager(task->parent_process->vm), m);
+  file_info_append(module_fi, fi);
+  fi = module_fi;
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
 
-  Tape *tape = (Tape *)m->_tape; // bless
   produce_instructions(etree, tape);
   delete_expression(etree);
   syntax_tree_delete(&stree);
-
-  tape_write(tape, stdout);
-
-  DEBUGF("A");
 
   Map new_classes;
   map_init_default(&new_classes);
   modulemanager_update_module(vm_module_manager(task->parent_process->vm), m,
                               &new_classes);
 
-  DEBUGF("B");
   if (1 != map_size(&new_classes)) {
     return raise_error(task, ctx, "Weird error adding a new class.");
   }

@@ -149,7 +149,6 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
 
 void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
-  DEBUGF("heap=%p, array=%p, index=%d, child=%p", heap, array, index, child);
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
     mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
