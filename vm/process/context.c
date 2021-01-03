@@ -73,6 +73,7 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   if (NULL != member) {
     return member;
   }
+  // if (Class_Class != ctx->self.obj->_class) {
   member = object_get(ctx->self.obj, id);
   if (NULL != member) {
     if (OBJECT == member->type && Class_Function == member->obj->_class &&
@@ -83,7 +84,7 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
     }
     return member;
   }
-
+  // }
   const Function *f = class_get_function(ctx->self.obj->_class, id);
   if (NULL != f) {
     Object *f_ref = wrap_function_in_ref(f, ctx->self.obj, task, ctx);

@@ -17,7 +17,10 @@ c.add_method('to_s')
     .with_statement('cat(\'Test(a=\', a, \', b=\', b, \')\')')
 io.println(c)
 
-c.build()
+io.println(c.build())
+io.println(Test)
 
-t = Test(1, 2)
-io.println(t)
+io.println(Class.methods())
+
+a = [1, 2, 3, 4, 5]
+io.println(a)
