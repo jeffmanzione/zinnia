@@ -51,18 +51,23 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
 
   if (out_ja && ends_with(fn, ".jl")) {
     make_dir_if_does_not_exist(machine_dir);
-    FILE *file =
-        FILE_FN(combine_path_file(machine_dir, file_name, ".ja"), "wb");
+    char *file_path = combine_path_file(machine_dir, file_name, ".ja");
+    FILE *file = FILE_FN(file_path, "wb");
     tape_write(tape, file);
     fclose(file);
+    DEALLOC(file_path);
   }
   if (out_jb && !ends_with(fn, ".jb")) {
     make_dir_if_does_not_exist(bytecode_dir);
-    FILE *file =
-        FILE_FN(combine_path_file(bytecode_dir, file_name, ".jb"), "wb");
+    char *file_path = combine_path_file(bytecode_dir, file_name, ".jb");
+    FILE *file = FILE_FN(file_path, "wb");
     tape_write_binary(tape, file);
     fclose(file);
+    DEALLOC(file_path);
   }
+  DEALLOC(path);
+  DEALLOC(file_name);
+  DEALLOC(ext);
 }
 
 Map *compile(const Set *source_files, const ArgStore *store) {

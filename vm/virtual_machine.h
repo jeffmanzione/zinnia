@@ -14,13 +14,10 @@
 VM *vm_create();
 void vm_delete(VM *vm);
 
+Process *vm_create_process(VM *vm);
 Process *vm_main_process(VM *vm);
 
 void process_run(Process *process);
 ThreadHandle process_run_in_new_thread(Process *process);
-
-TaskState vm_execute_task(VM *vm, Task *task);
-
-Process *vm_create_process(VM *vm);
 
 #endif /* VM_VIRTUAL_MACHINE_H_ */

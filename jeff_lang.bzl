@@ -30,7 +30,7 @@ _jeff_vm_library = rule(
             default = Label("//compile:jlc"),
             executable = True,
             allow_single_file = True,
-            cfg = "host",
+            cfg = "target",
         ),
     },
 )

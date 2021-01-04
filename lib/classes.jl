@@ -39,7 +39,11 @@ class _MethodBuilder {
             }
             return f_text
           })),
-      ') {\n')
+      ')')
+    if is_async {
+      c_text.extend(' async')
+    }
+    c_text.extend(' {\n')
     c_text.extend('\n'.join(statements.map(s -> cat('    ', s))))
     c_text.extend('\n  }\n')
     return c_text
