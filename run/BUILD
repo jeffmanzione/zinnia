@@ -33,6 +33,10 @@ cc_library(
 cc_binary(
     name = "jlr",
     srcs = ["jlr.c"],
+    defines = [
+        "DEBUG",
+        "DEBUG_MEMORY",
+    ],
     deps = [
         ":run",
     ],

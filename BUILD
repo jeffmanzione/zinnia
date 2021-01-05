@@ -1,6 +1,11 @@
-load(":jeff_lang.bzl", "jeff_vm_library")
+load(":jeff_lang.bzl", "jeff_vm_binary")
 
-jeff_vm_library(
+jeff_vm_binary(
     name = "test",
-    srcs = ["test.jl"],
+    main = "test.jl",
+)
+
+jeff_vm_binary(
+    name = "hello",
+    main = "hello.jl",
 )
