@@ -11,6 +11,7 @@
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
+#include "util/string.h"
 
 #ifdef _WIN32
 #define F_OK 0

@@ -33,6 +33,7 @@ cc_library(
 cc_binary(
     name = "jlr",
     srcs = ["jlr.c"],
+    data = ["//lib"],
     defines = [
         "DEBUG",
         "DEBUG_MEMORY",

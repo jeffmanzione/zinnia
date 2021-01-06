@@ -12,9 +12,20 @@ cc_library(
 
 cc_library(
     name = "file",
+    srcs = ["file.c"],
     hdrs = ["file.h"],
     deps = [
+        "@file_utils//util:string",
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena:intern",
+    ],
+)
+
+cc_library(
+    name = "string_util",
+    srcs = ["string_util.c"],
+    hdrs = ["string_util.h"],
+    deps = [
+        "@memory_wrapper//alloc",
     ],
 )

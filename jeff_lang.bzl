@@ -49,22 +49,23 @@ def jeff_vm_library(
 
 def _jeff_vm_binary_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
+    builtins = [file for target in ctx.attr.builtins for file in target.files.to_list()]
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".jb")]
     input_files = [main_file] + input_files
-    jlr_command = "%s %s" % (runner_executable.path, " ".join([file.path for file in input_files]))
+    jlr_command = "%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.run_shell(
         inputs = input_files,
         outputs = [run_sh],
-        command = "echo \"pwd\n%s\n\" > %s" % (jlr_command, run_sh.path),
+        command = "echo \"%s\n\" > %s" % (jlr_command, run_sh.path),
     )
     return [
         DefaultInfo(
             files = depset(input_files + [runner_executable, run_sh]),
             executable = run_sh,
-            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh]),
+            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh] + builtins),
         ),
     ]
 
@@ -81,6 +82,7 @@ _jeff_vm_binary = rule(
             allow_single_file = True,
             cfg = "target",
         ),
+        "builtins": attr.label_list(),
     },
     executable = True,
 )
@@ -99,4 +101,4 @@ def jeff_vm_binary(name, main, srcs = [], deps = []):
             srcs = srcs,
         )
         deps = [":%s_srcs" % name] + deps
-    return _jeff_vm_binary(name = name, main = ":%s_main" % name, deps = deps)
+    return _jeff_vm_binary(name = name, main = ":%s_main" % name, deps = deps, builtins = ["//lib"])

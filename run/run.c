@@ -35,12 +35,6 @@
 #include "vm/virtual_machine.h"
 
 void run(const Set *source_files, ArgStore *store) {
-  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
-  const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
-  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
-  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
-
   parsers_init();
   semantics_init();
   optimize_init();
@@ -53,16 +47,11 @@ void run(const Set *source_files, ArgStore *store) {
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
     Module *module = modulemanager_read(mm, src);
-
-    write_tape(src, module_tape(module), out_ja, machine_dir, out_jb,
-               bytecode_dir);
-
     if (NULL == main_module) {
       main_module = module;
       heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
     }
   }
-
   optimize_finalize();
   semantics_finalize();
   parsers_finalize();
