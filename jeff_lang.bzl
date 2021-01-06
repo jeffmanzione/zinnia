@@ -51,7 +51,7 @@ def _jeff_vm_binary_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
     builtins = [file for target in ctx.attr.builtins for file in target.files.to_list()]
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
-    input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".jb")]
+    input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
     jlr_command = "%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
