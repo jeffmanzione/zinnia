@@ -1000,18 +1000,6 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
   *task_mutable_resval(task) = *tuple_get(t, index);
 }
 
-bool _inherits_from(const Class *class, Class *possible_super) {
-  for (;;) {
-    if (NULL == class) {
-      return false;
-    }
-    if (class == possible_super) {
-      return true;
-    }
-    class = class->_super;
-  }
-}
-
 void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     ERROR("Weird type for IS.");
@@ -1027,7 +1015,7 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
     *task_mutable_resval(task) = NONE_ENTITY;
     return;
   }
-  if (_inherits_from(lhs.obj->_class, rhs.obj->_class_obj)) {
+  if (inherits_from(lhs.obj->_class, rhs.obj->_class_obj)) {
     *task_mutable_resval(task) = entity_int(1);
   } else {
     *task_mutable_resval(task) = NONE_ENTITY;

@@ -64,10 +64,10 @@ Task *process_create_task(Process *process) {
     task = (Task *)__arena_alloc(&process->task_arena);
     task_init(task);
     task->parent_process = process;
-    *Q_add_last(&process->queued_tasks) = task;
     _task_add_reflection(process, task);
     heap_inc_edge(process->heap, process->_reflection, task->_reflection);
   });
+  process_enqueue_task(process, task);
   return task;
 }
 
@@ -85,7 +85,7 @@ inline Task *process_pop_task(Process *process) {
 
 inline void process_enqueue_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_queue_lock,
-               { Q_enqueue(&process->queued_tasks, task); });
+               { *Q_add_last(&process->queued_tasks) = task; });
 }
 
 inline void process_insert_waiting_task(Process *process, Task *task) {

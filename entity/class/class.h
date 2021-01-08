@@ -11,9 +11,12 @@
 Class *class_init(Class *cls, const char name[], const Class *super,
                   const Module *module);
 void class_finalize(Class *cls);
-Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos, bool is_const, bool is_async);
+Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos,
+                             bool is_const, bool is_async);
 
 KL_iter class_functions(Class *cls);
 const Function *class_get_function(const Class *cls, const char name[]);
+
+bool inherits_from(const Class *class, Class *possible_super);
 
 #endif /* OBJECT_CLASS_CLASS_H_ */

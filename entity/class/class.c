@@ -64,3 +64,15 @@ const Function *class_get_function(const Class *cls, const char name[]) {
   }
   return NULL;
 }
+
+bool inherits_from(const Class *class, Class *possible_super) {
+  for (;;) {
+    if (NULL == class) {
+      return false;
+    }
+    if (class == possible_super) {
+      return true;
+    }
+    class = class->_super;
+  }
+}
