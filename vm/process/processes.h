@@ -61,6 +61,7 @@ struct __Task {
   AList entity_stack;
 
   Task *parent_task;
+
   Set dependent_tasks;
 
   bool child_task_has_error;

@@ -14,6 +14,7 @@
 #include "entity/native/error.h"
 #include "entity/native/io.h"
 #include "entity/native/math.h"
+#include "entity/native/process.h"
 
 void read_builtin(ModuleManager *mm, Heap *heap) {
   // builtin.jl
@@ -51,4 +52,9 @@ void read_builtin(ModuleManager *mm, Heap *heap) {
   classes_add_native(Module_classes);
   add_reflection_to_module(mm, Module_classes);
   heap_make_root(heap, Module_classes->_reflection);
+  // process.jl
+  Module_process = mm_read_helper(mm, "lib/process.jl");
+  process_add_native(Module_process);
+  add_reflection_to_module(mm, Module_process);
+  heap_make_root(heap, Module_process->_reflection);
 }

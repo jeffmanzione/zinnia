@@ -156,3 +156,29 @@ cc_library(
         "@memory_wrapper//struct:struct_defaults",
     ],
 )
+
+cc_library(
+    name = "process",
+    srcs = ["process.c"],
+    hdrs = ["process.h"],
+    deps = [
+        ":error",
+        "//entity",
+        "//entity:object",
+        "//entity/class",
+        "//entity/class:classes",
+        "//entity/string",
+        "//entity/tuple",
+        "//heap",
+        "//util/sync:thread",
+        "//vm",
+        "//vm:intern",
+        "//vm:module_manager",
+        "//vm/process",
+        "//vm/process:processes",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
+        "@memory_wrapper//struct:map",
+        "@memory_wrapper//struct:struct_defaults",
+    ],
+)

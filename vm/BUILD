@@ -87,5 +87,6 @@ cc_library(
         "//entity/native:error",
         "//entity/native:io",
         "//entity/native:math",
+        "//entity/native:process",
     ],
 )

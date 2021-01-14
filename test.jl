@@ -1,26 +1,23 @@
 module test
 
-import classes
 import io
+import process
 
-c = classes.factory.create_class('Test', self)
-    .with_field('b')
-c.get_constructor()
-    .with_parameter('a', True, '1')
-    .with_parameter('b', True)
-    .with_statement('x = a + b')
-    .with_statement('io.println(x)')
-c.add_method('set_b')
-    .with_parameter('new_b')
-    .with_statement('b = new_b')
-c.add_method('to_s')
-    .with_statement('cat(\'Test(a=\', a, \', b=\', b, \')\')')
-io.println(c)
+io.println('Hi')
 
-io.println(c.build())
-io.println(Test)
+def count(n) {
+  io.println('Yo', n)
+  i = 0
+  for i=0, i<n, i=i+1 {
+    io.println(i)
+  }
+}
+io.println('Hi')
 
-io.println(Class.methods())
+process.create_process(count, 100)
 
-a = [1, 2, 3, 4, 5]
-io.println(a)
+for i=100, i>0, i=i-1 {
+  io.println(i)
+}
+
+io.println('Hi')

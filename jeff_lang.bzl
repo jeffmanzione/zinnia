@@ -53,13 +53,13 @@ def _jeff_vm_binary_impl(ctx):
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
-    jlr_command = "%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
+    jlr_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
-    ctx.actions.run_shell(
-        inputs = input_files,
-        outputs = [run_sh],
-        command = "echo \"%s\n\" > %s" % (jlr_command, run_sh.path),
+    ctx.actions.write(
+        output = run_sh,
+        is_executable = True,
+        content = jlr_command,
     )
     return [
         DefaultInfo(
@@ -83,11 +83,18 @@ _jeff_vm_binary = rule(
             cfg = "target",
         ),
         "builtins": attr.label_list(),
+        "executable_ext": attr.string(default = ".sh"),
     },
     executable = True,
 )
 
 def jeff_vm_binary(name, main, srcs = [], deps = []):
+    native.config_setting(
+        name = "mingw",
+        values = {
+            "config": "mingw",
+        },
+    )
     if main in srcs:
         srcs.remove(main)
 
@@ -101,4 +108,9 @@ def jeff_vm_binary(name, main, srcs = [], deps = []):
             srcs = srcs,
         )
         deps = [":%s_srcs" % name] + deps
-    return _jeff_vm_binary(name = name, main = ":%s_main" % name, deps = deps, builtins = ["//lib"])
+    return _jeff_vm_binary(
+        name = name,
+        main = ":%s_main" % name,
+        deps = deps,
+        builtins = ["//lib"],
+    )

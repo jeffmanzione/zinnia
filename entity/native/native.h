@@ -14,7 +14,7 @@
 
 //#define
 
-#define IS_CLASS(class, e)                                                     \
+#define IS_CLASS(e, class) \
   (NULL != (e) && OBJECT == (e)->type && (class) == (e)->obj->_class)
 #define IS_NONE(e) (NULL == (e) || NONE == (e)->type)
 #define IS_OBJECT(e) (NULL != (e) && OBJECT == (e)->type)
