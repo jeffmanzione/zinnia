@@ -44,6 +44,7 @@ cc_library(
         "//program:tape",
         "//struct:alist",
         "//util/sync:mutex",
+        "//util/sync:thread",
         "@memory_wrapper//struct:set",
     ],
 )

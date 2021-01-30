@@ -3,21 +3,17 @@ module test
 import io
 import process
 
-io.println('Hi')
+io.println('Hi 1')
+
+self.hi = 'Hi'
 
 def count(n) {
-  io.println('Yo', n)
-  i = 0
-  for i=0, i<n, i=i+1 {
-    io.println(i)
-  }
+  io.println(hi, n)
 }
-io.println('Hi')
+io.println(hi, '2')
 
-process.create_process(count, 100)
+io.println(process.create_process(count, 100))
 
-for i=100, i>0, i=i-1 {
-  io.println(i)
-}
+hi = 'Hello'
 
-io.println('Hi')
+io.println(hi, '3')
