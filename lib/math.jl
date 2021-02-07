@@ -82,3 +82,8 @@ def sqrt(x) pow(x, 0.5)
 
 ; Returns the remainder of [x] divided by [y].
 ; def mod(x, y)
+
+; Returns (x / y, mod(x, y)).
+def div(x, y) {
+  return (x / y, mod(x, y))
+}
