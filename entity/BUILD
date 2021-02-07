@@ -24,6 +24,7 @@ cc_library(
         "//program:tape",
         "//struct:alist",
         "//struct:keyed_list",
+        "//util/sync:mutex",
         "@memory_wrapper//alloc/memory_graph",
         "@memory_wrapper//struct:map",
     ],

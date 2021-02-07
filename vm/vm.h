@@ -17,5 +17,6 @@ typedef struct _VM {
 } VM;
 
 ModuleManager *vm_module_manager(VM *vm);
-
 Process *vm_create_process(VM *vm);
+Process *create_process_no_reflection(VM *vm);
+void add_reflection_to_process(Process *process);

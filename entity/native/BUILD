@@ -175,6 +175,7 @@ cc_library(
         "//vm:intern",
         "//vm:module_manager",
         "//vm/process",
+        "//vm/process:context",
         "//vm/process:processes",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",

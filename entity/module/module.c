@@ -14,6 +14,7 @@ void module_init(Module *module, const char name[], Tape *tape) {
   module->_is_initialized = false;
   keyedlist_init(&module->_classes, Class, 16);
   keyedlist_init(&module->_functions, Function, 16);
+  module->_write_mutex = mutex_create();
 }
 
 void module_finalize(Module *module) {
@@ -32,6 +33,7 @@ void module_finalize(Module *module) {
   if (module->_tape != NULL) {
     tape_delete((Tape *)module->_tape); // Bless
   }
+  mutex_close(module->_write_mutex);
 }
 
 inline const char *module_name(const Module *const module) {

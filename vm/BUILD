@@ -21,6 +21,7 @@ cc_library(
         ":module_manager",
         "//struct:alist",
         "//util/sync:mutex",
+        "//vm/process",
         "//vm/process:processes",
     ],
 )

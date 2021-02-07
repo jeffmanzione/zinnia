@@ -12,12 +12,17 @@
 #include "entity/native/native.h"
 #include "entity/object.h"
 #include "entity/tuple/tuple.h"
+#include "struct/struct_defaults.h"
 #include "util/sync/thread.h"
 #include "vm/intern.h"
+#include "vm/process/context.h"
 #include "vm/process/process.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 #include "vm/vm.h"
+
+// From vm/virtual_machine.h
+ThreadHandle process_run_in_new_thread(Process *process);
 
 void _remote_init(Object *obj) {}
 void _remote_delete(Object *obj) {}
@@ -54,7 +59,7 @@ Entity _create_process(Task *task, Context *ctx, Object *obj, Entity *args) {
   map_finalize(&cps);
   context_set_function(new_ctx, f);
 
-  ThreadHandle thread = process_run_in_new_thread(p);
+  process_run_in_new_thread(p);
   return entity_object(p->_reflection);
 }
 

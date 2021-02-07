@@ -15,6 +15,7 @@
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/map.h"
+#include "util/sync/mutex.h"
 
 typedef struct _Object Object;
 typedef struct _Class Class;
@@ -64,6 +65,7 @@ struct _Module {
   KeyedList _classes;
   KeyedList _functions;
   bool _is_initialized;
+  Mutex _write_mutex;
 };
 
 struct _Function {
