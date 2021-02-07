@@ -194,7 +194,7 @@ Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
     return _read_jb(mm, fn);
   } else if (ends_with(fn, ".ja")) {
     return _read_ja(mm, fn);
-  } else if (ends_with(fn, ".jl")) {
+  } else if (ends_with(fn, ".jv")) {
     return _read_jl(mm, fn);
   } else {
     ERROR("Unknown file type.");

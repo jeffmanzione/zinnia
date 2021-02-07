@@ -2,7 +2,7 @@ def _jeff_vm_library_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
     compiler_executable_path = "./" + compiler_executable.short_path
     src_files = [file for target in ctx.attr.srcs for file in target.files.to_list()]
-    out_files = [ctx.actions.declare_file(file.short_path.replace(".jl", ".ja")) for file in src_files]
+    out_files = [ctx.actions.declare_file(file.short_path.replace(".jv", ".ja")) for file in src_files]
     out_dir = out_files[0].dirname
     jlc_args = ["-a", "-aout=" + out_dir] + [file.short_path for file in src_files]
     ctx.actions.run(

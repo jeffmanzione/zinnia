@@ -47,7 +47,7 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
     DEALLOC(fn);
     return to_return;
   }
-  strcpy(pos, ".jl");
+  strcpy(pos, ".jv");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern(fn);
     DEALLOC(fn);
