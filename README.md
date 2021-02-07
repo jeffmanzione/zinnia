@@ -15,11 +15,8 @@ sudo apt-get install bazel
 # Bazel requires building within the workspace.
 cd jeff-vm
 
-# Builds the compiler.
-bazel build -c opt //compile:jlc
-
-# Builds the runner.
-bazel build -c opt //run:jlr
+# Builds the compiler and runner.
+bazel build -c opt //compile:jlc //run:jlr
 ```
 
 ## Compiling your jeff-vm program and outputs my_program.ja (assembly) and my_program.jb (bytecode).
