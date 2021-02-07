@@ -5,7 +5,7 @@
  *      Author: Jeff
  */
 
-#include "statements.h"
+#include "lang/semantics/expressions/statements.h"
 
 #include <limits.h>
 #include <stdbool.h>
@@ -53,11 +53,12 @@ ImplPopulate(compound_statement, const SyntaxTree *stree) {
 }
 
 ImplDelete(compound_statement) {
-  void delete_statement(void *ptr) {
-    ExpressionTree *tree = *((ExpressionTree **)ptr);
+  AL_iter iter = alist_iter(compound_statement->expressions);
+  for(; al_has(&iter); al_inc(&iter)) {
+    ExpressionTree *tree = *((ExpressionTree **)al_value(&iter));
     delete_expression(tree);
+
   }
-  alist_iterate(compound_statement->expressions, delete_statement);
   alist_delete(compound_statement->expressions);
 }
 
@@ -66,11 +67,12 @@ ImplProduce(compound_statement, Tape *tape) {
   if (alist_len(compound_statement->expressions) == 0) {
     return 0;
   }
-  void produce_statements(void *ptr) {
-    ExpressionTree *tree = *((ExpressionTree **)ptr);
+  AL_iter iter = alist_iter(compound_statement->expressions);
+  for(;al_has(&iter); al_inc(&iter)) {
+    ExpressionTree *tree = *((ExpressionTree **)al_value(&iter));
     num_ins += produce_instructions(tree, tape);
+
   }
-  alist_iterate(compound_statement->expressions, produce_statements);
   return num_ins;
 }
 

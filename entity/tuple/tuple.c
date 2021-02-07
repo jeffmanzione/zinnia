@@ -23,11 +23,6 @@ void tuple_print(const Tuple *t, FILE *file);
 
 void __tuple_create(Object *obj) {}
 
-// void __tuple_init(Object *obj, size_t size) {
-//   ASSERT(NOT_NULL(obj), size >= 0);
-//   obj->_internal_obj = tuple_create(size);
-// }
-
 void __tuple_delete(Object *obj) {
   ASSERT(NOT_NULL(obj));
   Tuple *t = (Tuple *)obj->_internal_obj;

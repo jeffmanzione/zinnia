@@ -15,6 +15,7 @@
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/map.h"
+#include "util/sync/mutex.h"
 
 typedef struct _Object Object;
 typedef struct _Class Class;
@@ -25,6 +26,8 @@ typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
 // TODO: This should only be temporary until to_s() is supported.
 typedef void (*ObjPrintFn)(const Object *, FILE *);
+typedef void (*ObjCopyFn)(void *heap, Map *cpy_map, Object *target,
+                          Object *src);
 
 // Represents an object with properties.
 struct _Object {
@@ -51,6 +54,7 @@ struct _Class {
   ObjInitFn _init_fn;
   ObjDelFn _delete_fn;
   ObjPrintFn _print_fn;
+  ObjCopyFn _copy_fn;
 };
 
 struct _Module {
@@ -61,6 +65,7 @@ struct _Module {
   KeyedList _classes;
   KeyedList _functions;
   bool _is_initialized;
+  Mutex _write_mutex;
 };
 
 struct _Function {

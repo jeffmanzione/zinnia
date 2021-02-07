@@ -21,6 +21,7 @@ Class *class_init(Class *cls, const char name[], const Class *super,
   cls->_init_fn = NULL;
   cls->_delete_fn = NULL;
   cls->_print_fn = NULL;
+  cls->_copy_fn = NULL;
   keyedlist_init(&cls->_functions, Function, 16);
   return cls;
 }
@@ -30,7 +31,8 @@ void class_finalize(Class *cls) {
   keyedlist_finalize(&cls->_functions);
 }
 
-Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos, bool is_const, bool is_async) {
+Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos,
+                             bool is_const, bool is_async) {
   ASSERT(NOT_NULL(cls), NOT_NULL(name));
   Function *f;
   Function *old =
@@ -40,7 +42,8 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos, bo
           "name.",
           name, cls->_name);
   }
-  function_init(f, name, cls->_module, ins_pos, is_anon(name), is_const, is_async);
+  function_init(f, name, cls->_module, ins_pos, is_anon(name), is_const,
+                is_async);
   f->_parent_class = cls;
   return f;
 }
@@ -60,4 +63,16 @@ const Function *class_get_function(const Class *cls, const char name[]) {
     class = class->_super;
   }
   return NULL;
+}
+
+bool inherits_from(const Class *class, Class *possible_super) {
+  for (;;) {
+    if (NULL == class) {
+      return false;
+    }
+    if (class == possible_super) {
+      return true;
+    }
+    class = class->_super;
+  }
 }

@@ -35,6 +35,7 @@ char *OBJ_KEY;
 char *PARENT_CLASS;
 char *PROCESS_NAME;
 char *RANGE_CLASS_NAME;
+char *REMOTE_CLASS_NAME;
 char *RESULT_VAL;
 char *SELF;
 char *STACKLINE_NAME;
@@ -73,6 +74,8 @@ void _strings_insert_constants() {
   OBJ_KEY = intern("obj");
   PARENT_CLASS = intern("parent_class");
   PROCESS_NAME = intern("Process");
+  RANGE_CLASS_NAME = intern("Range");
+  REMOTE_CLASS_NAME = intern("Remote");
   RESULT_VAL = intern("$resval");
   SELF = intern("self");
   STACKLINE_NAME = intern("StackLine");

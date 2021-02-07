@@ -8,6 +8,7 @@
 #include "alloc/arena/arena.h"
 #include "entity/class/classes.h"
 #include "struct/struct_defaults.h"
+#include "util/sync/mutex.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
@@ -17,6 +18,9 @@ void process_init(Process *process) {
   process->heap = heap_create(&conf);
   __arena_init(&process->task_arena, sizeof(Task), "Task");
   __arena_init(&process->context_arena, sizeof(Context), "Context");
+  process->task_create_lock = mutex_create();
+  process->task_queue_lock = mutex_create();
+  process->task_waiting_lock = mutex_create();
   Q_init(&process->queued_tasks);
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
@@ -44,6 +48,9 @@ void process_finalize(Process *process) {
   __arena_finalize(&process->task_arena);
   __arena_finalize(&process->context_arena);
   heap_delete(process->heap);
+  mutex_close(process->task_create_lock);
+  mutex_close(process->task_queue_lock);
+  mutex_close(process->task_waiting_lock);
 }
 
 void _task_add_reflection(Process *process, Task *task) {
@@ -52,15 +59,41 @@ void _task_add_reflection(Process *process, Task *task) {
 }
 
 Task *process_create_task(Process *process) {
-  Task *task = (Task *)__arena_alloc(&process->task_arena);
-  task_init(task);
-  task->parent_process = process;
-  *Q_add_last(&process->queued_tasks) = task;
-  _task_add_reflection(process, task);
-  heap_inc_edge(process->heap, process->_reflection, task->_reflection);
+  Task *task;
+  SYNCHRONIZED(process->task_create_lock, {
+    task = (Task *)__arena_alloc(&process->task_arena);
+    task_init(task);
+    task->parent_process = process;
+    _task_add_reflection(process, task);
+    heap_inc_edge(process->heap, process->_reflection, task->_reflection);
+  });
+  process_enqueue_task(process, task);
   return task;
 }
 
-inline Task *process_last_task(Process *process) {
-  return Q_get(&process->queued_tasks, Q_size(&process->queued_tasks) - 1);
+inline Task *process_pop_task(Process *process) {
+  Task *task;
+  SYNCHRONIZED(process->task_queue_lock, {
+    if (0 == Q_size(&process->queued_tasks)) {
+      task = NULL;
+    } else {
+      task = Q_pop(&process->queued_tasks);
+    }
+  });
+  return task;
+}
+
+inline void process_enqueue_task(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_queue_lock,
+               { *Q_add_last(&process->queued_tasks) = task; });
+}
+
+inline void process_insert_waiting_task(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_waiting_lock,
+               { set_insert(&process->waiting_tasks, task); });
+}
+
+inline void process_remove_waiting_task(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_waiting_lock,
+               { set_remove(&process->waiting_tasks, task); });
 }

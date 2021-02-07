@@ -21,3 +21,18 @@ cc_library(
         "@memory_wrapper//alloc/memory_graph",
     ],
 )
+
+cc_library(
+    name = "copy_fns",
+    srcs = ["copy_fns.c"],
+    hdrs = ["copy_fns.h"],
+    deps = [
+        ":heap",
+        "//entity",
+        "//entity:object",
+        "//entity/array",
+        "//entity/string",
+        "//entity/tuple",
+        "@memory_wrapper//struct:map",
+    ],
+)

@@ -14,16 +14,18 @@
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 
-#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                                  \
-  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {          \
-    const Arg *arg = argstore_get(store, key);                                 \
-    if (!arg->used) {                                                          \
-      ERROR("Store did not have key: %d", key);                                \
-    }                                                                          \
-    if (ArgType__##typet != arg->type) {                                       \
-      ERROR("Expected a " #typet " for key=%d. Was %d.", key, arg->type);      \
-    }                                                                          \
-    return (retval)arg->typet##_val;                                           \
+#define _COST_CHAR_POINTER(ptr) ((const char *)(ptr))
+
+#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                             \
+  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {     \
+    const Arg *arg = argstore_get(store, key);                            \
+    if (!arg->used) {                                                     \
+      ERROR("Store did not have key: %d", key);                           \
+    }                                                                     \
+    if (ArgType__##typet != arg->type) {                                  \
+      ERROR("Expected a " #typet " for key=%d. Was %d.", key, arg->type); \
+    }                                                                     \
+    return (retval)arg->typet##_val;                                      \
   }
 
 #define ARGSTORE_LOOKUP(typet) ARGSTORE_LOOKUP_RETVAL(typet, typet)
@@ -144,8 +146,8 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
 
   M_iter args_iter = map_iter(&args);
   for (; has(&args_iter); inc(&args_iter)) {
-    const char *k = key(&args_iter);
-    const char *v = value(&args_iter);
+    const char *k = _COST_CHAR_POINTER(key(&args_iter));
+    const char *v = _COST_CHAR_POINTER(value(&args_iter));
     ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, k);
     if (ArgKey__NONE == arg_key) {
       ERROR("Unknown Arg name: %s", k);

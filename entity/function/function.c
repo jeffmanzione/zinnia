@@ -6,6 +6,7 @@
 #include "entity/function/function.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "alloc/alloc.h"
 #include "debug/debug.h"
@@ -22,7 +23,8 @@ inline bool is_anon(const char name[]) {
 }
 
 inline void function_init(Function *f, const char name[], const Module *module,
-                          uint32_t ins_pos, bool is_anon, bool is_const, bool is_async) {
+                          uint32_t ins_pos, bool is_anon, bool is_const,
+                          bool is_async) {
   ASSERT(NOT_NULL(f), NOT_NULL(name));
   f->_name = name;
   f->_module = module;
@@ -72,4 +74,14 @@ inline const Function *function_ref_get_func(Object *fn_ref_obj) {
 inline void *function_ref_get_parent_context(Object *fn_ref_obj) {
   _FunctionRef *func_ref = (_FunctionRef *)fn_ref_obj->_internal_obj;
   return func_ref->parent_context;
+}
+
+void function_ref_copy(Heap *heap, Map *cpy_map, Object *target_obj,
+                       Object *src_obj) {
+  _FunctionRef *func_ref = (_FunctionRef *)src_obj->_internal_obj;
+  Entity e = entity_object(func_ref->obj);
+  Entity cpy_obj = entity_copy(heap, cpy_map, &e);
+  // TODO: Deep copy parent context?
+  __function_ref_init(target_obj, cpy_obj.obj, func_ref->func,
+                      func_ref->parent_context);
 }

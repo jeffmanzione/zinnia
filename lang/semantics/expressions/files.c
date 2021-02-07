@@ -405,7 +405,10 @@ int produce_module_def(ModuleDef *module, Tape *tape) {
         *((ExpressionTree **)alist_get(module->statements, i));
     num_ins += produce_instructions(statement, tape);
   }
-  num_ins += tape_ins_int(tape, EXIT, 0, module->name.module_token);
+  num_ins += tape_ins_int(tape, EXIT, 0,
+                          module->name.module_token == NULL
+                              ? token_create(INTEGER, -1, -1, "0")
+                              : module->name.module_token);
   for (i = 0; i < alist_len(module->classes); ++i) {
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
     num_ins += produce_class(class, tape);

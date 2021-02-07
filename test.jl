@@ -1,11 +1,19 @@
 module test
 
 import io
-import async
+import process
 
-do_something = (c) async -> c.complete('Hello, world!')
-completer = async.Completer()
-do_something(completer)
-io.println(await completer.as_future())
+io.println('Hi 1')
 
-io.println(await async.value('Hello').then(x -> cat(x, ', world!')))
+self.hi = 'Hi'
+
+def count(n) {
+  io.println(hi, n)
+}
+io.println(hi, '2')
+
+io.println(process.create_process(count, 100))
+
+hi = 'Hello'
+
+io.println(hi, '3')

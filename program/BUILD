@@ -11,6 +11,8 @@ cc_library(
     deps = [
         ":op",
         "//entity:primitive",
+        "//util:string_util",
+        "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
     ],
 )

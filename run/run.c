@@ -12,7 +12,6 @@
 #include "alloc/alloc.h"
 #include "compile/compile.h"
 #include "entity/object.h"
-#include "lang/lexer/file_info.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
@@ -24,7 +23,10 @@
 #include "util/args/commandlines.h"
 #include "util/args/lib_finder.h"
 #include "util/file.h"
+#include "util/file/file_info.h"
 #include "util/string.h"
+#include "util/sync/constants.h"
+#include "util/sync/thread.h"
 #include "vm/intern.h"
 #include "vm/module_manager.h"
 #include "vm/process/process.h"
@@ -33,12 +35,6 @@
 #include "vm/virtual_machine.h"
 
 void run(const Set *source_files, ArgStore *store) {
-  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
-  const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
-  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
-  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
-
   parsers_init();
   semantics_init();
   optimize_init();
@@ -51,23 +47,18 @@ void run(const Set *source_files, ArgStore *store) {
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
     Module *module = modulemanager_read(mm, src);
-
-    write_tape(src, module_tape(module), out_ja, machine_dir, out_jb,
-               bytecode_dir);
-
     if (NULL == main_module) {
       main_module = module;
       heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
     }
   }
-
   optimize_finalize();
   semantics_finalize();
   parsers_finalize();
 
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
-  vm_run_process(vm, vm_main_process(vm));
+  process_run(vm_main_process(vm));
 
   vm_delete(vm);
 }

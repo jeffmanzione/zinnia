@@ -16,13 +16,20 @@
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
-#include "lang/lexer/file_info.h"
+#include "heap/heap.h"
+#include "struct/map.h"
+#include "struct/struct_defaults.h"
+#include "util/file/file_info.h"
 #include "util/string.h"
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
 
+#ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
+#endif
+
+#define BUFFER_SIZE 256
 
 static Class *Class_Range;
 
@@ -105,40 +112,41 @@ void _task_dec_all_context(Heap *heap, Task *task) {
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Process *process = task->parent_process;
   Heap *heap = process->heap;
+  uint32_t deleted_nodes_count;
 
-  _task_inc_all_context(heap, process->current_task);
-  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
-  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-    Task *queued_task = (Task *)Q_value(&queued_tasks);
-    _task_inc_all_context(heap, queued_task);
-  }
-  M_iter waiting_tasks = set_iter(&process->waiting_tasks);
-  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-    Task *waiting_task = (Task *)value(&waiting_tasks);
-    _task_inc_all_context(heap, waiting_task);
-  }
+  SYNCHRONIZED(process->task_queue_lock, {
+    _task_inc_all_context(heap, process->current_task);
+    Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_inc_all_context(heap, queued_task);
+    }
+    M_iter waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_inc_all_context(heap, waiting_task);
+    }
 
-  uint32_t deleted_nodes_count = heap_collect_garbage(heap);
+    deleted_nodes_count = heap_collect_garbage(heap);
 
-  _task_dec_all_context(heap, process->current_task);
-  queued_tasks = Q_iterator(&process->queued_tasks);
-  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-    Task *queued_task = (Task *)Q_value(&queued_tasks);
-    _task_dec_all_context(heap, queued_task);
-  }
-  waiting_tasks = set_iter(&process->waiting_tasks);
-  for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-    Task *waiting_task = (Task *)value(&waiting_tasks);
-    _task_dec_all_context(heap, waiting_task);
-  }
-
+    _task_dec_all_context(heap, process->current_task);
+    queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_dec_all_context(heap, queued_task);
+    }
+    waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_dec_all_context(heap, waiting_task);
+    }
+  });
   return entity_int(deleted_nodes_count);
 }
 
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args), PRIMITIVE == args->type);
   Primitive val = args->pri;
-  static const int BUFFER_SIZE = 256;
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
@@ -624,27 +632,40 @@ Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+Entity _object_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Entity e = entity_object(obj);
+  Map cpy_map;
+  map_init_default(&cpy_map);
+  Entity to_return = entity_copy(task->parent_process->heap, &cpy_map, &e);
+  map_finalize(&cpy_map);
+  return to_return;
+}
+
+Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Class);
+  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  Class *c = obj->_class_obj;
+  KL_iter funcs = class_functions(c);
+  for (; kl_has(&funcs); kl_inc(&funcs)) {
+    const Function *f = (const Function *)kl_value(&funcs);
+    Entity func = entity_object(f->_reflection);
+    array_add(task->parent_process->heap, array_obj, &func);
+  }
+  return entity_object(array_obj);
+}
+
 void _process_init(Object *obj) {}
 void _process_delete(Object *obj) {}
 
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 
-void builtin_add_native(Module *builtin) {
-  Class_Process =
-      native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
-  Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+// Entity _process_future(Task *task, Context *ctx, Object *obj, Entity *args) {
+//   Process *process = (Process *) obj->_internal_obj;
+//   process->
+// }
 
-  Class_Range =
-      native_class(builtin, RANGE_CLASS_NAME, _range_init, _range_delete);
-  native_method(Class_Range, CONSTRUCTOR_KEY, _range_constructor);
-  native_method(Class_Range, intern("start"), _range_start);
-  native_method(Class_Range, intern("inc"), _range_inc);
-  native_method(Class_Range, intern("end"), _range_end);
-
-  native_function(builtin, intern("__collect_garbage"), _collect_garbage);
-  native_function(builtin, intern("Int"), _Int);
-  native_function(builtin, intern("__stringify"), _stringify);
+void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("extend"), _string_extend);
   native_method(Class_String, CMP_FN_NAME, _string_cmp);
   native_method(Class_String, EQ_FN_NAME, _string_eq);
@@ -663,22 +684,55 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_String, intern("lshrink"), _string_lshrink);
   native_method(Class_String, intern("rshrink"), _string_rshrink);
   native_method(Class_String, intern("split"), _string_split);
-  native_method(Class_Array, intern("len"), _array_len);
-  native_method(Class_Array, intern("append"), _array_append);
-  native_method(Class_Tuple, intern("len"), _tuple_len);
-  native_method(Class_Object, CLASS_KEY, _object_class);
-  native_method(Class_Object, HASH_KEY, _object_hash);
+}
+
+void _builtin_add_function(Module *builtin) {
   native_method(Class_Function, MODULE_KEY, _function_module);
   native_method(Class_Function, PARENT_CLASS, _function_parent_class);
   native_method(Class_Function, intern("is_method"), _function_is_method);
   native_method(Class_FunctionRef, MODULE_KEY, _function_ref_module);
-  native_method(Class_Class, MODULE_KEY, _class_module);
   native_method(Class_Function, NAME_KEY, _function_name);
   native_method(Class_FunctionRef, NAME_KEY, _function_ref_name);
   native_method(Class_FunctionRef, OBJ_KEY, _function_ref_obj);
   native_method(Class_FunctionRef, intern("func"), _function_ref_func);
+}
+
+void _builtin_add_range(Module *builtin) {
+  Class_Range =
+      native_class(builtin, RANGE_CLASS_NAME, _range_init, _range_delete);
+  native_method(Class_Range, CONSTRUCTOR_KEY, _range_constructor);
+  native_method(Class_Range, intern("start"), _range_start);
+  native_method(Class_Range, intern("inc"), _range_inc);
+  native_method(Class_Range, intern("end"), _range_end);
+}
+
+void builtin_add_native(Module *builtin) {
+  Class_Process =
+      native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
+  Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+
+  native_function(builtin, intern("__collect_garbage"), _collect_garbage);
+  native_function(builtin, intern("Int"), _Int);
+  native_function(builtin, intern("__stringify"), _stringify);
+
+  _builtin_add_string(builtin);
+  _builtin_add_function(builtin);
+  _builtin_add_range(builtin);
+
+  native_method(Class_Class, MODULE_KEY, _class_module);
   native_method(Class_Class, NAME_KEY, _class_name);
-  native_method(Class_Module, NAME_KEY, _module_name);
   native_method(Class_Class, SUPER_KEY, _class_super);
+  native_method(Class_Class, intern("methods"), _class_methods);
+
+  native_method(Class_Object, CLASS_KEY, _object_class);
   native_method(Class_Object, SUPER_KEY, _object_super);
+  native_method(Class_Object, HASH_KEY, _object_hash);
+  native_method(Class_Object, intern("copy"), _object_copy);
+
+  native_method(Class_Array, intern("len"), _array_len);
+  native_method(Class_Array, intern("append"), _array_append);
+
+  native_method(Class_Tuple, intern("len"), _tuple_len);
+
+  native_method(Class_Module, NAME_KEY, _module_name);
 }

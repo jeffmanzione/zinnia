@@ -5,9 +5,8 @@ package(
 )
 
 cc_library(
-    name = "string",
-    srcs = ["string.c"],
-    hdrs = ["string.h"],
+    name = "platform",
+    hdrs = ["platform.h"],
     deps = [],
 )
 
@@ -16,9 +15,17 @@ cc_library(
     srcs = ["file.c"],
     hdrs = ["file.h"],
     deps = [
-        ":string",
+        "@file_utils//util:string",
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena:intern",
-        "@memory_wrapper//debug",
+    ],
+)
+
+cc_library(
+    name = "string_util",
+    srcs = ["string_util.c"],
+    hdrs = ["string_util.h"],
+    deps = [
+        "@memory_wrapper//alloc",
     ],
 )

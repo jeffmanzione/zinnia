@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 // Contains a primitive type, i.e.,
 //    char: int8_t
 //     int: int32_t

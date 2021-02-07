@@ -24,6 +24,8 @@ extern Class *Class_Process;
 extern Class *Class_Task;
 extern Class *Class_Future;
 
+extern Class *Class_Remote;
+
 void builtin_classes(Heap *heap, Module *builtin);
 
 #endif /* ENTITY_CLASS_CLASSES_ */

@@ -147,8 +147,8 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
-void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
+void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
     mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
@@ -161,7 +161,7 @@ void array_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
 }
 
 // Does this need to handle overwrites?
-void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
+void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
   ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
   Entity *e = tuple_get_mutable((Tuple *)array->_internal_obj, index);
@@ -170,4 +170,34 @@ void tuple_set(Heap *heap, Object *array, uint32_t index, const Entity *child) {
     return;
   }
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+}
+
+Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
+  ASSERT(NOT_NULL(e));
+  switch (e->type) {
+  case NONE:
+  case PRIMITIVE:
+    return *e;
+  default:
+    ASSERT(OBJECT == e->type);
+  }
+  Object *obj = e->obj;
+  // Guarantee only one copied version of each object.
+  Object *cpy = (Object *)map_lookup(copy_map, obj);
+  if (NULL != cpy) {
+    return entity_object(cpy);
+  }
+  cpy = heap_new(heap, obj->_class);
+  map_insert(copy_map, obj, cpy);
+
+  if (NULL != obj->_class->_copy_fn) {
+    obj->_class->_copy_fn(heap, copy_map, cpy, obj);
+  }
+
+  KL_iter members = keyedlist_iter(&obj->_members);
+  for (; kl_has(&members); kl_inc(&members)) {
+    Entity member_cpy = entity_copy(heap, copy_map, kl_value(&members));
+    object_set_member(heap, cpy, kl_key(&members), &member_cpy);
+  }
+  return entity_object(cpy);
 }

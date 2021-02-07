@@ -5,26 +5,14 @@ package(
 )
 
 cc_library(
-    name = "file_info",
-    srcs = ["file_info.c"],
-    hdrs = ["file_info.h"],
-    deps = [
-        ":token",
-        "//util:file",
-        "@memory_wrapper//alloc",
-        "@memory_wrapper//debug",
-    ],
-)
-
-cc_library(
     name = "lexer",
     srcs = ["lexer.c"],
     hdrs = ["lexer.h"],
     deps = [
-        ":file_info",
         ":token",
         "//struct:q",
-        "//util:string",
+        "@file_utils//util:string",
+        "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena",
         "@memory_wrapper//alloc/arena:intern",

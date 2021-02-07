@@ -14,7 +14,6 @@
 typedef struct _Tuple Tuple;
 
 void __tuple_create(Object *obj);
-// void __tuple_init(Object *obj, size_t size);
 void __tuple_delete(Object *obj);
 void __tuple_print(const Object *obj, FILE *out);
 

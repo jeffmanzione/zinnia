@@ -1,6 +1,21 @@
-load(":jeff_lang.bzl", "jeff_vm_library")
+load(":jeff_lang.bzl", "jeff_vm_binary", "jeff_vm_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "lib",
+    srcs = glob(["lib/*.jl"]),
+)
+
+jeff_vm_binary(
+    name = "test",
+    main = "test.jl",
+    deps = [],
+)
 
 jeff_vm_library(
-    name = "test",
-    srcs = ["test.jl"],
+    name = "hello",
+    srcs = ["hello.jl"],
 )
