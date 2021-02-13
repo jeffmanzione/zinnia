@@ -29,3 +29,13 @@ cc_library(
         "@memory_wrapper//alloc",
     ],
 )
+
+cc_library(
+    name = "socket",
+    srcs = ["socket.c"],
+    hdrs = ["socket.h"],
+    deps = [
+        ":platform",
+        "@memory_wrapper//alloc",
+    ],
+)
