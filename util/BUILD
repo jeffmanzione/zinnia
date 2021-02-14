@@ -34,6 +34,13 @@ cc_library(
     name = "socket",
     srcs = ["socket.c"],
     hdrs = ["socket.h"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [
+            "-lws2_32",
+            "-lwsock32",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":platform",
         "@memory_wrapper//alloc",

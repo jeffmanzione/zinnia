@@ -9,11 +9,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "util/platform.h"
-
-#ifdef OS_LINUX
-typedef int SOCKET;
+#if !defined(OS_WINDOWS)
+typedef uint32_t SOCKET;
 #endif
+
+#include "util/platform.h"
 
 typedef unsigned long ulong;
 

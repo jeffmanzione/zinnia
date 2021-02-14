@@ -44,24 +44,24 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-  case NONE:
-    return entity_int(0);
-  case OBJECT:
-    // Is this the right way to handle this?
-    return entity_int(0);
-  case PRIMITIVE:
-    switch (ptype(&args->pri)) {
-    case CHAR:
-      return entity_int(pchar(&args->pri));
-    case INT:
-      return *args;
-    case FLOAT:
-      return entity_int(pfloat(&args->pri));
+    case NONE:
+      return entity_int(0);
+    case OBJECT:
+      // Is this the right way to handle this?
+      return entity_int(0);
+    case PRIMITIVE:
+      switch (ptype(&args->pri)) {
+        case CHAR:
+          return entity_int(pchar(&args->pri));
+        case INT:
+          return *args;
+        case FLOAT:
+          return entity_int(pfloat(&args->pri));
+        default:
+          return raise_error(task, ctx, "Unknown primitive type.");
+      }
     default:
-      return raise_error(task, ctx, "Unknown primitive type.");
-    }
-  default:
-    return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -150,15 +150,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-  case INT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-    break;
-  case FLOAT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-    break;
-  default /*CHAR*/:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-    break;
+    case INT:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+      break;
+    case FLOAT:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+      break;
+    default /*CHAR*/:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+      break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -223,10 +223,6 @@ Entity _string_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(String_size(str));
 }
 
-#define IS_TUPLE(entity)                                                       \
-  ((NULL != entity) && (OBJECT == entity->type) &&                             \
-   (Class_Tuple == entity->obj->_class))
-
 Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   if (!IS_TUPLE(args)) {
@@ -258,10 +254,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class)                                              \
+#define IS_OBJECT_CLASS(e, class) \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype)                                              \
+#define IS_VALUE_TYPE(e, valtype) \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {

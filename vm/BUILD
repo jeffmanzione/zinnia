@@ -89,5 +89,6 @@ cc_library(
         "//entity/native:io",
         "//entity/native:math",
         "//entity/native:process",
+        "//entity/native:socket",
     ],
 )

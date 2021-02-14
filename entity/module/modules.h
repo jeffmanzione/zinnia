@@ -13,3 +13,4 @@ Module *Module_struct;
 Module *Module_math;
 Module *Module_classes;
 Module *Module_process;
+Module *Module_socket;

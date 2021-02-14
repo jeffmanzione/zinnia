@@ -5,14 +5,15 @@
 
 #include "socket.h"
 
-#ifdef OS_WINDOWS
-#include <windows.h>
-#include <winsock2.h>
-#else
+#include <stdio.h>
+
+#ifdef OS_LINUX
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#else
+#include <winsock2.h>
 #endif
 
 #include "alloc/alloc.h"
@@ -34,30 +35,38 @@ struct __SocketHandle {
 };
 
 void sockets_init() {
-#ifdef OS_WINDOWS
+#if defined(OS_WINDOWS)
   WSADATA wsaData;
   WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
 }
 
 void sockets_cleanup() {
-#ifdef OS_WINDOWS
+#if defined(OS_WINDOWS)
   WSACleanup();
 #endif
 }
 
 Socket *socket_create(int domain, int type, int protocol, uint16_t port) {
   Socket *sock = ALLOC2(Socket);
+  sock->sock = socket(domain, type, protocol);
+#if defined(OS_LINUX)
+  setsockopt(sock->sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+             sizeof(opt));
+#endif
   sock->in.sin_family = domain;
   sock->in.sin_addr.s_addr = htonl(INADDR_ANY);
   sock->in.sin_port = htons(port);
-  sock->sock = socket(domain, type, protocol);
   sock->is_closed = false;
   return sock;
 }
 
 bool socket_is_valid(const Socket *socket) {
+#if defined(OS_WINDOWS)
   return socket->sock != INVALID_SOCKET;
+#else
+  printf() return socket->sock >= 0;
+#endif
 }
 
 SocketStatus socket_bind(Socket *socket) {

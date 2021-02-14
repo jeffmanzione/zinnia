@@ -1,0 +1,16 @@
+module socket
+
+self.SOCKET_ERROR = -1
+self.AF_INET = 2
+self.INADDR_ANY = 0
+self.SOCK_STREAM = 1
+
+__init()
+
+; class Socket {
+; 
+; }
+
+; class SocketHandle {
+; 
+; }
