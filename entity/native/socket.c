@@ -139,14 +139,14 @@ Entity _SocketHandle_receive(Task *task, Context *ctx, Object *obj,
       string_new(task->parent_process->heap, buf, chars_received));
 }
 
-Entity _init(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity _init_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
   sockets_init();
   return NONE_ENTITY;
 }
 
-void socket_add_native(Module *process) {
-  native_function(process, intern("__init"), _init);
-  Class_SocketHandle = native_class(process, intern("SocketHandle"),
+void socket_add_native(Module *socket) {
+  native_function(socket, intern("__init"), _init_sockets);
+  Class_SocketHandle = native_class(socket, intern("SocketHandle"),
                                     _SocketHandle_init, _SocketHandle_delete);
   native_method(Class_SocketHandle, intern("new"), _SocketHandle_constructor);
   native_method(Class_SocketHandle, intern("send"), _SocketHandle_send);
@@ -154,7 +154,7 @@ void socket_add_native(Module *process) {
   native_method(Class_SocketHandle, intern("close"), _SocketHandle_close);
 
   Class_Socket =
-      native_class(process, intern("Socket"), _Socket_init, _Socket_delete);
+      native_class(socket, intern("Socket"), _Socket_init, _Socket_delete);
   native_method(Class_Socket, intern("new"), _Socket_constructor);
   native_method(Class_Socket, intern("accept"), _Socket_accept);
   native_method(Class_Socket, intern("close"), _Socket_close);

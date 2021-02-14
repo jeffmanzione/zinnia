@@ -50,10 +50,6 @@ void sockets_cleanup() {
 Socket *socket_create(int domain, int type, int protocol, uint16_t port) {
   Socket *sock = ALLOC2(Socket);
   sock->sock = socket(domain, type, protocol);
-#if defined(OS_LINUX)
-  setsockopt(sock->sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-             sizeof(opt));
-#endif
   sock->in.sin_family = domain;
   sock->in.sin_addr.s_addr = htonl(INADDR_ANY);
   sock->in.sin_port = htons(port);
@@ -65,7 +61,7 @@ bool socket_is_valid(const Socket *socket) {
 #if defined(OS_WINDOWS)
   return socket->sock != INVALID_SOCKET;
 #else
-  printf() return socket->sock >= 0;
+  return socket->sock >= 0;
 #endif
 }
 
