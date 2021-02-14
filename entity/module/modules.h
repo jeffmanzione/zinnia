@@ -3,14 +3,20 @@
 // Created on: Oct 3, 2020
 //     Author: Jeff Manzione
 
+#ifndef ENTITY_MODULE_MODULES_H_
+#define ENTITY_MODULE_MODULES_H_
+
 #include "entity/object.h"
 
-Module *Module_builtin;
-Module *Module_io;
-Module *Module_error;
-Module *Module_async;
-Module *Module_struct;
-Module *Module_math;
-Module *Module_classes;
-Module *Module_process;
-Module *Module_socket;
+extern Module *Module_builtin;
+extern Module *Module_io;
+extern Module *Module_error;
+extern Module *Module_async;
+extern Module *Module_struct;
+extern Module *Module_math;
+extern Module *Module_classes;
+extern Module *Module_process;
+extern Module *Module_socket;
+extern Module *Module_net;
+
+#endif /* ENTITY_MODULE_MODULES_H_ */
