@@ -144,12 +144,18 @@ Entity _init_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+Entity _cleanup_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
+  sockets_cleanup();
+  return NONE_ENTITY;
+}
+
 void socket_add_native(Module *socket) {
   native_function(socket, intern("__init"), _init_sockets);
+  native_function(socket, intern("__cleanup"), _cleanup_sockets);
   Class_SocketHandle = native_class(socket, intern("SocketHandle"),
                                     _SocketHandle_init, _SocketHandle_delete);
   native_method(Class_SocketHandle, intern("new"), _SocketHandle_constructor);
-  native_method(Class_SocketHandle, intern("send"), _SocketHandle_send);
+  native_method(Class_SocketHandle, intern("__send"), _SocketHandle_send);
   native_method(Class_SocketHandle, intern("receive"), _SocketHandle_receive);
   native_method(Class_SocketHandle, intern("close"), _SocketHandle_close);
 

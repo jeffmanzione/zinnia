@@ -7,10 +7,14 @@ self.SOCK_STREAM = 1
 
 __init()
 
+self.cleanup = () -> __cleanup()
+
 ; class Socket {
 ; 
 ; }
 
-; class SocketHandle {
-; 
-; }
+class SocketHandle {
+  method send(msg) {
+    __send(str(msg))
+  } 
+}

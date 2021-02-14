@@ -25,11 +25,6 @@ self.COOKIE_KEY = 'Cookie'
 self.COOKIE_SEPARATOR = '; '
 
 self.NOT_FOUND = 'Could not find file.'
-self.HEADER_GENERIC_200_HTML = 'HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n'
-self.HEADER_GENERIC_200_CSS = 'HTTP/1.1 200 OK\r\nContent-Type: text/css; charset=UTF-8\r\n\r\n'
-self.HEADER_GENERIC_200_JS = 'HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=UTF-8\r\n\r\n'
-self.HEADER_GENERIC_500 = 'HTTP/1.1 500 Internal Server Error\r\n\r\n'
-self.HEADER_GENERIC_501 = 'HTTP/1.1 501 Not Implemented\r\n\r\n'
 
 
 class Header {
@@ -65,14 +60,31 @@ def parse_header(header_text) {
   return Header(protocol, version, status_code, status, content_type, charset)
 }
 
-
 class HttpRequest {
+    field _headers
     new(field type,
         field path,
         field params,
         field protocol,
         field version,
-        field map) {}
+        headers) {
+          _headers = headers
+        }
+    method getHeaderValue(key) {
+      return _headers[key]
+    }
+    method getHost() {
+      return _headers['Host']
+    }
+    method getConnection() {
+      return _headers['Connection']
+    }
+    method getUserAgent() {
+      return _headers['User-Agent']
+    }
+    method getAccept() {
+      return _headers['Accept'].split(',')
+    }
     method to_s() {
       ret = cat(type, WHITE_SPACE, path)
       if params and (params.keys.len() > 0) {
@@ -84,15 +96,73 @@ class HttpRequest {
         ret.extend(AMPER.join(param_arr))
       }
       ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
-          .extend(version).extend('\n')
-      if map {
-        for (k,v) in map {
+          .extend(version).extend('\r\n')
+      if _headers {
+        for (k, v) in _headers {
           ret.extend('  ').extend(k).extend(': ').extend(str(v))
-              .extend('\n')
+              .extend('\r\n')
         }
       }
       return ret
     }
+}
+
+
+class HttpResponse {
+  field _protocol, _version, _status_code, _status
+  field _headers, _content
+  new() {
+    _protocol = HTTP
+    _version = 1.1
+    _status_code = 200
+    _status = 'OK'
+    _headers = {}
+    _headers['Content-Type'] = 'text/html'
+    _headers['Accept-Ranges'] = 'bytes'
+    ; Pad with 2 bytes for '\r\n'
+    _headers['Content-Length'] = 2
+    _content = ''
+  }
+  method withServer(server) {
+    _headers['Server'] = server
+    return self
+  }
+  method setDate(date_text) {
+    _headers['Date'] = date_text
+    return self
+  }
+  method setLastModified(date_text) {
+    _headers['Last-Modified'] = date_text
+    return self
+  }
+  method setContentType(type) {
+    _headers['Content-Type'] = type
+    return self
+  }
+  method setAcceptRanges(ranges) {
+    _headers['Accept-Ranges'] = ranges
+    return self
+  }
+  method setCookie(cookie) {
+    if cookie is Cookies {
+      cookie = cookie.to_s()
+    }
+    _headers['Set-Cookie'] = cookie
+  }
+  method addContent(text) {
+    _content.extend(text)
+    _headers['Content-Length'] = _headers['Content-Length'] + text.len()
+    return self
+  }
+  method to_s() {
+    res = cat(_protocol, '/', _version, ' ', _status_code, ' ', _status, '\r\n')
+    for (k, v) in _headers {
+      res.extend(cat(k, ': ', v, '\r\n'))
+    }
+    res.extend('\r\n\r\n')
+    res.extend(_content)
+    return res
+  }
 }
 
 def redirect(request, target) {
@@ -184,4 +254,32 @@ def parse_cookie(cookie) {
     res[kv[0]]= kv[1]
   }
   return Cookies(res)
+}
+
+class HttpSocketHandle {
+  new(field raw_handle) {}
+
+  method receive() {
+    return parse_request(raw_handle.receive())
+  }
+  method send(http_response) {
+    if ~(http_response is HttpResponse) {
+      throw Error('HttpSocketHandle.send() expects an HttpResponse argument.')
+    }
+    raw_handle.send(http_response.to_s())
+  }
+  method close() {
+    raw_handle.close()
+  }
+}
+
+class HttpSocket {
+  new(field raw_socket) {}
+
+  method accept() {
+    return HttpSocketHandle(raw_socket.accept())
+  }
+  method close() {
+    raw_socket.close()
+  }
 }
