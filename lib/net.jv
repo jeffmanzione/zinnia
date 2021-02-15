@@ -200,8 +200,9 @@ def parse_params(path) {
           eq_index = part.find(EQUALS)
           if ~eq_index {
             a[part] ='1'
+          } else {
+            a[part.substr(0, eq_index)] = part.substr(eq_index + 1)
           }
-          a[part.substr(0, eq_index)] = part.substr(eq_index + 1)
           return a
         },
         {}))
@@ -260,13 +261,13 @@ class HttpSocketHandle {
   new(field raw_handle) {}
 
   method receive() {
-    return parse_request(raw_handle.receive())
+    return parse_request(await raw_handle.receive())
   }
   method send(http_response) {
     if ~(http_response is HttpResponse) {
       throw Error('HttpSocketHandle.send() expects an HttpResponse argument.')
     }
-    raw_handle.send(http_response.to_s())
+    await raw_handle.send(http_response.to_s())
   }
   method close() {
     raw_handle.close()
@@ -277,7 +278,7 @@ class HttpSocket {
   new(field raw_socket) {}
 
   method accept() {
-    return HttpSocketHandle(raw_socket.accept())
+    return HttpSocketHandle(await raw_socket.accept())
   }
   method close() {
     raw_socket.close()

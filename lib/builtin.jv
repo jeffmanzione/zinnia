@@ -163,6 +163,31 @@ class Array {
     } 
     return result
   }
+  method collect(f, s=None) {
+    if len() == 0 {
+      if s is Function {
+        return s()
+      } else {
+        return s
+      }
+    }
+    i = 0
+    a = None
+    if s {
+      if s is Function {
+        a = s()
+      } else {
+        a = s
+      }
+    } else {
+      a = self[0]
+      i = 1
+    }
+    for _, i<len(), i=i+1 {
+      a = f(a, self[i])
+    }
+    return a
+  }
   method iter() {
     return IndexIterator(self)
   }

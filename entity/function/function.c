@@ -34,6 +34,7 @@ inline void function_init(Function *f, const char name[], const Module *module,
   f->_is_anon = is_anon;
   f->_is_const = is_const;
   f->_is_async = is_async;
+  f->_is_background = false;
   f->_reflection = NULL;
 }
 

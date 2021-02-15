@@ -21,6 +21,8 @@ void process_init(Process *process) {
   process->task_create_lock = mutex_create();
   process->task_queue_lock = mutex_create();
   process->task_waiting_lock = mutex_create();
+  process->task_wait_cond = mutex_condition(process->task_waiting_lock);
+  process->task_complete_lock = mutex_create();
   Q_init(&process->queued_tasks);
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
@@ -50,7 +52,9 @@ void process_finalize(Process *process) {
   heap_delete(process->heap);
   mutex_close(process->task_create_lock);
   mutex_close(process->task_queue_lock);
+  mutex_condition_delete(process->task_wait_cond);
   mutex_close(process->task_waiting_lock);
+  mutex_close(process->task_complete_lock);
 }
 
 void _task_add_reflection(Process *process, Task *task) {
@@ -58,7 +62,7 @@ void _task_add_reflection(Process *process, Task *task) {
   task->_reflection->_internal_obj = task;
 }
 
-Task *process_create_task(Process *process) {
+Task *process_create_unqueued_task(Process *process) {
   Task *task;
   SYNCHRONIZED(process->task_create_lock, {
     task = (Task *)__arena_alloc(&process->task_arena);
@@ -67,6 +71,11 @@ Task *process_create_task(Process *process) {
     _task_add_reflection(process, task);
     heap_inc_edge(process->heap, process->_reflection, task->_reflection);
   });
+  return task;
+}
+
+Task *process_create_task(Process *process) {
+  Task *task = process_create_unqueued_task(process);
   process_enqueue_task(process, task);
   return task;
 }
@@ -96,4 +105,9 @@ inline void process_insert_waiting_task(Process *process, Task *task) {
 inline void process_remove_waiting_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_waiting_lock,
                { set_remove(&process->waiting_tasks, task); });
+}
+
+inline void process_mark_task_complete(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_complete_lock,
+               { set_insert(&process->completed_tasks, task); });
 }

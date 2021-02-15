@@ -42,6 +42,10 @@ Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
     return raise_error(task, ctx, "Expected tuple input.");
   }
   Tuple *tuple = (Tuple *)args->obj->_internal_obj;
+
+  if (tuple_size(tuple) != 5) {
+    return raise_error(task, ctx, "Expected tuple to have exactly 5 args.");
+  }
   Socket *socket = socket_create(
       pint(&tuple_get(tuple, 0)->pri), pint(&tuple_get(tuple, 1)->pri),
       pint(&tuple_get(tuple, 2)->pri), pint(&tuple_get(tuple, 3)->pri));
@@ -155,13 +159,15 @@ void socket_add_native(Module *socket) {
   Class_SocketHandle = native_class(socket, intern("SocketHandle"),
                                     _SocketHandle_init, _SocketHandle_delete);
   native_method(Class_SocketHandle, intern("new"), _SocketHandle_constructor);
-  native_method(Class_SocketHandle, intern("__send"), _SocketHandle_send);
-  native_method(Class_SocketHandle, intern("receive"), _SocketHandle_receive);
+  native_background_method(Class_SocketHandle, intern("__send"),
+                           _SocketHandle_send);
+  native_background_method(Class_SocketHandle, intern("receive"),
+                           _SocketHandle_receive);
   native_method(Class_SocketHandle, intern("close"), _SocketHandle_close);
 
   Class_Socket =
       native_class(socket, intern("Socket"), _Socket_init, _Socket_delete);
   native_method(Class_Socket, intern("new"), _Socket_constructor);
-  native_method(Class_Socket, intern("accept"), _Socket_accept);
+  native_background_method(Class_Socket, intern("accept"), _Socket_accept);
   native_method(Class_Socket, intern("close"), _Socket_close);
 }

@@ -15,6 +15,6 @@ self.cleanup = () -> __cleanup()
 
 class SocketHandle {
   method send(msg) {
-    __send(str(msg))
+    return __send(msg)
   } 
 }

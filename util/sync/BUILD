@@ -23,6 +23,18 @@ cc_library(
 )
 
 cc_library(
+    name = "semaphore",
+    srcs = ["semaphore.c"],
+    hdrs = ["semaphore.h"],
+    linkopts = ["-lpthread"],
+    deps = [
+        ":constants",
+        "//util:platform",
+        "@memory_wrapper//alloc",
+    ],
+)
+
+cc_library(
     name = "thread",
     srcs = ["thread.c"],
     hdrs = ["thread.h"],
@@ -30,6 +42,19 @@ cc_library(
     deps = [
         ":constants",
         "//util:platform",
+        "@memory_wrapper//alloc",
+    ],
+)
+
+cc_library(
+    name = "threadpool",
+    srcs = ["threadpool.c"],
+    hdrs = ["threadpool.h"],
+    deps = [
+        ":mutex",
+        ":semaphore",
+        ":thread",
+        "//struct:q",
         "@memory_wrapper//alloc",
     ],
 )
