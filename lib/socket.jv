@@ -9,12 +9,5 @@ __init()
 
 self.cleanup = () -> __cleanup()
 
-; class Socket {
-; 
-; }
-
-class SocketHandle {
-  method send(msg) {
-    return __send(msg)
-  } 
-}
+; class Socket { }
+; class SocketHandle { }

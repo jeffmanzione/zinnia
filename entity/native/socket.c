@@ -159,7 +159,7 @@ void socket_add_native(Module *socket) {
   Class_SocketHandle = native_class(socket, intern("SocketHandle"),
                                     _SocketHandle_init, _SocketHandle_delete);
   native_method(Class_SocketHandle, intern("new"), _SocketHandle_constructor);
-  native_background_method(Class_SocketHandle, intern("__send"),
+  native_background_method(Class_SocketHandle, intern("send"),
                            _SocketHandle_send);
   native_background_method(Class_SocketHandle, intern("receive"),
                            _SocketHandle_receive);
