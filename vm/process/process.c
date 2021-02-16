@@ -97,6 +97,13 @@ inline void process_enqueue_task(Process *process, Task *task) {
                { *Q_add_last(&process->queued_tasks) = task; });
 }
 
+size_t process_queue_size(Process *process) {
+  size_t size;
+  SYNCHRONIZED(process->task_queue_lock,
+               { size = Q_size(&process->queued_tasks); });
+  return size;
+}
+
 inline void process_insert_waiting_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_waiting_lock,
                { set_insert(&process->waiting_tasks, task); });

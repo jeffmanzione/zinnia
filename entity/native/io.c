@@ -179,9 +179,9 @@ Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
 void io_add_native(Module *io) {
   Class *file = native_class(io, intern("__File"), __file_init, __file_delete);
   native_method(file, CONSTRUCTOR_KEY, _file_constructor);
-  native_method(file, intern("__close"), _file_close);
-  native_method(file, intern("__gets"), _file_gets);
-  native_method(file, intern("__getline"), _file_getline);
-  native_method(file, intern("__getall"), _file_getall);
-  native_method(file, intern("__puts"), _file_puts);
+  native_background_method(file, intern("__close"), _file_close);
+  native_background_method(file, intern("__gets"), _file_gets);
+  native_background_method(file, intern("__getline"), _file_getline);
+  native_background_method(file, intern("__getall"), _file_getall);
+  native_background_method(file, intern("__puts"), _file_puts);
 }

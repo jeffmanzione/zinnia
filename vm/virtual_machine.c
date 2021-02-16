@@ -399,7 +399,6 @@ inline void _execute_DUP(VM *vm, Task *task, Context *context,
 
 inline void _execute_PUSH(VM *vm, Task *task, Context *context,
                           const Instruction *ins) {
-  // DEBUGF("TEST");
   Object *str;
   Entity *member;
   Entity tmp;
@@ -548,7 +547,6 @@ typedef struct {
 } BackgroundThreadArgs;
 
 void _execute_in_background(BackgroundThreadArgs *args) {
-  DEBUGF("_execute_in_background");
   NativeFn native_fn = (NativeFn)args->func->_native_fn;
   *task_mutable_resval(args->task) =
       native_fn(args->task, args->context, args->self,
@@ -556,7 +554,6 @@ void _execute_in_background(BackgroundThreadArgs *args) {
 }
 
 void _execute_in_background_callback(BackgroundThreadArgs *args) {
-  DEBUGF("_execute_in_background_callback");
   args->task->state = TASK_COMPLETE;
   _mark_task_complete(args->task->parent_process, args->task);
   DEALLOC(args);
@@ -1296,10 +1293,8 @@ void _mark_task_complete(Process *process, Task *task) {
   process_mark_task_complete(process, task);
   // Only requeue parent task if it is waiting.
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
-  DEBUGF("dependent_tasks=%d", set_size(&task->dependent_tasks));
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
     Task *dependent_task = (Task *)value(&dependent_tasks);
-    DEBUGF("dependent_task=%p", dependent_task);
     if (TASK_WAITING != dependent_task->state) {
       continue;
     }
@@ -1307,7 +1302,6 @@ void _mark_task_complete(Process *process, Task *task) {
     process_enqueue_task(dependent_task->parent_process, dependent_task);
     process_remove_waiting_task(dependent_task->parent_process, dependent_task);
     mutex_condition_broadcast(process->task_wait_cond);
-    DEBUGF("\tYO");
   }
 }
 
@@ -1327,6 +1321,7 @@ bool _process_is_done(Process *process) {
 void process_run(Process *process) {
   VM *vm = process->vm;
   Task *task;
+top_of_fn:
   while (NULL != (task = process_pop_task(process))) {
     process->current_task = task;
     TaskState task_state = vm_execute_task(vm, task);
@@ -1359,31 +1354,20 @@ void process_run(Process *process) {
   }
 
   if (_process_is_done(process)) {
-    DEBUGF("process_is_done");
     return;
   }
 
   int waiting_task_count;
   SYNCHRONIZED(process->task_waiting_lock,
                { waiting_task_count = set_size(&process->waiting_tasks); });
-  DEBUGF("NEED TO WAIT FOR %d", waiting_task_count);
   SYNCHRONIZED(process->task_waiting_lock, {
     while (set_size(&process->waiting_tasks) != 0 &&
-           set_size(&process->waiting_tasks) == waiting_task_count) {
+           set_size(&process->waiting_tasks) == waiting_task_count &&
+           process_queue_size(process) == 0) {
       mutex_condition_wait(process->task_wait_cond);
-      DEBUGF("WE DID IT");
-      M_iter waiters = set_iter(&process->waiting_tasks);
-      for (; has(&waiters); inc(&waiters)) {
-        Task *t = (Task *)value(&waiters);
-        DEBUGF("\twaiter=%p", t);
-        if (NULL != t->current->func) {
-          DEBUGF("\t\tfunc=%p, %s", t->current->func, t->current->func->_name);
-        }
-      }
     }
-    DEBUGF("HERERERERERERERERERERER");
   });
-  process_run(process);
+  goto top_of_fn;
 }
 
 void *_process_run_return_void_ptr(void *ptr) {
