@@ -265,7 +265,7 @@ class HttpSocketHandle {
   }
   method send(http_response) {
     if ~(http_response is HttpResponse) {
-      throw Error('HttpSocketHandle.send() expects an HttpResponse argument.')
+      raise Error('HttpSocketHandle.send() expects an HttpResponse argument.')
     }
     await raw_handle.send(http_response.to_s())
   }

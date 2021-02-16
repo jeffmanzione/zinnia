@@ -8,20 +8,22 @@ import net
 import process
 import socket
 
+; Creates the socket listening on port 80, wrapping it in HTTP.
 sock = net.HttpSocket(
     socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
 
 io.println('Listening on port 80.')
 io.println('End the program by pressing Enter.')
 
-; Wait for user to press enter.
 is_done = False
+; It must be async; otherwise, it will block the rest of the program.
 () async {
   io.IN.getline()
   is_done = True
   io.println('Detected user input. Will stop after next request.')
 }()
 
+; Attempt to receive incomming connections.
 while ~is_done {
   handle = sock.accept()
   request = handle.receive()
