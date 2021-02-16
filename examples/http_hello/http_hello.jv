@@ -1,3 +1,6 @@
+; Example program that listens on port 80 for HTTP requests, and responds with
+; hello-world messages.
+
 module http_hello
 
 import io
@@ -5,29 +8,27 @@ import net
 import process
 import socket
 
-sock = net.HttpSocket(socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
+sock = net.HttpSocket(
+    socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
 
-io.println('Connected on port 80.')
+io.println('Listening on port 80.')
+io.println('End the program by pressing Enter.')
 
+; Wait for user to press enter.
 is_done = False
-
-wait_for_input = () async {
+() async {
   io.IN.getline()
   is_done = True
-}
-
-wait_for_input()
-
-def handle_connection(handle) {
-  msg = handle.receive()
-  io.println(msg)
-  handle.send(net.HttpResponse().addContent('Hello, world!'))
-  handle.close()
-}
+  io.println('Detected user input. Will stop after next request.')
+}()
 
 while ~is_done {
-  io.println(cat('is_done=', is_done))
-  handle_connection(await sock.accept())
+  handle = sock.accept()
+  request = handle.receive()
+  io.println('Received request:')
+  io.println(request)
+  handle.send(net.HttpResponse().addContent('Hello, world!'))
+  handle.close()
 }
 
 sock.close()
