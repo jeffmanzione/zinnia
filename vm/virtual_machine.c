@@ -1372,11 +1372,14 @@ void process_run(Process *process) {
            set_size(&process->waiting_tasks) == waiting_task_count) {
       mutex_condition_wait(process->task_wait_cond);
       DEBUGF("WE DID IT");
-      // M_iter waiters = set_iter(&process->waiting_tasks);
-      // for (; has(&waiters); inc(&waiters)) {
-      //   Task *t = (Task *)value(&waiters);
-      //   DEBUGF("\twaiter=%p", t);
-      // }
+      M_iter waiters = set_iter(&process->waiting_tasks);
+      for (; has(&waiters); inc(&waiters)) {
+        Task *t = (Task *)value(&waiters);
+        DEBUGF("\twaiter=%p", t);
+        if (NULL != t->current->func) {
+          DEBUGF("\t\tfunc=%p, %s", t->current->func, t->current->func->_name);
+        }
+      }
     }
     DEBUGF("HERERERERERERERERERERER");
   });
