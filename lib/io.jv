@@ -16,11 +16,11 @@ class _FileInternal {
     }
     file = __File(fn, mode)
   }
-  method gets(n) file.__gets(n)
-  method getline() file.__getline()
-  method getall() file.__getall()
-  method puts(s) file.__puts(s)
-  method close() file.__close()
+  method gets(n) await file.__gets(n)
+  method getline() await file.__getline()
+  method getall() await file.__getall()
+  method puts(s) await file.__puts(s)
+  method close() await file.__close()
 }
 
 class FileReader {

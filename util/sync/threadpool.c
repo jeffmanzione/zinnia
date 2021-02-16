@@ -24,7 +24,6 @@ struct __ThreadPool {
 void _do_work(ThreadPool *tp) {
   _Work *w = NULL;
   for (;;) {
-    DEBUGF("A");
     semaphore_wait(tp->thread_sem);
     SYNCHRONIZED(tp->work_mutex, {
       if (!Q_is_empty(&tp->work)) {
@@ -39,7 +38,6 @@ void _do_work(ThreadPool *tp) {
       DEALLOC(w);
       w = NULL;
     }
-    DEBUGF("B");
   }
 }
 

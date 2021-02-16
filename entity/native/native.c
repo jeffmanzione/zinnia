@@ -32,6 +32,14 @@ Function *native_function(Module *module, const char name[],
   return fn;
 }
 
+Function *native_background_function(Module *module, const char name[],
+                                     NativeFn native_fn) {
+  Function *fn = native_function(module, name, native_fn);
+  fn->_is_background = true;
+  fn->_is_async = true;
+  return fn;
+}
+
 Class *native_class(Module *module, const char name[], ObjInitFn init_fn,
                     ObjDelFn del_fn) {
   Class *cls = module_add_class(module, name, Class_Object);
