@@ -1,0 +1,34 @@
+module http_hello
+
+import io
+import net
+import process
+import socket
+
+sock = net.HttpSocket(socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
+
+io.println('Connected on port 80.')
+
+is_done = False
+
+wait_for_input = () async {
+  io.IN.getline()
+  is_done = True
+}
+
+wait_for_input()
+
+def handle_connection(handle) {
+  msg = handle.receive()
+  io.println(msg)
+  handle.send(net.HttpResponse().addContent('Hello, world!'))
+  handle.close()
+}
+
+while ~is_done {
+  io.println(cat('is_done=', is_done))
+  handle_connection(await sock.accept())
+}
+
+sock.close()
+socket.cleanup()
