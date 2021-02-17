@@ -183,3 +183,23 @@ cc_library(
         "@memory_wrapper//struct:struct_defaults",
     ],
 )
+
+cc_library(
+    name = "socket",
+    srcs = ["socket.c"],
+    hdrs = ["socket.h"],
+    deps = [
+        "//entity",
+        "//entity:object",
+        "//entity/array",
+        "//entity/class:classes",
+        "//entity/native",
+        "//entity/native:error",
+        "//entity/string",
+        "//entity/string:string_helper",
+        "//entity/tuple",
+        "//util:socket",
+        "//vm/process:processes",
+        "@memory_wrapper//alloc/arena:intern",
+    ],
+)

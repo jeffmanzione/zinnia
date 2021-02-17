@@ -74,9 +74,7 @@ Entity _stackline_function(Task *task, Context *ctx, Object *obj,
 }
 
 Entity _stackline_token(Task *task, Context *ctx, Object *obj, Entity *args) {
-  DEBUGF("test %p", obj);
   _StackLine *sl = (_StackLine *)obj->_internal_obj;
-  DEBUGF("name=%p %p", sl->func, sl->error_token);
   Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
   Entity token_text = entity_object(string_new(
@@ -105,9 +103,9 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
       sl->module = c->module;
-      sl->func = (Function *)c->func;  // blessed
+      sl->func = (Function *)c->func; // blessed
       sl->error_token =
-          (Token *)tape_get_source(c->tape, c->ins)->token;  // blessed
+          (Token *)tape_get_source(c->tape, c->ins)->token; // blessed
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }

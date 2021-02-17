@@ -15,6 +15,7 @@
 #endif
 
 #include "alloc/alloc.h"
+#include "debug/debug.h"
 
 inline Mutex mutex_create() {
 #ifdef OS_WINDOWS
@@ -48,5 +49,48 @@ inline void mutex_close(Mutex mutex) {
 #else
   pthread_mutex_destroy(mutex);
   DEALLOC(mutex);
+#endif
+}
+
+struct __Condition {
+#if !defined(OS_WINDOWS)
+  pthread_cond_t cond;
+#endif
+  Mutex mutex;
+};
+
+inline Condition *mutex_condition(Mutex mutex) {
+  Condition *cond = ALLOC2(Condition);
+  cond->mutex = mutex;
+#ifdef OS_WINDOWS
+  ERROR("Unimplemented.");
+#else
+  pthread_cond_init(&cond->cond, NULL);
+#endif
+  return cond;
+}
+
+inline void mutex_condition_delete(Condition *cond) {
+#ifdef OS_WINDOWS
+  ERROR("Unimplemented.");
+#else
+  pthread_cond_destroy(&cond->cond);
+  DEALLOC(cond);
+#endif
+}
+
+inline void mutex_condition_broadcast(Condition *cond) {
+#ifdef OS_WINDOWS
+  ERROR("Unimplemented.");
+#else
+  pthread_cond_broadcast(&cond->cond);
+#endif
+}
+
+inline void mutex_condition_wait(Condition *cond) {
+#ifdef OS_WINDOWS
+  ERROR("Unimplemented.");
+#else
+  pthread_cond_wait(&cond->cond, cond->mutex);
 #endif
 }

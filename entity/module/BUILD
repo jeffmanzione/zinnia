@@ -19,6 +19,7 @@ cc_library(
 
 cc_library(
     name = "modules",
+    srcs = ["modules.c"],
     hdrs = ["modules.h"],
     deps = [
         "//entity:object",

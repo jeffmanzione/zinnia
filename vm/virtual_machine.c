@@ -30,8 +30,11 @@
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
+#define DEFAULT_THREADPOOL_SIZE 2
+
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context);
+void _mark_task_complete(Process *process, Task *task);
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
@@ -249,6 +252,7 @@ VM *vm_create() {
   VM *vm = ALLOC2(VM);
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
   vm->process_create_lock = mutex_create();
+  vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
   read_builtin(&vm->mm, vm->main->heap);
@@ -268,6 +272,7 @@ void vm_delete(VM *vm) {
   }
   alist_finalize(&vm->processes);
   mutex_close(vm->process_create_lock);
+  threadpool_delete(vm->background_pool);
   modulemanager_finalize(&vm->mm);
   DEALLOC(vm);
 }
@@ -394,7 +399,6 @@ inline void _execute_DUP(VM *vm, Task *task, Context *context,
 
 inline void _execute_PUSH(VM *vm, Task *task, Context *context,
                           const Instruction *ins) {
-  // DEBUGF("TEST");
   Object *str;
   Entity *member;
   Entity tmp;
@@ -535,6 +539,26 @@ Context *_execute_as_new_task(Task *task, Object *self, Module *m,
   return ctx;
 }
 
+typedef struct {
+  Task *task;
+  Context *context;
+  const Function *func;
+  Object *self;
+} BackgroundThreadArgs;
+
+void _execute_in_background(BackgroundThreadArgs *args) {
+  NativeFn native_fn = (NativeFn)args->func->_native_fn;
+  *task_mutable_resval(args->task) =
+      native_fn(args->task, args->context, args->self,
+                (Entity *)task_get_resval(args->task));
+}
+
+void _execute_in_background_callback(BackgroundThreadArgs *args) {
+  args->task->state = TASK_COMPLETE;
+  _mark_task_complete(args->task->parent_process, args->task);
+  DEALLOC(args);
+}
+
 // VERY IMPORTANT: context is only necessary for native functions!
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context) {
@@ -542,6 +566,23 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
       ERROR("Invalid native function.");
+    }
+    if (func->_is_background) {
+      Task *new_task = process_create_unqueued_task(task->parent_process);
+      new_task->parent_task = task;
+      ASSERT(func->_is_async);
+      *task_mutable_resval(new_task) = *task_get_resval(task);
+      *task_mutable_resval(task) = entity_object(future_create(new_task));
+      BackgroundThreadArgs *args = ALLOC2(BackgroundThreadArgs);
+      args->task = new_task;
+      args->context = context;
+      args->func = func;
+      args->self = self;
+      threadpool_execute(task->parent_process->vm->background_pool,
+                         (VoidFnPtr)_execute_in_background,
+                         (VoidFnPtr)_execute_in_background_callback,
+                         (VoidPtr)args);
+      return false;
     }
     *task_mutable_resval(task) =
         native_fn(task, context, self, (Entity *)task_get_resval(task));
@@ -557,9 +598,8 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
     *task_mutable_resval(task) =
         entity_object(future_create(fn_ctx->parent_task));
     return false;
-  } else {
-    set_insert(&fn_ctx->parent_task->dependent_tasks, task);
   }
+  set_insert(&fn_ctx->parent_task->dependent_tasks, task);
   return true;
 }
 
@@ -1249,9 +1289,39 @@ end_of_loop:
   return task->state;
 }
 
+void _mark_task_complete(Process *process, Task *task) {
+  process_mark_task_complete(process, task);
+  // Only requeue parent task if it is waiting.
+  M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+  for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+    Task *dependent_task = (Task *)value(&dependent_tasks);
+    if (TASK_WAITING != dependent_task->state) {
+      continue;
+    }
+    *task_mutable_resval(dependent_task) = *task_get_resval(task);
+    process_enqueue_task(dependent_task->parent_process, dependent_task);
+    process_remove_waiting_task(dependent_task->parent_process, dependent_task);
+    mutex_condition_broadcast(process->task_wait_cond);
+  }
+}
+
+bool _process_is_done(Process *process) {
+  bool is_done = false;
+  SYNCHRONIZED(process->task_waiting_lock, {
+    SYNCHRONIZED(process->task_queue_lock, {
+      if (set_size(&process->waiting_tasks) == 0 &&
+          Q_size(&process->queued_tasks) == 0) {
+        is_done = true;
+      }
+    });
+  });
+  return is_done;
+}
+
 void process_run(Process *process) {
   VM *vm = process->vm;
   Task *task;
+top_of_fn:
   while (NULL != (task = process_pop_task(process))) {
     process->current_task = task;
     TaskState task_state = vm_execute_task(vm, task);
@@ -1272,39 +1342,32 @@ void process_run(Process *process) {
         _call_function(task, (Context *)NULL, errorln->_function_obj);
       } else {
         task->parent_task->child_task_has_error = true;
-        set_insert(&process->completed_tasks, task);
-        M_iter dependent_tasks = set_iter(&task->dependent_tasks);
-        for (; has(&dependent_tasks); inc(&dependent_tasks)) {
-          Task *dependent_task = (Task *)value(&dependent_tasks);
-          if (TASK_WAITING != dependent_task->state) {
-            continue;
-          }
-          *task_mutable_resval(dependent_task) = *task_get_resval(task);
-          process_enqueue_task(dependent_task->parent_process, dependent_task);
-          process_remove_waiting_task(dependent_task->parent_process,
-                                      dependent_task);
-        }
+        _mark_task_complete(process, task);
       }
       break;
     case TASK_COMPLETE:
-      set_insert(&process->completed_tasks, task);
-      // Only requeue parent task if it is waiting.
-      M_iter dependent_tasks = set_iter(&task->dependent_tasks);
-      for (; has(&dependent_tasks); inc(&dependent_tasks)) {
-        Task *dependent_task = (Task *)value(&dependent_tasks);
-        if (TASK_WAITING != dependent_task->state) {
-          continue;
-        }
-        *task_mutable_resval(dependent_task) = *task_get_resval(task);
-        process_enqueue_task(dependent_task->parent_process, dependent_task);
-        process_remove_waiting_task(dependent_task->parent_process,
-                                    dependent_task);
-      }
+      _mark_task_complete(process, task);
       break;
     default:
       ERROR("Some unknown TaskState.");
     }
   }
+
+  if (_process_is_done(process)) {
+    return;
+  }
+
+  int waiting_task_count;
+  SYNCHRONIZED(process->task_waiting_lock,
+               { waiting_task_count = set_size(&process->waiting_tasks); });
+  SYNCHRONIZED(process->task_waiting_lock, {
+    while (set_size(&process->waiting_tasks) != 0 &&
+           set_size(&process->waiting_tasks) == waiting_task_count &&
+           process_queue_size(process) == 0) {
+      mutex_condition_wait(process->task_wait_cond);
+    }
+  });
+  goto top_of_fn;
 }
 
 void *_process_run_return_void_ptr(void *ptr) {

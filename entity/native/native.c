@@ -16,11 +16,27 @@ Function *native_method(Class *class, const char name[], NativeFn native_fn) {
   return fn;
 }
 
+Function *native_background_method(Class *class, const char *name,
+                                   NativeFn native_fn) {
+  Function *fn = native_method(class, name, native_fn);
+  fn->_is_background = true;
+  fn->_is_async = true;
+  return fn;
+}
+
 Function *native_function(Module *module, const char name[],
                           NativeFn native_fn) {
   Function *fn = module_add_function(module, name, 0, false, false);
   fn->_is_native = true;
   fn->_native_fn = native_fn;
+  return fn;
+}
+
+Function *native_background_function(Module *module, const char name[],
+                                     NativeFn native_fn) {
+  Function *fn = native_function(module, name, native_fn);
+  fn->_is_background = true;
+  fn->_is_async = true;
   return fn;
 }
 

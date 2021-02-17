@@ -78,7 +78,11 @@ struct __Process {
   __Arena context_arena;
   Mutex task_create_lock;
   Mutex task_queue_lock;
+
   Mutex task_waiting_lock;
+  Condition *task_wait_cond;
+
+  Mutex task_complete_lock;
 
   Task *current_task;
   Q queued_tasks;
@@ -86,7 +90,7 @@ struct __Process {
   Set completed_tasks;
 
   Object *_reflection;
-  ThreadHandle thread;  // Null if main thread.
+  ThreadHandle thread; // Null if main thread.
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

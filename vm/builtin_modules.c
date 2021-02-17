@@ -15,6 +15,7 @@
 #include "entity/native/io.h"
 #include "entity/native/math.h"
 #include "entity/native/process.h"
+#include "entity/native/socket.h"
 
 void read_builtin(ModuleManager *mm, Heap *heap) {
   // builtin.jv
@@ -57,4 +58,13 @@ void read_builtin(ModuleManager *mm, Heap *heap) {
   process_add_native(Module_process);
   add_reflection_to_module(mm, Module_process);
   heap_make_root(heap, Module_process->_reflection);
+  // socket.jv
+  Module_socket = mm_read_helper(mm, "lib/socket.jv");
+  socket_add_native(Module_socket);
+  add_reflection_to_module(mm, Module_socket);
+  heap_make_root(heap, Module_socket->_reflection);
+  // net.jv
+  Module_net = mm_read_helper(mm, "lib/net.jv");
+  add_reflection_to_module(mm, Module_net);
+  heap_make_root(heap, Module_net->_reflection);
 }
