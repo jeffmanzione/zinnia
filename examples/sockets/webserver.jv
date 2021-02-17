@@ -1,0 +1,35 @@
+module webserver
+
+import io
+import net
+import socket
+
+sock = net.HttpSocket(
+  socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
+
+index_html = io.FileReader('./examples/sockets/web/index.html').getall()
+favicon_ico = io.FileReader('./examples/sockets/web/favicon.ico').getall()
+not_found_html = io.FileReader('./examples/sockets/web/not_found.html').getall()
+
+try {
+  while True { 
+    handle = sock.accept()
+    request = handle.receive()
+    io.println(cat('Received request: ', request.type, ' ', request.path))
+    response = net.HttpResponse()
+    if request.path == '/' or request.path == '/index.html' {
+      response.addContent(index_html)
+    } else if request.path == '/favicon.ico' {
+      response.setContentType('image/x-icon').addContent(favicon_ico)
+    } else {
+      response.setStatusCode(404).setStatus('NOT FOUND').addContent(not_found_html)
+    }
+    handle.send(response)
+    handle.close()
+  }
+} catch e {
+  io.fprintln(io.ERROR, e)
+}
+
+sock.close()
+socket.cleanup()

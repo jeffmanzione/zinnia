@@ -119,11 +119,18 @@ class HttpResponse {
     _headers = {}
     _headers['Content-Type'] = 'text/html'
     _headers['Accept-Ranges'] = 'bytes'
-    ; Pad with 2 bytes for '\r\n'
-    _headers['Content-Length'] = 2
+    _headers['Content-Length'] = 0
     _content = ''
   }
-  method withServer(server) {
+  method setStatus(status) {
+    _status = status
+    return self
+  }
+  method setStatusCode(status_code) {
+    _status_code = status_code
+    return self
+  }
+  method setServer(server) {
     _headers['Server'] = server
     return self
   }
@@ -159,7 +166,7 @@ class HttpResponse {
     for (k, v) in _headers {
       res.extend(cat(k, ': ', v, '\r\n'))
     }
-    res.extend('\r\n\r\n')
+    res.extend('\r\n')
     res.extend(_content)
     return res
   }
