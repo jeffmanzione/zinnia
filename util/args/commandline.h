@@ -34,7 +34,7 @@ void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
                    Arg arg_default);
 
 ArgStore *commandline_parse_args(ArgConfig *config, int argc,
-                                 const char *const argv[]);
+                                 const char *argv[]);
 
 const Set *argstore_sources(const ArgStore *const store);
 
@@ -46,5 +46,7 @@ ARGSTORE_TEMPLATE_RETVAL(stringlist, const char **);
 
 const Arg *argstore_get(const ArgStore *store, ArgKey key);
 void argstore_delete(ArgStore *store);
+
+const Map *argstore_program_args(const ArgStore *store);
 
 #endif /* UTIL_ARGS_COMMANDLINE_H_ */
