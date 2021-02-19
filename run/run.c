@@ -10,8 +10,12 @@
 #include <stdlib.h>
 
 #include "alloc/alloc.h"
+#include "alloc/arena/intern.h"
 #include "compile/compile.h"
+#include "entity/class/classes.h"
+#include "entity/module/modules.h"
 #include "entity/object.h"
+#include "entity/string/string_helper.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "lang/semantics/semantics.h"
@@ -34,6 +38,18 @@
 #include "vm/process/task.h"
 #include "vm/virtual_machine.h"
 
+void _set_args(Heap *heap, ArgStore *store) {
+  Object *args = heap_new(heap, Class_Object);
+  M_iter cl_args = map_iter((Map *)argstore_program_args(store));
+  for (; has(&cl_args); inc(&cl_args)) {
+    const char *k = key(&cl_args);
+    const char *v = value(&cl_args);
+    object_set_member_obj(heap, args, k, string_new(heap, v, strlen(v)));
+  }
+  object_set_member_obj(heap, Module_builtin->_reflection, intern("args"),
+                        args);
+}
+
 void run(const Set *source_files, ArgStore *store) {
   parsers_init();
   semantics_init();
@@ -52,6 +68,9 @@ void run(const Set *source_files, ArgStore *store) {
       heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
     }
   }
+
+  _set_args(vm_main_process(vm)->heap, store);
+
   optimize_finalize();
   semantics_finalize();
   parsers_finalize();
@@ -68,7 +87,6 @@ int jlr(int argc, const char *argv[]) {
   strings_init();
 
   ArgConfig *config = argconfig_create();
-  argconfig_compile(config);
   argconfig_run(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 

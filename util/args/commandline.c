@@ -6,6 +6,7 @@
 #include "util/args/commandline.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "alloc/alloc.h"
@@ -34,6 +35,7 @@ struct __Argstore {
   const ArgConfig *config;
   Arg *args;
   Set src_files;
+  Map program_args;
 };
 
 struct __ArgConfig {
@@ -67,12 +69,14 @@ ArgStore *argstore_create(const ArgConfig *config) {
   store->config = config;
   store->args = ALLOC_ARRAY(Arg, ArgKey__END);
   set_init_default(&store->src_files);
+  map_init_default(&store->program_args);
   return store;
 }
 
 void argstore_delete(ArgStore *store) {
   ASSERT(NOT_NULL(store));
   set_finalize(&store->src_files);
+  map_finalize(&store->program_args);
   int i;
   for (i = 0; i < ArgKey__END; ++i) {
     if (ArgType__stringlist == store->args[i].type) {
@@ -104,11 +108,21 @@ const Set *argstore_sources(const ArgStore *const store) {
 }
 
 void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
-                   Arg arg_default) {
+                   char short_name, Arg arg_default) {
   ASSERT(NOT_NULL(config));
   const char *arg_name = intern(name);
   if (!map_insert(&config->arg_names, arg_name, (uint32_t *)key)) {
     ERROR("Argument key string '%s' already added.", arg_name);
+  }
+  if ('\0' != short_name) {
+    if (ArgType__bool != arg_default.type) {
+      ERROR("Arguments with short names (%s, %c) must be of type bool.", name,
+            short_name);
+    }
+    const char *short_name_str = intern_range(&short_name, 0, 1);
+    if (!map_insert(&config->arg_names, short_name_str, (uint32_t *)key)) {
+      ERROR("Argument short key string '%s' already added.", short_name_str);
+    }
   }
   if (config->args[key].used) {
     ERROR("Trying to map arg key to '%s', but is already used.", arg_name);
@@ -116,34 +130,181 @@ void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
   config->args[key] = arg_default;
 }
 
-void parse_args_inner(int argc, const char *const argv[], Set *sources,
-                      Map *args) {
-  int i;
-  for (i = 1; i < argc; ++i) {
-    const char *arg = argv[i];
-    if ('-' != arg[0]) {
-      const char *src = intern(arg);
-      set_insert(sources, src);
-      continue;
+bool _parse_argument(const char *arg, Pair *pair) {
+  if (strlen(arg) <= 2) {
+    fprintf(stderr,
+            "ERROR: Argument '%s' is malformed. Arguments must be at least 3 "
+            "characters long.\n",
+            arg);
+    return false;
+  }
+  if (0 != strncmp("--", arg, 2)) {
+    fprintf(
+        stderr,
+        "ERROR: Argument '%s' is malformed. Arguments must start with a '-'.\n",
+        arg);
+    return false;
+  }
+  if (0 == strncmp("---", arg, 3)) {
+    fprintf(stderr,
+            "ERROR: Argument '%s' is malformed. Arguments must start with "
+            "either 1 or 2 dashes.\n",
+            arg);
+    return false;
+  }
+  // Ex: --nobehappy
+  if (0 == strncmp("--no", arg, 4)) {
+    if (NULL != strchr(arg, '=')) {
+      fprintf(stderr,
+              "ERROR: Argument '%s' is malformed. Argumements prefixed with "
+              "'--no' cannot be set equal to a value.\n",
+              arg);
+      return false;
     }
-    char *eq = strchr(arg, '=');
-    int arg_len = strlen(arg);
-    int end_pos = (NULL == eq) ? arg_len : (eq - arg);
-    char *key = intern_range(arg, 1, end_pos);
-    char *value =
-        (NULL == eq) ? intern("true") : intern_range(arg, end_pos + 1, arg_len);
-    map_insert(args, key, value);
+    pair->key = intern(arg + 4);
+    pair->value = intern("false");
+    return true;
+  }
+  char *eq = strchr(arg, '=');
+  // Ex: --behappy
+  if (NULL == eq) {
+    pair->key = intern(arg + 2);
+    pair->value = intern("true");
+    return true;
+  }
+  // Ex: --behappy=true
+  pair->key = intern_range(arg, 2, eq - arg);
+  pair->value = intern_range(arg, eq - arg + 1, strlen(arg));
+  return true;
+}
+
+void _parse_arguments(int argc, const char *const argv[], Map *args) {
+  int i;
+  for (i = 0; i < argc; ++i) {
+    const char *arg = argv[i];
+    Pair pair;
+    if (!_parse_argument(arg, &pair)) {
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
+    }
+    map_insert(args, pair.key, pair.value);
   }
 }
 
+bool _parse_compiler_argument(const char *arg, Map *args) {
+  if (strlen(arg) <= 1) {
+    fprintf(stderr,
+            "ERROR: Argument '%s' is malformed. Compiler arguments must be at "
+            "least 2 characters long.\n",
+            arg);
+    return false;
+  }
+  if ('-' != arg[0]) {
+    fprintf(stderr,
+            "ERROR: Argument '%s' is malformed. Compiler arguments must be "
+            "prefixed by a '-'.\n",
+            arg);
+    return false;
+  }
+  if ('-' != arg[1]) {
+    if (NULL != strchr(arg, '=')) {
+      fprintf(stderr,
+              "ERROR: Argument '%s' is malformed. Compiler argumements cannot "
+              "be set equal to a value.\n",
+              arg);
+      return false;
+    }
+    int i;
+    for (i = 1; i < strlen(arg); ++i) {
+      char *key = intern_range(arg, i, i + 1);
+      char *value = intern("1");
+      map_insert(args, key, value);
+    }
+    return true;
+  }
+  Pair pair;
+  if (!_parse_argument(arg, &pair)) {
+    return false;
+  }
+  map_insert(args, pair.key, pair.value);
+  return true;
+}
+
+void _parse_compiler_args(int argc, const char *const argv[], Map *args) {
+  int i;
+  for (i = 0; i < argc; ++i) {
+    const char *arg = argv[i];
+    if (!_parse_compiler_argument(arg, args)) {
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
+    }
+  }
+}
+
+void _parse_sources(int argc, const char *const argv[], Set *sources) {
+  int i;
+  for (i = 0; i < argc; ++i) {
+    const char *arg = argv[i];
+    if ('-' == arg[0]) {
+      fprintf(
+          stderr,
+          "ERROR: Source '%s' is malformed. Sources must not start with '-'\n",
+          arg);
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
+    }
+    set_insert(sources, intern(arg));
+  }
+}
+
+int _index_of_sources(int argc, const char *argv[]) {
+  int i;
+  for (i = 1; i < argc; ++i) {
+    const char *arg = argv[i];
+    // -- is a special argument that indicates that subsequent arguments should
+    // go to the program, not runner.
+    if (0 == strcmp(arg, "--")) {
+      return -1;
+    }
+    if (arg[0] != '-') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int _index_of_double_dash(int argc, const char *argv[]) {
+  int i;
+  for (i = 1; i < argc; ++i) {
+    if (0 == strcmp(argv[i], "--")) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 ArgStore *commandline_parse_args(ArgConfig *config, int argc,
-                                 const char *const argv[]) {
+                                 const char *argv[]) {
   ASSERT(NOT_NULL(config));
   ArgStore *store = argstore_create(config);
   Map args;
   map_init_default(&args);
-  parse_args_inner(argc, argv, &store->src_files, &args);
 
+  int index_of_sources = _index_of_sources(argc, argv);
+
+  if (index_of_sources < 0) {
+    fprintf(stderr, "ERROR: No sources.\n");
+    ERROR(
+        "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+        "--arg1 --noarg2 --arg3=5]");
+  }
+
+  int index_of_dd = _index_of_double_dash(argc, argv);
+
+  _parse_compiler_args(index_of_sources - 1, argv + 1, &args);
   M_iter args_iter = map_iter(&args);
   for (; has(&args_iter); inc(&args_iter)) {
     const char *k = _COST_CHAR_POINTER(key(&args_iter));
@@ -164,5 +325,20 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     }
   }
   map_finalize(&args);
+
+  if (index_of_dd > 0) {
+    _parse_arguments(argc - index_of_dd - 1, argv + index_of_dd + 1,
+                     &store->program_args);
+  } else {
+    index_of_dd = argc;
+  }
+
+  _parse_sources(index_of_dd - index_of_sources, argv + index_of_sources,
+                 &store->src_files);
+
   return store;
+}
+
+const Map *argstore_program_args(const ArgStore *store) {
+  return &store->program_args;
 }
