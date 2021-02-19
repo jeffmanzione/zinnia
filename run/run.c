@@ -87,7 +87,6 @@ int jlr(int argc, const char *argv[]) {
   strings_init();
 
   ArgConfig *config = argconfig_create();
-  argconfig_compile(config);
   argconfig_run(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 

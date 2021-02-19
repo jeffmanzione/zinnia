@@ -17,16 +17,16 @@
 
 #define _COST_CHAR_POINTER(ptr) ((const char *)(ptr))
 
-#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                                  \
-  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {          \
-    const Arg *arg = argstore_get(store, key);                                 \
-    if (!arg->used) {                                                          \
-      ERROR("Store did not have key: %d", key);                                \
-    }                                                                          \
-    if (ArgType__##typet != arg->type) {                                       \
-      ERROR("Expected a " #typet " for key=%d. Was %d.", key, arg->type);      \
-    }                                                                          \
-    return (retval)arg->typet##_val;                                           \
+#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                             \
+  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {     \
+    const Arg *arg = argstore_get(store, key);                            \
+    if (!arg->used) {                                                     \
+      ERROR("Store did not have key: %d", key);                           \
+    }                                                                     \
+    if (ArgType__##typet != arg->type) {                                  \
+      ERROR("Expected a " #typet " for key=%d. Was %d.", key, arg->type); \
+    }                                                                     \
+    return (retval)arg->typet##_val;                                      \
   }
 
 #define ARGSTORE_LOOKUP(typet) ARGSTORE_LOOKUP_RETVAL(typet, typet)
@@ -108,11 +108,21 @@ const Set *argstore_sources(const ArgStore *const store) {
 }
 
 void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
-                   Arg arg_default) {
+                   char short_name, Arg arg_default) {
   ASSERT(NOT_NULL(config));
   const char *arg_name = intern(name);
   if (!map_insert(&config->arg_names, arg_name, (uint32_t *)key)) {
     ERROR("Argument key string '%s' already added.", arg_name);
+  }
+  if ('\0' != short_name) {
+    if (ArgType__bool != arg_default.type) {
+      ERROR("Arguments with short names (%s, %c) must be of type bool.", name,
+            short_name);
+    }
+    const char *short_name_str = intern_range(&short_name, 0, 1);
+    if (!map_insert(&config->arg_names, short_name_str, (uint32_t *)key)) {
+      ERROR("Argument short key string '%s' already added.", short_name_str);
+    }
   }
   if (config->args[key].used) {
     ERROR("Trying to map arg key to '%s', but is already used.", arg_name);
@@ -174,8 +184,9 @@ void _parse_arguments(int argc, const char *const argv[], Map *args) {
     const char *arg = argv[i];
     Pair pair;
     if (!_parse_argument(arg, &pair)) {
-      ERROR("Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
-            "--arg1 --noarg2 --arg3=5]");
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
     map_insert(args, pair.key, pair.value);
   }
@@ -225,8 +236,9 @@ void _parse_compiler_args(int argc, const char *const argv[], Map *args) {
   for (i = 0; i < argc; ++i) {
     const char *arg = argv[i];
     if (!_parse_compiler_argument(arg, args)) {
-      ERROR("Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
-            "--arg1 --noarg2 --arg3=5]");
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
   }
 }
@@ -240,8 +252,9 @@ void _parse_sources(int argc, const char *const argv[], Set *sources) {
           stderr,
           "ERROR: Source '%s' is malformed. Sources must not start with '-'\n",
           arg);
-      ERROR("Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
-            "--arg1 --noarg2 --arg3=5]");
+      ERROR(
+          "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
     set_insert(sources, intern(arg));
   }
@@ -284,8 +297,9 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
 
   if (index_of_sources < 0) {
     fprintf(stderr, "ERROR: No sources.\n");
-    ERROR("Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
-          "--arg1 --noarg2 --arg3=5]");
+    ERROR(
+        "Could not parse arguments. Format: jlr [-abc] d.jv e.jv [-- "
+        "--arg1 --noarg2 --arg3=5]");
   }
 
   int index_of_dd = _index_of_double_dash(argc, argv);

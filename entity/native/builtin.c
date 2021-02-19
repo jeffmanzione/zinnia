@@ -5,6 +5,7 @@
 
 #include "entity/native/builtin.h"
 
+#include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
 #include "entity/class/classes.h"
@@ -30,6 +31,7 @@
 #endif
 
 #define BUFFER_SIZE 256
+#define INFER_FROM_STRING 0
 
 static Class *Class_Range;
 
@@ -39,7 +41,21 @@ typedef struct {
   int32_t inc;
 } _Range;
 
+bool _str_to_int64(String *str, int64_t *result) {
+  char *cstr = strndup(str->table, String_size(str));
+  char *endptr;
+  *result = strtol(cstr, &endptr, INFER_FROM_STRING);
+  // Error scenario.
+  if (0 == result && endptr - cstr != String_size(str)) {
+    free(cstr);
+    return false;
+  }
+  free(cstr);
+  return true;
+}
+
 Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
+  int64_t result;
   if (NULL == args) {
     return entity_int(0);
   }
@@ -47,8 +63,15 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     case NONE:
       return entity_int(0);
     case OBJECT:
-      // Is this the right way to handle this?
-      return entity_int(0);
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to Int.");
+      }
+      if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return entity_int(result);
     case PRIMITIVE:
       switch (ptype(&args->pri)) {
         case CHAR:
@@ -64,6 +87,102 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
       return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
+}
+
+bool _str_to_float(String *str, double *result) {
+  char *cstr = strndup(str->table, String_size(str));
+  char *endptr;
+  *result = strtod(cstr, &endptr);
+  // Error scenario.
+  if (0 == result && endptr - cstr != String_size(str)) {
+    free(cstr);
+    return false;
+  }
+  free(cstr);
+  return true;
+}
+
+Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
+  double result;
+  if (NULL == args) {
+    return entity_int(0);
+  }
+  switch (args->type) {
+    case NONE:
+      return entity_float(0.f);
+    case OBJECT:
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to Float.");
+      }
+      if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return entity_float(result);
+    case PRIMITIVE:
+      switch (ptype(&args->pri)) {
+        case CHAR:
+          return entity_float(pchar(&args->pri));
+        case INT:
+          return entity_float(pfloat(&args->pri));
+        case FLOAT:
+          return *args;
+        default:
+          return raise_error(task, ctx, "Unknown primitive type.");
+      }
+    default:
+      return raise_error(task, ctx, "Unknown type.");
+  }
+  return entity_float(0.f);
+}
+
+bool _str_to_bool(String *str, bool *result) {
+  char *cstr = strndup(str->table, String_size(str));
+  if (0 == strcmp("True", cstr) || 0 == strcmp("true", cstr) ||
+      0 == strcmp("T", cstr) || 0 == strcmp("t", cstr)) {
+    *result = true;
+    return true;
+  }
+  if (0 == strcmp("False", cstr) || 0 == strcmp("false", cstr) ||
+      0 == strcmp("F", cstr) || 0 == strcmp("f", cstr)) {
+    *result = false;
+    return true;
+  }
+  return false;
+}
+
+Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
+  bool result;
+  if (NULL == args) {
+    return NONE_ENTITY;
+  }
+  switch (args->type) {
+    case NONE:
+      return NONE_ENTITY;
+    case OBJECT:
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to bool Int.");
+      }
+      if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return result ? entity_int(1) : NONE_ENTITY;
+    case PRIMITIVE:
+      switch (ptype(&args->pri)) {
+        case CHAR:
+        case INT:
+        case FLOAT:
+          return entity_int(1);
+        default:
+          return raise_error(task, ctx, "Unknown primitive type.");
+      }
+    default:
+      return raise_error(task, ctx, "Unknown type.");
+  }
+  return NONE_ENTITY;
 }
 
 Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
@@ -709,6 +828,8 @@ void builtin_add_native(Module *builtin) {
 
   native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);
+  native_function(builtin, intern("Float"), _Float);
+  native_function(builtin, intern("Bool"), __Bool);
   native_function(builtin, intern("__stringify"), _stringify);
 
   _builtin_add_string(builtin);
