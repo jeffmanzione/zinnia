@@ -23,14 +23,16 @@ is_done = False
   io.println('Detected user input. Will stop after next request.')
 }()
 
-; Attempt to receive incomming connections.
-while ~is_done {
-  handle = sock.accept()
+handle_connection = (handle) async {
   request = handle.receive()
   handle.send(net.HttpResponse().addContent('Hello, world!'))
   io.println('Received request:')
   io.println(request)
   handle.close()
+}
+
+while ~is_done {
+  handle_connection(sock.accept())
 }
 
 sock.close()

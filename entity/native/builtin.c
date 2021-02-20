@@ -775,11 +775,6 @@ void _process_delete(Object *obj) {}
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 
-// Entity _process_future(Task *task, Context *ctx, Object *obj, Entity *args) {
-//   Process *process = (Process *) obj->_internal_obj;
-//   process->
-// }
-
 void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("extend"), _string_extend);
   native_method(Class_String, CMP_FN_NAME, _string_cmp);
