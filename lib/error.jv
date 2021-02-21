@@ -3,7 +3,6 @@ module error
 import io
 
 class Token {
-  field text, line, col
   new(field text, field line, field col) {}
 
   method to_s() {

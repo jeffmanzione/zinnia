@@ -17,6 +17,8 @@ char *CONSTRUCTOR_KEY;
 char *EQ_FN_NAME;
 char *ERROR_NAME;
 char *FALSE_KEYWORD;
+char *FIELDS_KEY;
+char *FIELDS_PRIVATE_KEY;
 char *FUNCTION_NAME;
 char *FUNCTION_REF_NAME;
 char *FUTURE_NAME;
@@ -57,6 +59,8 @@ void _strings_insert_constants() {
   EQ_FN_NAME = intern("__eq__");
   ERROR_NAME = intern("Error");
   FALSE_KEYWORD = intern("False");
+  FIELDS_PRIVATE_KEY = intern("_fields");
+  FIELDS_KEY = intern("fields");
   FUNCTION_NAME = intern("Function");
   FUNCTION_REF_NAME = intern("FunctionRef");
   FUTURE_NAME = intern("Future");

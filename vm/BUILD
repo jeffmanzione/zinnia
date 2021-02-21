@@ -63,6 +63,7 @@ cc_library(
         "//entity/class:classes",
         "//entity/function",
         "//entity/module",
+        "//entity/string:string_helper",
         "//lang/parser",
         "//lang/semantics",
         "//program:tape",
@@ -71,6 +72,7 @@ cc_library(
         "//struct:keyed_list",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 

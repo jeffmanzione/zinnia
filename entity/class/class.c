@@ -23,6 +23,7 @@ Class *class_init(Class *cls, const char name[], const Class *super,
   cls->_print_fn = NULL;
   cls->_copy_fn = NULL;
   keyedlist_init(&cls->_functions, Function, 16);
+  keyedlist_init(&cls->_fields, Field, 16);
   return cls;
 }
 
@@ -38,9 +39,10 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos,
   Function *old =
       (Function *)keyedlist_insert(&cls->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR("Adding function %s to class %s that already has a function by this "
-          "name.",
-          name, cls->_name);
+    ERROR(
+        "Adding function %s to class %s that already has a function by this "
+        "name.",
+        name, cls->_name);
   }
   function_init(f, name, cls->_module, ins_pos, is_anon(name), is_const,
                 is_async);
@@ -48,8 +50,26 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos,
   return f;
 }
 
+Field *class_add_field(Class *cls, const char name[]) {
+  ASSERT(NOT_NULL(cls), NOT_NULL(name));
+  Field *f;
+  Field *old = (Field *)keyedlist_insert(&cls->_fields, name, (void **)&f);
+  if (NULL != old) {
+    ERROR(
+        "Adding function %s to class %s that already has a function by this "
+        "name.",
+        name, cls->_name);
+  }
+  f->name = name;
+  return f;
+}
+
 inline KL_iter class_functions(Class *cls) {
   return keyedlist_iter(&cls->_functions);
+}
+
+inline KL_iter class_fields(Class *cls) {
+  return keyedlist_iter(&cls->_fields);
 }
 
 const Function *class_get_function(const Class *cls, const char name[]) {

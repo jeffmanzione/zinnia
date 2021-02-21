@@ -19,6 +19,7 @@
 #define CLASS_KEYWORD "class"
 #define CLASSEND_KEYWORD "endclass"
 #define MODULE_KEYWORD "module"
+#define FIELD_KEYWORD "field"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
 
@@ -40,7 +41,7 @@ inline Tape *tape_create() {
   alist_init(&tape->ins, Instruction, DEFAULT_TAPE_SZ);
   alist_init(&tape->source_map, SourceMapping, DEFAULT_TAPE_SZ);
   keyedlist_init(&tape->class_refs, ClassRef, DEFAULT_ARRAY_SZ);
-  keyedlist_init(&tape->func_refs, ClassRef, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&tape->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
   tape->current_class = NULL;
   return tape;
 }
@@ -132,6 +133,26 @@ void tape_end_class(Tape *tape) {
   tape_end_class_at_index(tape, alist_len(&tape->ins));
 }
 
+inline void _field_ref_init(FieldRef *fref, const char name[]) {
+  fref->name = name;
+}
+
+void tape_field(Tape *tape, const char *field) {
+  ClassRef *cls = tape->current_class;
+  if (NULL == cls) {
+    ERROR("Cannot have field outside of a class.");
+  }
+  FieldRef *ref;
+  FieldRef *old =
+      (FieldRef *)keyedlist_insert(&cls->field_refs, field, (void **)&ref);
+  if (NULL != old) {
+    ERROR("Attempting to add field '%s', but a field by that name already "
+          "exists.",
+          field);
+  }
+  _field_ref_init(ref, field);
+}
+
 inline const Instruction *tape_get(const Tape *tape, uint32_t index) {
   ASSERT(NOT_NULL(tape), index >= 0, index < tape_size(tape));
   return (Instruction *)alist_get(&tape->ins, index);
@@ -180,11 +201,13 @@ inline const char *tape_module_name(const Tape *tape) {
 inline void _classref_init(ClassRef *ref, const char name[]) {
   ref->name = name;
   keyedlist_init(&ref->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&ref->field_refs, FieldRef, DEFAULT_ARRAY_SZ);
   alist_init(&ref->supers, char *, DEFAULT_ARRAY_SZ);
 }
 
 inline void _classref_finalize(ClassRef *ref) {
   keyedlist_finalize(&ref->func_refs);
+  keyedlist_finalize(&ref->field_refs);
   alist_finalize(&ref->supers);
 }
 
@@ -213,6 +236,12 @@ void tape_write(const Tape *tape, FILE *file) {
         in_class = true;
         cls_func_iter = alist_iter((AList *)&class_ref->func_refs._list);
         fprintf(file, "class %s\n", class_ref->name);
+
+        KL_iter fields = keyedlist_iter(&class_ref->field_refs);
+        for (; kl_has(&fields); kl_inc(&fields)) {
+          FieldRef *field = (FieldRef *)kl_value(&fields);
+          fprintf(file, " field %s\n", field->name);
+        }
       }
     }
     if (in_class && al_has(&cls_func_iter)) {
@@ -282,6 +311,14 @@ void tape_append(Tape *head, Tape *tail) {
       keyedlist_insert(&cpy_class->func_refs, old_func->name, (void **)&cpy);
       *cpy = *old_func;
       cpy->index += previous_head_length;
+    }
+    // Copy all fields.
+    KL_iter field_iter = keyedlist_iter(&old_class->field_refs);
+    for (; kl_has(&field_iter); kl_inc(&field_iter)) {
+      FieldRef *old_field = (FieldRef *)kl_value(&field_iter);
+      FieldRef *cpy;
+      keyedlist_insert(&cpy_class->field_refs, old_field->name, (void **)&cpy);
+      *cpy = *old_field;
     }
   }
   // Dealloc all of tail.
@@ -358,6 +395,11 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   }
   if (0 == strcmp(CLASSEND_KEYWORD, first->text)) {
     tape_endclass(tape, first);
+    return;
+  }
+  if (0 == strcmp(CLASS_KEYWORD, first->text)) {
+    Token *field = Q_remove(tokens, 0);
+    tape_field(tape, field->text);
     return;
   }
   Op op = str_to_op(first->text);

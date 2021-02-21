@@ -122,14 +122,14 @@ SyntaxTree parse_file(FileInfo *src) {
   DEBUGF("Parsing %s", file_info_name(src));
   parser_init(&parser, src);
   SyntaxTree m = file_level_statement_list(&parser);
-#ifdef DEBUG
-  DEBUGF("%d", m.matched);
-  if (m.matched) {
-    syntax_tree_to_str(&m, &parser, stdout);
-    fprintf(stdout, "\n");
-    fflush(stdout);
-  }
-#endif
+  // #ifdef DEBUG
+  //   DEBUGF("%d", m.matched);
+  //   if (m.matched) {
+  //     syntax_tree_to_str(&m, &parser, stdout);
+  //     fprintf(stdout, "\n");
+  //     fflush(stdout);
+  //   }
+  // #endif
   bool has_error = parser_finalize(&parser);
   if (has_error) {
     ERROR("Cannot finish parsing.");

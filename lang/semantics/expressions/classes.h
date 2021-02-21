@@ -25,14 +25,14 @@ typedef struct {
 typedef struct {
   const Token *name;
   const Token *field_token;
-} Field;
+} FieldDef;
 
 typedef struct {
   ClassSignature def;
   AList *fields;
   bool has_constructor;
   FunctionDef constructor;
-  AList *methods;  // Function.
+  AList *methods; // Function.
 } ClassDef;
 
 ClassDef populate_class(const SyntaxTree *stree);

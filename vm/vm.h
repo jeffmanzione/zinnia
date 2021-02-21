@@ -25,5 +25,7 @@ ModuleManager *vm_module_manager(VM *vm);
 Process *vm_create_process(VM *vm);
 Process *create_process_no_reflection(VM *vm);
 void add_reflection_to_process(Process *process);
+Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
+                             Context *ctx);
 
 #endif /* VM_VM_H_ */

@@ -10,13 +10,16 @@
 #include "entity/function/function.h"
 #include "entity/module/module.h"
 #include "entity/object.h"
+#include "entity/string/string_helper.h"
 #include "lang/parser/parser.h"
 #include "lang/semantics/expression_tree.h"
 #include "program/optimization/optimize.h"
 #include "program/tape_binary.h"
+#include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
 #include "util/string.h"
 #include "vm/intern.h"
+
 
 typedef struct {
   Module module;
@@ -58,6 +61,11 @@ bool _hydrate_class(Module *module, ClassRef *cref) {
     super = Class_Object;
   }
   Class *class = module_add_class(module, cref->name, super);
+  KL_iter fields = keyedlist_iter(&cref->field_refs);
+  for (; kl_has(&fields); kl_inc(&fields)) {
+    FieldRef *fref = (FieldRef *)kl_value(&fields);
+    class_add_field(class, fref->name);
+  }
   KL_iter funcs = keyedlist_iter(&cref->func_refs);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
@@ -88,6 +96,8 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
   Q_init(&classes_to_process);
+  Map waiting_for_class;
+  map_init_default(&waiting_for_class);
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
     if (!_hydrate_class(module, cref)) {
@@ -101,6 +111,7 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
     }
   }
   Q_finalize(&classes_to_process);
+  map_finalize(&waiting_for_class);
   return module_info;
 }
 
@@ -128,6 +139,17 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   for (; kl_has(&funcs); kl_inc(&funcs)) {
     Function *func = (Function *)kl_value(&funcs);
     add_reflection_to_function(heap, class->_reflection, func);
+  }
+
+  Object *field_arr = heap_new(heap, Class_Array);
+  object_set_member_obj(heap, class->_reflection, FIELDS_PRIVATE_KEY,
+                        field_arr);
+  KL_iter fields = class_fields(class);
+  for (; kl_has(&fields); kl_inc(&fields)) {
+    Field *field = (Field *)kl_value(&fields);
+    Entity str =
+        entity_object(string_new(heap, field->name, strlen(field->name)));
+    array_add(heap, field_arr, &str);
   }
 }
 
