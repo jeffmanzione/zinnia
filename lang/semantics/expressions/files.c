@@ -237,6 +237,7 @@ int produce_arguments(Arguments *args, Tape *tape) {
                  tape_ins_int(tape, IF, num_default_ins + 1, arg->arg_name);
       tape_append(tape, defaults);
       num_ins += tape_ins_int(tape, JMP, 1, arg->arg_name) +
+                 tape_ins_no_arg(tape, RES, arg->arg_name) +
                  tape_ins_int(tape, TGET, 0, arg->arg_name);
     }
     num_ins += produce_argument(arg, tape);
