@@ -66,9 +66,6 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   file_info_append(module_fi, fi);
   fi = module_fi;
   SyntaxTree stree = parse_file(fi);
-  if (!stree.matched) {
-    DEBUGF("PARSER DID NOT MATCH.");
-  }
   ExpressionTree *etree = populate_expression(&stree);
 
   produce_instructions(etree, tape);
