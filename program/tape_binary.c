@@ -107,6 +107,11 @@ void _intern_all_strings(const Tape *tape, AList *strings, Map *string_index) {
       FunctionRef *fref = (FunctionRef *)kl_value(&funcs);
       _insert_string(strings, string_index, fref->name);
     }
+    KL_iter fields = keyedlist_iter(&cref->field_refs);
+    for (; kl_has(&fields); kl_inc(&fields)) {
+      FieldRef *fref = (FieldRef *)kl_value(&fields);
+      _insert_string(strings, string_index, fref->name);
+    }
   }
   KL_iter funcs = tape_functions(tape);
   for (; kl_has(&funcs); kl_inc(&funcs)) {

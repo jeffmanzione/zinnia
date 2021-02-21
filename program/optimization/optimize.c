@@ -21,7 +21,7 @@
 
 #define _as_ptr(i) ((void *)(intptr_t)(i))
 
-#define is_goto(op)                                                            \
+#define is_goto(op) \
   (((op) == JMP) || ((op) == IFN) || ((op) == IF) || ((op) == CTCH))
 
 static AList *optimizers = NULL;
@@ -133,6 +133,11 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
         }
         tape_class_with_parents(new_tape, &tok, &q_parents);
         Q_finalize(&q_parents);
+      }
+      KL_iter fields = keyedlist_iter((KeyedList *)&cref->field_refs);
+      for (; kl_has(&fields); kl_inc(&fields)) {
+        FieldRef *f = (FieldRef *)kl_value(&fields);
+        tape_field(new_tape, f->name);
       }
     }
     FunctionRef *fref;

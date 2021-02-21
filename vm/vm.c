@@ -7,6 +7,7 @@
 
 #include "entity/class/classes.h"
 #include "vm/process/process.h"
+#include "vm/process/context.h"
 
 Process *create_process_no_reflection(VM *vm) {
   Process *process = alist_add(&vm->processes);
@@ -30,4 +31,25 @@ Process *vm_create_process(VM *vm) {
     add_reflection_to_process(process);
   });
   return process;
+}
+
+Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
+                             Context *ctx) {
+  Entity member;
+  const Entity *member_ptr =
+      (Class_Class == obj->_class) ? NULL : object_get(obj, field);
+  if (NULL == member_ptr) {
+    const Function *f = class_get_function(obj->_class, field);
+    if (NULL == f) {
+      return NONE_ENTITY;
+    }
+    member = entity_object(f->_reflection);
+  } else {
+    member = *member_ptr;
+  }
+  if (OBJECT == member.type && Class_Function == member.obj->_class) {
+    return entity_object(
+        wrap_function_in_ref(member.obj->_function_obj, obj, task, ctx));
+  }
+  return member;
 }

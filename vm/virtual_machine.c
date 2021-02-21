@@ -489,26 +489,6 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-Entity _object_get_maybe_wrap(Object *obj, const char field[], Task *task,
-                              Context *ctx) {
-  Entity member;
-  const Entity *member_ptr =
-      (Class_Class == obj->_class) ? NULL : object_get(obj, field);
-  if (NULL == member_ptr) {
-    const Function *f = class_get_function(obj->_class, field);
-    if (NULL == f) {
-      return NONE_ENTITY;
-    }
-    member = entity_object(f->_reflection);
-  } else {
-    member = *member_ptr;
-  }
-  if (OBJECT == member.type && Class_Function == member.obj->_class) {
-    return entity_object(
-        wrap_function_in_ref(member.obj->_function_obj, obj, task, ctx));
-  }
-  return member;
-}
 
 inline void _execute_GET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
@@ -522,7 +502,7 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
     return;
   }
   *task_mutable_resval(task) =
-      _object_get_maybe_wrap(e->obj, ins->id, task, context);
+      object_get_maybe_wrap(e->obj, ins->id, task, context);
 }
 
 inline void _execute_GTSH(VM *vm, Task *task, Context *context,
@@ -536,7 +516,7 @@ inline void _execute_GTSH(VM *vm, Task *task, Context *context,
                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
-  Entity get_result = _object_get_maybe_wrap(e->obj, ins->id, task, context);
+  Entity get_result = object_get_maybe_wrap(e->obj, ins->id, task, context);
   *task_pushstack(task) = get_result;
 }
 
@@ -618,7 +598,7 @@ bool _call_method(Task *task, Object *obj, Context *context,
   ASSERT(NOT_NULL(obj), NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
 
-  Entity method = _object_get_maybe_wrap(obj, ins->id, task, context);
+  Entity method = object_get_maybe_wrap(obj, ins->id, task, context);
   if (NONE == method.type) {
     raise_error(task, context, "Failed to find method '%s' on %s", ins->id,
                 class->_name);

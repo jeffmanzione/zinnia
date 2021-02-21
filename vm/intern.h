@@ -16,6 +16,8 @@ extern char *CONSTRUCTOR_KEY;
 extern char *EQ_FN_NAME;
 extern char *ERROR_NAME;
 extern char *FALSE_KEYWORD;
+extern char *FIELDS_PRIVATE_KEY;
+extern char *FIELDS_KEY;
 extern char *FUNCTION_NAME;
 extern char *FUNCTION_REF_NAME;
 extern char *FUTURE_NAME;

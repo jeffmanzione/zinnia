@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
   const Token *name;
   const Token *field_token;
-} Field;
+} FieldDef;
 
 typedef struct {
   ClassSignature def;

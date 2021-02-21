@@ -63,6 +63,7 @@ cc_library(
         "//entity/class:classes",
         "//entity/function",
         "//entity/module",
+        "//entity/string:string_helper",
         "//lang/parser",
         "//lang/semantics",
         "//program:tape",

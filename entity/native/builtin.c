@@ -25,6 +25,7 @@
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
+#include "vm/vm.h"
 
 #ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
@@ -769,6 +770,41 @@ Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(array_obj);
 }
 
+Entity _class_fields(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Class);
+  return *object_get(obj, FIELDS_PRIVATE_KEY);
+}
+
+Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
+  }
+  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
+  if (2 != tuple_size(t_args)) {
+    return raise_error(task, ctx,
+                       "$set() can only be called with 2 args. %d provided.",
+                       tuple_size(t_args));
+  }
+  if (!IS_CLASS(tuple_get(t_args, 0), Class_String)) {
+    return raise_error(task, ctx, "First argument to $set() must be a String.");
+  }
+  const String *str_key =
+      (const String *)tuple_get(t_args, 0)->obj->_internal_obj;
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  object_set_member(task->parent_process->heap, obj, key, tuple_get(t_args, 1));
+  return entity_object(obj);
+}
+
+Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_CLASS(args, Class_String)) {
+    return raise_error(task, ctx, "$get() can only be called with a String.");
+  }
+  const String *str_key = (const String *)args->obj->_internal_obj;
+  // TODO: Maybe use _object_get_maybe_wrap instead.
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  return object_get_maybe_wrap(obj, key, task, ctx);
+}
+
 void _process_init(Object *obj) {}
 void _process_delete(Object *obj) {}
 
@@ -835,11 +871,13 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_Class, NAME_KEY, _class_name);
   native_method(Class_Class, SUPER_KEY, _class_super);
   native_method(Class_Class, intern("methods"), _class_methods);
+  native_method(Class_Class, FIELDS_KEY, _class_fields);
 
   native_method(Class_Object, CLASS_KEY, _object_class);
   native_method(Class_Object, SUPER_KEY, _object_super);
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
+  native_method(Class_Object, intern("$set"), _set_member);
 
   native_method(Class_Array, intern("len"), _array_len);
   native_method(Class_Array, intern("append"), _array_append);
