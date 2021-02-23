@@ -25,6 +25,13 @@ typedef struct {
   AList *args;
 } Arguments;
 
+typedef struct {
+  const Token *prefix;
+  const Token *class_name;
+  bool is_called, has_args;
+  Arguments args;
+} Annotation;
+
 typedef enum {
   SpecialMethod__NONE,
   SpecialMethod__EQUIV,

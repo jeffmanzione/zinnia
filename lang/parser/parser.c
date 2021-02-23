@@ -122,14 +122,14 @@ SyntaxTree parse_file(FileInfo *src) {
   DEBUGF("Parsing %s", file_info_name(src));
   parser_init(&parser, src);
   SyntaxTree m = file_level_statement_list(&parser);
-  // #ifdef DEBUG
-  //   DEBUGF("%d", m.matched);
-  //   if (m.matched) {
-  //     syntax_tree_to_str(&m, &parser, stdout);
-  //     fprintf(stdout, "\n");
-  //     fflush(stdout);
-  //   }
-  // #endif
+#ifdef DEBUG
+  DEBUGF("%d", m.matched);
+  if (m.matched) {
+    syntax_tree_to_str(&m, &parser, stdout);
+    fprintf(stdout, "\n");
+    fflush(stdout);
+  }
+#endif
   bool has_error = parser_finalize(&parser);
   if (has_error) {
     ERROR("Cannot finish parsing.");
@@ -981,13 +981,38 @@ ImplSyntax(class_compound_statement,
 ImplSyntax(class_name_and_inheritance,
     And(Ln(identifier), Opt(parent_classes)));
 
+ImplSyntax(class_definition_no_annotation,
+           And(And(Type(CLASS), class_name_and_inheritance),
+               Or(class_compound_statement,
+                  Ln(class_statement))));
+
+ImplSyntax(annotation_not_called,
+           Or(And(identifier, Type(PERIOD), identifier),
+              identifier));
+
+ImplSyntax(annotation_no_arguments,
+           And(annotation_not_called, Type(LPAREN), Type(RPAREN)));
+
+ImplSyntax(annotation_with_arguments,
+           And(annotation_not_called, Type(LPAREN), function_argument_list, Type(RPAREN)));
+
+ImplSyntax(annotation,
+           And(Type(AT),
+               Or(
+                  annotation_with_arguments,
+                  annotation_no_arguments,
+                  annotation_not_called)));
+
+ImplSyntax(class_definition_with_annotation,
+           And(Ln(annotation),
+               class_definition_no_annotation));
+
 // class_definition
 //    class identifier statement
 //    class identifier parent_classes statement
 ImplSyntax(class_definition,
-           And(And(Type(CLASS), class_name_and_inheritance),
-               Or(class_compound_statement,
-                  Ln(class_statement))));
+           Or(class_definition_with_annotation,
+              class_definition_no_annotation));
 
 // import_statement
 //    import identifier

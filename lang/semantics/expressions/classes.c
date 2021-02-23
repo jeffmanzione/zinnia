@@ -239,6 +239,7 @@ void populate_class_statements(ClassDef *class, const SyntaxTree *stree) {
 }
 
 ClassDef populate_class(const SyntaxTree *stree) {
+  // TODO HANDLE ANNOTATIONS.
   ASSERT(!IS_LEAF(stree->first), IS_TOKEN(stree->first->first, CLASS));
   ClassDef class;
   class.has_constructor = false;
@@ -313,20 +314,10 @@ int produce_constructor(ClassDef *class, Tape *tape) {
 
 int produce_class(ClassDef *class, Tape *tape) {
   int num_ins = 0;
-  if (alist_len(class->def.parent_classes) == 0) {
-    // No parents.
-    num_ins += tape_class(tape, class->def.name.token);
-  } else {
-    Q parents;
-    Q_init(&parents);
-    int i;
-    for (i = 0; i < alist_len(class->def.parent_classes); ++i) {
-      ClassName *name = (ClassName *)alist_get(class->def.parent_classes, i);
-      Q_enqueue(&parents, (char *)name->token->text);
-    }
-    num_ins += tape_class_with_parents(tape, class->def.name.token, &parents);
-    Q_finalize(&parents);
+  if (alist_len(class->def.parent_classes) > 1) {
+    ERROR("Cannot have more than one super class.");
   }
+  num_ins += tape_class(tape, class->def.name.token);
   // Fields
   AL_iter fields = alist_iter(class->fields);
   for (; al_has(&fields); al_inc(&fields)) {

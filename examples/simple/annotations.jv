@@ -50,15 +50,13 @@ class Dog {
 }
 MVC('BaseDog').annotate(Dog)
 
-class DogView {
+class DogView : BaseDogView {
   new(dog) { super(BaseDogView)(dog) }
 }
-DogView.$__set_super(BaseDogView)
 
-class DogController {
+class DogController : BaseDogController {
   new(dog) { super(BaseDogController)(dog) }
 }
-DogController.$__set_super(BaseDogController)
 
 io.println(Dog, DogView, DogController, BaseDogView, BaseDogController)
 io.println(DogView.super(), DogController.super())

@@ -29,6 +29,7 @@ typedef struct {
 
 typedef struct {
   ClassSignature def;
+  Annotation annot;
   AList *fields;
   bool has_constructor;
   FunctionDef constructor;

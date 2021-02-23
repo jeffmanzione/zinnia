@@ -10,7 +10,6 @@
 #include "struct/q.h"
 #include "util/file/file_info.h"
 
-
 typedef struct _Parser Parser;
 typedef struct _SyntaxTree SyntaxTree;
 typedef SyntaxTree (*ParseExpression)(Parser *);
@@ -163,7 +162,12 @@ DefineSyntax(method_definition);
 DefineSyntax(identifier_list);
 DefineSyntax(identifier_list1);
 DefineSyntax(field_statement);
-DefineSyntax(class_definition);
+DefineSyntax(annotation);
+DefineSyntax(annotation_not_called);
+DefineSyntax(annotation_no_arguments);
+DefineSyntax(annotation_with_arguments);
+DefineSyntax(class_definition_no_annotation);
+DefineSyntax(class_definition_with_annotation);
 DefineSyntax(class_statement);
 DefineSyntax(class_statement_list);
 DefineSyntax(class_statement_list1);
