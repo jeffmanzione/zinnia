@@ -479,7 +479,6 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-
 inline void _execute_GET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
@@ -587,7 +586,6 @@ bool _call_method(Task *task, Object *obj, Context *context,
                   const Instruction *ins) {
   ASSERT(NOT_NULL(obj), NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
-
   Entity method = object_get_maybe_wrap(obj, ins->id, task, context);
   if (NONE == method.type) {
     raise_error(task, context, "Failed to find method '%s' on %s", ins->id,

@@ -6,8 +6,8 @@
 #include "vm/vm.h"
 
 #include "entity/class/classes.h"
-#include "vm/process/process.h"
 #include "vm/process/context.h"
+#include "vm/process/process.h"
 
 Process *create_process_no_reflection(VM *vm) {
   Process *process = alist_add(&vm->processes);
@@ -33,6 +33,18 @@ Process *vm_create_process(VM *vm) {
   return process;
 }
 
+Object *class_get_function_ref(const Class *cls, const char name[]) {
+  const Class *class = cls;
+  while (NULL != class) {
+    Entity *fref = object_get(cls->_reflection, name);
+    if (NULL != fref && fref->obj->_class == Class_FunctionRef) {
+      return fref->obj;
+    }
+    class = class->_super;
+  }
+  return NULL;
+}
+
 Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
                              Context *ctx) {
   Entity member;
@@ -40,10 +52,15 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
       (Class_Class == obj->_class) ? NULL : object_get(obj, field);
   if (NULL == member_ptr) {
     const Function *f = class_get_function(obj->_class, field);
-    if (NULL == f) {
-      return NONE_ENTITY;
+    if (NULL != f) {
+      member = entity_object(f->_reflection);
+    } else {
+      Object *fref = class_get_function_ref(obj->_class, field);
+      if (NULL == fref) {
+        return NONE_ENTITY;
+      }
+      return entity_object(fref);
     }
-    member = entity_object(f->_reflection);
   } else {
     member = *member_ptr;
   }

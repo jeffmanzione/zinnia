@@ -8,34 +8,27 @@ import classes
 @MVC('BaseDog')
 class Dog {
   new(field _breed, field _age, field _sex, field _name) {}
-
-  method getView() {
-    DogView(self)
-  }
-  method getController() {
-    DogController(self)
-  }
+  method view() DogView(self)
+  method controller() DogController(self)
 }
-
 
 ; Extend auto-generated classes to add custom functions.
 class DogView : BaseDogView {
-  new(dog) { super(BaseDogView)(dog) }
+  new(dog) super(BaseDogView)(dog)
 }
 class DogController : BaseDogController {
-  new(dog) { super(BaseDogController)(dog) }
+  new(dog) super(BaseDogController)(dog)
 }
 
 d = Dog('Poodle', 5, 'Female', 'Fluffy')
 
-dc = d.getController()
+dc = d.controller()
 dc.set_age(dc.get_age() + 1)
 
 io.println(dc.get_breed(), dc.get_age(), dc.get_sex(), dc.get_name())
 
 
 ; In some other MVC module:
-
 class MVC {
   new(field _class_prefix = None) {}
   method annotate(model_class) {
@@ -57,7 +50,8 @@ class MVC {
       get_method = view_class.add_method(cat('get', f))
           .with_statement(cat('return _model.', f))
     })
-    view_class.build()
+    view = view_class.build()
+    return view
   }
 
   method _add_controller_class(model_class) {
@@ -73,6 +67,7 @@ class MVC {
           .with_statement(cat('_model.', f, ' = ', f))
           .with_statement(cat('return _model.', f))
     })
-    controller_class.build()
+    controller = controller_class.build()
+    return controller
   }
 }

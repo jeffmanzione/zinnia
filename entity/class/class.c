@@ -39,10 +39,9 @@ Function *class_add_function(Class *cls, const char name[], uint32_t ins_pos,
   Function *old =
       (Function *)keyedlist_insert(&cls->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR(
-        "Adding function %s to class %s that already has a function by this "
-        "name.",
-        name, cls->_name);
+    ERROR("Adding function %s to class %s that already has a function by this "
+          "name.",
+          name, cls->_name);
   }
   function_init(f, name, cls->_module, ins_pos, is_anon(name), is_const,
                 is_async);
@@ -55,10 +54,9 @@ Field *class_add_field(Class *cls, const char name[]) {
   Field *f;
   Field *old = (Field *)keyedlist_insert(&cls->_fields, name, (void **)&f);
   if (NULL != old) {
-    ERROR(
-        "Adding function %s to class %s that already has a function by this "
-        "name.",
-        name, cls->_name);
+    ERROR("Adding function %s to class %s that already has a function by this "
+          "name.",
+          name, cls->_name);
   }
   f->name = name;
   return f;

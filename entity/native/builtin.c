@@ -818,6 +818,41 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
+Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
+  DEBUGF("HERERERERERE");
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
+  }
+  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
+  if (2 != tuple_size(t_args)) {
+    return raise_error(
+        task, ctx, "$set_method() can only be called with 2 args. %d provided.",
+        tuple_size(t_args));
+  }
+  if (!IS_CLASS(tuple_get(t_args, 0), Class_String)) {
+    return raise_error(task, ctx,
+                       "First argument to $set_method() must be a String.");
+  }
+  const String *str_key =
+      (const String *)tuple_get(t_args, 0)->obj->_internal_obj;
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  const Entity *arg1 = tuple_get(t_args, 1);
+  // if (IS_CLASS(arg1, Class_FunctionRef)) {
+  //   const Function *func = function_ref_get_func(arg1->obj);
+  //   add_reflection_to_function(
+  //       task->parent_process->heap, obj,
+  //       class_add_function(obj->_class_obj, key, func->_ins_pos,
+  //                          func->_is_const, func->_is_async));
+  // } else {
+  //   return raise_error(
+  //       task, ctx, "Second argument to $set_method() must be a
+  //       FunctionRef.");
+  // }
+  object_set_member(task->parent_process->heap, obj, key, arg1);
+
+  return entity_object(obj);
+}
+
 Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_String)) {
     return raise_error(task, ctx, "$get() can only be called with a String.");
@@ -896,6 +931,7 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_Class, intern("methods"), _class_methods);
 
   native_method(Class_Class, intern("$__set_super"), _class_set_super);
+  native_method(Class_Class, intern("$set_method"), _class_set_method);
   native_method(Class_Class, FIELDS_KEY, _class_fields);
 
   native_method(Class_Object, CLASS_KEY, _object_class);

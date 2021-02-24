@@ -18,7 +18,10 @@ Field *class_add_field(Class *cls, const char name[]);
 KL_iter class_functions(Class *cls);
 KL_iter class_fields(Class *cls);
 
+// TODO: Consider merging these 2 functions.
 const Function *class_get_function(const Class *cls, const char name[]);
+// const FunctionRef *class_get_function_ref(const Class *cls, const char
+// name[]);
 
 bool inherits_from(const Class *class, Class *possible_super);
 
