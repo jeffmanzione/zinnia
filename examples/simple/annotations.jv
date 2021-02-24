@@ -3,6 +3,39 @@ module annotations
 import io
 import classes
 
+; Annotated with @MVC means that this class will have View (read-only) and
+; Controller (read-write) classes generated for this class.
+@MVC('BaseDog')
+class Dog {
+  new(field _breed, field _age, field _sex, field _name) {}
+
+  method getView() {
+    DogView(self)
+  }
+  method getController() {
+    DogController(self)
+  }
+}
+
+
+; Extend auto-generated classes to add custom functions.
+class DogView : BaseDogView {
+  new(dog) { super(BaseDogView)(dog) }
+}
+class DogController : BaseDogController {
+  new(dog) { super(BaseDogController)(dog) }
+}
+
+d = Dog('Poodle', 5, 'Female', 'Fluffy')
+
+dc = d.getController()
+dc.set_age(dc.get_age() + 1)
+
+io.println(dc.get_breed(), dc.get_age(), dc.get_sex(), dc.get_name())
+
+
+; In some other MVC module:
+
 class MVC {
   new(field _class_prefix = None) {}
   method annotate(model_class) {
@@ -43,29 +76,3 @@ class MVC {
     controller_class.build()
   }
 }
-
-;@MVC('Base')
-class Dog {
-  new(field _breed, field _age, field _sex, field _name) {}
-}
-MVC('BaseDog').annotate(Dog)
-
-class DogView : BaseDogView {
-  new(dog) { super(BaseDogView)(dog) }
-}
-
-class DogController : BaseDogController {
-  new(dog) { super(BaseDogController)(dog) }
-}
-
-io.println(Dog, DogView, DogController, BaseDogView, BaseDogController)
-io.println(DogView.super(), DogController.super())
-io.println(BaseDogView.super(), BaseDogController.super())
-
-d = Dog('Poodle', 5, 'Female', 'Fluffy')
-
-dc = DogController(d)
-dc.set_age(dc.get_age() + 1)
-
-io.println(Dog.fields())
-io.println(dc.get_breed(), dc.get_age(), dc.get_sex(), dc.get_name())

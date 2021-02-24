@@ -29,7 +29,7 @@ typedef struct {
   const Token *prefix;
   const Token *class_name;
   bool is_called, has_args;
-  Arguments args;
+  ExpressionTree *args_tuple;
 } Annotation;
 
 typedef enum {
@@ -64,6 +64,7 @@ void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
                                   bool *is_async, const Token **async_token);
 int produce_function(FunctionDef *func, Tape *tape);
 void delete_function(FunctionDef *func);
+void delete_arguments(Arguments *args);
 
 FunctionDef populate_function_variant(
     const SyntaxTree *stree, ParseExpression def,

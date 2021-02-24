@@ -99,7 +99,6 @@ Annotation populate_annotation(const SyntaxTree *stree) {
   } else if (IS_SYNTAX(stree->second, annotation_with_arguments)) {
     const SyntaxTree *class = stree->second->first;
     const SyntaxTree *args_list = stree->second->second->second->first;
-    const Token *lparen_tok = stree->second->second->first->token;
     annot.is_called = true;
     annot.has_args = true;
     if (IS_SYNTAX(class, identifier)) {
@@ -108,7 +107,7 @@ Annotation populate_annotation(const SyntaxTree *stree) {
       annot.class_name = class->second->second->token;
       annot.prefix = class->first->token;
     }
-    annot.args = set_function_args(args_list, lparen_tok);
+    annot.args_tuple = populate_expression(args_list);
   }
   return annot;
 }
@@ -375,6 +374,7 @@ void populate_fi_statement(const SyntaxTree *stree, ModuleDef *module) {
     alist_append(module->classes, &class);
   } else if (IS_SYNTAX(stree, class_definition_with_annotation)) {
     ClassDef class = populate_class(stree->second);
+    class.has_annot = true;
     class.annot = populate_annotation(stree->first);
     alist_append(module->classes, &class);
   } else if (IS_SYNTAX(stree, function_definition)) {
@@ -435,6 +435,29 @@ ImplDelete(file_level_statement_list) {
   delete_module_def(&file_level_statement_list->def);
 }
 
+int produce_annotation(const ClassDef *class, Tape *tape) {
+  int num_ins = 0;
+  const Annotation *annot = &class->annot;
+
+  if (NULL != annot->prefix) {
+    num_ins += tape_ins(tape, RES, annot->prefix) +
+               tape_ins(tape, GTSH, annot->class_name);
+  } else {
+    num_ins += tape_ins(tape, PUSH, annot->class_name);
+  }
+  if (annot->has_args) {
+    num_ins += produce_instructions(annot->args_tuple, tape) +
+               tape_ins_no_arg(tape, CALL, annot->class_name);
+
+  } else {
+    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+  }
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name) +
+             tape_ins(tape, RES, class->def.name.token) +
+             tape_ins_text(tape, CALL, intern("annotate"), annot->class_name);
+  return num_ins;
+}
+
 int produce_module_def(ModuleDef *module, Tape *tape) {
   int num_ins = 0;
   if (module->name.is_named) {
@@ -445,6 +468,14 @@ int produce_module_def(ModuleDef *module, Tape *tape) {
   for (i = 0; i < alist_len(module->imports); ++i) {
     Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->module_name);
+  }
+  // Annotations
+  for (i = 0; i < alist_len(module->classes); ++i) {
+    ClassDef *class = (ClassDef *)alist_get(module->classes, i);
+    if (!class->has_annot) {
+      continue;
+    }
+    num_ins += produce_annotation(class, tape);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

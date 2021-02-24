@@ -785,7 +785,7 @@ Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _class_set_super(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Class)) {
     return raise_error(task, ctx,
-                       "Argument 1 of __set_super must be of type Class.");
+                       "Argument 1 of $__set_super must be of type Class.");
   }
   Class *class = obj->_class_obj;
   Class *new_super = args->obj->_class_obj;

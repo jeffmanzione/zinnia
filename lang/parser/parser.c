@@ -994,7 +994,7 @@ ImplSyntax(annotation_no_arguments,
            And(annotation_not_called, Type(LPAREN), Type(RPAREN)));
 
 ImplSyntax(annotation_with_arguments,
-           And(annotation_not_called, Type(LPAREN), function_argument_list, Type(RPAREN)));
+           And(annotation_not_called, Type(LPAREN), tuple_expression, Type(RPAREN)));
 
 ImplSyntax(annotation,
            And(Type(AT),

@@ -243,6 +243,7 @@ ClassDef populate_class(const SyntaxTree *stree) {
   ASSERT(!IS_LEAF(stree->first), IS_TOKEN(stree->first->first, CLASS));
   ClassDef class;
   class.has_constructor = false;
+  class.has_annot = false;
   class.fields = alist_create(FieldDef, 4);
   class.methods = alist_create(FunctionDef, 6);
   populate_class_def(&class.def, stree->first->second);
@@ -254,6 +255,12 @@ ClassDef populate_class(const SyntaxTree *stree) {
     populate_class_statement(&class, body);
   }
   return class;
+}
+
+void delete_annotation(Annotation *annot) {
+  if (annot->has_args && NULL != annot->args_tuple) {
+    delete_expression(annot->args_tuple);
+  }
 }
 
 void delete_class(ClassDef *class) {
@@ -268,6 +275,9 @@ void delete_class(ClassDef *class) {
     delete_function(func);
   }
   alist_delete(class->methods);
+  if (class->has_annot) {
+    delete_annotation(&class->annot);
+  }
 }
 
 int produce_constructor(ClassDef *class, Tape *tape) {

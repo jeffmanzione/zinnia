@@ -31,7 +31,7 @@ typedef struct {
   ClassSignature def;
   Annotation annot;
   AList *fields;
-  bool has_constructor;
+  bool has_constructor, has_annot;
   FunctionDef constructor;
   AList *methods; // Function.
 } ClassDef;
