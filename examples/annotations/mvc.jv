@@ -1,4 +1,4 @@
-module annotations
+module mvc
 
 import io
 import classes
