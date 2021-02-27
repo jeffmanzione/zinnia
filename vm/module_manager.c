@@ -5,6 +5,7 @@
 
 #include "vm/module_manager.h"
 
+#include "alloc/arena/intern.h"
 #include "entity/class/class.h"
 #include "entity/class/classes.h"
 #include "entity/function/function.h"
@@ -20,7 +21,6 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-
 typedef struct {
   Module module;
   FileInfo *fi;
@@ -32,6 +32,7 @@ void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ASSERT(NOT_NULL(mm));
   mm->_heap = heap;
   keyedlist_init(&mm->_modules, ModuleInfo, 25);
+  set_init_default(&mm->_files_processed);
 }
 
 void modulemanager_finalize(ModuleManager *mm) {
@@ -45,6 +46,7 @@ void modulemanager_finalize(ModuleManager *mm) {
     }
   }
   keyedlist_finalize(&mm->_modules);
+  set_finalize(&mm->_files_processed);
 }
 
 bool _hydrate_class(Module *module, ClassRef *cref) {
@@ -212,12 +214,17 @@ Module *_read_jb(ModuleManager *mm, const char fn[]) {
 }
 
 Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
-  if (ends_with(fn, ".jb")) {
-    return _read_jb(mm, fn);
+  char *interned_fn = intern(fn);
+  if (set_lookup(&mm->_files_processed, interned_fn)) {
+    return NULL;
+  }
+  set_insert(&mm->_files_processed, interned_fn);
+  if (ends_with(interned_fn, ".jb")) {
+    return _read_jb(mm, interned_fn);
   } else if (ends_with(fn, ".ja")) {
-    return _read_ja(mm, fn);
+    return _read_ja(mm, interned_fn);
   } else if (ends_with(fn, ".jv")) {
-    return _read_jl(mm, fn);
+    return _read_jl(mm, interned_fn);
   } else {
     ERROR("Unknown file type.");
   }
@@ -226,6 +233,9 @@ Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   Module *module = mm_read_helper(mm, fn);
+  if (NULL == module) {
+    return NULL;
+  }
   add_reflection_to_module(mm, module);
   return module;
 }
@@ -252,7 +262,7 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
   ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
-  Tape *tape = (Tape *)m->_tape; // bless
+  Tape *tape = (Tape *)m->_tape;  // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
@@ -260,12 +270,12 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (NULL != c) {
       continue;
     }
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -274,9 +284,9 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   }
   while (Q_size(&classes_to_process) > 0) {
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {

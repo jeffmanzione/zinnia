@@ -10,11 +10,13 @@
 #include "heap/heap.h"
 #include "program/tape.h"
 #include "struct/keyed_list.h"
+#include "struct/set.h"
 #include "util/file/file_info.h"
 
 typedef struct {
+  Set _files_processed;
   Heap *_heap;
-  KeyedList _modules; // ModuleInfo
+  KeyedList _modules;  // ModuleInfo
 } ModuleManager;
 
 void modulemanager_init(ModuleManager *mm, Heap *heap);

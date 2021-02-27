@@ -9,6 +9,6 @@
 #include "heap/heap.h"
 #include "vm/module_manager.h"
 
-void read_builtin(ModuleManager *mm, Heap *heap);
+void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location);
 
 #endif /* VM_BUILTIN_MODULES_H_ */

@@ -11,7 +11,7 @@
 #include "vm/process/processes.h"
 #include "vm/vm.h"
 
-VM *vm_create();
+VM *vm_create(const char *lib_location);
 void vm_delete(VM *vm);
 
 Process *vm_create_process(VM *vm);

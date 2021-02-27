@@ -22,4 +22,8 @@ void argconfig_compile(ArgConfig *const config) {
   argconfig_add(config, ArgKey__OPTIMIZE, "optimize", 'o', arg_bool(true));
 }
 
-void argconfig_run(ArgConfig *const config) { ASSERT(NOT_NULL(config)); }
+void argconfig_run(ArgConfig *const config) {
+  ASSERT(NOT_NULL(config));
+  argconfig_add(config, ArgKey__LIB_LOCATION, "lib_location", '\0',
+                arg_string(path_to_libs()));
+}
