@@ -133,9 +133,7 @@ void tape_end_class(Tape *tape) {
   tape_end_class_at_index(tape, alist_len(&tape->ins));
 }
 
-inline void _field_ref_init(FieldRef *fref, const char name[]) {
-  fref->name = name;
-}
+void _field_ref_init(FieldRef *fref, const char name[]) { fref->name = name; }
 
 void tape_field(Tape *tape, const char *field) {
   ClassRef *cls = tape->current_class;

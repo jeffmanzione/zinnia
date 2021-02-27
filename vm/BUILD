@@ -95,6 +95,7 @@ cc_library(
         "//entity/native:math",
         "//entity/native:process",
         "//entity/native:socket",
+        "//util:file",
         "@file_utils//util:string",
     ],
 )

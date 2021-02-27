@@ -19,14 +19,13 @@
 #include "entity/native/math.h"
 #include "entity/native/process.h"
 #include "entity/native/socket.h"
+#include "util/file.h"
 #include "util/string.h"
-
-#define LIB_FILE_EXT ".jv"
 
 void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   // builtin.jv
   {
-    const char *fn = combine_path_file(lib_location, "builtin", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "builtin");
     Module_builtin = mm_read_helper(mm, fn);
     builtin_classes(heap, Module_builtin);
     builtin_add_native(Module_builtin);
@@ -36,7 +35,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // io.jv
   {
-    const char *fn = combine_path_file(lib_location, "io", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "io");
     Module_io = mm_read_helper(mm, fn);
     io_add_native(Module_io);
     add_reflection_to_module(mm, Module_io);
@@ -45,7 +44,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // error.jv
   {
-    const char *fn = combine_path_file(lib_location, "error", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "error");
     Module_error = mm_read_helper(mm, fn);
     error_add_native(Module_error);
     add_reflection_to_module(mm, Module_error);
@@ -54,7 +53,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // async.jv
   {
-    const char *fn = combine_path_file(lib_location, "async", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "async");
     Module_async = mm_read_helper(mm, fn);
     async_add_native(Module_async);
     add_reflection_to_module(mm, Module_async);
@@ -63,7 +62,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // math.jv
   {
-    const char *fn = combine_path_file(lib_location, "math", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "math");
     Module_math = mm_read_helper(mm, fn);
     math_add_native(Module_math);
     add_reflection_to_module(mm, Module_math);
@@ -72,7 +71,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // struct.jv
   {
-    const char *fn = combine_path_file(lib_location, "struct", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "struct");
     Module_struct = mm_read_helper(mm, fn);
     add_reflection_to_module(mm, Module_struct);
     heap_make_root(heap, Module_struct->_reflection);
@@ -80,7 +79,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // classes.jv
   {
-    const char *fn = combine_path_file(lib_location, "classes", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "classes");
     Module_classes = mm_read_helper(mm, fn);
     classes_add_native(Module_classes);
     add_reflection_to_module(mm, Module_classes);
@@ -89,7 +88,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // process.jv
   {
-    const char *fn = combine_path_file(lib_location, "process", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "process");
     Module_process = mm_read_helper(mm, fn);
     process_add_native(Module_process);
     add_reflection_to_module(mm, Module_process);
@@ -98,7 +97,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // socket.jv
   {
-    const char *fn = combine_path_file(lib_location, "socket", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "socket");
     Module_socket = mm_read_helper(mm, fn);
     socket_add_native(Module_socket);
     add_reflection_to_module(mm, Module_socket);
@@ -107,7 +106,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   }
   // net.jv
   {
-    const char *fn = combine_path_file(lib_location, "net", LIB_FILE_EXT);
+    const char *fn = find_file_by_name(lib_location, "net");
     Module_net = mm_read_helper(mm, fn);
     add_reflection_to_module(mm, Module_net);
     heap_make_root(heap, Module_net->_reflection);
@@ -117,7 +116,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   DIR *lib = opendir(lib_location);
   struct dirent *dir;
   while ((dir = readdir(lib)) != NULL) {
-    const char *fn = combine_path_file(lib_location, dir->d_name, "");
+    const char *fn = find_file_by_name(lib_location, dir->d_name);
     if (ends_with(fn, ".jv") || ends_with(fn, ".ja") || ends_with(fn, ".jb")) {
       modulemanager_read(mm, fn);
     }

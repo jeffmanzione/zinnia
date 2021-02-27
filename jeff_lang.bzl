@@ -2,17 +2,20 @@ def _jeff_vm_library_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
     compiler_executable_path = "./" + compiler_executable.short_path
     src_files = [file for target in ctx.attr.srcs for file in target.files.to_list()]
-    out_files = [ctx.actions.declare_file(file.short_path.replace(".jv", ".ja")) for file in src_files]
-    out_dir = out_files[0].dirname
-    jlc_args = ["-a", "--assembly_out_dir=" + out_dir] + [file.short_path for file in src_files]
-    ctx.actions.run(
-        outputs = out_files,
-        inputs = src_files,
-        executable = compiler_executable,
-        arguments = jlc_args,
-        mnemonic = "CompileJL",
-        progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(jlc_args)),
-    )
+    out_files = []
+    for src in src_files:
+        out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
+        out_files.append(out_file)
+        out_dir = out_file.root.path + "/" + src.dirname
+        jlc_args = ["-a", "--assembly_out_dir=" + out_dir, src.short_path]
+        ctx.actions.run(
+            outputs = [out_file],
+            inputs = [src],
+            executable = compiler_executable,
+            arguments = jlc_args,
+            mnemonic = "CompileJL",
+            progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(jlc_args)),
+        )
     return [
         DefaultInfo(
             files = depset(out_files),
@@ -53,7 +56,7 @@ def _jeff_vm_binary_impl(ctx):
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
-    jlr_command = "./bazel-bin/%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
+    jlr_command = "pwd\n./%s %s" % (runner_executable.short_path, " ".join([file.path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
@@ -63,7 +66,7 @@ def _jeff_vm_binary_impl(ctx):
     )
     return [
         DefaultInfo(
-            files = depset(input_files + [runner_executable, run_sh]),
+            files = depset(input_files + builtins + [runner_executable, run_sh]),
             executable = run_sh,
             default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh] + builtins),
         ),
