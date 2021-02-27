@@ -31,7 +31,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     builtin_add_native(Module_builtin);
     add_reflection_to_module(mm, Module_builtin);
     heap_make_root(heap, Module_builtin->_reflection);
-    DEALLOC(fn);
   }
   // io.jv
   {
@@ -40,7 +39,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     io_add_native(Module_io);
     add_reflection_to_module(mm, Module_io);
     heap_make_root(heap, Module_io->_reflection);
-    DEALLOC(fn);
   }
   // error.jv
   {
@@ -49,7 +47,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     error_add_native(Module_error);
     add_reflection_to_module(mm, Module_error);
     heap_make_root(heap, Module_error->_reflection);
-    DEALLOC(fn);
   }
   // async.jv
   {
@@ -58,7 +55,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     async_add_native(Module_async);
     add_reflection_to_module(mm, Module_async);
     heap_make_root(heap, Module_async->_reflection);
-    DEALLOC(fn);
   }
   // math.jv
   {
@@ -67,7 +63,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     math_add_native(Module_math);
     add_reflection_to_module(mm, Module_math);
     heap_make_root(heap, Module_math->_reflection);
-    DEALLOC(fn);
   }
   // struct.jv
   {
@@ -75,7 +70,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     Module_struct = mm_read_helper(mm, fn);
     add_reflection_to_module(mm, Module_struct);
     heap_make_root(heap, Module_struct->_reflection);
-    DEALLOC(fn);
   }
   // classes.jv
   {
@@ -84,7 +78,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     classes_add_native(Module_classes);
     add_reflection_to_module(mm, Module_classes);
     heap_make_root(heap, Module_classes->_reflection);
-    DEALLOC(fn);
   }
   // process.jv
   {
@@ -93,7 +86,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     process_add_native(Module_process);
     add_reflection_to_module(mm, Module_process);
     heap_make_root(heap, Module_process->_reflection);
-    DEALLOC(fn);
   }
   // socket.jv
   {
@@ -102,7 +94,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     socket_add_native(Module_socket);
     add_reflection_to_module(mm, Module_socket);
     heap_make_root(heap, Module_socket->_reflection);
-    DEALLOC(fn);
   }
   // net.jv
   {
@@ -110,7 +101,6 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     Module_net = mm_read_helper(mm, fn);
     add_reflection_to_module(mm, Module_net);
     heap_make_root(heap, Module_net->_reflection);
-    DEALLOC(fn);
   }
 
   DIR *lib = opendir(lib_location);
@@ -120,6 +110,5 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     if (ends_with(fn, ".jv") || ends_with(fn, ".ja") || ends_with(fn, ".jb")) {
       modulemanager_read(mm, fn);
     }
-    DEALLOC(fn);
   }
 }
