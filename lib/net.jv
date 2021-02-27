@@ -70,19 +70,19 @@ class HttpRequest {
         headers) {
           _headers = headers
         }
-    method getHeaderValue(key) {
+    method get_header_value(key) {
       return _headers[key]
     }
-    method getHost() {
+    method get_host() {
       return _headers['Host']
     }
-    method getConnection() {
+    method get_connection() {
       return _headers['Connection']
     }
-    method getUserAgent() {
+    method get_user_agent() {
       return _headers['User-Agent']
     }
-    method getAccept() {
+    method get_accept() {
       return _headers['Accept'].split(',')
     }
     method to_s() {
@@ -122,41 +122,41 @@ class HttpResponse {
     _headers['Content-Length'] = 0
     _content = ''
   }
-  method setStatus(status) {
+  method set_status(status) {
     _status = status
     return self
   }
-  method setStatusCode(status_code) {
+  method set_status_code(status_code) {
     _status_code = status_code
     return self
   }
-  method setServer(server) {
+  method set_server(server) {
     _headers['Server'] = server
     return self
   }
-  method setDate(date_text) {
+  method set_date(date_text) {
     _headers['Date'] = date_text
     return self
   }
-  method setLastModified(date_text) {
+  method set_last_modified(date_text) {
     _headers['Last-Modified'] = date_text
     return self
   }
-  method setContentType(type) {
+  method set_content_type(type) {
     _headers['Content-Type'] = type
     return self
   }
-  method setAcceptRanges(ranges) {
+  method set_accept_ranges(ranges) {
     _headers['Accept-Ranges'] = ranges
     return self
   }
-  method setCookie(cookie) {
+  method set_cookie(cookie) {
     if cookie is Cookies {
       cookie = cookie.to_s()
     }
     _headers['Set-Cookie'] = cookie
   }
-  method addContent(text) {
+  method add_content(text) {
     _content.extend(text)
     _headers['Content-Length'] = _headers['Content-Length'] + text.len()
     return self

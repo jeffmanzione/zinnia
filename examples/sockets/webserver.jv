@@ -18,11 +18,13 @@ try {
     io.println(cat('Received request: ', request.type, ' ', request.path))
     response = net.HttpResponse()
     if request.path == '/' or request.path == '/index.html' {
-      response.addContent(index_html)
+      response.add_content(index_html)
     } else if request.path == '/favicon.ico' {
-      response.setContentType('image/x-icon').addContent(favicon_ico)
+      response.set_content_type('image/x-icon').add_content(favicon_ico)
     } else {
-      response.setStatusCode(404).setStatus('NOT FOUND').addContent(not_found_html)
+      response.set_status_code(404)
+          .set_status('NOT FOUND')
+          .add_content(not_found_html)
     }
     handle.send(response)
     handle.close()

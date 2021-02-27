@@ -25,7 +25,7 @@ is_done = False
 
 handle_connection = (handle) async {
   request = handle.receive()
-  handle.send(net.HttpResponse().addContent('Hello, world!'))
+  handle.send(net.HttpResponse().add_content('Hello, world!'))
   io.println('Received request:')
   io.println(request)
   handle.close()

@@ -3,9 +3,12 @@ module build
 import classes
 
 class WithBuilder {
+  new(field _builder_class_name=None) {}
   method annotate(cls) {
-    builder_class_name = cat(cls.name(), 'Builder')
-    builder_class = classes.factory.create_class(builder_class_name, cls.module())
+    if ~_builder_class_name {
+      _builder_class_name = cat(cls.name(), 'Builder')
+    }
+    builder_class = classes.factory.create_class(_builder_class_name, cls.module())
     build_method = builder_class.add_method('build')
         .with_statement(cat('o = ', cls.name(), '()'))
     cls.fields().each((f) {
