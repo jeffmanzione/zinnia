@@ -745,7 +745,7 @@ Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   const Class *target_super = args->obj->_class_obj;
 
-  const Class *super = obj->_class->_supepr;
+  const Class *super = obj->_class->_super;
   const Function *constructor = NULL;
   while (NULL != super) {
     if (super == target_super) {
