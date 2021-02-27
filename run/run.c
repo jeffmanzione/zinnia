@@ -55,7 +55,10 @@ void run(const Set *source_files, ArgStore *store) {
   semantics_init();
   optimize_init();
 
-  VM *vm = vm_create();
+  const char *lib_location =
+      argstore_lookup_string(store, ArgKey__LIB_LOCATION);
+
+  VM *vm = vm_create(lib_location);
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = NULL;
 

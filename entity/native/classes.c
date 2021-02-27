@@ -23,8 +23,7 @@
 
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
-  if (NULL == args || args->type != OBJECT ||
-      Class_Tuple != args->obj->_class) {
+  if (!IS_TUPLE(args)) {
     return raise_error(task, ctx,
                        "Invalid arguments for __load_class_from_text: Input is "
                        "wrong type. Expected tuple(2).");
@@ -40,16 +39,14 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
 
   const Entity *arg0 = tuple_get(t, 0);
   const Entity *arg1 = tuple_get(t, 1);
-  if (NULL == arg0 || OBJECT != arg0->type ||
-      Class_Module != arg0->obj->_class) {
+  if (!IS_CLASS(arg0, Class_Module)) {
     return raise_error(task, ctx,
                        "Invalid argument(0) for "
                        "__load_class_from_text: Expected type Module.");
   }
   Module *m = arg0->obj->_module_obj;
 
-  if (NULL == arg1 || OBJECT != arg1->type ||
-      Class_String != arg1->obj->_class) {
+  if (!IS_CLASS(arg1, Class_String)) {
     return raise_error(task, ctx,
                        "Invalid argument(1) for "
                        "__load_class_from_text: Expected type String.");
@@ -59,10 +56,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   parsers_init();
   semantics_init();
 
-  char *c_str_text = ALLOC_ARRAY2(char, String_size(class_text) + 1);
-  memmove(c_str_text, class_text->table, String_size(class_text));
-  c_str_text[String_size(class_text)] = '\0';
-
+  char *c_str_text = strndup(class_text->table, String_size(class_text));
   SFILE *file = sfile_open(c_str_text);
 
   Tape *tape = (Tape *)m->_tape; // bless
@@ -94,6 +88,8 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
 
   semantics_finalize();
   parsers_finalize();
+
+  DEALLOC(c_str_text);
 
   return entity_object(new_class->_reflection);
 }

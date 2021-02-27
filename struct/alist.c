@@ -48,7 +48,8 @@ inline void *alist_add(AList *const e) {
 
 inline void alist_remove_last(AList *const e) {
   ASSERT(NOT_NULL(e));
-  if (e->_len <= 0) return;
+  if (e->_len <= 0)
+    return;
   e->_len--;
 }
 

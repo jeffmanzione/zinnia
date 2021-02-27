@@ -21,9 +21,9 @@ cc_library(
     srcs = ["classes.c"],
     hdrs = ["classes.h"],
     deps = [
+        ":class",
         "//entity:object",
         "//entity/array",
-        "//entity/class",
         "//entity/function",
         "//entity/module",
         "//entity/string",

@@ -258,14 +258,14 @@ void _add_filename_method(VM *vm) {
                              Class_StackLine->_reflection, linename);
 }
 
-VM *vm_create() {
+VM *vm_create(const char *lib_location) {
   VM *vm = ALLOC2(VM);
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
   vm->process_create_lock = mutex_create();
   vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
-  read_builtin(&vm->mm, vm->main->heap);
+  read_builtin(&vm->mm, vm->main->heap, lib_location);
   // Have to put this here since there was no way else to get around the
   // circular dependency.
   _add_filename_method(vm);
@@ -489,27 +489,6 @@ inline void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
-Entity _object_get_maybe_wrap(Object *obj, const char field[], Task *task,
-                              Context *ctx) {
-  Entity member;
-  const Entity *member_ptr =
-      (Class_Class == obj->_class) ? NULL : object_get(obj, field);
-  if (NULL == member_ptr) {
-    const Function *f = class_get_function(obj->_class, field);
-    if (NULL == f) {
-      return NONE_ENTITY;
-    }
-    member = entity_object(f->_reflection);
-  } else {
-    member = *member_ptr;
-  }
-  if (OBJECT == member.type && Class_Function == member.obj->_class) {
-    return entity_object(
-        wrap_function_in_ref(member.obj->_function_obj, obj, task, ctx));
-  }
-  return member;
-}
-
 inline void _execute_GET(VM *vm, Task *task, Context *context,
                          const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
@@ -522,7 +501,7 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
     return;
   }
   *task_mutable_resval(task) =
-      _object_get_maybe_wrap(e->obj, ins->id, task, context);
+      object_get_maybe_wrap(e->obj, ins->id, task, context);
 }
 
 inline void _execute_GTSH(VM *vm, Task *task, Context *context,
@@ -536,7 +515,7 @@ inline void _execute_GTSH(VM *vm, Task *task, Context *context,
                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
-  Entity get_result = _object_get_maybe_wrap(e->obj, ins->id, task, context);
+  Entity get_result = object_get_maybe_wrap(e->obj, ins->id, task, context);
   *task_pushstack(task) = get_result;
 }
 
@@ -617,8 +596,7 @@ bool _call_method(Task *task, Object *obj, Context *context,
                   const Instruction *ins) {
   ASSERT(NOT_NULL(obj), NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
-
-  Entity method = _object_get_maybe_wrap(obj, ins->id, task, context);
+  Entity method = object_get_maybe_wrap(obj, ins->id, task, context);
   if (NONE == method.type) {
     raise_error(task, context, "Failed to find method '%s' on %s", ins->id,
                 class->_name);
@@ -992,14 +970,20 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
     return;
   }
   const Entity *e = task_get_resval(task);
+
+  int test_len = pint(&ins->val);
+  if (1 == test_len) {
+    *task_mutable_resval(task) =
+        (NULL != e && NONE != e->type) ? entity_int(1) : NONE_ENTITY;
+    return;
+  }
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
     *task_mutable_resval(task) = NONE_ENTITY;
     return;
   }
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   uint32_t tlen = tuple_size(t);
-  *task_mutable_resval(task) =
-      tlen >= pint(&ins->val) ? entity_int(1) : NONE_ENTITY;
+  *task_mutable_resval(task) = tlen >= test_len ? entity_int(1) : NONE_ENTITY;
 }
 
 void _execute_TGET(VM *vm, Task *task, Context *context,
@@ -1010,7 +994,7 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
   }
   int32_t index = pint(&ins->val);
   const Entity *e = task_get_resval(task);
-  if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
+  if (!IS_TUPLE(e)) {
     if (NULL != e && 0 == index) {
       return;
     }

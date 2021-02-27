@@ -44,12 +44,17 @@ struct _Object {
   };
 };
 
+typedef struct {
+  const char *name;
+} Field;
+
 struct _Class {
   Object *_reflection;
 
   const char *_name;
   const Class *_super;
   const Module *_module;
+  KeyedList _fields;
   KeyedList _functions;
   ObjInitFn _init_fn;
   ObjDelFn _delete_fn;
@@ -82,7 +87,7 @@ struct _Function {
   bool _is_background;
   union {
     uint32_t _ins_pos;
-    void *_native_fn; // NativeFn
+    void *_native_fn;  // NativeFn
   };
 };
 

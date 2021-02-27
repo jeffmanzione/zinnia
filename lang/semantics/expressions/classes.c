@@ -61,6 +61,7 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
 Argument populate_constructor_argument(const SyntaxTree *stree) {
   Argument arg = {.is_const = false,
                   .const_token = NULL,
+                  .field_token = NULL,
                   .is_field = false,
                   .has_default = false,
                   .default_value = NULL};
@@ -77,6 +78,7 @@ Argument populate_constructor_argument(const SyntaxTree *stree) {
   }
   if (IS_SYNTAX(argument, new_field_arg)) {
     arg.arg_name = argument->second->token;
+    arg.field_token = argument->first->token;
     arg.is_field = true;
   } else {
     ASSERT(IS_SYNTAX(argument, identifier));
@@ -155,9 +157,9 @@ FunctionDef populate_constructor(const SyntaxTree *stree) {
                                    set_new_def, set_constructor_args);
 }
 
-Field populate_field_statement(const Token *field_token,
-                               const SyntaxTree *stree) {
-  Field field = {.name = stree->token, .field_token = field_token};
+FieldDef populate_field_statement(const Token *field_token,
+                                  const SyntaxTree *stree) {
+  FieldDef field = {.name = stree->token, .field_token = field_token};
   return field;
 }
 
@@ -167,21 +169,21 @@ void populate_field_statements(const SyntaxTree *stree, ClassDef *class) {
 
   if (!IS_SYNTAX(stree->second, identifier_list)) {
     ASSERT(IS_SYNTAX(stree->second, identifier));
-    Field field = populate_field_statement(field_token, stree->second);
+    FieldDef field = populate_field_statement(field_token, stree->second);
     alist_append(class->fields, &field);
     return;
   }
-  Field field = populate_field_statement(field_token, stree->second->first);
+  FieldDef field = populate_field_statement(field_token, stree->second->first);
   alist_append(class->fields, &field);
 
   const SyntaxTree *statement = stree->second->second;
   while (true) {
     if (IS_TOKEN(statement->first, COMMA)) {
-      Field field = populate_field_statement(field_token, statement->second);
+      FieldDef field = populate_field_statement(field_token, statement->second);
       alist_append(class->fields, &field);
       break;
     }
-    Field field =
+    FieldDef field =
         populate_field_statement(field_token, statement->first->second);
     alist_append(class->fields, &field);
     statement = statement->second;
@@ -197,6 +199,18 @@ void populate_class_statement(ClassDef *class, const SyntaxTree *stree) {
   } else if (IS_SYNTAX(stree, new_definition)) {
     class->constructor = populate_constructor(stree);
     class->has_constructor = true;
+    if (class->constructor.has_args) {
+      AL_iter args = alist_iter(class->constructor.args.args);
+      for (; al_has(&args); al_inc(&args)) {
+        Argument *arg = (Argument *)al_value(&args);
+        if (!arg->is_field) {
+          continue;
+        }
+        FieldDef *field = (FieldDef *)alist_add(class->fields);
+        field->name = arg->arg_name;
+        field->field_token = arg->arg_name;
+      }
+    }
   } else {
     ERROR("Unknown class_statement.");
   }
@@ -225,10 +239,12 @@ void populate_class_statements(ClassDef *class, const SyntaxTree *stree) {
 }
 
 ClassDef populate_class(const SyntaxTree *stree) {
+  // TODO HANDLE ANNOTATIONS.
   ASSERT(!IS_LEAF(stree->first), IS_TOKEN(stree->first->first, CLASS));
   ClassDef class;
   class.has_constructor = false;
-  class.fields = alist_create(Field, 4);
+  class.has_annot = false;
+  class.fields = alist_create(FieldDef, 4);
   class.methods = alist_create(FunctionDef, 6);
   populate_class_def(&class.def, stree->first->second);
 
@@ -239,6 +255,12 @@ ClassDef populate_class(const SyntaxTree *stree) {
     populate_class_statement(&class, body);
   }
   return class;
+}
+
+void delete_annotation(Annotation *annot) {
+  if (annot->has_args && NULL != annot->args_tuple) {
+    delete_expression(annot->args_tuple);
+  }
 }
 
 void delete_class(ClassDef *class) {
@@ -253,6 +275,9 @@ void delete_class(ClassDef *class) {
     delete_function(func);
   }
   alist_delete(class->methods);
+  if (class->has_annot) {
+    delete_annotation(&class->annot);
+  }
 }
 
 int produce_constructor(ClassDef *class, Tape *tape) {
@@ -269,7 +294,7 @@ int produce_constructor(ClassDef *class, Tape *tape) {
     num_ins += tape_ins_no_arg(tape, PUSH, class->def.name.token);
     int i;
     for (i = 0; i < num_fields; ++i) {
-      Field *field = (Field *)alist_get(class->fields, i);
+      FieldDef *field = (FieldDef *)alist_get(class->fields, i);
       num_ins += tape_ins_no_arg(tape, PNIL, field->name) +
                  tape_ins_text(tape, RES, SELF, field->name) +
                  tape_ins(tape, FLD, field->name);
@@ -299,19 +324,15 @@ int produce_constructor(ClassDef *class, Tape *tape) {
 
 int produce_class(ClassDef *class, Tape *tape) {
   int num_ins = 0;
-  if (alist_len(class->def.parent_classes) == 0) {
-    // No parents.
-    num_ins += tape_class(tape, class->def.name.token);
-  } else {
-    Q parents;
-    Q_init(&parents);
-    int i;
-    for (i = 0; i < alist_len(class->def.parent_classes); ++i) {
-      ClassName *name = (ClassName *)alist_get(class->def.parent_classes, i);
-      Q_enqueue(&parents, (char *)name->token->text);
-    }
-    num_ins += tape_class_with_parents(tape, class->def.name.token, &parents);
-    Q_finalize(&parents);
+  if (alist_len(class->def.parent_classes) > 1) {
+    ERROR("Cannot have more than one super class.");
+  }
+  num_ins += tape_class(tape, class->def.name.token);
+  // Fields
+  AL_iter fields = alist_iter(class->fields);
+  for (; al_has(&fields); al_inc(&fields)) {
+    FieldDef *f = (FieldDef *)al_value(&fields);
+    tape_field(tape, f->name->text);
   }
   // Constructor
   if (class->has_constructor || alist_len(class->fields) > 0) {

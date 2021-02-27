@@ -4,7 +4,7 @@ def _jeff_vm_library_impl(ctx):
     src_files = [file for target in ctx.attr.srcs for file in target.files.to_list()]
     out_files = [ctx.actions.declare_file(file.short_path.replace(".jv", ".ja")) for file in src_files]
     out_dir = out_files[0].dirname
-    jlc_args = ["-a", "-aout=" + out_dir] + [file.short_path for file in src_files]
+    jlc_args = ["-a", "--assembly_out_dir=" + out_dir] + [file.short_path for file in src_files]
     ctx.actions.run(
         outputs = out_files,
         inputs = src_files,
@@ -53,7 +53,7 @@ def _jeff_vm_binary_impl(ctx):
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
-    jlr_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
+    jlr_command = "./bazel-bin/%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
@@ -89,12 +89,6 @@ _jeff_vm_binary = rule(
 )
 
 def jeff_vm_binary(name, main, srcs = [], deps = []):
-    native.config_setting(
-        name = "mingw",
-        values = {
-            "config": "mingw",
-        },
-    )
     if main in srcs:
         srcs.remove(main)
 

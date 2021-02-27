@@ -21,6 +21,7 @@ typedef enum {
   ArgKey__BIN_OUT_DIR,
   ArgKey__ASSEMBLY_OUT_DIR,
   ArgKey__OPTIMIZE,
+  ArgKey__LIB_LOCATION,
   ArgKey__END,
 } ArgKey;
 

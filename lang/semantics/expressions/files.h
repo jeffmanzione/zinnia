@@ -15,6 +15,7 @@ typedef struct {
   bool is_const, is_field, has_default;
   const Token *arg_name;
   const Token *const_token;
+  const Token *field_token;
   ExpressionTree *default_value;
 } Argument;
 
@@ -23,6 +24,13 @@ typedef struct {
   int count_required, count_optional;
   AList *args;
 } Arguments;
+
+typedef struct {
+  const Token *prefix;
+  const Token *class_name;
+  bool is_called, has_args;
+  ExpressionTree *args_tuple;
+} Annotation;
 
 typedef enum {
   SpecialMethod__NONE,
@@ -51,14 +59,18 @@ void add_arg(Arguments *args, Argument *arg);
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 Arguments set_function_args(const SyntaxTree *stree, const Token *token);
 
-void populate_function_qualifiers(const SyntaxTree *fn_qualifiers, bool *is_const, const Token **const_token, bool *is_async, const Token **async_token);
+void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
+                                  bool *is_const, const Token **const_token,
+                                  bool *is_async, const Token **async_token);
 int produce_function(FunctionDef *func, Tape *tape);
 void delete_function(FunctionDef *func);
+void delete_arguments(Arguments *args);
 
 FunctionDef populate_function_variant(
     const SyntaxTree *stree, ParseExpression def,
-    ParseExpression signature_with_qualifier, ParseExpression signature_no_qualifier,
-    ParseExpression fn_identifier, ParseExpression function_arguments_no_args,
+    ParseExpression signature_with_qualifier,
+    ParseExpression signature_no_qualifier, ParseExpression fn_identifier,
+    ParseExpression function_arguments_no_args,
     ParseExpression function_arguments_present, FuncDefPopulator def_populator,
     FuncArgumentsPopulator args_populator);
 FunctionDef populate_function(const SyntaxTree *stree);

@@ -25,6 +25,7 @@
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/processes.h"
+#include "vm/vm.h"
 
 #ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
@@ -60,31 +61,31 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_int(0);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Int.");
-      }
-      if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_int(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_int(pchar(&args->pri));
-        case INT:
-          return *args;
-        case FLOAT:
-          return entity_int(pfloat(&args->pri));
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_int(0);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Int.");
+    }
+    if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_int(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_int(pchar(&args->pri));
+    case INT:
+      return *args;
+    case FLOAT:
+      return entity_int(pfloat(&args->pri));
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -108,31 +109,31 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_float(0.f);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Float.");
-      }
-      if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_float(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_float(pchar(&args->pri));
-        case INT:
-          return entity_float(pfloat(&args->pri));
-        case FLOAT:
-          return *args;
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_float(0.f);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Float.");
+    }
+    if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_float(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_float(pchar(&args->pri));
+    case INT:
+      return entity_float(pfloat(&args->pri));
+    case FLOAT:
+      return *args;
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_float(0.f);
 }
@@ -158,29 +159,29 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
     return NONE_ENTITY;
   }
   switch (args->type) {
-    case NONE:
-      return NONE_ENTITY;
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to bool Int.");
-      }
-      if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return result ? entity_int(1) : NONE_ENTITY;
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-        case INT:
-        case FLOAT:
-          return entity_int(1);
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return NONE_ENTITY;
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to bool Int.");
+    }
+    if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return result ? entity_int(1) : NONE_ENTITY;
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+    case INT:
+    case FLOAT:
+      return entity_int(1);
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return NONE_ENTITY;
 }
@@ -269,15 +270,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-    case INT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-      break;
-    case FLOAT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-      break;
-    default /*CHAR*/:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-      break;
+  case INT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    break;
+  case FLOAT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+    break;
+  default /*CHAR*/:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+    break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -373,10 +374,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class) \
+#define IS_OBJECT_CLASS(e, class)                                              \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype) \
+#define IS_VALUE_TYPE(e, valtype)                                              \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -733,14 +734,26 @@ Entity _range_end(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _class_super(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return (NULL == obj->_class->_super)
+  return (NULL == obj->_class_obj->_super)
              ? NONE_ENTITY
-             : entity_object(obj->_class->_super->_reflection);
+             : entity_object(obj->_class_obj->_super->_reflection);
 }
 
 Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_CLASS(args, Class_Class)) {
+    return raise_error(task, ctx, "super() requires a Class as an argument.");
+  }
+  const Class *target_super = args->obj->_class_obj;
+
   const Class *super = obj->_class->_super;
-  const Function *constructor = class_get_function(super, CONSTRUCTOR_KEY);
+  const Function *constructor = NULL;
+  while (NULL != super) {
+    if (super == target_super) {
+      constructor = class_get_function(super, CONSTRUCTOR_KEY);
+      break;
+    }
+    super = super->_super;
+  }
   if (NULL != constructor) {
     return entity_object(_wrap_function_in_ref2(constructor, obj, task, ctx));
   }
@@ -767,6 +780,87 @@ Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {
     array_add(task->parent_process->heap, array_obj, &func);
   }
   return entity_object(array_obj);
+}
+
+Entity _class_set_super(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_CLASS(args, Class_Class)) {
+    return raise_error(task, ctx,
+                       "Argument 1 of $__set_super must be of type Class.");
+  }
+  Class *class = obj->_class_obj;
+  Class *new_super = args->obj->_class_obj;
+  class->_super = new_super;
+  return entity_object(obj);
+}
+
+Entity _class_fields(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Class);
+  return *object_get(obj, FIELDS_PRIVATE_KEY);
+}
+
+Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
+  }
+  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
+  if (2 != tuple_size(t_args)) {
+    return raise_error(task, ctx,
+                       "$set() can only be called with 2 args. %d provided.",
+                       tuple_size(t_args));
+  }
+  if (!IS_CLASS(tuple_get(t_args, 0), Class_String)) {
+    return raise_error(task, ctx, "First argument to $set() must be a String.");
+  }
+  const String *str_key =
+      (const String *)tuple_get(t_args, 0)->obj->_internal_obj;
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  object_set_member(task->parent_process->heap, obj, key, tuple_get(t_args, 1));
+  return entity_object(obj);
+}
+
+Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
+  DEBUGF("HERERERERERE");
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
+  }
+  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
+  if (2 != tuple_size(t_args)) {
+    return raise_error(
+        task, ctx, "$set_method() can only be called with 2 args. %d provided.",
+        tuple_size(t_args));
+  }
+  if (!IS_CLASS(tuple_get(t_args, 0), Class_String)) {
+    return raise_error(task, ctx,
+                       "First argument to $set_method() must be a String.");
+  }
+  const String *str_key =
+      (const String *)tuple_get(t_args, 0)->obj->_internal_obj;
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  const Entity *arg1 = tuple_get(t_args, 1);
+  // if (IS_CLASS(arg1, Class_FunctionRef)) {
+  //   const Function *func = function_ref_get_func(arg1->obj);
+  //   add_reflection_to_function(
+  //       task->parent_process->heap, obj,
+  //       class_add_function(obj->_class_obj, key, func->_ins_pos,
+  //                          func->_is_const, func->_is_async));
+  // } else {
+  //   return raise_error(
+  //       task, ctx, "Second argument to $set_method() must be a
+  //       FunctionRef.");
+  // }
+  object_set_member(task->parent_process->heap, obj, key, arg1);
+
+  return entity_object(obj);
+}
+
+Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_CLASS(args, Class_String)) {
+    return raise_error(task, ctx, "$get() can only be called with a String.");
+  }
+  const String *str_key = (const String *)args->obj->_internal_obj;
+  // TODO: Maybe use _object_get_maybe_wrap instead.
+  const char *key = intern_range(str_key->table, 0, String_size(str_key));
+  return object_get_maybe_wrap(obj, key, task, ctx);
 }
 
 void _process_init(Object *obj) {}
@@ -836,10 +930,15 @@ void builtin_add_native(Module *builtin) {
   native_method(Class_Class, SUPER_KEY, _class_super);
   native_method(Class_Class, intern("methods"), _class_methods);
 
+  native_method(Class_Class, intern("$__set_super"), _class_set_super);
+  native_method(Class_Class, intern("$set_method"), _class_set_method);
+  native_method(Class_Class, FIELDS_KEY, _class_fields);
+
   native_method(Class_Object, CLASS_KEY, _object_class);
   native_method(Class_Object, SUPER_KEY, _object_super);
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
+  native_method(Class_Object, intern("$set"), _set_member);
 
   native_method(Class_Array, intern("len"), _array_len);
   native_method(Class_Array, intern("append"), _array_append);

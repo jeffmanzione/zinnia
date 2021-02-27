@@ -9,7 +9,7 @@
 
 #include "alloc/arena/intern.h"
 
-#define DEFAULT_PATH_TO_LIB "./lib/bin/"
+#define DEFAULT_PATH_TO_LIB "./lib"
 
 char *path_to_libs() {
   char *path_var = getenv(PATH_ENV_VAR_NAME);

@@ -54,6 +54,7 @@ cc_library(
         "//entity/string:string_helper",
         "//entity/tuple",
         "//heap",
+        "//vm",
         "//vm/process:processes",
         "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc/arena:intern",

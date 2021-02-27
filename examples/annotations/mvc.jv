@@ -1,0 +1,73 @@
+module mvc
+
+import io
+import classes
+
+; Annotated with @MVC means that this class will have View (read-only) and
+; Controller (read-write) classes generated for this class.
+@MVC('BaseDog')
+class Dog {
+  new(field _breed, field _age, field _sex, field _name) {}
+  method view() DogView(self)
+  method controller() DogController(self)
+}
+
+; Extend auto-generated classes to add custom functions.
+class DogView : BaseDogView {
+  new(dog) super(BaseDogView)(dog)
+}
+class DogController : BaseDogController {
+  new(dog) super(BaseDogController)(dog)
+}
+
+d = Dog('Poodle', 5, 'Female', 'Fluffy')
+
+dc = d.controller()
+dc.set_age(dc.get_age() + 1)
+
+io.println(dc.get_breed(), dc.get_age(), dc.get_sex(), dc.get_name())
+
+
+; In some other MVC module:
+class MVC {
+  new(field _class_prefix = None) {}
+  method annotate(model_class) {
+    if ~_class_prefix {
+      _class_prefix = model_class.name()
+    }
+    view_class = _add_view_class(model_class)
+    controller_class = _add_controller_class(model_class)
+    controller_class.$__set_super(view_class)
+  }
+
+  method _add_view_class(model_class) {
+    view_class = classes.factory.create_class(
+        cat(_class_prefix, 'View'),
+        model_class.module())
+    constructor = view_class.get_constructor()
+        .with_parameter('_model', True)
+    model_class.fields().each((f) {
+      get_method = view_class.add_method(cat('get', f))
+          .with_statement(cat('return _model.', f))
+    })
+    view = view_class.build()
+    return view
+  }
+
+  method _add_controller_class(model_class) {
+    controller_class = classes.factory.create_class(
+        cat(_class_prefix, 'Controller'),
+        model_class.module())
+    constructor = controller_class.get_constructor()
+        .with_parameter('_model')
+        .with_statement(cat('super(', _class_prefix, 'View', ')(_model)'))
+    model_class.fields().each((f) {
+      get_method = controller_class.add_method(cat('set', f))
+          .with_parameter(f)
+          .with_statement(cat('_model.', f, ' = ', f))
+          .with_statement(cat('return _model.', f))
+    })
+    controller = controller_class.build()
+    return controller
+  }
+}
