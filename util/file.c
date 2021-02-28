@@ -26,8 +26,8 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   if (!ends_with(dir, "/")) {
     fn_len++;
   }
-  char *fn = ALLOC_ARRAY2(char, fn_len);
-  char *pos = fn;
+  const char *fn = ALLOC_ARRAY2(char, fn_len + 1);
+  char *pos = (char *)fn;
   strcpy(pos, dir);
   pos += strlen(dir);
   if (!ends_with(dir, "/")) {
@@ -37,19 +37,19 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   pos += strlen(file_prefix);
   strcpy(pos, ".jb");
   if (access(fn, F_OK) != -1) {
-    char *to_return = intern(fn);
+    char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
     return to_return;
   }
   strcpy(pos, ".ja");
   if (access(fn, F_OK) != -1) {
-    char *to_return = intern(fn);
+    char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
     return to_return;
   }
   strcpy(pos, ".jv");
   if (access(fn, F_OK) != -1) {
-    char *to_return = intern(fn);
+    char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
     return to_return;
   }
