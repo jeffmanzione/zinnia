@@ -54,6 +54,7 @@ inline Token *token_create(TokenType type, int line, int col,
   }
   Token *tok = ARENA_ALLOC(Token);
   token_fill(tok, type, line, col, text);
+  DEBUGF("token='%s'", text);
   return tok;
 }
 

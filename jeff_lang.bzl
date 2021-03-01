@@ -56,7 +56,7 @@ def _jeff_vm_binary_impl(ctx):
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
-    jlr_command = "pwd\n./%s %s" % (runner_executable.short_path, " ".join([file.path for file in input_files]))
+    jlr_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(

@@ -26,19 +26,27 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   // builtin.jv
   {
     const char *fn = find_file_by_name(lib_location, "builtin");
+    DEBUGF("A");
     Module_builtin = mm_read_helper(mm, fn);
+    DEBUGF("B");
     builtin_classes(heap, Module_builtin);
     builtin_add_native(Module_builtin);
     add_reflection_to_module(mm, Module_builtin);
+    DEBUGF("C");
     heap_make_root(heap, Module_builtin->_reflection);
+    DEBUGF("D");
   }
   // io.jv
   {
     const char *fn = find_file_by_name(lib_location, "io");
+    DEBUGF("A");
     Module_io = mm_read_helper(mm, fn);
+    DEBUGF("B");
     io_add_native(Module_io);
     add_reflection_to_module(mm, Module_io);
+    DEBUGF("C");
     heap_make_root(heap, Module_io->_reflection);
+    DEBUGF("D");
   }
   // error.jv
   {

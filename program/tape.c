@@ -395,7 +395,7 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     tape_endclass(tape, first);
     return;
   }
-  if (0 == strcmp(CLASS_KEYWORD, first->text)) {
+  if (0 == strcmp(FIELD_KEYWORD, first->text)) {
     Token *field = Q_remove(tokens, 0);
     tape_field(tape, field->text);
     return;

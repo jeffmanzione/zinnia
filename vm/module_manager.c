@@ -188,17 +188,22 @@ Module *_read_jl(ModuleManager *mm, const char fn[]) {
 }
 
 Module *_read_ja(ModuleManager *mm, const char fn[]) {
+  DEBUGF("A");
   FileInfo *fi = file_info(fn);
   Lexer lexer;
   lexer_init(&lexer, fi, true);
   Q *tokens = lex(&lexer);
 
+  DEBUGF("B");
   Tape *tape = tape_create();
   tape_read(tape, tokens);
+  DEBUGF("C");
   ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
   module_info->fi = fi;
 
+  DEBUGF("D");
   lexer_finalize(&lexer);
+  DEBUGF("E");
   return &module_info->module;
 }
 
@@ -222,6 +227,7 @@ Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
   if (ends_with(interned_fn, ".jb")) {
     return _read_jb(mm, interned_fn);
   } else if (ends_with(fn, ".ja")) {
+    DEBUGF("A");
     return _read_ja(mm, interned_fn);
   } else if (ends_with(fn, ".jv")) {
     return _read_jl(mm, interned_fn);
@@ -233,6 +239,7 @@ Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   Module *module = mm_read_helper(mm, fn);
+  DEBUGF("B");
   if (NULL == module) {
     return NULL;
   }
@@ -262,7 +269,7 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
   ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
-  Tape *tape = (Tape *)m->_tape;  // bless
+  Tape *tape = (Tape *)m->_tape; // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
@@ -270,12 +277,12 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
     if (NULL != c) {
       continue;
     }
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name);  // bless
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -284,9 +291,9 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   }
   while (Q_size(&classes_to_process) > 0) {
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
-    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name);  // bless
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
