@@ -107,18 +107,21 @@ Object *_object_create(Heap *heap, const Class *class) {
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
   // if (0 == strcmp(object->_class->_name, "Class")) {
-  //   printf("DELETING a Class('%s')\n", object->_class_obj->_name);
+  //   printf("DELETING a Class('%s') (%p)\n", object->_class_obj->_name,
+  //   object);
   // } else if (0 == strcmp(object->_class->_name, "Module")) {
-  //   printf("DELETING a Module('%s')\n", object->_module_obj->_name);
+  //   printf("DELETING a Module('%s') (%p)\n", object->_module_obj->_name,
+  //          object);
   // } else if (0 == strcmp(object->_class->_name, "Function")) {
-  //   printf("DELETING a Function('%s')\n", object->_function_obj->_name);
+  //   printf("DELETING a Function('%s') (%p) \n", object->_function_obj->_name,
+  //          object);
   // } else if (0 == strcmp(object->_class->_name, "String")) {
   //   printf("DELETING a String('%.*s', %p, %p)\n",
   //          String_size(((String *)object->_internal_obj)),
   //          ((String *)object->_internal_obj)->table, object->_internal_obj,
   //          object);
   // } else {
-  //   printf("DELETING a '%s'\n", object->_class->_name);
+  //   printf("DELETING a '%s' (%p)\n", object->_class->_name, object);
   // }
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
@@ -175,11 +178,11 @@ void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   ASSERT(NOT_NULL(e));
   switch (e->type) {
-  case NONE:
-  case PRIMITIVE:
-    return *e;
-  default:
-    ASSERT(OBJECT == e->type);
+    case NONE:
+    case PRIMITIVE:
+      return *e;
+    default:
+      ASSERT(OBJECT == e->type);
   }
   Object *obj = e->obj;
   // Guarantee only one copied version of each object.

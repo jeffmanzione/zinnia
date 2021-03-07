@@ -15,7 +15,7 @@
 typedef struct {
   Object *obj;
   const Function *func;
-  void *parent_context; // To avoid circular dependency.
+  void *parent_context;  // To avoid circular dependency.
 } _FunctionRef;
 
 inline bool is_anon(const char name[]) {

@@ -29,6 +29,7 @@
 #include "vm/process/process.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
+#include "vm/vm.h"
 
 #define DEFAULT_THREADPOOL_SIZE 6
 
@@ -1284,7 +1285,6 @@ end_of_loop:
 }
 
 void _mark_task_complete(Process *process, Task *task) {
-  DEBUGF("_mark_task_complete");
   process_mark_task_complete(process, task);
   // Only requeue parent task if it is waiting.
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
@@ -1301,7 +1301,6 @@ void _mark_task_complete(Process *process, Task *task) {
 }
 
 bool _process_is_done(Process *process) {
-  DEBUGF("_process_is_done");
   bool is_done = false;
   SYNCHRONIZED(process->task_waiting_lock, {
     SYNCHRONIZED(process->task_queue_lock, {
@@ -1313,6 +1312,8 @@ bool _process_is_done(Process *process) {
   });
   return is_done;
 }
+
+void _maybe_garbage_collect(Process *process) { collect_garbage(process); }
 
 void process_run(Process *process) {
   VM *vm = process->vm;
@@ -1352,6 +1353,10 @@ top_of_fn:
   if (_process_is_done(process)) {
     return;
   }
+
+  // printf("Before\n");
+  // _maybe_garbage_collect(process);
+  // printf("After\n");
 
   int waiting_task_count;
   SYNCHRONIZED(process->task_waiting_lock,

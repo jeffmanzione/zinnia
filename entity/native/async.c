@@ -30,6 +30,7 @@ Object *future_create(Task *task) {
   Object *future_obj = heap_new(heap, Class_Future);
   Future *future = (Future *)future_obj->_internal_obj;
   future->task = task;
+  heap_inc_edge(heap, task->_reflection, future_obj);
   return future_obj;
 }
 
