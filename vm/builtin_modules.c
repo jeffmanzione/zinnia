@@ -119,11 +119,7 @@ void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   while ((dir = readdir(lib)) != NULL) {
     const char *fn = combine_path_file(lib_location, dir->d_name, "");
     if (ends_with(fn, ".jv") || ends_with(fn, ".ja") || ends_with(fn, ".jb")) {
-      Module *module = modulemanager_read(mm, fn);
-      if (NULL == module) {
-        continue;
-      }
-      heap_make_root(heap, module->_reflection);
+      modulemanager_read(mm, fn);
     }
     DEALLOC(fn);
   }

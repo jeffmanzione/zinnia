@@ -61,31 +61,31 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_int(0);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Int.");
-      }
-      if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_int(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_int(pchar(&args->pri));
-        case INT:
-          return *args;
-        case FLOAT:
-          return entity_int(pfloat(&args->pri));
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_int(0);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Int.");
+    }
+    if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_int(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_int(pchar(&args->pri));
+    case INT:
+      return *args;
+    case FLOAT:
+      return entity_int(pfloat(&args->pri));
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -109,31 +109,31 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_float(0.f);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Float.");
-      }
-      if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_float(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_float(pchar(&args->pri));
-        case INT:
-          return entity_float(pfloat(&args->pri));
-        case FLOAT:
-          return *args;
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_float(0.f);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Float.");
+    }
+    if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_float(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+      return entity_float(pchar(&args->pri));
+    case INT:
+      return entity_float(pfloat(&args->pri));
+    case FLOAT:
+      return *args;
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_float(0.f);
 }
@@ -159,29 +159,29 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
     return NONE_ENTITY;
   }
   switch (args->type) {
-    case NONE:
-      return NONE_ENTITY;
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to bool Int.");
-      }
-      if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return result ? entity_int(1) : NONE_ENTITY;
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-        case INT:
-        case FLOAT:
-          return entity_int(1);
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return NONE_ENTITY;
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to bool Int.");
+    }
+    if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return result ? entity_int(1) : NONE_ENTITY;
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case CHAR:
+    case INT:
+    case FLOAT:
+      return entity_int(1);
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return NONE_ENTITY;
 }
@@ -193,8 +193,75 @@ Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
   return fn_ref;
 }
 
+void _task_inc_all_context(Heap *heap, Task *task) {
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_inc_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_inc_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_inc_edge(heap, task->_reflection, ctx->member_obj);
+    ctx = ctx->previous_context;
+  }
+}
+
+void _task_dec_all_context(Heap *heap, Task *task) {
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_dec_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_dec_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_dec_edge(heap, task->_reflection, ctx->member_obj);
+    ctx = ctx->previous_context;
+  }
+}
+
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_int(collect_garbage(task->parent_process));
+  Process *process = task->parent_process;
+  Heap *heap = process->heap;
+  uint32_t deleted_nodes_count;
+
+  SYNCHRONIZED(process->task_queue_lock, {
+    _task_inc_all_context(heap, process->current_task);
+    Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_inc_all_context(heap, queued_task);
+    }
+    M_iter waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_inc_all_context(heap, waiting_task);
+    }
+
+    deleted_nodes_count = heap_collect_garbage(heap);
+
+    _task_dec_all_context(heap, process->current_task);
+    queued_tasks = Q_iterator(&process->queued_tasks);
+    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+      Task *queued_task = (Task *)Q_value(&queued_tasks);
+      _task_dec_all_context(heap, queued_task);
+    }
+    waiting_tasks = set_iter(&process->waiting_tasks);
+    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+      Task *waiting_task = (Task *)value(&waiting_tasks);
+      _task_dec_all_context(heap, waiting_task);
+    }
+  });
+  return entity_int(deleted_nodes_count);
 }
 
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -203,15 +270,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-    case INT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-      break;
-    case FLOAT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-      break;
-    default /*CHAR*/:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-      break;
+  case INT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    break;
+  case FLOAT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+    break;
+  default /*CHAR*/:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+    break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -307,10 +374,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class) \
+#define IS_OBJECT_CLASS(e, class)                                              \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype) \
+#define IS_VALUE_TYPE(e, valtype)                                              \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
