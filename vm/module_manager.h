@@ -16,7 +16,7 @@
 typedef struct {
   Set _files_processed;
   Heap *_heap;
-  KeyedList _modules;  // ModuleInfo
+  KeyedList _modules; // ModuleInfo
 } ModuleManager;
 
 void modulemanager_init(ModuleManager *mm, Heap *heap);
@@ -33,5 +33,7 @@ void add_reflection_to_module(ModuleManager *mm, Module *module);
 void add_reflection_to_function(Heap *heap, Object *parent, Function *func);
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes);
+
+const char *module_info_file_name(ModuleInfo *mi);
 
 #endif /* VM_MODULE_MANAGER_H_ */

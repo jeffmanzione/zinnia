@@ -21,9 +21,14 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
+typedef void (*NativeCallback)(Module *);
+
 typedef struct {
   Module module;
   FileInfo *fi;
+  const char *file_name;
+  bool is_loaded, has_native_callback;
+  NativeCallback native_callback;
 } ModuleInfo;
 
 void add_reflection_to_module(ModuleManager *mm, Module *module);
@@ -75,6 +80,21 @@ bool _hydrate_class(Module *module, ClassRef *cref) {
                        fref->is_async);
   }
   return true;
+}
+
+ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char file_name[]) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(tape));
+  ModuleInfo *module_info;
+  ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
+      &mm->_modules, tape_module_name(tape), (void **)&module_info);
+  if (old != NULL) {
+    ERROR("Module by name '%s' already exists.", module_name(&old->module));
+  }
+  return module_info;
+}
+
+inline const char *module_info_file_name(ModuleInfo *mi) {
+  return mi->file_name;
 }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
@@ -188,22 +208,17 @@ Module *_read_jl(ModuleManager *mm, const char fn[]) {
 }
 
 Module *_read_ja(ModuleManager *mm, const char fn[]) {
-  DEBUGF("A");
   FileInfo *fi = file_info(fn);
   Lexer lexer;
   lexer_init(&lexer, fi, true);
   Q *tokens = lex(&lexer);
 
-  DEBUGF("B");
   Tape *tape = tape_create();
   tape_read(tape, tokens);
-  DEBUGF("C");
   ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
   module_info->fi = fi;
 
-  DEBUGF("D");
   lexer_finalize(&lexer);
-  DEBUGF("E");
   return &module_info->module;
 }
 
@@ -239,7 +254,6 @@ Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
 
 Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
   Module *module = mm_read_helper(mm, fn);
-  DEBUGF("B");
   if (NULL == module) {
     return NULL;
   }
