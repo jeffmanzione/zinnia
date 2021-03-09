@@ -65,10 +65,9 @@ void run(const Set *source_files, ArgStore *store) {
   M_iter srcs = set_iter((Set *)source_files);
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    Module *module = modulemanager_read(mm, src);
+    ModuleInfo *module_info = mm_register_module(mm, src);
     if (NULL == main_module) {
-      main_module = module;
-      heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
+      main_module = modulemanager_load(mm, module_info);
     }
   }
 

@@ -7,7 +7,8 @@
 #define ENTITY_NATIVE_MATH_H_
 
 #include "entity/object.h"
+#include "vm/module_manager.h"
 
-void math_add_native(Module *math);
+void math_add_native(ModuleManager *mm, Module *math);
 
 #endif /* ENTITY_NATIVE_MATH_H_ */

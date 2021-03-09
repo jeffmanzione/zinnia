@@ -910,7 +910,9 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("end"), _range_end);
 }
 
-void builtin_add_native(Module *builtin) {
+void builtin_add_native(ModuleManager *mm, Module *builtin) {
+  builtin_classes(mm->_heap, builtin);
+
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
