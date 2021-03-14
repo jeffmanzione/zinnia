@@ -19,15 +19,22 @@ typedef struct {
   KeyedList _modules; // ModuleInfo
 } ModuleManager;
 
+typedef struct _ModuleInfo ModuleInfo;
+typedef void (*NativeCallback)(ModuleManager *, Module *);
+
 void modulemanager_init(ModuleManager *mm, Heap *heap);
 void modulemanager_finalize(ModuleManager *mm);
-Module *modulemanager_read(ModuleManager *mm, const char fn[]);
-Module *modulemanager_lookup(ModuleManager *mm, const char fn[]);
+Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info);
+
+ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[]);
+
+ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
+                                             NativeCallback callback);
+
+Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]);
 
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m);
-
-Module *mm_read_helper(ModuleManager *mm, const char fn[]);
 
 void add_reflection_to_module(ModuleManager *mm, Module *module);
 void add_reflection_to_function(Heap *heap, Object *parent, Function *func);

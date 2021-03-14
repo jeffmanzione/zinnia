@@ -119,7 +119,7 @@ SingleFloatToCFn(abs, fabs);
 SingleFloatToCFn(ceil, ceil);
 SingleFloatToCFn(floor, floor);
 
-void math_add_native(Module *math) {
+void math_add_native(ModuleManager *mm, Module *math) {
   native_function(math, intern("__log"), _log);
   native_function(math, intern("pow"), _pow);
   native_function(math, intern("sin"), _sin);

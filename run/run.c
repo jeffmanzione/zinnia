@@ -65,24 +65,21 @@ void run(const Set *source_files, ArgStore *store) {
   M_iter srcs = set_iter((Set *)source_files);
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    Module *module = modulemanager_read(mm, src);
-    if (NULL == main_module) {
-      main_module = module;
-      heap_make_root(vm_main_process(vm)->heap, main_module->_reflection);
-    }
+    ModuleInfo *module_info = mm_register_module(mm, src);
+    // if (NULL == main_module) {
+    main_module = modulemanager_load(mm, module_info);
+    // }
   }
 
   _set_args(vm_main_process(vm)->heap, store);
-
-  optimize_finalize();
-  semantics_finalize();
-  parsers_finalize();
-
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
   process_run(vm_main_process(vm));
 
   vm_delete(vm);
+  optimize_finalize();
+  semantics_finalize();
+  parsers_finalize();
 }
 
 int jlr(int argc, const char *argv[]) {

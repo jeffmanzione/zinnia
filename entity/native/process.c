@@ -87,7 +87,7 @@ Entity _sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-void process_add_native(Module *process) {
+void process_add_native(ModuleManager *mm, Module *process) {
   Class_Remote =
       native_class(process, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
   native_function(process, intern("__create_process"), _create_process);

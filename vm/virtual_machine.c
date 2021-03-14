@@ -265,7 +265,7 @@ VM *vm_create(const char *lib_location) {
   vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
-  read_builtin(&vm->mm, vm->main->heap, lib_location);
+  register_builtin(&vm->mm, vm->main->heap, lib_location);
   // Have to put this here since there was no way else to get around the
   // circular dependency.
   _add_filename_method(vm);
@@ -1039,7 +1039,9 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_ID != ins->type) {
     ERROR("Weird type for LMDL.");
   }
+  DEBUGF("LMDL '%s' %p \n", ins->id, ins->id);
   Module *module = modulemanager_lookup(&vm->mm, ins->id);
+  DEBUGF("%p", module);
   if (NULL == module) {
     raise_error(task, context, "Module '%s' not found.", ins->id);
     return false;
