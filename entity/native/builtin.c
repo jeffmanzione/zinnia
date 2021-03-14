@@ -606,6 +606,32 @@ Entity _string_split(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(array_obj);
 }
 
+Entity _string_starts_with(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  String *prefix = (String *)args->obj->_internal_obj;
+  size_t lenstr = String_size(str);
+  size_t lenprefix = String_size(prefix);
+  if (lenprefix > lenstr) {
+    return NONE_ENTITY;
+  }
+  return 0 == strncmp(str->table, prefix->table, lenprefix) ? entity_int(1)
+                                                            : NONE_ENTITY;
+}
+
+Entity _string_ends_with(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  String *suffix = (String *)args->obj->_internal_obj;
+  size_t lenstr = String_size(str);
+  size_t lensuffix = String_size(suffix);
+  if (lensuffix > lenstr) {
+    return NONE_ENTITY;
+  }
+  return 0 == strncmp(str->table + lenstr - lensuffix, suffix->table, lensuffix)
+             ? entity_int(1)
+             : NONE_ENTITY;
+}
+
 Entity _array_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   Array *arr = (Array *)obj->_internal_obj;
   return entity_int(Array_size(arr));
@@ -888,6 +914,8 @@ void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("lshrink"), _string_lshrink);
   native_method(Class_String, intern("rshrink"), _string_rshrink);
   native_method(Class_String, intern("split"), _string_split);
+  native_method(Class_String, intern("__starts_with"), _string_starts_with);
+  native_method(Class_String, intern("__ends_with"), _string_ends_with);
 }
 
 void _builtin_add_function(Module *builtin) {

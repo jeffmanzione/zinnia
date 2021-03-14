@@ -19,9 +19,17 @@
 #include "util/file/file_util.h"
 #include "vm/intern.h"
 
+#define FILE_WATCHER_EVENT_SIZE (sizeof(struct inotify_event))
+#define FILE_WATCHER_BUFFER_LENGTH (1024 * (FILE_WATCHER_EVENT_SIZE + 16))
+
 typedef struct {
   FILE *fp;
 } _File;
+
+typedef struct {
+  int fd;
+  Set wds;
+} _FileWatcher;
 
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
@@ -90,6 +98,9 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       f->fp = fopen(fn, mode);
       DEALLOC(fn);
       DEALLOC(mode);
+      if (NULL == f->fp) {
+        return raise_error(task, ctx, "File could not be opened.");
+      }
     }
   } else {
     return raise_error(task, ctx, "Unknown input.");

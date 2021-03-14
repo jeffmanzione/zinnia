@@ -64,3 +64,24 @@ class Map {
     return cat('{', ', '.join(kvs), '}')
   }
 }
+
+
+class Cache {
+  field map
+  new(sz=255) {
+    map = Map(sz)
+  }
+  method get(k, factory, default=None) {
+    v = map[k]
+    if v {
+      return v
+    }
+    try {
+      v = factory(k)
+    } catch e {
+      v = default
+    }
+    map[k] = v
+    return v
+  }
+}

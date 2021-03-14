@@ -70,7 +70,7 @@ void run(const Set *source_files, ArgStore *store) {
       main_module = modulemanager_load(mm, module_info);
       Entity true_e = entity_int(1);
       object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                        intern("_main"), &true_e);
+                        intern("__main"), &true_e);
     }
   }
 
