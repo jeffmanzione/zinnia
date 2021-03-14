@@ -483,6 +483,24 @@ ImplSyntax(unary_expression,
               And(Type(AWAIT), unary_expression),
               range_expression));
 
+ImplSyntax(binary_and_expression1,
+          Or(And(Type(AMPER), binary_and_expression),
+             Epsilon));
+ImplSyntax(binary_and_expression,
+          And(unary_expression, binary_and_expression1));
+
+ImplSyntax(binary_xor_expression1,
+          Or(And(Type(CARET), binary_xor_expression),
+             Epsilon));
+ImplSyntax(binary_xor_expression,
+          And(binary_and_expression, binary_xor_expression1));
+
+ImplSyntax(binary_or_expression1,
+          Or(And(Type(PIPE), binary_or_expression),
+             Epsilon));
+ImplSyntax(binary_or_expression,
+          And(binary_xor_expression, binary_or_expression1));
+
 // multiplicative_expression
 //    unary_expression
 //    multiplicative_expression * unary_expression
@@ -494,7 +512,7 @@ ImplSyntax(multiplicative_expression1,
               And(Type(PERCENT), multiplicative_expression),
               Epsilon));
 ImplSyntax(multiplicative_expression,
-           And(unary_expression, multiplicative_expression1));
+           And(binary_or_expression, multiplicative_expression1));
 
 // additive_expression
 //    multiplicative_expression
@@ -545,30 +563,21 @@ ImplSyntax(equality_expression,
 
 // and_expression
 //    equality_expression
-//    and_expression & equality_expression
+//    and_expression and equality_expression
 ImplSyntax(and_expression1,
            Or(And(Type(AND_T), and_expression),
               Epsilon));
 ImplSyntax(and_expression,
            And(equality_expression, and_expression1));
 
-// xor_expression
-//    and_expression
-//    xor_expression ^ and_expression
-ImplSyntax(xor_expression1,
-           Or(And(Type(CARET), xor_expression),
-              Epsilon));
-ImplSyntax(xor_expression,
-           And(and_expression, xor_expression1));
-
 // or_expression
 //    xor_expression
-//    or_expression | xor_expression
+//    or_expression or xor_expression
 ImplSyntax(or_expression1,
            Or(And(Type(OR_T), or_expression),
               Epsilon));
 ImplSyntax(or_expression,
-           And(xor_expression, or_expression1));
+           And(and_expression, or_expression1));
 
 // is_expression
 //    or_expression

@@ -98,8 +98,11 @@ typedef enum {
   Rel_neq,
 
   And_and,
-  And_xor,
   And_or,
+
+  Bin_and,
+  Bin_xor,
+  Bin_or
 
 } BiType;
 
@@ -120,8 +123,10 @@ BiDefineExpression(additive_expression);
 BiDefineExpression(relational_expression);
 BiDefineExpression(equality_expression);
 BiDefineExpression(and_expression);
-BiDefineExpression(xor_expression);
 BiDefineExpression(or_expression);
+BiDefineExpression(binary_and_expression);
+BiDefineExpression(binary_xor_expression);
+BiDefineExpression(binary_or_expression);
 
 DefineExpression(in_expression) {
   Token *token;

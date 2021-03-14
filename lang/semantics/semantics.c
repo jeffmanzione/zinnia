@@ -33,12 +33,14 @@ void semantics_init() {
   Register(postfix_expression);
   Register(range_expression);
   Register(unary_expression);
+  Register(binary_and_expression);
+  Register(binary_xor_expression);
+  Register(binary_or_expression);
   Register(multiplicative_expression);
   Register(additive_expression);
   Register(relational_expression);
   Register(equality_expression);
   Register(and_expression);
-  Register(xor_expression);
   Register(or_expression);
   Register(in_expression);
   Register(is_expression);
