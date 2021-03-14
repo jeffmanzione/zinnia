@@ -42,7 +42,7 @@ void __file_delete(Object *obj) {
     return;
   }
   _File *f = (_File *)obj->_internal_obj;
-  if (NULL != f->fp) {
+  if (NULL != f->fp && f->fp != stdout && f->fp != stderr) {
     fclose(f->fp);
   }
 }

@@ -30,8 +30,8 @@
 // From vm/virtual_machine.h
 ThreadHandle process_run_in_new_thread(Process *process);
 
-void _remote_init(Object *obj) {}
-void _remote_delete(Object *obj) {}
+// void _remote_init(Object *obj) {}
+// void _remote_delete(Object *obj) {}
 
 Entity _create_process(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
@@ -88,8 +88,8 @@ Entity _sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 void process_add_native(ModuleManager *mm, Module *process) {
-  Class_Remote =
-      native_class(process, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
+  // Class_Remote =
+  //     native_class(process, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
   native_function(process, intern("__create_process"), _create_process);
   native_background_function(process, intern("__sleep"), _sleep);
 }
