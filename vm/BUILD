@@ -95,6 +95,9 @@ cc_library(
         "//entity/native:math",
         "//entity/native:process",
         "//entity/native:socket",
+        "//util:file",
         "@file_utils//util:string",
+        "@file_utils//util/file:file_util",
+        "@memory_wrapper//alloc/arena:intern",
     ],
 )

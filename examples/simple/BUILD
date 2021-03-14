@@ -19,6 +19,4 @@ jeff_vm_binary(
 jeff_vm_binary(
     name = "hello",
     main = "hello.jv",
-    deps = [],
 )
-

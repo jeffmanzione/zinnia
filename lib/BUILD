@@ -1,8 +1,10 @@
+load("//:jeff_lang.bzl", "jeff_vm_library")
+
 package(
     default_visibility = ["//visibility:public"],
 )
 
-filegroup(
+jeff_vm_library(
     name = "lib",
-    srcs = glob(["*.jl"]),
+    srcs = glob(["*.jv"]),
 )

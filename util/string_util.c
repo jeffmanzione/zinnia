@@ -23,6 +23,19 @@ bool _should_escape(char c) {
   }
 }
 
+char _excape_char(char c) {
+  switch (c) {
+  case '\n':
+    return 'n';
+  case '\t':
+    return 't';
+  case '\r':
+    return 'r';
+  default:
+    return c;
+  }
+}
+
 char *escape(const char str[]) {
   if (NULL == str) {
     return NULL;
@@ -39,7 +52,7 @@ char *escape(const char str[]) {
     if (_should_escape(c)) {
       escaped_str[escaped_len++] = '\\';
     }
-    escaped_str[escaped_len++] = c;
+    escaped_str[escaped_len++] = _excape_char(c);
     ptr++;
   }
   escaped_str[escaped_len] = '\0';

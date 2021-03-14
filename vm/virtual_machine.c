@@ -265,7 +265,7 @@ VM *vm_create(const char *lib_location) {
   vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
   modulemanager_init(&vm->mm, vm->main->heap);
-  read_builtin(&vm->mm, vm->main->heap, lib_location);
+  register_builtin(&vm->mm, vm->main->heap, lib_location);
   // Have to put this here since there was no way else to get around the
   // circular dependency.
   _add_filename_method(vm);
@@ -1039,7 +1039,9 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_ID != ins->type) {
     ERROR("Weird type for LMDL.");
   }
+  DEBUGF("LMDL '%s' %p \n", ins->id, ins->id);
   Module *module = modulemanager_lookup(&vm->mm, ins->id);
+  DEBUGF("%p", module);
   if (NULL == module) {
     raise_error(task, context, "Module '%s' not found.", ins->id);
     return false;
@@ -1284,7 +1286,6 @@ end_of_loop:
 }
 
 void _mark_task_complete(Process *process, Task *task) {
-  DEBUGF("_mark_task_complete");
   process_mark_task_complete(process, task);
   // Only requeue parent task if it is waiting.
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
@@ -1301,7 +1302,6 @@ void _mark_task_complete(Process *process, Task *task) {
 }
 
 bool _process_is_done(Process *process) {
-  DEBUGF("_process_is_done");
   bool is_done = false;
   SYNCHRONIZED(process->task_waiting_lock, {
     SYNCHRONIZED(process->task_queue_lock, {
@@ -1356,15 +1356,12 @@ top_of_fn:
   int waiting_task_count;
   SYNCHRONIZED(process->task_waiting_lock,
                { waiting_task_count = set_size(&process->waiting_tasks); });
-  DEBUGF("waiting_task_count=%d", waiting_task_count);
   SYNCHRONIZED(process->task_waiting_lock, {
     while (set_size(&process->waiting_tasks) != 0 &&
            set_size(&process->waiting_tasks) == waiting_task_count &&
            process_queue_size(process) == 0) {
-      DEBUGF("check cond");
       mutex_condition_wait(process->task_wait_cond);
     }
-    DEBUGF("out of loop");
   });
   goto top_of_fn;
 }

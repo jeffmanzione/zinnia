@@ -94,7 +94,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   return entity_object(new_class->_reflection);
 }
 
-void classes_add_native(Module *classes) {
+void classes_add_native(ModuleManager *mm, Module *classes) {
   native_function(classes, intern("__load_class_from_text"),
                   _load_class_from_text);
 }
