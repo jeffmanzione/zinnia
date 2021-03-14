@@ -153,7 +153,7 @@ Entity _cleanup_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-void socket_add_native(Module *socket) {
+void socket_add_native(ModuleManager *mm, Module *socket) {
   native_function(socket, intern("__init"), _init_sockets);
   native_function(socket, intern("__cleanup"), _cleanup_sockets);
   Class_SocketHandle = native_class(socket, intern("SocketHandle"),

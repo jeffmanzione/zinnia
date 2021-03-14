@@ -7,7 +7,8 @@
 #define ENTITY_NATIVE_BUILTIN_H_
 
 #include "entity/object.h"
+#include "vm/module_manager.h"
 
-void builtin_add_native(Module *builtin);
+void builtin_add_native(ModuleManager *mm, Module *builtin);
 
 #endif /* ENTITY_NATIVE_BUILTIN_H_ */

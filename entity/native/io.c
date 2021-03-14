@@ -42,7 +42,7 @@ void __file_delete(Object *obj) {
     return;
   }
   _File *f = (_File *)obj->_internal_obj;
-  if (NULL != f->fp) {
+  if (NULL != f->fp && f->fp != stdout && f->fp != stderr) {
     fclose(f->fp);
   }
 }
@@ -176,7 +176,7 @@ Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-void io_add_native(Module *io) {
+void io_add_native(ModuleManager *mm, Module *io) {
   Class *file = native_class(io, intern("__File"), __file_init, __file_delete);
   native_method(file, CONSTRUCTOR_KEY, _file_constructor);
   native_background_method(file, intern("__close"), _file_close);

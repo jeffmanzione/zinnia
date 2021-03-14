@@ -175,11 +175,11 @@ void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   ASSERT(NOT_NULL(e));
   switch (e->type) {
-  case NONE:
-  case PRIMITIVE:
-    return *e;
-  default:
-    ASSERT(OBJECT == e->type);
+    case NONE:
+    case PRIMITIVE:
+      return *e;
+    default:
+      ASSERT(OBJECT == e->type);
   }
   Object *obj = e->obj;
   // Guarantee only one copied version of each object.

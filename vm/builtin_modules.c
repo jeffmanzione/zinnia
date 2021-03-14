@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <stdio.h>
 
+#include "alloc/arena/intern.h"
 #include "entity/class/classes.h"
 #include "entity/module/module.h"
 #include "entity/module/modules.h"
@@ -20,103 +21,46 @@
 #include "entity/native/process.h"
 #include "entity/native/socket.h"
 #include "util/file.h"
+#include "util/file/file_util.h"
 #include "util/string.h"
 
-void read_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
-  // builtin.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "builtin");
-    DEBUGF("A");
-    Module_builtin = mm_read_helper(mm, fn);
-    DEBUGF("B");
-    builtin_classes(heap, Module_builtin);
-    builtin_add_native(Module_builtin);
-    add_reflection_to_module(mm, Module_builtin);
-    DEBUGF("C");
-    heap_make_root(heap, Module_builtin->_reflection);
-    DEBUGF("D");
-  }
-  // io.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "io");
-    DEBUGF("A");
-    Module_io = mm_read_helper(mm, fn);
-    DEBUGF("B");
-    io_add_native(Module_io);
-    add_reflection_to_module(mm, Module_io);
-    DEBUGF("C");
-    heap_make_root(heap, Module_io->_reflection);
-    DEBUGF("D");
-  }
-  // error.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "error");
-    Module_error = mm_read_helper(mm, fn);
-    error_add_native(Module_error);
-    add_reflection_to_module(mm, Module_error);
-    heap_make_root(heap, Module_error->_reflection);
-  }
-  // async.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "async");
-    Module_async = mm_read_helper(mm, fn);
-    async_add_native(Module_async);
-    add_reflection_to_module(mm, Module_async);
-    heap_make_root(heap, Module_async->_reflection);
-  }
-  // math.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "math");
-    Module_math = mm_read_helper(mm, fn);
-    math_add_native(Module_math);
-    add_reflection_to_module(mm, Module_math);
-    heap_make_root(heap, Module_math->_reflection);
-  }
-  // struct.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "struct");
-    Module_struct = mm_read_helper(mm, fn);
-    add_reflection_to_module(mm, Module_struct);
-    heap_make_root(heap, Module_struct->_reflection);
-  }
-  // classes.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "classes");
-    Module_classes = mm_read_helper(mm, fn);
-    classes_add_native(Module_classes);
-    add_reflection_to_module(mm, Module_classes);
-    heap_make_root(heap, Module_classes->_reflection);
-  }
-  // process.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "process");
-    Module_process = mm_read_helper(mm, fn);
-    process_add_native(Module_process);
-    add_reflection_to_module(mm, Module_process);
-    heap_make_root(heap, Module_process->_reflection);
-  }
-  // socket.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "socket");
-    Module_socket = mm_read_helper(mm, fn);
-    socket_add_native(Module_socket);
-    add_reflection_to_module(mm, Module_socket);
-    heap_make_root(heap, Module_socket->_reflection);
-  }
-  // net.jv
-  {
-    const char *fn = find_file_by_name(lib_location, "net");
-    Module_net = mm_read_helper(mm, fn);
-    add_reflection_to_module(mm, Module_net);
-    heap_make_root(heap, Module_net->_reflection);
-  }
+void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
+  mm_register_module_with_callback(
+      mm, find_file_by_name(lib_location, "builtin"), builtin_add_native);
+  Module_builtin = modulemanager_lookup(mm, intern("builtin"));
+
+  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "io"),
+                                   io_add_native);
+  Module_io = modulemanager_lookup(mm, intern("io"));
+  DEBUGF("Module_io=%p %p", Module_io, Module_io->_name);
+
+  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "error"),
+                                   error_add_native);
+  modulemanager_lookup(mm, intern("error"));
+
+  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "async"),
+                                   async_add_native);
+  modulemanager_lookup(mm, intern("async"));
+
+  mm_register_module(mm, find_file_by_name(lib_location, "struct"));
+  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "math"),
+                                   math_add_native);
+  mm_register_module_with_callback(
+      mm, find_file_by_name(lib_location, "classes"), classes_add_native);
+  mm_register_module_with_callback(
+      mm, find_file_by_name(lib_location, "process"), process_add_native);
+  mm_register_module_with_callback(
+      mm, find_file_by_name(lib_location, "socket"), socket_add_native);
+  mm_register_module(mm, find_file_by_name(lib_location, "net"));
 
   DIR *lib = opendir(lib_location);
   struct dirent *dir;
   while ((dir = readdir(lib)) != NULL) {
-    const char *fn = find_file_by_name(lib_location, dir->d_name);
-    if (ends_with(fn, ".jv") || ends_with(fn, ".ja") || ends_with(fn, ".jb")) {
-      modulemanager_read(mm, fn);
+    const char *fn = combine_path_file(lib_location, dir->d_name, NULL);
+    DEBUGF("'%s' '%s'", dir->d_name, fn);
+    if (ends_with(dir->d_name, ".jv") || ends_with(dir->d_name, ".ja") ||
+        ends_with(dir->d_name, ".jb")) {
+      mm_register_module(mm, fn);
     }
   }
 }

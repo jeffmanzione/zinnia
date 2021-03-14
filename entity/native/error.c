@@ -123,7 +123,7 @@ Object *error_new(Task *task, Context *ctx, Object *error_msg) {
   return err;
 }
 
-void error_add_native(Module *error) {
+void error_add_native(ModuleManager *mm, Module *error) {
   Class_Error = native_class(error, ERROR_NAME, _error_init, _error_delete);
   native_method(Class_Error, CONSTRUCTOR_KEY, _error_constructor);
 

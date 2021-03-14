@@ -66,7 +66,7 @@ const Entity *future_get_value(Heap *heap, Object *obj) {
 
 inline Task *future_get_task(Future *f) { return f->task; }
 
-void async_add_native(Module *async) {
+void async_add_native(ModuleManager *mm, Module *async) {
   Class_Future = native_class(async, FUTURE_NAME, _future_init, _future_delete);
   native_function(async, VALUE_KEY, _future_value);
 }

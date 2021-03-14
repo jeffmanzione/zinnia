@@ -21,17 +21,20 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
-typedef struct {
+struct _ModuleInfo {
   Module module;
   FileInfo *fi;
-} ModuleInfo;
+  const char *file_name;
+  bool is_loaded, has_native_callback;
+  NativeCallback native_callback;
+};
 
 void add_reflection_to_module(ModuleManager *mm, Module *module);
 
 void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ASSERT(NOT_NULL(mm));
   mm->_heap = heap;
-  keyedlist_init(&mm->_modules, ModuleInfo, 25);
+  keyedlist_init(&mm->_modules, ModuleInfo, 100);
   set_init_default(&mm->_files_processed);
 }
 
@@ -40,6 +43,9 @@ void modulemanager_finalize(ModuleManager *mm) {
   KL_iter iter = keyedlist_iter(&mm->_modules);
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
+    if (!module_info->is_loaded) {
+      continue;
+    }
     module_finalize(&module_info->module);
     if (NULL != module_info->fi) {
       file_info_delete(module_info->fi);
@@ -77,14 +83,27 @@ bool _hydrate_class(Module *module, ClassRef *cref) {
   return true;
 }
 
-ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape) {
-  ASSERT(NOT_NULL(mm), NOT_NULL(tape));
+ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
+                               const char file_name[]) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(file_name));
   ModuleInfo *module_info;
   ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
-      &mm->_modules, tape_module_name(tape), (void **)&module_info);
+      &mm->_modules, intern(module_name), (void **)&module_info);
   if (old != NULL) {
-    ERROR("Module by name '%s' already exists.", module_name(&old->module));
+    ERROR("Module by name '%s' already exists.", module_name);
   }
+  module_info->file_name = intern(file_name);
+  return module_info;
+}
+
+inline const char *module_info_file_name(ModuleInfo *mi) {
+  return mi->file_name;
+}
+
+ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape,
+                                   ModuleInfo *module_info) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(tape), NOT_NULL(module_info));
+
   Module *module = &module_info->module;
   module_init(module, tape_module_name(tape), tape);
 
@@ -171,8 +190,8 @@ void add_reflection_to_module(ModuleManager *mm, Module *module) {
   }
 }
 
-Module *_read_jl(ModuleManager *mm, const char fn[]) {
-  FileInfo *fi = file_info(fn);
+Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
+  FileInfo *fi = file_info(module_info->file_name);
   SyntaxTree stree = parse_file(fi);
   ExpressionTree *etree = populate_expression(&stree);
 
@@ -182,77 +201,100 @@ Module *_read_jl(ModuleManager *mm, const char fn[]) {
   syntax_tree_delete(&stree);
 
   tape = optimize(tape);
-  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  _modulemanager_hydrate(mm, tape, module_info);
   module_info->fi = fi;
   return &module_info->module;
 }
 
-Module *_read_ja(ModuleManager *mm, const char fn[]) {
-  DEBUGF("A");
-  FileInfo *fi = file_info(fn);
+Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
+  FileInfo *fi = file_info(module_info->file_name);
   Lexer lexer;
   lexer_init(&lexer, fi, true);
   Q *tokens = lex(&lexer);
 
-  DEBUGF("B");
   Tape *tape = tape_create();
   tape_read(tape, tokens);
-  DEBUGF("C");
-  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  _modulemanager_hydrate(mm, tape, module_info);
   module_info->fi = fi;
 
-  DEBUGF("D");
   lexer_finalize(&lexer);
-  DEBUGF("E");
   return &module_info->module;
 }
 
-Module *_read_jb(ModuleManager *mm, const char fn[]) {
-  FILE *file = fopen(fn, "rb");
+Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
+  FILE *file = fopen(module_info->file_name, "rb");
   if (NULL == file) {
-    ERROR("Cannot open file '%s'. Exiting...", fn);
+    ERROR("Cannot open file '%s'. Exiting...", module_info->file_name);
   }
   Tape *tape = tape_create();
   tape_read_binary(tape, file);
-  ModuleInfo *module_info = _modulemanager_hydrate(mm, tape);
+  _modulemanager_hydrate(mm, tape, module_info);
   return &module_info->module;
 }
 
-Module *mm_read_helper(ModuleManager *mm, const char fn[]) {
-  char *interned_fn = intern(fn);
-  if (set_lookup(&mm->_files_processed, interned_fn)) {
-    return NULL;
-  }
-  set_insert(&mm->_files_processed, interned_fn);
-  if (ends_with(interned_fn, ".jb")) {
-    return _read_jb(mm, interned_fn);
-  } else if (ends_with(fn, ".ja")) {
-    DEBUGF("A");
-    return _read_ja(mm, interned_fn);
-  } else if (ends_with(fn, ".jv")) {
-    return _read_jl(mm, interned_fn);
-  } else {
-    ERROR("Unknown file type.");
-  }
-  return NULL;
+ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[]) {
+  return mm_register_module_with_callback(mm, fn, NULL);
 }
 
-Module *modulemanager_read(ModuleManager *mm, const char fn[]) {
-  Module *module = mm_read_helper(mm, fn);
-  DEBUGF("B");
-  if (NULL == module) {
-    return NULL;
+ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
+                                             NativeCallback callback) {
+  ASSERT(NOT_NULL(mm), NOT_NULL(fn));
+
+  char *dir_path, *module_name_tmp, *ext;
+  split_path_file(fn, &dir_path, &module_name_tmp, &ext);
+
+  char *module_name = intern(module_name_tmp);
+  DEALLOC(module_name_tmp);
+  // Module already exists.
+  ModuleInfo *module_info =
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_name);
+  if (NULL != module_info) {
+    DEBUGF("Module '%s' already registered.", module_name);
+    DEALLOC(dir_path);
+    DEALLOC(ext);
+    return module_info;
   }
-  add_reflection_to_module(mm, module);
-  return module;
+
+  module_info = _create_moduleinfo(mm, module_name, fn);
+  module_info->has_native_callback = callback != NULL;
+  module_info->native_callback = callback;
+  module_info->is_loaded = false;
+
+  DEALLOC(dir_path);
+  DEALLOC(ext);
+
+  return module_info;
 }
 
-Module *modulemanager_lookup(ModuleManager *mm, const char fn[]) {
-  ModuleInfo *mi = (ModuleInfo *)keyedlist_lookup(&mm->_modules, fn);
-  if (NULL == mi) {
+Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
+  Module *module = NULL;
+  if (!module_info->is_loaded) {
+    if (ends_with(module_info->file_name, ".jb")) {
+      module = _read_jb(mm, module_info);
+    } else if (ends_with(module_info->file_name, ".ja")) {
+      module = _read_ja(mm, module_info);
+    } else if (ends_with(module_info->file_name, ".jv")) {
+      module = _read_jl(mm, module_info);
+    } else {
+      ERROR("Unknown file type.");
+    }
+    module_info->is_loaded = true;
+    if (module_info->has_native_callback) {
+      module_info->native_callback(mm, module);
+    }
+    add_reflection_to_module(mm, module);
+    heap_make_root(mm->_heap, module->_reflection);
+  }
+  return &module_info->module;
+}
+
+Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]) {
+  ModuleInfo *module_info =
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_name);
+  if (NULL == module_info) {
     return NULL;
   }
-  return &mi->module;
+  return modulemanager_load(mm, module_info);
 }
 
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
@@ -269,7 +311,7 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
   ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
-  Tape *tape = (Tape *)m->_tape; // bless
+  Tape *tape = (Tape *)m->_tape;  // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
@@ -277,12 +319,12 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (NULL != c) {
       continue;
     }
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -291,9 +333,9 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   }
   while (Q_size(&classes_to_process) > 0) {
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
