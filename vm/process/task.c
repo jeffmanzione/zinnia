@@ -84,6 +84,12 @@ inline const Entity *task_peekstack(Task *task) {
                              alist_len(&task->entity_stack) - 1);
 }
 
+inline const Entity *task_peekstack_n(Task *task, int n) {
+  ASSERT(alist_len(&task->entity_stack) > n);
+  return (Entity *)alist_get(&task->entity_stack,
+                             alist_len(&task->entity_stack) - 1 - n);
+}
+
 inline void task_dropstack(Task *task) {
   alist_remove_last(&task->entity_stack);
 }

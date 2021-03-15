@@ -218,6 +218,50 @@ PRIMITIVE_OP(BAND, &, MATH_OP_INT(BAND, &));
 PRIMITIVE_OP(BXOR, ^, MATH_OP_INT(BXOR, ^));
 PRIMITIVE_OP(BOR, |, MATH_OP_INT(BOR, |));
 
+void _execute_BOR_with_obj(VM *vm, Task *task, Context *context,
+                           const Instruction *ins) {
+  Entity first, second;
+  const Entity *tmp;
+  switch (ins->type) {
+  case INSTRUCTION_NO_ARG:
+    tmp = task_peekstack_n(task, 1);
+    if (PRIMITIVE == tmp->type) {
+      _execute_BOR(vm, task, context, ins);
+      break;
+    }
+    second = task_popstack(task);
+    first = task_popstack(task);
+    *task_mutable_resval(task) = (NONE == first.type) ? second : first;
+    break;
+  case INSTRUCTION_ID:
+    first = *task_get_resval(task);
+    if (PRIMITIVE == first.type) {
+      _execute_BOR(vm, task, context, ins);
+      break;
+    }
+    if (NONE != first.type) {
+      *task_mutable_resval(task) = first;
+      break;
+    }
+    tmp = context_lookup(context, ins->id, &second);
+    *task_mutable_resval(task) = (NULL == tmp) ? NONE_ENTITY : *tmp;
+    break;
+  case INSTRUCTION_PRIMITIVE:
+    first = *task_get_resval(task);
+    if (PRIMITIVE == first.type) {
+      _execute_BOR(vm, task, context, ins);
+      break;
+    }
+    if (NONE != first.type) {
+      break;
+    }
+    *task_mutable_resval(task) = entity_primitive(ins->val);
+    break;
+  default:
+    ERROR("Invalid arg type=%d for BOR.", ins->type);
+  }
+}
+
 Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
   const FileInfo *fi = modulemanager_get_fileinfo(
       vm_module_manager(task->parent_process->vm), obj->_module_obj);
@@ -1199,7 +1243,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       _execute_BXOR(vm, task, context, ins);
       break;
     case BOR:
-      _execute_BOR(vm, task, context, ins);
+      _execute_BOR_with_obj(vm, task, context, ins);
       break;
     case LT:
       _execute_LT(vm, task, context, ins);

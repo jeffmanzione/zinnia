@@ -84,4 +84,7 @@ class Cache {
     map[k] = v
     return v
   }
+  method clear(k) {
+    map[k] = None
+  }
 }

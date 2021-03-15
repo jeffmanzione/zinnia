@@ -13,15 +13,20 @@ import struct
 ;   jlr lib/simple_http.jv -- --dir=. --port=80
 ; ```
 class SimpleHTTPServer {
-  field cache, stop_called, sock
+  field cache, stop_called, sock, fw
   new(field dir='.', field port=80) {
     cache = struct.Cache(255)
+    fw = io.FileWatcher()
+    fw.watch(dir)
+    fw.listen(
+        e -> cache.clear(cat('/', e.file_name)),
+        io.IN_CLOSE_WRITE | io.IN_MODIFY | io.IN_MOVE)
     stop_called = False
   }
 
   method start() async {
     sock = net.HttpSocket(
-      socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, 80, 4))
+      socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, port, 4))
     while ~stop_called {
       handle = sock.accept()
       request = handle.receive()
@@ -37,7 +42,7 @@ class SimpleHTTPServer {
       if ~response_content {
         response.set_status_code(404)
             .set_status('NOT FOUND')
-            .add_content('<h1>Sorry, page not found.</h1>')
+            .add_content('<title>Page not found</title><h1>Sorry, page not found.</h1>')
       } else {
         response.add_content('<pre>')
             .add_content(response_content)
@@ -67,14 +72,8 @@ class SimpleHTTPServer {
   }
 }
 
-
-if ~args.dir {
-  dir = '.'
-}
-if ~args.port {
-  port = 80
-}
-
 if __main {
+  dir = args.dir | '.'
+  port = Int(args.port | 80)
   await SimpleHTTPServer(dir, port).start()
 }
