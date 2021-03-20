@@ -53,9 +53,6 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   }
   String *class_text = (String *)arg1->obj->_internal_obj;
 
-  parsers_init();
-  semantics_init();
-
   char *c_str_text = strndup(class_text->table, String_size(class_text));
   SFILE *file = sfile_open(c_str_text);
 
@@ -85,9 +82,6 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   Class *new_class = (Class *)value(&iter);
 
   map_finalize(&new_classes);
-
-  semantics_finalize();
-  parsers_finalize();
 
   DEALLOC(c_str_text);
 
