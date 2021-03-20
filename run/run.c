@@ -66,9 +66,12 @@ void run(const Set *source_files, ArgStore *store) {
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
     ModuleInfo *module_info = mm_register_module(mm, src);
-    // if (NULL == main_module) {
-    main_module = modulemanager_load(mm, module_info);
-    // }
+    if (NULL == main_module) {
+      main_module = modulemanager_load(mm, module_info);
+      Entity true_e = entity_int(1);
+      object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
+                        intern("_main"), &true_e);
+    }
   }
 
   _set_args(vm_main_process(vm)->heap, store);
