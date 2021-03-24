@@ -13,7 +13,6 @@ class Dog {
   }
 }
 
-
 io.println(
     DogBuilder().set_age(5)
         .set_weight(15)

@@ -7,7 +7,7 @@ import process
 ; Completers represent futures that can be manually completed.
 completer = async.Completer()
 
-() async {
+work = () async {
   process.sleep(2)  ; Wait 2 seconds. 
   io.println('Hard work done!')
   completer.complete()

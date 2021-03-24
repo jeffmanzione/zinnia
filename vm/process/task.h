@@ -20,6 +20,7 @@ Context *task_back_context(Task *task);
 
 Entity task_popstack(Task *task);
 const Entity *task_peekstack(Task *task);
+const Entity *task_peekstack_n(Task *task, int n);
 void task_dropstack(Task *task);
 Entity *task_pushstack(Task *task);
 

@@ -85,6 +85,19 @@ class String {
   method __in__(sub) {
     find(sub) != None
   }
+  method starts_with(other) {
+    if ~(other is String) {
+      return False
+    }
+    return __starts_with(other)
+  }
+  method ends_with(other) {
+    if ~(other is String) {
+      return False
+    }
+    return __ends_with(other)
+
+  }
 }
 
 class Tuple {

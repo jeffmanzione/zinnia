@@ -28,12 +28,14 @@ struct ExpressionTree_ {
     Expression_postfix_expression postfix_expression;
     Expression_range_expression range_expression;
     Expression_unary_expression unary_expression;
+    Expression_binary_and_expression binary_and_expression;
+    Expression_binary_xor_expression binary_xor_expression;
+    Expression_binary_or_expression binary_or_expression;
     Expression_multiplicative_expression multiplicative_expression;
     Expression_additive_expression additive_expression;
     Expression_relational_expression relational_expression;
     Expression_equality_expression equality_expression;
     Expression_and_expression and_expression;
-    Expression_xor_expression xor_expression;
     Expression_or_expression or_expression;
     Expression_in_expression in_expression;
     Expression_is_expression is_expression;

@@ -4,7 +4,12 @@
 //     Author: Jeff Manzione
 #include "entity/native/io.h"
 
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/inotify.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
@@ -16,12 +21,33 @@
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
+#include "struct/map.h"
+#include "struct/set.h"
 #include "util/file/file_util.h"
 #include "vm/intern.h"
+
+#define MAX_EVENTS 1024
+#define FILE_NAME_LENGTH_ESTIMATE 16
+#define EVENT_SIZE (sizeof(struct inotify_event))
+#define EVENT_BUFFER_LENGTH \
+  (MAX_EVENTS * (EVENT_SIZE + FILE_NAME_LENGTH_ESTIMATE))
+
+static Class *Class_WatchDir;
 
 typedef struct {
   FILE *fp;
 } _File;
+
+typedef struct {
+  bool is_closed;
+  int fd, length;
+  char buffer[EVENT_BUFFER_LENGTH];
+} _FileWatcher;
+
+typedef struct {
+  int wd;
+  char *dir;
+} _WatchDir;
 
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
@@ -90,6 +116,9 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       f->fp = fopen(fn, mode);
       DEALLOC(fn);
       DEALLOC(mode);
+      if (NULL == f->fp) {
+        return raise_error(task, ctx, "File could not be opened.");
+      }
     }
   } else {
     return raise_error(task, ctx, "Unknown input.");
@@ -176,6 +205,136 @@ Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+void _watch_dir_init(Object *obj) {
+  _WatchDir *wd = ALLOC2(_WatchDir);
+  obj->_internal_obj = wd;
+}
+
+void _watch_dir_delete(Object *obj) {
+  _WatchDir *wd = obj->_internal_obj;
+  if (NULL == wd) {
+    return;
+  }
+  free(wd->dir);
+  DEALLOC(wd);
+}
+
+void _file_watcher_init(Object *obj) {
+  _FileWatcher *fw = ALLOC2(_FileWatcher);
+  fw->fd = inotify_init();
+  fw->is_closed = false;
+  obj->_internal_obj = fw;
+}
+
+void _file_watcher_delete(Object *obj) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  if (NULL == fw) {
+    return;
+  }
+  if (!fw->is_closed && fw->fd >= 0) {
+    close(fw->fd);
+    fw->is_closed = true;
+  }
+  DEALLOC(fw);
+}
+
+Entity _file_watcher_is_valid(Task *task, Context *ctx, Object *obj,
+                              Entity *args) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  return entity_int(fw->fd >= 0);
+}
+
+Entity _file_watcher_watch(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  String *dir = args->obj->_internal_obj;
+  Object *wd_obj = heap_new(task->parent_process->heap, Class_WatchDir);
+  _WatchDir *wd = (_WatchDir *)wd_obj->_internal_obj;
+  char *dir_str = strndup(dir->table, String_size(dir));
+  wd->wd = inotify_add_watch(fw->fd, dir_str, IN_ALL_EVENTS);
+  if (wd < 0) {
+    return raise_error(task, ctx, "Could not watch directory: '%s'", dir_str);
+  }
+  return entity_object(wd_obj);
+}
+
+Entity _file_watcher_unwatch(Task *task, Context *ctx, Object *obj,
+                             Entity *args) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  _WatchDir *wd = (_WatchDir *)args->obj->_internal_obj;
+  inotify_rm_watch(fw->fd, wd->wd);
+  return NONE_ENTITY;
+}
+
+Entity _file_watcher_read(Task *task, Context *ctx, Object *obj, Entity *args) {
+  // printf("IN_ACCESS=%d\n", IN_ACCESS);
+  // printf("IN_ATTRIB=%d\n", IN_ATTRIB);
+  // printf("IN_CLOSE=%d\n", IN_CLOSE);
+  // printf("IN_CLOSE_WRITE=%d\n", IN_CLOSE_WRITE);
+  // printf("IN_CLOSE_NOWRITE=%d\n", IN_CLOSE_NOWRITE);
+  // printf("IN_CREATE=%d\n", IN_CREATE);
+  // printf("IN_DELETE=%d\n", IN_DELETE);
+  // printf("IN_DELETE_SELF=%d\n", IN_DELETE_SELF);
+  // printf("IN_MODIFY=%d\n", IN_MODIFY);
+  // printf("IN_MOVE=%d\n", IN_MOVE);
+  // printf("IN_MOVE_SELF=%d\n", IN_MOVE_SELF);
+  // printf("IN_MOVED_FROM=%d\n", IN_MOVED_FROM);
+  // printf("IN_MOVED_TO=%d\n", IN_MOVED_TO);
+  // printf("IN_OPEN=%d\n", IN_OPEN);
+  // printf("IN_IGNORED=%d\n", IN_IGNORED);
+  // printf("IN_ISDIR=%d\n", IN_ISDIR);
+  // printf("IN_Q_OVERFLOW=%d\n", IN_Q_OVERFLOW);
+  // printf("IN_UNMOUNT=%d\n", IN_UNMOUNT);
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  int length = read(fw->fd, fw->buffer, EVENT_BUFFER_LENGTH);
+  if (length < 0) {
+    return raise_error(task, ctx, "read() failed.");
+  }
+  fw->length = length;
+  return entity_int(length);
+}
+
+Entity _file_watcher_get_read(Task *task, Context *ctx, Object *obj,
+                              Entity *args) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  int length = fw->length;
+  int i = 0;
+  fflush(stdout);
+  Object *arr_obj = heap_new(task->parent_process->heap, Class_Array);
+  while (i < length) {
+    struct inotify_event *event = (struct inotify_event *)&fw->buffer[i];
+    Entity name = entity_object(string_new(task->parent_process->heap,
+                                           event->name, strlen(event->name)));
+    Entity mask = entity_int(event->mask);
+    Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
+    tuple_obj->_internal_obj = tuple_create(2);
+    Entity tuple_e = entity_object(tuple_obj);
+    tuple_set(task->parent_process->heap, tuple_obj, 0, &name);
+    tuple_set(task->parent_process->heap, tuple_obj, 1, &mask);
+
+    array_add(task->parent_process->heap, arr_obj, &tuple_e);
+    i += EVENT_SIZE + event->len;
+  }
+  fw->length = 0;
+  return entity_object(arr_obj);
+}
+
+Entity _file_watcher_close(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  _FileWatcher *fw = (_FileWatcher *)obj->_internal_obj;
+  ASSERT(NOT_NULL(fw));
+  if (!fw->is_closed && fw->fd >= 0) {
+    close(fw->fd);
+    fw->is_closed = true;
+  }
+  return NONE_ENTITY;
+}
+
 void io_add_native(ModuleManager *mm, Module *io) {
   Class *file = native_class(io, intern("__File"), __file_init, __file_delete);
   native_method(file, CONSTRUCTOR_KEY, _file_constructor);
@@ -184,4 +343,15 @@ void io_add_native(ModuleManager *mm, Module *io) {
   native_background_method(file, intern("__getline"), _file_getline);
   native_background_method(file, intern("__getall"), _file_getall);
   native_background_method(file, intern("__puts"), _file_puts);
+
+  Class_WatchDir = native_class(io, intern("__WatchDir"), _watch_dir_init,
+                                _watch_dir_delete);
+  Class *file_watcher = native_class(io, intern("__FileWatcher"),
+                                     _file_watcher_init, _file_watcher_delete);
+  native_method(file_watcher, intern("__is_valid"), _file_watcher_is_valid);
+  native_method(file_watcher, intern("__watch"), _file_watcher_watch);
+  native_method(file_watcher, intern("__unwatch"), _file_watcher_unwatch);
+  native_background_method(file_watcher, intern("__read"), _file_watcher_read);
+  native_method(file_watcher, intern("__get_read"), _file_watcher_get_read);
+  native_method(file_watcher, intern("__close"), _file_watcher_close);
 }
