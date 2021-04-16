@@ -31,7 +31,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "jlc",
-    srcs = ["jlc.c"],
+    name = "jvc",
+    srcs = ["jvc.c"],
     deps = [":compile"],
 )

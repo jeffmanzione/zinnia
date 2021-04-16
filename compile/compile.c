@@ -97,7 +97,7 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   return src_map;
 }
 
-int jlc(int argc, const char *argv[]) {
+int jvc(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 

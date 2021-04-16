@@ -7,14 +7,14 @@ def _jeff_vm_library_impl(ctx):
         out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
         out_files.append(out_file)
         out_dir = out_file.root.path + "/" + src.dirname
-        jlc_args = ["-a", "--assembly_out_dir=" + out_dir, src.short_path]
+        jvc_args = ["-a", "--assembly_out_dir=" + out_dir, src.short_path]
         ctx.actions.run(
             outputs = [out_file],
             inputs = [src],
             executable = compiler_executable,
-            arguments = jlc_args,
+            arguments = jvc_args,
             mnemonic = "CompileJL",
-            progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(jlc_args)),
+            progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(jvc_args)),
         )
     return [
         DefaultInfo(
@@ -31,7 +31,7 @@ _jeff_vm_library = rule(
         ),
         "deps": attr.label_list(),
         "compiler": attr.label(
-            default = Label("//compile:jlc"),
+            default = Label("//compile:jvc"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -56,13 +56,13 @@ def _jeff_vm_binary_impl(ctx):
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
-    jlr_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
+    jvr_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
     run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = run_sh,
         is_executable = True,
-        content = jlr_command,
+        content = jvr_command,
     )
     return [
         DefaultInfo(
@@ -80,7 +80,7 @@ _jeff_vm_binary = rule(
         ),
         "deps": attr.label_list(),
         "runner": attr.label(
-            default = Label("//run:jlr"),
+            default = Label("//run:jvr"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
