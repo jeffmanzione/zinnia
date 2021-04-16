@@ -5,4 +5,4 @@
 
 #include "compile/compile.h"
 
-int main(int argc, const char *argv[]) { return jlc(argc, argv); }
+int main(int argc, const char *argv[]) { return jvc(argc, argv); }

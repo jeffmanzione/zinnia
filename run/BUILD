@@ -31,8 +31,8 @@ cc_library(
 )
 
 cc_binary(
-    name = "jlr",
-    srcs = ["jlr.c"],
+    name = "jvr",
+    srcs = ["jvr.c"],
     data = ["//lib"],
     deps = [
         ":run",

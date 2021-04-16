@@ -85,7 +85,7 @@ void run(const Set *source_files, ArgStore *store) {
   parsers_finalize();
 }
 
-int jlr(int argc, const char *argv[]) {
+int jvr(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 
