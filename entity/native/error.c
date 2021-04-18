@@ -34,6 +34,12 @@ void _error_delete(Object *obj) {}
 void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC2(_StackLine); }
 void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
+Entity raise_error_with_object(Task *task, Context *context, Object *err) {
+  context->error = err;
+  *task_mutable_resval(task) = entity_object(err);
+  return entity_object(err);
+}
+
 Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
   va_list args;
   va_start(args, fmt);
@@ -42,9 +48,7 @@ Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
   va_end(args);
   Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
   Object *err = error_new(task, context, error_msg);
-  context->error = err;
-  *task_mutable_resval(task) = entity_object(err);
-  return entity_object(err);
+  return raise_error_with_object(task, context, err);
 }
 
 uint32_t stackline_linenum(Object *stackline) {
