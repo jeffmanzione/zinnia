@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #ifdef OS_LINUX
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -47,11 +48,12 @@ void sockets_cleanup() {
 #endif
 }
 
-Socket *socket_create(int domain, int type, int protocol, uint16_t port) {
+Socket *socket_create(int domain, int type, int protocol, unsigned long host,
+                      uint16_t port) {
   Socket *sock = ALLOC2(Socket);
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
-  sock->in.sin_addr.s_addr = htonl(INADDR_ANY);
+  sock->in.sin_addr.s_addr = host;
   sock->in.sin_port = htons(port);
   sock->is_closed = false;
   return sock;
@@ -82,6 +84,14 @@ SocketHandle *socket_accept(Socket *socket) {
                            (socklen_t *)
 #endif
                            &addr_len);
+  return sh;
+}
+
+SocketHandle *socket_connect(Socket *socket) {
+  SocketHandle *sh = ALLOC2(SocketHandle);
+  sh->is_closed = false;
+  connect(socket->sock, (struct sockaddr *)&socket->in, sizeof(socket->in));
+  sh->client_sock = socket->sock;
   return sh;
 }
 
@@ -130,4 +140,11 @@ void sockethandle_delete(SocketHandle *sh) {
     sockethandle_close(sh);
   }
   DEALLOC(sh);
+}
+
+unsigned long socket_inet_address(const char *host, size_t host_len) {
+  char *host_str = strndup(host, host_len);
+  unsigned long addr = inet_addr(host_str);
+  free(host_str);
+  return addr;
 }

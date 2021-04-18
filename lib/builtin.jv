@@ -1,5 +1,6 @@
 module builtin
 
+import error
 import io
 import struct
 
@@ -159,6 +160,13 @@ class Array {
       }
     }
     return False
+  }
+  method remove(i) {
+    i = Int(i)
+    if i >= len() or i < 0 {
+      raise error.Error(cat('Index is out of bounds: ', i, ', Array length: ', len()))
+    }
+    return __remove(i)
   }
   method to_s() {
     result = '['

@@ -37,15 +37,20 @@ void task_init(Task *task) {
   task->child_task_has_error = false;
   task->current = NULL;
   task->_reflection = NULL;
+  task->is_finalized = false;
 }
 
 void task_finalize(Task *task) {
+  if (task->is_finalized) {
+    return;
+  }
   set_finalize(&task->dependent_tasks);
   alist_finalize(&task->entity_stack);
   if (NULL != task->parent_process) {
     heap_dec_edge(task->parent_process->heap, task->parent_process->_reflection,
                   task->_reflection);
   }
+  task->is_finalized = true;
 }
 
 Context *task_create_context(Task *task, Object *self, Module *module,

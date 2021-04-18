@@ -43,23 +43,31 @@ Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
   }
   Tuple *tuple = (Tuple *)args->obj->_internal_obj;
 
-  if (tuple_size(tuple) != 5) {
-    return raise_error(task, ctx, "Expected tuple to have exactly 5 args.");
+  if (tuple_size(tuple) != 7) {
+    return raise_error(task, ctx, "Expected tuple to have exactly 7 args.");
   }
+
+  String *host = (String *)tuple_get(tuple, 3)->obj->_internal_obj;
+
   Socket *socket = socket_create(
       pint(&tuple_get(tuple, 0)->pri), pint(&tuple_get(tuple, 1)->pri),
-      pint(&tuple_get(tuple, 2)->pri), pint(&tuple_get(tuple, 3)->pri));
+      pint(&tuple_get(tuple, 2)->pri),
+      socket_inet_address(host->table, String_size(host)),
+      pint(&tuple_get(tuple, 4)->pri));
 
   obj->_internal_obj = socket;
-
-  if (!socket_is_valid(socket)) {
-    return raise_error(task, ctx, "Invalid socket.");
-  }
-  if (SOCKET_ERROR == socket_bind(socket)) {
-    return raise_error(task, ctx, "Could not bind to socket.");
-  }
-  if (SOCKET_ERROR == socket_listen(socket, pint(&tuple_get(tuple, 4)->pri))) {
-    return raise_error(task, ctx, "Could not listen to socket.");
+  // Auto bind/
+  if (NONE != tuple_get(tuple, 6)->type) {
+    if (!socket_is_valid(socket)) {
+      return raise_error(task, ctx, "Invalid socket.");
+    }
+    if (SOCKET_ERROR == socket_bind(socket)) {
+      return raise_error(task, ctx, "Could not bind to socket.");
+    }
+    if (SOCKET_ERROR ==
+        socket_listen(socket, pint(&tuple_get(tuple, 4)->pri))) {
+      return raise_error(task, ctx, "Could not listen to socket.");
+    }
   }
   return entity_object(obj);
 }
@@ -83,6 +91,29 @@ Entity _Socket_accept(Task *task, Context *ctx, Object *obj, Entity *args) {
       heap_new(task->parent_process->heap, Class_SocketHandle);
   Entity arg = entity_object(obj);
   _SocketHandle_constructor(task, ctx, socket_handle, &arg);
+  return entity_object(socket_handle);
+}
+
+Entity _SocketHandle_connect_constructor(Task *task, Context *ctx, Object *obj,
+                                         Entity *args) {
+  Socket *socket = (Socket *)args->obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(task, ctx, "Weird Socket error.");
+  }
+  SocketHandle *sh = socket_connect(socket);
+  obj->_internal_obj = sh;
+  return entity_object(obj);
+}
+
+Entity _Socket_connect(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(task, ctx, "Weird Socket error.");
+  }
+  Object *socket_handle =
+      heap_new(task->parent_process->heap, Class_SocketHandle);
+  Entity arg = entity_object(obj);
+  _SocketHandle_connect_constructor(task, ctx, socket_handle, &arg);
   return entity_object(socket_handle);
 }
 
@@ -169,5 +200,6 @@ void socket_add_native(ModuleManager *mm, Module *socket) {
       native_class(socket, intern("Socket"), _Socket_init, _Socket_delete);
   native_method(Class_Socket, intern("new"), _Socket_constructor);
   native_background_method(Class_Socket, intern("accept"), _Socket_accept);
+  native_background_method(Class_Socket, intern("connect"), _Socket_connect);
   native_method(Class_Socket, intern("close"), _Socket_close);
 }

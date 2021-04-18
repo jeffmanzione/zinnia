@@ -58,6 +58,7 @@ cc_library(
         "//vm",
         "//vm:module_manager",
         "//vm/process:processes",
+        "//vm/process:task",
         "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",

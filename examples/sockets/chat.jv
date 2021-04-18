@@ -1,0 +1,144 @@
+; Toy chat client.
+;
+; To start server:
+;   jvr examples/socket/chat.jv -- --server
+; To start client:
+;   jvr examples/socket/chat.jv
+;
+; The client will prompt for a username and then allow clients to broadcast
+; messages to the other clients.
+
+module chat
+
+import error
+import io
+import socket
+
+class ChatServer {
+  field clients, sock
+  new(field port=1453) {
+    clients = {}
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0', port, 4, True)
+  }
+  method start() {
+    while True {
+      try {
+        (client, leftovers) = _accept_connection()
+        await client.handle(leftovers)
+        client.handle_all()
+      } catch e {
+        io.fprintln(io.ERROR, e)
+      }
+    }
+  }
+  method _accept_connection() {
+    conn = await sock.accept()
+    0
+    (login, leftovers) = _receive_login(conn)
+    io.println(cat('Logged in \'', login.username, '\'.'))
+    client = clients[login.username]
+    if client {
+      client.refresh(login, conn)
+    } else {
+      client = _ClientConnection(login, conn, _handle_message)
+      clients[login.username] = client
+    }
+    return (client, leftovers)
+  }
+  method _receive_login(conn) {
+    msg = (await conn.receive()).split('\n\n')
+    if msg.len() == 0 {
+      raise error.Error('Received too-short message.')
+    }
+    login_info = msg.remove(0).split(':')
+    if login_info[0].trim() != 'login' {
+      raise error.Error('Missing login.')
+    }
+    return (_Login(login_info[1].trim()), msg)
+  }
+
+  method _handle_message(type, source_connection, message) {
+    if type == 'message' {
+      for (username, client) in clients {
+        client.send_message(source_connection, message)
+      }
+    } else {
+      io.println(cat('Unknown message type: ', type))
+    }
+  }
+}
+
+class ChatClient {
+  field sock, connection
+  new(field port=1453) {
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0', port, 4, False)
+    connection = await sock.connect()
+  }
+  method start() {
+    _login()
+    _start_send_loop()
+    while True {
+    str_message = (await connection.receive()).split(':')
+      _handle_message(str_message[0], str_message[1])
+    }
+  }
+  method _start_send_loop() async {
+    while True {
+      await connection.send(cat('message:', io.IN.getline().trim(), '\n\n'))
+    }
+  }
+  method _login() {
+    io.print('Username: ')
+    await connection.send(cat('login:', io.IN.getline().trim(), '\n\n'))
+  }
+  method _handle_message(type, message) {
+    if type == 'message' {
+      io.println(message)
+    } else {
+      io.println(cat('Unknown message type: ', type))
+    }
+  }
+}
+
+class _Login {
+  new(field username) {}
+}
+
+class _ClientConnection {
+  new(field login, field connection, field broadcast) {}
+  method refresh(alogin, aconnection) {
+    connection.close()
+    login = alogin
+    connection = aconnection
+  }
+  method close() {
+    connection.send('END_OF_COMMUNICATION\n\n')
+    connection.close()
+  }
+  method handle(message) async {
+    if message is Array {
+      for (i, m) in message {
+        await handle(m)
+      }
+      return
+    }
+    io.println(cat(login.username, ': \'', message, '\''))
+    str_message = message.split(':')
+    broadcast(str_message[0], self, str_message[1])
+  }
+  method handle_all() async {
+    while True {
+      msg = await connection.receive()
+      handle(msg.split('\n\n'))
+    }
+  }
+  method send_message(source_connection, message) {
+    await connection.send(cat('message:', source_connection.login.username, ' said \'', message, '\''))
+  }
+}
+
+if Bool(args.server) {
+  ChatServer(Int(args.port | 1453)).start()
+} else {
+  ChatClient(Int(args.port | 1453)).start()
+}

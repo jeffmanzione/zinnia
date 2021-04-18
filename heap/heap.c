@@ -147,6 +147,15 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
+Entity array_remove(Heap *heap, Object *array, int32_t index) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
+  Entity e = Array_remove((Array *)array->_internal_obj, index);
+  if (OBJECT == e.type) {
+    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e.obj->_node_ref);
+  }
+  return e;
+}
+
 void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);

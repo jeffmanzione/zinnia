@@ -66,6 +66,7 @@ struct __Task {
   Set dependent_tasks;
 
   bool child_task_has_error;
+  bool is_finalized;
 
   Object *_reflection;
 };
@@ -90,7 +91,7 @@ struct __Process {
   Set completed_tasks;
 
   Object *_reflection;
-  ThreadHandle thread; // Null if main thread.
+  ThreadHandle thread;  // Null if main thread.
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */
