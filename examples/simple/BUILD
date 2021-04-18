@@ -11,6 +11,12 @@ jeff_vm_binary(
 )
 
 jeff_vm_binary(
+    name = "exceptions",
+    main = "exceptions.jv",
+    deps = [],
+)
+
+jeff_vm_binary(
     name = "fibonacci",
     main = "fibonacci.jv",
     deps = [],
