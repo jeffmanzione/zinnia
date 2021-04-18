@@ -21,5 +21,6 @@ uint32_t stackline_linenum(Object *stackline);
 Module *stackline_module(Object *stackline);
 
 Entity raise_error(Task *task, Context *context, const char fmt[], ...);
+Entity raise_error_with_object(Task *task, Context *context, Object *err);
 
 #endif /* ENTITY_NATIVE_ERROR_H_ */

@@ -1,0 +1,16 @@
+module exceptions
+
+import error
+import io
+
+try {
+  a.a ; Will trigger an exception.
+} catch e {
+  io.fprintln(io.ERROR, e)
+}
+
+try {
+  raise error.Error('Hello, world!')
+} catch e {
+  io.fprintln(io.ERROR, e)
+}

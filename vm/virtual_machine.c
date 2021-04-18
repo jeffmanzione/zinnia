@@ -1107,6 +1107,15 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
   return true;
 }
 
+void _execute_RAIS(VM *vm, Task *task, Context *context) {
+  const Entity *err = task_get_resval(task);
+  if (OBJECT != err->type || !inherits_from(err->obj->_class, Class_Error)) {
+    raise_error(task, context, "raise can only be invoked with an Error().");
+    return;
+  }
+  raise_error_with_object(task, context, err->obj);
+}
+
 bool _attemp_catch_error(Task *task, Context *ctx) {
   // *task_mutable_resval(task) = entity_object(ctx->error);
   while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)))
@@ -1305,6 +1314,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       break;
     case CTCH:
       _execute_CTCH(vm, task, context, ins);
+      break;
+    case RAIS:
+      _execute_RAIS(vm, task, context);
       break;
     case LMDL:
       if (_execute_LMDL(vm, task, context, ins)) {
