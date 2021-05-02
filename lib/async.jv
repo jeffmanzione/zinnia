@@ -28,7 +28,7 @@ class Completer {
     _future = () async {
       while ~(() -> completed)() {}
       return _value
-    } ()
+    }()
   }
 
   ; Completes the future with the value [v].

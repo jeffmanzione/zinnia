@@ -44,8 +44,7 @@ self._IN_TO_STR = {
   32768: 'IGNORED',
   1073741824: 'ISDIR',
   16384: 'Q_OVERFLOW',
-  8192: 'UNMOUNT',
-  4095: 'ALL_EVENTS'
+  8192: 'UNMOUNT'
 }
 
 class _FileInternal {
@@ -99,8 +98,14 @@ _EVENT_TYPES = {
 class FileEvent {
   new(field file_name, field mask) {}
   method to_s() {
+    masks = []
+    for (k, v) in _IN_TO_STR {
+      if (k & mask) > 0 {
+        masks.append(v)
+      }
+    }
     return cat('FileEvent(file_name=',
-        file_name, ', type=', _IN_TO_STR[mask], ')')
+        file_name, ', type=', ','.join(masks), ')')
   }
 }
 

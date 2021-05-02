@@ -259,7 +259,7 @@ def parse_cookie(cookie) {
   kvs = cookie.split(COOKIE_SEPARATOR)
   for i=0, i<kvs.len(), i=i+1 {
     kv = kvs[i].split(EQUALS)
-    res[kv[0]]= kv[1]
+    res[kv[0]] = kv[1]
   }
   return Cookies(res)
 }

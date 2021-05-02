@@ -148,7 +148,7 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
 }
 
 Entity array_remove(Heap *heap, Object *array, int32_t index) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
+  ASSERT(NOT_NULL(heap), NOT_NULL(array), index >= 0);
   Entity e = Array_remove((Array *)array->_internal_obj, index);
   if (OBJECT == e.type) {
     mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e.obj->_node_ref);
