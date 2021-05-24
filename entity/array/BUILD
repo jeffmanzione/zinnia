@@ -11,7 +11,7 @@ cc_library(
     deps = [
         "//entity",
         "//entity:object",
-        "//struct:arraylike",
+        "@c_data_structures//struct:arraylike",
         "@memory_wrapper//debug",
     ],
 )

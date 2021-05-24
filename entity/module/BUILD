@@ -13,7 +13,7 @@ cc_library(
         "//entity/class",
         "//entity/function",
         "//program:tape",
-        "//struct:keyed_list",
+        "@c_data_structures//struct:keyed_list",
     ],
 )
 

@@ -54,7 +54,7 @@ cc_library(
         ":mutex",
         ":semaphore",
         ":thread",
-        "//struct:q",
+        "@c_data_structures//struct:q",
         "@memory_wrapper//alloc",
     ],
 )

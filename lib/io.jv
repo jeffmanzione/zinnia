@@ -91,10 +91,6 @@ class FileWriter {
   method close() fi.close()
 }
 
-_EVENT_TYPES = {
-  
-}
-
 class FileEvent {
   new(field file_name, field mask) {}
   method to_s() {

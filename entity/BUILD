@@ -22,9 +22,9 @@ cc_library(
     deps = [
         "//lang/lexer:token",
         "//program:tape",
-        "//struct:alist",
-        "//struct:keyed_list",
         "//util/sync:mutex",
+        "@c_data_structures//struct:alist",
+        "@c_data_structures//struct:keyed_list",
         "@memory_wrapper//alloc/memory_graph",
         "@memory_wrapper//struct:map",
     ],

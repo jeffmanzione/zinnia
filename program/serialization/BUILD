@@ -36,7 +36,7 @@ cc_library(
         ":buffer",
         "//entity:primitive",
         "//program:instruction",
-        "//struct:alist",
+        "@c_data_structures//struct:alist",
         "@memory_wrapper//debug",
     ],
 )

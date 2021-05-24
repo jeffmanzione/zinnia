@@ -11,7 +11,7 @@ cc_library(
     deps = [
         "//lang/lexer",
         "//lang/lexer:token",
-        "//struct:q",
+        "@c_data_structures//struct:q",
         "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",

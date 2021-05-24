@@ -10,7 +10,7 @@ cc_library(
     hdrs = ["lexer.h"],
     deps = [
         ":token",
-        "//struct:q",
+        "@c_data_structures//struct:q",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc",

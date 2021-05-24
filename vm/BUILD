@@ -19,11 +19,11 @@ cc_library(
     hdrs = ["vm.h"],
     deps = [
         ":module_manager",
-        "//struct:alist",
         "//util/sync:mutex",
         "//util/sync:threadpool",
         "//vm/process",
         "//vm/process:processes",
+        "@c_data_structures//struct:alist",
     ],
 )
 
@@ -69,7 +69,7 @@ cc_library(
         "//program:tape",
         "//program:tape_binary",
         "//program/optimization:optimize",
-        "//struct:keyed_list",
+        "@c_data_structures//struct:keyed_list",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",
         "@memory_wrapper//alloc/arena:intern",

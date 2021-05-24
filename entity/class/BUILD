@@ -11,7 +11,7 @@ cc_library(
     deps = [
         "//entity:object",
         "//entity/function",
-        "//struct:keyed_list",
+        "@c_data_structures//struct:keyed_list",
         "@memory_wrapper//alloc",
     ],
 )
