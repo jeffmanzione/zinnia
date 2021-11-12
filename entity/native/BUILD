@@ -211,3 +211,15 @@ cc_library(
         "@memory_wrapper//alloc/arena:intern",
     ],
 )
+
+cc_library(
+    name = "dynamic",
+    srcs = ["dynamic.c"],
+    hdrs = ["dynamic.h"],
+    deps = [
+        "//entity",
+        "//entity:object",
+        "//entity/native",
+        "//vm:module_manager",
+    ],
+)

@@ -90,6 +90,7 @@ cc_library(
         "//entity/native:async",
         "//entity/native:builtin",
         "//entity/native:classes",
+        "//entity/native:dynamic",
         "//entity/native:error",
         "//entity/native:io",
         "//entity/native:math",
