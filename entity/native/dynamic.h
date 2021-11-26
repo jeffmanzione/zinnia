@@ -9,6 +9,6 @@
 #include "entity/object.h"
 #include "vm/module_manager.h"
 
-void dynamic_add_native(ModuleManager *mm, Module *classes);
+void dynamic_add_native(ModuleManager *mm, Module *dynamic);
 
 #endif /* ENTITY_NATIVE_DYNAMIC_H_ */

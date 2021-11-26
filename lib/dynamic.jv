@@ -1,13 +1,5 @@
 module dynamic
 
-class CLibrary {
-  new(field _clib) {}
-
-  method get_function_handle(func_name) {
-    _clib.__get_function_handle(func_name)
-  }
-}
-
-def open_c_library(file_name) {
-  CLibrary(__open_c_lib(file_name))
+def open_c_library(file_name, init_fn_name) {
+  __open_c_lib(file_name, init_fn_name)
 }
