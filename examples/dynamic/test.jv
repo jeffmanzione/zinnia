@@ -1,0 +1,9 @@
+; Compile c library: bazel build -c opt //examples/dynamic:_custom
+; Run with bazel-bin/run/jvr examples/dynamic/test.jv examples/dynamic/custom.jv
+
+module test
+
+import custom
+import io
+
+io.println(custom.cos(1.5))

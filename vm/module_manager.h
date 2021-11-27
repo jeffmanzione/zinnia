@@ -30,6 +30,9 @@ ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[]);
 
 ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
                                              NativeCallback callback);
+ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
+                                       const char module_name[],
+                                       NativeCallback init_fn);
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]);
 

@@ -15,6 +15,7 @@
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/classes.h"
+#include "entity/native/dynamic.h"
 #include "entity/native/error.h"
 #include "entity/native/io.h"
 #include "entity/native/math.h"
@@ -32,7 +33,6 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(mm, find_file_by_name(lib_location, "io"),
                                    io_add_native);
   Module_io = modulemanager_lookup(mm, intern("io"));
-  DEBUGF("Module_io=%p %p", Module_io, Module_io->_name);
 
   mm_register_module_with_callback(mm, find_file_by_name(lib_location, "error"),
                                    error_add_native);
@@ -52,6 +52,8 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(
       mm, find_file_by_name(lib_location, "socket"), socket_add_native);
   mm_register_module(mm, find_file_by_name(lib_location, "net"));
+  mm_register_module_with_callback(
+      mm, find_file_by_name(lib_location, "dynamic"), dynamic_add_native);
 
   DIR *lib = opendir(lib_location);
   struct dirent *dir;

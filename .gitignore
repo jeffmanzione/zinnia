@@ -54,9 +54,6 @@ dkms.conf
 # Bazel
 bazel*
 
-# Test
-test.*
-
 # JL
 *.ja
 *.jb
