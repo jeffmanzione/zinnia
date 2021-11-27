@@ -216,10 +216,19 @@ cc_library(
     name = "dynamic",
     srcs = ["dynamic.c"],
     hdrs = ["dynamic.h"],
+    linkopts = [
+        "-ldl",
+        "-rdynamic",
+    ],
     deps = [
         "//entity",
         "//entity:object",
         "//entity/native",
+        "//entity/native:error",
+        "//entity/string",
+        "//entity/string:string_helper",
+        "//vm",
         "//vm:module_manager",
+        "//vm/process:processes",
     ],
 )

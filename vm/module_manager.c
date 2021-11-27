@@ -25,7 +25,7 @@ struct _ModuleInfo {
   Module module;
   FileInfo *fi;
   const char *file_name;
-  bool is_loaded, has_native_callback;
+  bool is_loaded, has_native_callback, is_dynamic;
   NativeCallback native_callback;
 };
 
@@ -85,14 +85,14 @@ bool _hydrate_class(Module *module, ClassRef *cref) {
 
 ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
                                const char file_name[]) {
-  ASSERT(NOT_NULL(mm), NOT_NULL(file_name));
+  ASSERT(NOT_NULL(mm));
   ModuleInfo *module_info;
   ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
       &mm->_modules, intern(module_name), (void **)&module_info);
   if (old != NULL) {
     ERROR("Module by name '%s' already exists.", module_name);
   }
-  module_info->file_name = intern(file_name);
+  module_info->file_name = (NULL != file_name) ? intern(file_name) : NULL;
   return module_info;
 }
 
@@ -236,6 +236,19 @@ ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[]) {
   return mm_register_module_with_callback(mm, fn, NULL);
 }
 
+ModuleInfo *_create_and_init_moduleinfo(ModuleManager *mm,
+                                        const char *module_name,
+                                        const char *file_name,
+                                        NativeCallback native_callback,
+                                        bool is_dynamic) {
+  ModuleInfo *module_info = _create_moduleinfo(mm, module_name, file_name);
+  module_info->has_native_callback = native_callback != NULL;
+  module_info->native_callback = native_callback;
+  module_info->is_loaded = false;
+  module_info->is_dynamic = is_dynamic;
+  return module_info;
+}
+
 ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
                                              NativeCallback callback) {
   ASSERT(NOT_NULL(mm), NOT_NULL(fn));
@@ -255,10 +268,8 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
     return module_info;
   }
 
-  module_info = _create_moduleinfo(mm, module_name, fn);
-  module_info->has_native_callback = callback != NULL;
-  module_info->native_callback = callback;
-  module_info->is_loaded = false;
+  module_info = _create_and_init_moduleinfo(mm, module_name, fn, callback,
+                                            /*is_dynamic=*/false);
 
   DEALLOC(dir_path);
   DEALLOC(ext);
@@ -266,17 +277,31 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
   return module_info;
 }
 
+ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
+                                       const char module_name[],
+                                       NativeCallback init_fn) {
+  ModuleInfo *module_info =
+      _create_and_init_moduleinfo(mm, intern(module_name), NULL, init_fn,
+                                  /*is_dynamic*/ true);
+  module_init(&module_info->module, intern(module_name), NULL);
+  return module_info;
+}
+
 Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
   Module *module = NULL;
   if (!module_info->is_loaded) {
-    if (ends_with(module_info->file_name, ".jb")) {
-      module = _read_jb(mm, module_info);
-    } else if (ends_with(module_info->file_name, ".ja")) {
-      module = _read_ja(mm, module_info);
-    } else if (ends_with(module_info->file_name, ".jv")) {
-      module = _read_jl(mm, module_info);
+    if (!module_info->is_dynamic) {
+      if (ends_with(module_info->file_name, ".jb")) {
+        module = _read_jb(mm, module_info);
+      } else if (ends_with(module_info->file_name, ".ja")) {
+        module = _read_ja(mm, module_info);
+      } else if (ends_with(module_info->file_name, ".jv")) {
+        module = _read_jl(mm, module_info);
+      } else {
+        ERROR("Unknown file type.");
+      }
     } else {
-      ERROR("Unknown file type.");
+      module = &module_info->module;
     }
     module_info->is_loaded = true;
     if (module_info->has_native_callback) {
@@ -290,7 +315,7 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]) {
   ModuleInfo *module_info =
-      (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_name);
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, intern(module_name));
   if (NULL == module_info) {
     return NULL;
   }
@@ -311,7 +336,7 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
   ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
-  Tape *tape = (Tape *)m->_tape;  // bless
+  Tape *tape = (Tape *)m->_tape; // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
@@ -319,12 +344,12 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
     if (NULL != c) {
       continue;
     }
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name);  // bless
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -333,9 +358,9 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   }
   while (Q_size(&classes_to_process) > 0) {
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
-    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name);  // bless
+      c = (Class *)module_lookup_class(m, cref->name); // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
