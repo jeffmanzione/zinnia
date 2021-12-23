@@ -1,21 +1,11 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@language_tools//lang/parser:parser_builder.bzl", "parser_builder")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
-    name = "parser",
-    srcs = ["parser.c"],
-    hdrs = ["parser.h"],
-    deps = [
-        "//lang/lexer",
-        "//lang/lexer:token",
-        "@c_data_structures//struct:q",
-        "@file_utils//util/file:file_info",
-        "@memory_wrapper//alloc",
-        "@memory_wrapper//debug",
-        "@memory_wrapper//struct:map",
-        "@memory_wrapper//struct:struct_defaults",
-    ],
+parser_builder(
+    name = "lang_parser",
+    lexer = "//lang/lexer",
+    rules = "rules.txt",
 )
