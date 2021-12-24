@@ -20,7 +20,7 @@ array_declaration ->
   );
 
 map_declaration_entry -> AND(rule:postfix_expression, token:SYMBOL_COLON, rule:postfix_expression);
-map_declaration_entry1 -> OR(AND(AND(token:SYMBOL_COMMA, rule:map_declaration_entity), rule:map_declaration_entry1), E);
+map_declaration_entry1 -> OR(AND(AND(token:SYMBOL_COMMA, rule:map_declaration_entry), rule:map_declaration_entry1), E);
 map_declaration_list -> AND(rule:map_declaration_entry, rule:map_declaration_entry1);
 map_declaration ->
   OR(
@@ -206,12 +206,7 @@ field_expression -> AND(rule:identifier, rule:field_expression1);
 
 assignment_lhs_single -> OR(rule:const_assignment_expression, rule:field_expression);
 
-assignment_tuple_list1 ->
-  OR(
-    AND(token:SYMBOL_COMMA, rule:assignment_lhs, rule:assignment_tuple_list1),
-    E
-  );
-assignment_tuple_list -> AND(rule:assignment_lhs, rule:assignment_tuple_list1);
+assignment_tuple_list -> LIST(token:SYMBOL_COMMA, rule:assignment_lhs);
 assignment_tuple -> AND(token:SYMBOL_LPAREN, rule:assignment_tuple_list, token:SYMBOL_RPAREN);
 
 assignment_array -> AND(token:SYMBOL_LBRACKET, rule:assignment_tuple_list, token:SYMBOL_RBRACKET);
@@ -229,11 +224,433 @@ assignment_expression ->
     rule:conditional_expression
   );
 
-tuple_expression1 ->
-  OR(
-    AND(token:SYMBOL_COMMA, rule:assignment_expression, rule:tuple_expression1),
-    E
-  );
-tuple_expression -> AND(rule:assignment_expression, rule:tuple_expression1);
+tuple_expression -> LIST(token:SYMBOL_COMMA, rule:assignment_expression);
 
 expression_statement -> AND(rule:tuple_expression, OPTIONAL(token:TOKEN_NEWLINE));
+
+foreach_statement ->
+  AND(
+    token:KEYWORD_FOR,
+    OR(
+      AND(token:SYMBOL_LPAREN, rule:assignment_lhs, token:KEYWORD_IN, rule:conditional_expression, token:SYMBOL_RPAREN),
+      AND(rule:assignment_lhs, token:KEYWORD_IN, rule:conditional_expression)
+    ),
+    rule:statement
+  );
+
+for_statement ->
+  AND(
+    token:KEYWORD_FOR,
+    OR(
+      AND(
+        token:SYMBOL_LPAREN,
+        rule:assignment_expression,
+        token:SYMBOL_COMMA,
+        rule:conditional_expression,
+        token:SYMBOL_COMMA,
+        rule:assignment_expression,
+        token:SYMBOL_RPAREN),
+      AND(
+        rule:assignment_expression,
+        token:SYMBOL_COMMA,
+        rule:conditional_expression,
+        token:SYMBOL_COMMA,
+        rule:assignment_expression)
+    )
+  );
+
+while_statement ->
+  AND(
+    token:KEYWORD_WHILE, rule:conditional_expression, rule:statement
+  );
+
+iteration_statement ->
+  OR(
+    rule:while_statement,
+    rule:foreach_statement,
+    rule:for_statement
+  );
+
+compound_statement ->
+  OR(
+    AND(token:SYMBOL_LBRACE, token:SYMBOL_RBRACE),
+    AND(token:SYMBOL_LBRACE, rule:statement_list, token:SYMBOL_RBRACE)
+  );
+
+selection_statement ->
+  AND(
+    token:KEYWORD_IF,
+    rule:tuple_expression,
+    rule:statement,
+    OPTIONAL(
+      AND(
+        token:KEYWORD_ELSE,
+        rule:statement
+      )
+    )
+  );
+
+exit_statement -> token:KEYWORD_EXIT;
+
+raise_statement -> AND(token:KEYWORD_RAISE, rule:assignment_expression);
+
+catch_assign ->
+  OR(
+    AND(token:SYMBOL_LPAREN, rule:assignment_lhs, token:SYMBOL_RPAREN),
+    rule:assignment_lhs
+  );
+
+try_statement ->
+  AND(
+    token:KEYWORD_TRY,
+    rule:statement,
+    token:KEYWORD_CATCH,
+    rule:catch_assign,
+    rule:statement
+  );
+
+jump_statement ->
+  OR(
+    AND(
+      token:KEYWORD_RETURN,
+      token:SYMBOL_LPAREN,
+      rule:tuple_expression,
+      token:SYMBOL_RPAREN
+    ),
+    AND(
+      token:KEYWORD_RETURN,
+      rule:tuple_expression
+    ),
+    token:KEYWORD_RETURN
+  );
+
+break_statement ->
+  AND(
+    OR(
+      token:KEYWORD_BREAK,
+      token:KEYWORD_CONTINUE
+    ),
+    token:TOKEN_NEWLINE
+  );
+
+default_value_expression ->
+  AND(
+    token:SYMBOL_EQUALS,
+    rule:conditional_expression
+  );
+
+const_expression ->
+  AND(
+    OPTIONAL(token:KEYWORD_CONST),
+    OR(
+      AND(
+        token:SYMBOL_LPAREN,
+        rule:function_argument_list,
+        token:SYMBOL_RPAREN
+      ),
+      rule:identifier
+    ),
+    OPTIONAL(rule:default_value_expression)
+  );
+
+function_arg_default_value ->
+  AND(
+    token:SYMBOL_EQUALS,
+    rule:conditional_expression
+  );
+
+function_arg_elt_with_default ->
+  AND(
+    rule:identifier,
+    rule:function_arg_default_value
+  );
+
+function_arg_elt ->
+  OR(
+    rule:function_arg_elt_with_default,
+    rule:identifier
+  );
+
+const_function_argument ->
+  AND(
+    token:KEYWORD_CONST,
+    rule:function_arg_elt
+  );
+
+function_argument ->
+  OR(
+    rule:const_function_argument,
+    rule:function_arg_elt
+  );
+
+function_argument_list -> LIST(token:SYMBOL_COMMA, rule:function_argument);
+
+function_arguments_present ->
+  AND(
+    token:SYMBOL_LPAREN,
+    rule:function_argument_list,
+    token:SYMBOL_RPAREN
+  );
+
+function_arguments_no_args ->
+  AND(
+    token:SYMBOL_LPAREN,
+    token:SYMBOL_RPAREN
+  );
+
+function_arguments ->
+  OR(
+    rule:function_arguments_present,
+    rule:function_arguments_no_args
+  );
+
+def_identifier -> AND(token:KEYWORD_DEF, rule:identifier);
+
+function_signature_no_qualifier ->
+  AND(
+    rule:def_identifier,
+    rule:function_arguments
+  );
+
+function_qualifier -> OR(token:KEYWORD_ASYNC, token:KEYWORD_CONST);
+
+function_qualifier_list -> LIST(E, rule:function_qualifier);
+
+function_signature_with_qualifier ->
+  AND(rule:function_signature_no_qualifier, rule:function_qualifier_list);
+
+function_signature ->
+  OR(
+    rule:function_signature_with_qualifier,
+    rule:function_signature_no_qualifier
+  );
+
+function_definition -> AND(rule:function_signature, rule:statement);
+
+method_identifier ->
+  AND(
+    token:KEYWORD_METHOD,
+    OR(
+      rule:identifier,
+      token:SYMBOL_EQUIV,
+      token:SYMBOL_NEQUIV,
+      AND(token:SYMBOL_LBRACKET, token:SYMBOL_RBRACKET, token:SYMBOL_EQUALS),
+      AND(token:SYMBOL_LBRACKET, token:SYMBOL_RBRACKET)
+    )
+  );
+
+method_signature_no_qualifier ->
+  AND(rule:method_identifier, rule: function_arguments);
+
+method_signature_with_qualifier -> 
+  AND(rule:method_signature_no_qualifier, rule:function_qualifier_list);
+
+method_signature ->
+  OR(
+    rule:method_signature_with_qualifier,
+    rule:method_signature_no_qualifier
+  );
+
+method_definition -> AND(rule:method_signature, rule:statement);
+
+new_arg_var -> OR(rule:new_field_arg, rule:identifier);
+
+new_field_arg -> AND(token:KEYWORD_FIELD, rule:identifier);
+
+new_arg_default_value -> AND(token:SYMBOL_EQUALS, rule:conditional_expression);
+
+new_arg_elt_with_default -> AND(rule:new_arg_var, rule:new_arg_default_value);
+
+new_arg_elt -> OR(rule:new_arg_elt_with_default, rule:new_arg_var);
+
+const_new_argument -> AND(token:KEYWORD_CONST, rule:new_arg_elt);
+
+new_argument -> OR(rule:const_new_argument, rule:new_arg_elt);
+
+new_argument_list -> LIST(token:SYMBOL_COMMA, rule:new_argument);
+
+new_arguments_present -> AND(token:SYMBOL_LPAREN, rule:new_argument_list, token:SYMBOL_RPAREN);
+
+new_arguments_no_args -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+
+new_arguments -> OR(rule:new_arguments_present, rule:new_arguments_no_args);
+
+new_identifier -> rule:new_expression;
+
+new_signature_nonconst -> AND(rule:new_identifier, rule:new_arguments);
+
+new_signature_const -> AND(rule:new_signature_nonconst, token:KEYWORD_CONST);
+
+new_signature -> OR(rule:new_signature_const, rule:new_signature_nonconst);
+
+new_definition -> AND(rule:new_signature, rule:statement);
+
+anon_signature_no_qualifier -> rule:function_arguments;
+
+anon_signature_with_qualifier ->
+  AND(
+    rule:anon_signature_no_qualifier,
+    rule:function_qualifier_list
+  );
+
+anon_signature ->
+  OR(
+    rule:anon_signature_with_qualifier,
+    rule:anon_signature_no_qualifier
+  );
+
+anon_function_lambda_lhs -> OR(rule:anon_signature, rule:identifier);
+
+anon_function_lambda_rhs -> AND(token:SYMBOL_RARROW, rule:assignment_expression);
+
+anon_function_definition ->
+  OR(
+    AND(
+      rule:anon_function_lambda_lhs,
+      rule:anon_function_lambda_rhs
+    ),
+    AND(
+      rule:anon_signature,
+      rule:compound_statement
+    )
+  );
+
+identifier_list -> LIST(token:SYMBOL_COMMA, rule:identifier);
+
+field_statement -> AND(token:KEYWORD_FIELD, rule:identifier_list);
+
+class_statement ->
+  AND(
+    OR(
+      rule:new_definition,
+      rule:field_statement,
+      rule:method_definition
+    ),
+    token:TOKEN_NEWLINE
+  );
+
+class_statement_list ->
+  LIST(
+    E,
+    AND(
+      rule:class_statement,
+      OPTIONAL(token:TOKEN_NEWLINE)
+    )
+  );
+
+parent_class_list ->
+  LIST(
+    token:SYMBOL_COMMA,
+    rule:identifier
+  );
+
+parent_classes -> AND(token:SYMBOL_COLON, rule:parent_class_list);
+
+class_compound_statement ->
+  OR(
+    AND(token:SYMBOL_LBRACE, token:SYMBOL_RBRACE),
+    AND(token:SYMBOL_LBRACE, rule:class_statement_list, token:SYMBOL_RBRACE)
+  );
+
+class_name_and_inheritance -> AND(rule:identifier, OPTIONAL(rule:parent_classes));
+
+class_definition_no_annotation ->
+  AND(
+    token:KEYWORD_CLASS,
+    rule:class_name_and_inheritance,
+    OR(
+      rule:class_compound_statement,
+      AND(
+        rule:class_statement,
+        OPTIONAL(token:TOKEN_NEWLINE)
+      )
+    )
+  );
+
+annotation_not_called ->
+  OR(
+    AND(rule:identifier, token:SYMBOL_PERIOD, rule:identifier),
+    rule:identifier
+  );
+
+annotation_no_arguments ->
+  AND(
+    rule:annotation_not_called,
+    token:SYMBOL_LPAREN,
+    token:SYMBOL_RPAREN
+  );
+
+annotation_with_arguments ->
+  AND(
+    rule:annotation_not_called,
+    token:SYMBOL_LPAREN,
+    rule:tuple_expression,
+    token:SYMBOL_RPAREN
+
+  );
+
+annotation ->
+  AND(
+    token:SYMBOL_AT,
+    OR(
+      rule:annotation_with_arguments,
+      rule:annotation_no_arguments,
+      rule:annotation_not_called
+    )
+  );
+
+class_definition_with_annotation ->
+  AND(
+    rule:annotation,
+    rule:class_definition_no_annotation
+  );
+
+class_definition ->
+  OR(
+    rule:class_definition_with_annotation,
+    rule:class_definition_no_annotation
+  );
+
+import_statement ->
+  OR(
+    AND(
+      token:KEYWORD_IMPORT,
+      rule:identifier,
+      token:KEYWORD_AS,
+      rule:identifier,
+      token:TOKEN_NEWLINE
+    ),
+    AND(
+      token:KEYWORD_IMPORT,
+      rule:identifier,
+      token:TOKEN_NEWLINE
+    )
+  );
+
+module_statement -> AND(token:KEYWORD_MODULE, rule:identifier, token:TOKEN_NEWLINE);
+
+statement ->
+  OR(
+    rule:exit_statement,
+    rule:raise_statement,
+    rule:try_statement,
+    rule:selection_statement,
+    rule:compound_statement,
+    rule:iteration_statement,
+    rule:jump_statement,
+    rule:break_statement,
+    rule:expression_statement
+  );
+
+file_level_statement ->
+  OR(
+    rule:module_statement,
+    rule:import_statement,
+    rule:class_statement,
+    rule:function_definition,
+    rule:statement
+  );
+
+file_level_statement_list -> LIST(E, rule:file_level_statement);
+
+statement_list -> LIST(E, rule:statement);
