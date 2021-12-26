@@ -5,7 +5,7 @@ package(
 )
 
 lexer_builder(
-    name = "lexer",
+    name = "lang_lexer",
     comments = "comments.txt",
     keywords = "keywords.txt",
     strings = "strings.txt",

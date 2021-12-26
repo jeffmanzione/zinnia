@@ -1,1 +1,2 @@
 COMMENT_LINE,;,\n
+COMMENT_INLINE,/*,*/
