@@ -139,33 +139,80 @@ DEFINE_BI_EXPRESSION(binary_and_expression);
 DEFINE_BI_EXPRESSION(binary_xor_expression);
 DEFINE_BI_EXPRESSION(binary_or_expression);
 
-// DEFINE_EXPRESSION(in_expression, Tape) {
-//   Token *token;
-//   bool is_not;
-//   ExpressionTree *element;
-//   ExpressionTree *collection;
-// };
+DEFINE_EXPRESSION_WITH_PRODUCER(in_expression, Tape) {
+  Token *token;
+  bool is_not;
+  ExpressionTree *element;
+  ExpressionTree *collection;
+};
 
-// DEFINE_EXPRESSION(is_expression, Tape) {
-//   Token *token;
-//   ExpressionTree *exp;
-//   ExpressionTree *type;
-// };
+DEFINE_EXPRESSION_WITH_PRODUCER(is_expression, Tape) {
+  Token *token;
+  ExpressionTree *exp;
+  ExpressionTree *type;
+};
 
-// DEFINE_EXPRESSION(conditional_expression, Tape) { IfElse if_else; };
+typedef struct {
+  Token *if_token;
+  ExpressionTree *condition;
+  ExpressionTree *body;
+} Conditional;
 
-// DEFINE_EXPRESSION(anon_function_definition, Tape) { FunctionDef func; };
+typedef struct {
+  AList *conditions;
+  ExpressionTree *else_exp;
+} IfElse;
 
-// typedef struct {
-//   Token *colon;
-//   ExpressionTree *lhs;
-//   ExpressionTree *rhs;
-// } MapDecEntry;
+DEFINE_EXPRESSION_WITH_PRODUCER(conditional_expression, Tape) {
+  IfElse if_else;
+};
 
-// DEFINE_EXPRESSION(map_declaration, Tape) {
-//   Token *lbrce, *rbrce;
-//   bool is_empty;
-//   AList *entries;
-// };
+typedef struct {
+  bool is_const, is_field, has_default;
+  const Token *arg_name;
+  const Token *const_token;
+  const Token *field_token;
+  ExpressionTree *default_value;
+} Argument;
+
+typedef struct {
+  const Token *token;
+  int count_required, count_optional;
+  AList *args;
+} Arguments;
+
+typedef enum {
+  SpecialMethod__NONE,
+  SpecialMethod__EQUIV,
+  SpecialMethod__NEQUIV,
+  SpecialMethod__ARRAY_INDEX,
+  SpecialMethod__ARRAY_SET
+} SpecialMethod;
+
+typedef struct {
+  const Token *def_token;
+  const Token *fn_name;
+  SpecialMethod special_method;
+  const Token *const_token, *async_token;
+  bool has_args, is_const, is_async;
+  Arguments args;
+  ExpressionTree *body;
+} FunctionDef;
+
+DEFINE_EXPRESSION_WITH_PRODUCER(anon_function_definition, Tape) {
+  FunctionDef func;
+};
+
+typedef struct {
+  Token *colon;
+  ExpressionTree *lhs;
+  ExpressionTree *rhs;
+} MapDecEntry;
+
+DEFINE_EXPRESSION_WITH_PRODUCER(map_declaration, Tape) {
+  Token *lbrce, *rbrce;
+  bool is_empty;
+  AList *entries;
+};
 
 #endif /* LANG_SEMANTIC_ANALYZER_DEFINITIONS_H_ */

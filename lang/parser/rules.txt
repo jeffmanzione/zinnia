@@ -135,14 +135,15 @@ additive_expression1 ->
   );
 additive_expression -> AND(rule:multiplicative_expression, rule:additive_expression1);
 
-in_expression1 ->
+in_expression ->
   OR(
     AND(
-      OR(token:KEYWORD_IN, token:KEYWORD_NOTIN), rule:additive_expression, rule:in_expression1
+      rule:additive_expression,
+      OR(token:KEYWORD_IN, token:KEYWORD_NOTIN),
+      rule:additive_expression
     ),
-    E
+    rule:additive_expression
   );
-in_expression -> AND(rule:additive_expression, rule:in_expression1);
 
 relational_expression1 ->
   OR(
@@ -186,13 +187,18 @@ is_expression ->
 conditional_expression ->
   OR(
     AND(
-      token:KEYWORD_IF, rule:is_expression,
-      OPTIONAL(token:KEYWORD_THEN), rule:conditional_expression,
-      token:KEYWORD_ELSE, rule:conditional_expression
+      token:KEYWORD_IF,
+      rule:is_expression,
+      OPTIONAL(token:KEYWORD_THEN),
+      rule:conditional_expression,
+      token:KEYWORD_ELSE,
+      rule:conditional_expression
     ),
     AND(
-      token:KEYWORD_IF, rule:is_expression,
-      OPTIONAL(token:KEYWORD_THEN), rule:conditional_expression
+      token:KEYWORD_IF,
+      rule:is_expression,
+      OPTIONAL(token:KEYWORD_THEN),
+      rule:conditional_expression
     ),
     rule:is_expression
   );

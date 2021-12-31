@@ -13,6 +13,7 @@
 #include "struct/q.h"
 #include "util/file/file_info.h"
 #include "util/file/sfile.h"
+#include "vm/intern.h"
 
 REGISTRATION_FN(_semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(identifier);
@@ -34,6 +35,11 @@ REGISTRATION_FN(_semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(binary_and_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(binary_xor_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(binary_or_expression);
+  REGISTER_EXPRESSION_WITH_PRODUCER(in_expression);
+  REGISTER_EXPRESSION_WITH_PRODUCER(is_expression);
+  REGISTER_EXPRESSION_WITH_PRODUCER(conditional_expression);
+  REGISTER_EXPRESSION_WITH_PRODUCER(anon_function_definition);
+  REGISTER_EXPRESSION_WITH_PRODUCER(map_declaration);
 }
 
 DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
@@ -41,6 +47,7 @@ DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
 int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
+  strings_init();
 
   FileInfo *fi = file_info_file(stdin);
 
@@ -93,6 +100,7 @@ int main(int argc, const char *args[]) {
   file_info_delete(fi);
 
   token_finalize_all();
+  strings_finalize();
   intern_finalize();
   alloc_finalize();
   return 0;
