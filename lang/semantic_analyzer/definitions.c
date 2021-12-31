@@ -418,3 +418,226 @@ PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Tape *target) {
   }
   return num_ins;
 }
+
+BiType relational_type_for_token(const Token *token) {
+  switch (token->type) {
+  case SYMBOL_STAR:
+    return Mult_mult;
+  case SYMBOL_FSLASH:
+    return Mult_div;
+  case SYMBOL_PERCENT:
+    return Mult_mod;
+  case SYMBOL_PLUS:
+    return Add_add;
+  case SYMBOL_MINUS:
+    return Add_sub;
+  case SYMBOL_LTHAN:
+    return Rel_lt;
+  case SYMBOL_GTHAN:
+    return Rel_gt;
+  case SYMBOL_LTHANEQ:
+    return Rel_lte;
+  case SYMBOL_GTHANEQ:
+    return Rel_gte;
+  case SYMBOL_EQUIV:
+    return Rel_eq;
+  case SYMBOL_NEQUIV:
+    return Rel_neq;
+  case KEYWORD_AND:
+    return And_and;
+  case KEYWORD_OR:
+    return And_or;
+  case SYMBOL_AMPER:
+    return Bin_and;
+  case SYMBOL_CARET:
+    return Bin_xor;
+  case SYMBOL_PIPE:
+    return Bin_or;
+  default:
+    ERROR("Unknown type: %s", token->text);
+  }
+  return BiType_unknown;
+}
+
+Op bi_to_ins(BiType type) {
+  switch (type) {
+  case Mult_mult:
+    return MULT;
+  case Mult_div:
+    return DIV;
+  case Mult_mod:
+    return MOD;
+  case Add_add:
+    return ADD;
+  case Add_sub:
+    return SUB;
+  case Rel_lt:
+    return LT;
+  case Rel_gt:
+    return GT;
+  case Rel_lte:
+    return LTE;
+  case Rel_gte:
+    return GTE;
+  case Rel_eq:
+    return EQ;
+  case Rel_neq:
+    return NEQ;
+  case And_and:
+    return AND;
+  case And_or:
+    return OR;
+  case Bin_and:
+    return BAND;
+  case Bin_xor:
+    return BXOR;
+  case Bin_or:
+    return BOR;
+  default:
+    ERROR("Unknown type: %s", type);
+  }
+  return NOP;
+}
+
+#define POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer)                     \
+  {                                                                            \
+    expr->exp =                                                                \
+        semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 0));       \
+    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);                \
+    SyntaxTree *cur_suffix = CHILD_SYNTAX_AT(stree, 1);                        \
+    while (true) {                                                             \
+      EXPECT_TYPE(cur_suffix, rule_##expr##1);                                 \
+      BiSuffix suffix = {.token = CHILD_SYNTAX_AT(cur_suffix, 0)->token,       \
+                         .type = relational_type_for_token(                    \
+                             CHILD_SYNTAX_AT(cur_suffix, 0)->token)};          \
+      SyntaxTree *second_exp = CHILD_SYNTAX_AT(cur_suffix, 1);                 \
+      if (second_exp->rule_fn == stree->rule_fn) {                             \
+        suffix.exp = semantic_analyzer_populate(                               \
+            analyzer, CHILD_SYNTAX_AT(second_exp, 0));                         \
+        alist_append(suffixes, &suffix);                                       \
+        cur_suffix = CHILD_SYNTAX_AT(second_exp, 1);                           \
+      } else {                                                                 \
+        suffix.exp = semantic_analyzer_populate(analyzer, second_exp);         \
+        alist_append(suffixes, &suffix);                                       \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    expr->suffixes = suffixes;                                                 \
+  }
+
+#define DELETE_BI_EXPRESSION_IMPL(expr, analyzer)                              \
+  {                                                                            \
+    semantic_analyzer_delete(analyzer, expr->exp);                             \
+    AL_iter iter = alist_iter(expr->suffixes);                                 \
+    for (; al_has(&iter); al_inc(&iter)) {                                     \
+      BiSuffix *suffix = (BiSuffix *)al_value(&iter);                          \
+      semantic_analyzer_delete(analyzer, suffix->exp);                         \
+    }                                                                          \
+    alist_delete(expr->suffixes);                                              \
+  }
+
+#define PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, tape)                       \
+  {                                                                            \
+    int num_ins = 0;                                                           \
+    num_ins += semantic_analyzer_produce(analyzer, expr->exp, tape);           \
+    AL_iter iter = alist_iter(expr->suffixes);                                 \
+    for (; al_has(&iter); al_inc(&iter)) {                                     \
+      BiSuffix *suffix = (BiSuffix *)al_value(&iter);                          \
+      num_ins +=                                                               \
+          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
+          semantic_analyzer_produce(analyzer, suffix->exp, tape) +             \
+          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
+          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token);       \
+    }                                                                          \
+    return num_ins;                                                            \
+  }
+
+#define BI_EXPRESSION_IMPL(expr)                                               \
+  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer)     \
+  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                          \
+  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                                \
+  DELETE_BI_EXPRESSION_IMPL(expr, analyzer);                                   \
+  PRODUCE_IMPL(expr, SemanticAnalyzer *analyzer, Tape *target)                 \
+  PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, target)
+
+#define BI_EXPRESSION_IMPL_NO_PRODUCE(expr)                                    \
+  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer)     \
+  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                          \
+  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                                \
+  DELETE_BI_EXPRESSION_IMPL(expr, analyzer);
+
+BI_EXPRESSION_IMPL(multiplicative_expression);
+BI_EXPRESSION_IMPL(additive_expression);
+BI_EXPRESSION_IMPL(relational_expression);
+BI_EXPRESSION_IMPL(equality_expression);
+BI_EXPRESSION_IMPL_NO_PRODUCE(and_expression);
+BI_EXPRESSION_IMPL_NO_PRODUCE(or_expression);
+BI_EXPRESSION_IMPL(binary_and_expression);
+BI_EXPRESSION_IMPL(binary_xor_expression);
+BI_EXPRESSION_IMPL(binary_or_expression);
+
+// a
+// ifn b + 1 + c + 1 + d
+// b
+// ifn c + 1 + d
+// c
+// ifn d
+// d
+PRODUCE_IMPL(and_expression, SemanticAnalyzer *analyzer, Tape *target) {
+  AList *and_bodies = alist_create(Tape *, DEFAULT_ARRAY_SZ);
+  int num_suffixes = alist_len(and_expression->suffixes);
+  int num_ins =
+      semantic_analyzer_produce(analyzer, and_expression->exp, target);
+  int i, and_suffix_ins = 0;
+  for (i = 0; i < num_suffixes; ++i) {
+    BiSuffix *suffix = (BiSuffix *)alist_get(and_expression->suffixes, i);
+    Tape *and_tape = tape_create();
+    and_suffix_ins +=
+        semantic_analyzer_produce(analyzer, suffix->exp, and_tape);
+    alist_append(and_bodies, &and_tape);
+  }
+
+  for (i = 0; i < num_suffixes; ++i) {
+    BiSuffix *suffix = (BiSuffix *)alist_get(and_expression->suffixes, i);
+    Tape *and_tape = *((Tape **)alist_get(and_bodies, i));
+    num_ins += tape_ins_int(target, IFN, and_suffix_ins + num_suffixes - i - 1,
+                            suffix->token);
+    and_suffix_ins -= tape_size(and_tape);
+    num_ins += tape_size(and_tape);
+    tape_append(target, and_tape);
+  }
+  alist_delete(and_bodies);
+  return num_ins;
+}
+
+// a
+// if b + 1 + c + 1 + d
+// b
+// if c + 1 + d
+// c
+// if d
+// d
+PRODUCE_IMPL(or_expression, SemanticAnalyzer *analyzer, Tape *target) {
+  AList *or_bodies = alist_create(Tape *, DEFAULT_ARRAY_SZ);
+  int num_suffixes = alist_len(or_expression->suffixes);
+  int num_ins = semantic_analyzer_produce(analyzer, or_expression->exp, target);
+  int i, or_suffix_ins = 0;
+  for (i = 0; i < num_suffixes; ++i) {
+    BiSuffix *suffix = (BiSuffix *)alist_get(or_expression->suffixes, i);
+    Tape *or_tape = tape_create();
+    or_suffix_ins += semantic_analyzer_produce(analyzer, suffix->exp, or_tape);
+    alist_append(or_bodies, &or_tape);
+  }
+
+  for (i = 0; i < num_suffixes; ++i) {
+    BiSuffix *suffix = (BiSuffix *)alist_get(or_expression->suffixes, i);
+    Tape *or_tape = *((Tape **)alist_get(or_bodies, i));
+    num_ins += tape_ins_int(target, IF, or_suffix_ins + num_suffixes - i - 1,
+                            suffix->token);
+    or_suffix_ins -= tape_size(or_tape);
+    num_ins += tape_size(or_tape);
+    tape_append(target, or_tape);
+  }
+  alist_delete(or_bodies);
+  return num_ins;
+}

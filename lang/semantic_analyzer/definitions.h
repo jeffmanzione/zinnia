@@ -91,81 +91,81 @@ DEFINE_EXPRESSION_WITH_PRODUCER(unary_expression, Tape) {
   ExpressionTree *exp;
 };
 
-  // typedef enum {
-  //   BiType_unknown,
+typedef enum {
+  BiType_unknown,
 
-  //   Mult_mult,
-  //   Mult_div,
-  //   Mult_mod,
+  Mult_mult,
+  Mult_div,
+  Mult_mod,
 
-  //   Add_add,
-  //   Add_sub,
+  Add_add,
+  Add_sub,
 
-  //   Rel_lt,
-  //   Rel_gt,
-  //   Rel_lte,
-  //   Rel_gte,
-  //   Rel_eq,
-  //   Rel_neq,
+  Rel_lt,
+  Rel_gt,
+  Rel_lte,
+  Rel_gte,
+  Rel_eq,
+  Rel_neq,
 
-  //   And_and,
-  //   And_or,
+  And_and,
+  And_or,
 
-  //   Bin_and,
-  //   Bin_xor,
-  //   Bin_or
+  Bin_and,
+  Bin_xor,
+  Bin_or
 
-  // } BiType;
+} BiType;
 
-  // typedef struct {
-  //   Token *token;
-  //   BiType type;
-  //   ExpressionTree *exp;
-  // } BiSuffix;
+typedef struct {
+  Token *token;
+  BiType type;
+  ExpressionTree *exp;
+} BiSuffix;
 
-  // #define BiDEFINE_EXPRESSION(expr)                                              \
-//   DEFINE_EXPRESSION(expr, Tape) {                                              \
-//     ExpressionTree *exp;                                                       \
-//     AList *suffixes;                                                           \
-//   }
+#define DEFINE_BI_EXPRESSION(expr)                                             \
+  DEFINE_EXPRESSION_WITH_PRODUCER(expr, Tape) {                                \
+    ExpressionTree *exp;                                                       \
+    AList *suffixes;                                                           \
+  }
 
-  // BiDEFINE_EXPRESSION(multiplicative_expression, Tape);
-  // BiDEFINE_EXPRESSION(additive_expression, Tape);
-  // BiDEFINE_EXPRESSION(relational_expression, Tape);
-  // BiDEFINE_EXPRESSION(equality_expression, Tape);
-  // BiDEFINE_EXPRESSION(and_expression, Tape);
-  // BiDEFINE_EXPRESSION(or_expression, Tape);
-  // BiDEFINE_EXPRESSION(binary_and_expression, Tape);
-  // BiDEFINE_EXPRESSION(binary_xor_expression, Tape);
-  // BiDEFINE_EXPRESSION(binary_or_expression, Tape);
+DEFINE_BI_EXPRESSION(multiplicative_expression);
+DEFINE_BI_EXPRESSION(additive_expression);
+DEFINE_BI_EXPRESSION(relational_expression);
+DEFINE_BI_EXPRESSION(equality_expression);
+DEFINE_BI_EXPRESSION(and_expression);
+DEFINE_BI_EXPRESSION(or_expression);
+DEFINE_BI_EXPRESSION(binary_and_expression);
+DEFINE_BI_EXPRESSION(binary_xor_expression);
+DEFINE_BI_EXPRESSION(binary_or_expression);
 
-  // DEFINE_EXPRESSION(in_expression, Tape) {
-  //   Token *token;
-  //   bool is_not;
-  //   ExpressionTree *element;
-  //   ExpressionTree *collection;
-  // };
+// DEFINE_EXPRESSION(in_expression, Tape) {
+//   Token *token;
+//   bool is_not;
+//   ExpressionTree *element;
+//   ExpressionTree *collection;
+// };
 
-  // DEFINE_EXPRESSION(is_expression, Tape) {
-  //   Token *token;
-  //   ExpressionTree *exp;
-  //   ExpressionTree *type;
-  // };
+// DEFINE_EXPRESSION(is_expression, Tape) {
+//   Token *token;
+//   ExpressionTree *exp;
+//   ExpressionTree *type;
+// };
 
-  // DEFINE_EXPRESSION(conditional_expression, Tape) { IfElse if_else; };
+// DEFINE_EXPRESSION(conditional_expression, Tape) { IfElse if_else; };
 
-  // DEFINE_EXPRESSION(anon_function_definition, Tape) { FunctionDef func; };
+// DEFINE_EXPRESSION(anon_function_definition, Tape) { FunctionDef func; };
 
-  // typedef struct {
-  //   Token *colon;
-  //   ExpressionTree *lhs;
-  //   ExpressionTree *rhs;
-  // } MapDecEntry;
+// typedef struct {
+//   Token *colon;
+//   ExpressionTree *lhs;
+//   ExpressionTree *rhs;
+// } MapDecEntry;
 
-  // DEFINE_EXPRESSION(map_declaration, Tape) {
-  //   Token *lbrce, *rbrce;
-  //   bool is_empty;
-  //   AList *entries;
-  // };
+// DEFINE_EXPRESSION(map_declaration, Tape) {
+//   Token *lbrce, *rbrce;
+//   bool is_empty;
+//   AList *entries;
+// };
 
 #endif /* LANG_SEMANTIC_ANALYZER_DEFINITIONS_H_ */
