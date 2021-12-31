@@ -9,8 +9,6 @@
 #include "util/file/file_info.h"
 #include "util/file/sfile.h"
 
-#define BUFFER_SIZE 256
-
 int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();

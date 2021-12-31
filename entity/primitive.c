@@ -9,39 +9,39 @@
 
 #include "debug/debug.h"
 
-inline PrimitiveType ptype(const Primitive *p) {
+PrimitiveType ptype(const Primitive *p) {
   ASSERT(NOT_NULL(p));
   return p->_type;
 }
 
-inline int8_t pchar(const Primitive *p) {
+int8_t pchar(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == CHAR);
   return p->_char_val;
 }
 
-inline int32_t pint(const Primitive *p) {
+int32_t pint(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == INT);
   return p->_int_val;
 }
 
-inline double pfloat(const Primitive *p) {
+double pfloat(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == FLOAT);
   return p->_float_val;
 }
 
-inline void pset_char(Primitive *p, int8_t val) {
+void pset_char(Primitive *p, int8_t val) {
   ASSERT(NOT_NULL(p));
   p->_type = CHAR;
   p->_char_val = val;
 }
 
-inline void pset_int(Primitive *p, int32_t val) {
+void pset_int(Primitive *p, int32_t val) {
   ASSERT(NOT_NULL(p));
   p->_type = INT;
   p->_int_val = val;
 }
 
-inline void pset_float(Primitive *p, double val) {
+void pset_float(Primitive *p, double val) {
   ASSERT(NOT_NULL(p));
   p->_type = FLOAT;
   p->_float_val = val;
@@ -62,7 +62,7 @@ Primitive primitive_float(double val) {
   return p;
 }
 
-inline double float_of(const Primitive *p) {
+double float_of(const Primitive *p) {
   switch (ptype(p)) {
   case INT:
     return (double)pint(p);
@@ -73,7 +73,7 @@ inline double float_of(const Primitive *p) {
   }
 }
 
-inline int32_t int_of(const Primitive *p) {
+int32_t int_of(const Primitive *p) {
   switch (ptype(p)) {
   case INT:
     return pint(p);
@@ -84,7 +84,7 @@ inline int32_t int_of(const Primitive *p) {
   }
 }
 
-inline int8_t char_of(const Primitive *p) {
+int8_t char_of(const Primitive *p) {
   switch (ptype(p)) {
   case INT:
     return (int8_t)pint(p);
@@ -95,7 +95,7 @@ inline int8_t char_of(const Primitive *p) {
   }
 }
 
-inline bool primitive_equals(const Primitive *p1, const Primitive *p2) {
+bool primitive_equals(const Primitive *p1, const Primitive *p2) {
   if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {
     return float_of(p1) == float_of(p2);
   }

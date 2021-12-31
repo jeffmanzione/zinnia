@@ -68,12 +68,20 @@ primary_expression_no_constants ->
     AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN)
   );
 
+empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+
+function_call -> AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN);
+
+array_indexing -> AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET);
+
+member_access ->  AND(token:SYMBOL_PERIOD, OR(rule:identifier, rule:new_expression));
+
 postfix_expression1 ->
   OR(
-    AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET, rule:postfix_expression1),
-    AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN, rule:postfix_expression1),
-    AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN, rule:postfix_expression1),
-    AND(OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_PERIOD, OR(rule:identifier, rule:new_expression), rule:postfix_expression1),
+    AND(rule:array_indexing, rule:postfix_expression1),
+    AND(rule:empty_parens, rule:postfix_expression1),
+    AND(rule:function_call, rule:postfix_expression1),
+    AND(OPTIONAL(token:TOKEN_NEWLINE), rule:member_access, rule:postfix_expression1),
     E
   );
 postfix_expression ->
@@ -82,11 +90,13 @@ postfix_expression ->
     rule:primary_expression
   );
 
+range_suffix -> AND(token:SYMBOL_COLON, rule:postfix_expression);
+
 range_expression ->
   AND(
     rule:postfix_expression,
-    OPTIONAL(AND(token:SYMBOL_COLON, rule:postfix_expression)),
-    OPTIONAL(AND(token:SYMBOL_COLON, rule:postfix_expression))
+    OPTIONAL(rule:range_suffix),
+    OPTIONAL(rule:range_suffix)
   );
 
 unary_expression ->

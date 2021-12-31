@@ -17,7 +17,7 @@ static const char *_op_strs[] = {
     "fld",  "fldc", "is",   "adr",  "rais", "ctch", "anew", "aidx", "aset",
     "cnst", "setc", "letc", "sget", "wait"};
 
-inline const char *op_to_str(Op op) { return _op_strs[op]; }
+const char *op_to_str(Op op) { return _op_strs[op]; }
 
 Op str_to_op(const char op_str[]) {
   int i;

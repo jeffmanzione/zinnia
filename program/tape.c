@@ -8,6 +8,7 @@
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
+#include "lang/lexer/lang_lexer.h"
 #include "lang/lexer/token.h"
 #include "program/instruction.h"
 #include "struct/alist.h"
@@ -36,7 +37,7 @@ struct _Tape {
 void _classref_init(ClassRef *ref, const char name[]);
 void _classref_finalize(ClassRef *ref);
 
-inline Tape *tape_create() {
+Tape *tape_create() {
   Tape *tape = ALLOC2(Tape);
   alist_init(&tape->ins, Instruction, DEFAULT_TAPE_SZ);
   alist_init(&tape->source_map, SourceMapping, DEFAULT_TAPE_SZ);
@@ -151,59 +152,56 @@ void tape_field(Tape *tape, const char *field) {
   _field_ref_init(ref, field);
 }
 
-inline const Instruction *tape_get(const Tape *tape, uint32_t index) {
+const Instruction *tape_get(const Tape *tape, uint32_t index) {
   ASSERT(NOT_NULL(tape), index >= 0, index < tape_size(tape));
   return (Instruction *)alist_get(&tape->ins, index);
 }
 
-inline Instruction *tape_get_mutable(Tape *tape, uint32_t index) {
+Instruction *tape_get_mutable(Tape *tape, uint32_t index) {
   ASSERT(NOT_NULL(tape), index >= 0, index < tape_size(tape));
   return (Instruction *)alist_get(&tape->ins, index);
 }
 
-inline const SourceMapping *tape_get_source(const Tape *tape, uint32_t index) {
+const SourceMapping *tape_get_source(const Tape *tape, uint32_t index) {
   ASSERT(NOT_NULL(tape), index >= 0, index < tape_size(tape));
   return (SourceMapping *)alist_get(&tape->source_map, index);
 }
 
-inline size_t tape_size(const Tape *tape) {
+size_t tape_size(const Tape *tape) {
   ASSERT(NOT_NULL(tape));
   return alist_len(&tape->ins);
 }
 
-inline uint32_t tape_class_count(const Tape *tape) {
+uint32_t tape_class_count(const Tape *tape) {
   return alist_len(&tape->class_refs._list);
 }
 
-inline KL_iter tape_classes(const Tape *tape) {
+KL_iter tape_classes(const Tape *tape) {
   return keyedlist_iter((KeyedList *)&tape->class_refs); // bless
 }
 
-inline const ClassRef *tape_get_class(const Tape *tape,
-                                      const char class_name[]) {
+const ClassRef *tape_get_class(const Tape *tape, const char class_name[]) {
   return keyedlist_lookup((KeyedList *)&tape->class_refs, class_name);
 }
 
-inline uint32_t tape_func_count(const Tape *tape) {
+uint32_t tape_func_count(const Tape *tape) {
   return alist_len(&tape->func_refs._list);
 }
 
-inline KL_iter tape_functions(const Tape *tape) {
+KL_iter tape_functions(const Tape *tape) {
   return keyedlist_iter((KeyedList *)&tape->func_refs); // bless
 }
 
-inline const char *tape_module_name(const Tape *tape) {
-  return tape->module_name;
-}
+const char *tape_module_name(const Tape *tape) { return tape->module_name; }
 
-inline void _classref_init(ClassRef *ref, const char name[]) {
+void _classref_init(ClassRef *ref, const char name[]) {
   ref->name = name;
   keyedlist_init(&ref->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
   keyedlist_init(&ref->field_refs, FieldRef, DEFAULT_ARRAY_SZ);
   alist_init(&ref->supers, char *, DEFAULT_ARRAY_SZ);
 }
 
-inline void _classref_finalize(ClassRef *ref) {
+void _classref_finalize(ClassRef *ref) {
   keyedlist_finalize(&ref->func_refs);
   keyedlist_finalize(&ref->field_refs);
   alist_finalize(&ref->supers);
@@ -339,7 +337,7 @@ Token *_next_token_skip_ln(Q *queue) {
   ASSERT(Q_size(queue) > 0);
   Token *first = (Token *)Q_remove(queue, 0);
   ASSERT_NOT_NULL(first);
-  while (first->type == ENDLINE) {
+  while (first->type == TOKEN_NEWLINE) {
     first = (Token *)_q_peek(queue);
     if (NULL == first) {
       return NULL;
@@ -358,9 +356,9 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   if (NULL == first) {
     return;
   }
-  if (AT == first->type) {
+  if (SYMBOL_AT == first->type) {
     Token *fn_name = Q_remove(tokens, 0);
-    if (COLON == _q_peek(tokens)->type) {
+    if (SYMBOL_COLON == _q_peek(tokens)->type) {
       Q_remove(tokens, 0);
       Token *async_keyword = Q_remove(tokens, 0);
       if (0 != strcmp("async", async_keyword->text)) {
@@ -369,7 +367,7 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
       }
       tape_label_async(tape, fn_name);
     }
-    if (ENDLINE != _q_peek(tokens)->type) {
+    if (TOKEN_NEWLINE != _q_peek(tokens)->type) {
       ERROR("Invalid token after @def.");
     }
     tape_label(tape, fn_name);
@@ -377,13 +375,13 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   }
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
     Token *class_name = Q_remove(tokens, 0);
-    if (ENDLINE == _q_peek(tokens)->type) {
+    if (TOKEN_NEWLINE == _q_peek(tokens)->type) {
       tape_class(tape, class_name);
       return;
     }
     Q parents;
     Q_init(&parents);
-    while (COMMA == _q_peek(tokens)->type) {
+    while (SYMBOL_COMMA == _q_peek(tokens)->type) {
       Q_remove(tokens, 0);
       *Q_add_last(&parents) = (char *)((Token *)Q_remove(tokens, 0))->text;
     }
@@ -402,9 +400,9 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
   }
   Op op = str_to_op(first->text);
   Token *next = (Token *)_q_peek(tokens);
-  if (ENDLINE == next->type || POUND == next->type) {
+  if (TOKEN_NEWLINE == next->type || SYMBOL_POUND == next->type) {
     tape_ins_no_arg(tape, op, first);
-  } else if (MINUS == next->type) {
+  } else if (SYMBOL_MINUS == next->type) {
     Q_remove(tokens, 0);
     tape_ins_neg(tape, op, Q_remove(tokens, 0));
   } else {
@@ -439,6 +437,24 @@ int tape_ins_raw(Tape *tape, Instruction *ins) {
   return 1;
 }
 
+Primitive token_to_primitive(const Token *tok) {
+  ASSERT_NOT_NULL(tok);
+  Primitive val;
+  switch (tok->type) {
+  case TOKEN_INTEGER:
+    val._type = INT;
+    val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
+    break;
+  case TOKEN_FLOATING:
+    val._type = FLOAT;
+    val._float_val = strtod(tok->text, NULL);
+    break;
+  default:
+    ERROR("Attempted to create a Value from '%s'.", tok->text);
+  }
+  return val;
+}
+
 int tape_ins(Tape *tape, Op op, const Token *token) {
   ASSERT(NOT_NULL(tape), NOT_NULL(token));
   Instruction *ins = tape_add(tape);
@@ -450,16 +466,16 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
   sm->col = token->col;
 
   switch (token->type) {
-  case INTEGER:
-  case FLOATING:
+  case TOKEN_INTEGER:
+  case TOKEN_FLOATING:
     ins->type = INSTRUCTION_PRIMITIVE;
     ins->val = token_to_primitive(token);
     break;
-  case STR:
+  case TOKEN_STRING:
     ins->type = INSTRUCTION_STRING;
     ins->str = token->text;
     break;
-  case WORD:
+  case TOKEN_WORD:
   default:
     ins->type = INSTRUCTION_ID;
     ins->id = token->text;
