@@ -1254,3 +1254,255 @@ PRODUCE_IMPL(map_declaration, SemanticAnalyzer *analyzer, Tape *target) {
   num_ins += tape_ins_no_arg(target, RES, map_declaration->lbrce);
   return num_ins;
 }
+
+void populate_single_postfixes(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree, Postfix *postfix) {
+  ASSERT(!HAS_TOKEN(stree), CHILD_HAS_TOKEN(stree, 0));
+  postfix->token = CHILD_SYNTAX_AT(stree, 0)->token;
+  if (IS_SYNTAX(stree, rule_array_index_assignment)) {
+    postfix->type = Postfix_array_index;
+    // Inside array brackets.
+    postfix->exp =
+        semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
+  } else if (IS_SYNTAX(stree, rule_function_call_args)) {
+    postfix->type = Postfix_fncall;
+    if (CHILD_IS_TOKEN(stree, 1, SYMBOL_RPAREN)) {
+      // Has no args.
+      postfix->exp = NULL;
+    } else {
+      // Inside fncall parents.
+      postfix->exp =
+          semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
+    }
+  } else if (IS_SYNTAX(stree, rule_field_set_value)) {
+    postfix->type = Postfix_field;
+    postfix->id = CHILD_SYNTAX_AT(stree, 1)->token;
+  } else {
+    ERROR("Unknown field_expression1");
+  }
+}
+
+void populate_single_complex(SemanticAnalyzer *analyzer,
+                             const SyntaxTree *stree,
+                             SingleAssignment *single) {
+  single->type = SingleAssignment_complex;
+  single->suffixes = alist_create(Postfix, DEFAULT_ARRAY_SZ);
+  single->prefix_exp =
+      semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 0));
+  SyntaxTree *cur = CHILD_SYNTAX_AT(stree, 1);
+  while (true) {
+    Postfix postfix = {
+        .type = Postfix_none, .id = NULL, .exp = NULL, .token = NULL};
+    if (IS_SYNTAX(cur, rule_field_expression1) ||
+        IS_SYNTAX(cur, rule_field_next)) {
+      populate_single_postfixes(analyzer, CHILD_SYNTAX_AT(cur, 0), &postfix);
+      alist_append(single->suffixes, &postfix);
+      cur = CHILD_SYNTAX_AT(cur, 1); // field_next
+    } else {
+      populate_single_postfixes(analyzer, cur, &postfix);
+      alist_append(single->suffixes, &postfix);
+      break;
+    }
+  }
+}
+
+SingleAssignment populate_single(SemanticAnalyzer *analyzer,
+                                 const SyntaxTree *stree) {
+  SingleAssignment single = {.is_const = false, .const_token = NULL};
+  if (IS_SYNTAX(stree, rule_identifier)) {
+    single.type = SingleAssignment_var;
+    single.var = stree->token;
+  } else if (IS_SYNTAX(stree, rule_const_assignment_expression)) {
+    single.type = SingleAssignment_var;
+    single.is_const = true;
+    single.const_token = CHILD_SYNTAX_AT(stree, 0)->token;
+    single.var = CHILD_SYNTAX_AT(stree, 1)->token;
+  } else if (IS_SYNTAX(stree, rule_field_expression)) {
+    populate_single_complex(analyzer, stree, &single);
+  } else {
+    ERROR("Unknown single assignment.");
+  }
+  return single;
+}
+
+bool is_assignment_single(const SyntaxTree *stree) {
+  return IS_SYNTAX(stree, rule_identifier) ||
+         IS_SYNTAX(stree, rule_const_assignment_expression) ||
+         IS_SYNTAX(stree, rule_field_expression);
+}
+
+Assignment populate_assignment(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree);
+
+MultiAssignment populate_list(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree, TokenType open,
+                              TokenType close) {
+  MultiAssignment assignment = {.subargs =
+                                    alist_create(Assignment, DEFAULT_ARRAY_SZ)};
+  ASSERT(CHILD_IS_TOKEN(stree, 0, open), CHILD_IS_TOKEN(stree, 2, close));
+  SyntaxTree *list = CHILD_SYNTAX_AT(stree, 1);
+
+  if (HAS_TOKEN(list) ||
+      !CHILD_IS_SYNTAX(list, 1, rule_assignment_tuple_list1)) {
+    // Single element list.
+    Assignment subarg = populate_assignment(analyzer, list);
+    alist_append(assignment.subargs, &subarg);
+  } else {
+    Assignment subarg = populate_assignment(analyzer, CHILD_SYNTAX_AT(list, 0));
+    alist_append(assignment.subargs, &subarg);
+    SyntaxTree *cur = CHILD_SYNTAX_AT(list, 1);
+    while (true) {
+      if (IS_TOKEN(CHILD_SYNTAX_AT(cur, 0), SYMBOL_COMMA)) {
+        // Last in tuple.
+        subarg = populate_assignment(analyzer, CHILD_SYNTAX_AT(cur, 1));
+        alist_append(assignment.subargs, &subarg);
+        break;
+      } else {
+        // Not last.
+        subarg = populate_assignment(
+            analyzer, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(cur, 0), 1));
+        alist_append(assignment.subargs, &subarg);
+        cur = CHILD_SYNTAX_AT(cur, 1);
+      }
+    }
+  }
+  return assignment;
+}
+
+Assignment populate_assignment(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree) {
+  Assignment assignment;
+  if (is_assignment_single(stree)) {
+    assignment.type = Assignment_single;
+    assignment.single = populate_single(analyzer, stree);
+  } else if (IS_SYNTAX(stree, rule_assignment_tuple)) {
+    assignment.type = Assignment_tuple;
+    assignment.multi =
+        populate_list(analyzer, stree, SYMBOL_LPAREN, SYMBOL_RPAREN);
+  } else if (IS_SYNTAX(stree, rule_assignment_array)) {
+    assignment.type = Assignment_array;
+    assignment.multi =
+        populate_list(analyzer, stree, SYMBOL_LBRACE, SYMBOL_RBRACE);
+  } else {
+    ERROR("Unknown assignment.");
+  }
+  return assignment;
+}
+
+POPULATE_IMPL(assignment_expression, const SyntaxTree *stree,
+              SemanticAnalyzer *analyzer) {
+  ASSERT(CHILD_IS_TOKEN(stree, 1, SYMBOL_EQUALS));
+  assignment_expression->eq_token = CHILD_SYNTAX_AT(stree, 1)->token;
+  assignment_expression->rhs =
+      semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 2));
+  assignment_expression->assignment =
+      populate_assignment(analyzer, CHILD_SYNTAX_AT(stree, 0));
+}
+
+void delete_postfix(SemanticAnalyzer *analyzer, Postfix *postfix) {
+  if ((postfix->type == Postfix_fncall ||
+       postfix->type == Postfix_array_index) &&
+      NULL != postfix->exp) {
+    semantic_analyzer_delete(analyzer, postfix->exp);
+  }
+}
+
+void delete_assignment(SemanticAnalyzer *analyzer, Assignment *assignment) {
+  if (assignment->type == Assignment_single) {
+    SingleAssignment *single = &assignment->single;
+    if (single->type == SingleAssignment_complex) {
+      semantic_analyzer_delete(analyzer, single->prefix_exp);
+      AL_iter iter = alist_iter(single->suffixes);
+      for (; al_has(&iter); al_inc(&iter)) {
+        delete_postfix(analyzer, (Postfix *)al_value(&iter));
+      }
+      alist_delete(single->suffixes);
+    } else {
+      // Is SingleAssignment_var, so do nothing.
+    }
+  } else {
+    AL_iter iter = alist_iter(assignment->multi.subargs);
+    for (; al_has(&iter); al_inc(&iter)) {
+      delete_assignment(analyzer, (Assignment *)al_value(&iter));
+    }
+    alist_delete(assignment->multi.subargs);
+  }
+}
+
+DELETE_IMPL(assignment_expression, SemanticAnalyzer *analyzer) {
+  delete_assignment(analyzer, &assignment_expression->assignment);
+  semantic_analyzer_delete(analyzer, assignment_expression->rhs);
+}
+
+int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
+                       Tape *tape, const Token *eq_token);
+
+int produce_assignment_multi(SemanticAnalyzer *analyzer, MultiAssignment *multi,
+                             Tape *tape, const Token *eq_token) {
+  int i, num_ins = 0, len = alist_len(multi->subargs);
+
+  num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
+  for (i = 0; i < len; ++i) {
+    Assignment *assign = (Assignment *)alist_get(multi->subargs, i);
+    num_ins += tape_ins_no_arg(tape, (i < len - i) ? PEEK : RES, eq_token) +
+               tape_ins_no_arg(tape, PUSH, eq_token) +
+               tape_ins_int(tape, RES, i, eq_token) +
+               tape_ins_no_arg(tape, AIDX, eq_token) +
+               produce_assignment(analyzer, assign, tape, eq_token);
+  }
+  return num_ins;
+}
+
+int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
+                       Tape *tape, const Token *eq_token) {
+  int num_ins = 0;
+  if (assign->type == Assignment_single) {
+    SingleAssignment *single = &assign->single;
+    if (single->type == SingleAssignment_var) {
+      if (single->is_const) {
+        num_ins += tape_ins(tape, SETC, single->var);
+      } else {
+        num_ins += tape_ins(tape, SET, single->var);
+      }
+    } else {
+      ASSERT(single->type == SingleAssignment_complex,
+             single->prefix_exp != NULL);
+      num_ins += tape_ins_no_arg(tape, PUSH, eq_token) +
+                 semantic_analyzer_produce(analyzer, single->prefix_exp, tape);
+      int i, len = alist_len(single->suffixes);
+      Postfix *next = (Postfix *)alist_get(single->suffixes, 0);
+      for (i = 0; i < len - 1; ++i) {
+        if (NULL == next) {
+          break;
+        }
+        num_ins += produce_postfix(analyzer, &i, len - 1, single->suffixes,
+                                   &next, tape);
+      }
+      // Last one should be the set part.
+      Postfix *postfix = (Postfix *)alist_get(single->suffixes, len - 1);
+      if (postfix->type == Postfix_field) {
+        num_ins += tape_ins(tape, FLD, postfix->id);
+      } else if (postfix->type == Postfix_array_index) {
+        num_ins += tape_ins_no_arg(tape, PUSH, postfix->token) +
+                   semantic_analyzer_produce(analyzer, postfix->exp, tape) +
+                   tape_ins_no_arg(tape, ASET, postfix->token);
+      } else {
+        ERROR("Unknown postfix.");
+      }
+    }
+  } else if (assign->type == Assignment_array ||
+             assign->type == Assignment_tuple) {
+    num_ins +=
+        produce_assignment_multi(analyzer, &assign->multi, tape, eq_token);
+  } else {
+    ERROR("Unknown multi.");
+  }
+  return num_ins;
+}
+
+PRODUCE_IMPL(assignment_expression, SemanticAnalyzer *analyzer, Tape *target) {
+  return semantic_analyzer_produce(analyzer, assignment_expression->rhs,
+                                   target) +
+         produce_assignment(analyzer, &assignment_expression->assignment,
+                            target, assignment_expression->eq_token);
+}

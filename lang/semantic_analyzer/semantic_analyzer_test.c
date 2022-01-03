@@ -40,6 +40,7 @@ REGISTRATION_FN(_semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(conditional_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(anon_function_definition);
   REGISTER_EXPRESSION_WITH_PRODUCER(map_declaration);
+  REGISTER_EXPRESSION_WITH_PRODUCER(assignment_expression);
 }
 
 DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
@@ -60,9 +61,10 @@ int main(int argc, const char *args[]) {
 
     Parser parser;
     parser_init(&parser, rule_file_level_statement_list,
-                /*ignore_newline=*/true);
+                /*ignore_newline=*/false);
 
     SyntaxTree *stree = parser_parse(&parser, &tokens);
+    stree = parser_prune_newlines(&parser, stree);
     syntax_tree_print(stree, 0, stdout);
     printf("\n");
 

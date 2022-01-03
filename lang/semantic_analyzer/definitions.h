@@ -215,4 +215,69 @@ DEFINE_EXPRESSION_WITH_PRODUCER(map_declaration, Tape) {
   AList *entries;
 };
 
+typedef struct {
+  enum { SingleAssignment_var, SingleAssignment_complex } type;
+  union {
+    struct {
+      Token *var;
+      bool is_const;
+      Token *const_token;
+    };
+    struct {
+      ExpressionTree *prefix_exp;
+      AList *suffixes; // Should be Posfixes.
+    };
+  };
+} SingleAssignment;
+
+typedef struct {
+  AList *subargs;
+} MultiAssignment;
+
+typedef struct {
+  enum { Assignment_single, Assignment_array, Assignment_tuple } type;
+  union {
+    SingleAssignment single;
+    MultiAssignment multi;
+  };
+} Assignment;
+
+DEFINE_EXPRESSION_WITH_PRODUCER(assignment_expression, Tape) {
+  Token *eq_token;
+  Assignment assignment;
+  ExpressionTree *rhs;
+};
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(compound_statement, Tape) {
+  //   AList *expressions;
+  // };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(try_statement, Tape) {
+  //   ExpressionTree *try_body;
+  //   Assignment error_assignment_lhs;
+  //   const Token *try_token, *catch_token;
+  //   ExpressionTree *catch_body;
+  // };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Tape) {
+  //   const Token *raise_token;
+  //   ExpressionTree *exp;
+  // };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Tape) { IfElse
+  // if_else; };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Tape) {
+  //   const Token *return_token;
+  //   ExpressionTree *exp;
+  // };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Tape) {
+  //   enum { Break_break, Break_continue } type;
+  //   const Token *token;
+  // };
+
+  // DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) { const Token *token;
+  // };
+
 #endif /* LANG_SEMANTIC_ANALYZER_DEFINITIONS_H_ */
