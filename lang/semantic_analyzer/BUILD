@@ -6,7 +6,12 @@ package(
 
 cc_library(
     name = "definitions",
-    srcs = ["definitions.c"],
+    srcs = [
+        "definitions.c",
+        "files.c",
+        "loops.c",
+        "statements.c",
+    ],
     hdrs = ["definitions.h"],
     deps = [
         "//lang/parser:lang_parser",

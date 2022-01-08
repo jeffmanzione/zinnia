@@ -268,39 +268,63 @@ tuple_expression ->
 expression_statement -> AND(rule:tuple_expression, OPTIONAL(token:TOKEN_NEWLINE));
 
 foreach_statement ->
-  AND(
-    token:KEYWORD_FOR,
-    OR(
-      AND(token:SYMBOL_LPAREN, rule:assignment_lhs, token:KEYWORD_IN, rule:conditional_expression, token:SYMBOL_RPAREN),
-      AND(rule:assignment_lhs, token:KEYWORD_IN, rule:conditional_expression)
+  OR(
+    AND(
+      token:KEYWORD_FOR,
+      token:SYMBOL_LPAREN,
+      rule:assignment_lhs,
+      token:KEYWORD_IN,
+      rule:conditional_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
     ),
-    rule:statement
+    AND(
+      token:KEYWORD_FOR,
+      rule:assignment_lhs,
+      token:KEYWORD_IN,
+      rule:conditional_expression,
+      rule:statement
+    )
   );
 
 for_statement ->
-  AND(
-    token:KEYWORD_FOR,
-    OR(
-      AND(
-        token:SYMBOL_LPAREN,
-        rule:assignment_expression,
-        token:SYMBOL_COMMA,
-        rule:conditional_expression,
-        token:SYMBOL_COMMA,
-        rule:assignment_expression,
-        token:SYMBOL_RPAREN),
-      AND(
-        rule:assignment_expression,
-        token:SYMBOL_COMMA,
-        rule:conditional_expression,
-        token:SYMBOL_COMMA,
-        rule:assignment_expression)
+  OR(
+    AND(
+      token:KEYWORD_FOR,
+      token:SYMBOL_LPAREN,
+      rule:assignment_expression,
+      token:SYMBOL_COMMA,
+      rule:conditional_expression,
+      token:SYMBOL_COMMA,
+      rule:assignment_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_FOR,
+      rule:assignment_expression,
+      token:SYMBOL_COMMA,
+      rule:conditional_expression,
+      token:SYMBOL_COMMA,
+      rule:assignment_expression,
+      rule:statement
     )
   );
 
 while_statement ->
-  AND(
-    token:KEYWORD_WHILE, rule:conditional_expression, rule:statement
+  OR(
+    AND(
+      token:KEYWORD_WHILE,
+      token:SYMBOL_LPAREN,
+      rule:conditional_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_WHILE,
+      rule:conditional_expression,
+      rule:statement
+    )
   );
 
 iteration_statement ->
@@ -317,15 +341,18 @@ compound_statement ->
   );
 
 selection_statement ->
-  AND(
-    token:KEYWORD_IF,
-    rule:tuple_expression,
-    rule:statement,
-    OPTIONAL(
-      AND(
-        token:KEYWORD_ELSE,
-        rule:statement
-      )
+  OR(
+    AND(
+      token:KEYWORD_IF,
+      rule:tuple_expression,
+      rule:statement,
+      token:KEYWORD_ELSE,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_IF,
+      rule:tuple_expression,
+      rule:statement
     )
   );
 
@@ -363,14 +390,9 @@ jump_statement ->
     token:KEYWORD_RETURN
   );
 
-break_statement ->
-  AND(
-    OR(
-      token:KEYWORD_BREAK,
-      token:KEYWORD_CONTINUE
-    ),
-    token:TOKEN_NEWLINE
-  );
+break_statement -> OR(token:KEYWORD_BREAK, token:KEYWORD_CONTINUE);
+
+break_statement_container -> AND(rule:break_statement, token:TOKEN_NEWLINE);
 
 default_value_expression ->
   AND(
@@ -686,7 +708,7 @@ statement ->
       rule:compound_statement,
       rule:iteration_statement,
       rule:jump_statement,
-      rule:break_statement,
+      rule:break_statement_container,
       rule:expression_statement
     ),
     OPTIONAL(token:TOKEN_NEWLINE)

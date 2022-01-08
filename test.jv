@@ -1,3 +1,20 @@
 module test
 
-table[pos] = [(k,v)]
+def test(a, b) const async {
+  io.println('test')
+}
+
+class TestImpl : Test {
+  field a
+
+  new(field b) {
+    a = b
+  }
+
+  method test() {
+    io.println(a, b)
+  }
+}
+
+t = TestImpl(5)
+t.test()

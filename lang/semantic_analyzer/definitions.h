@@ -242,42 +242,136 @@ typedef struct {
   };
 } Assignment;
 
+Assignment populate_assignment(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree);
+
 DEFINE_EXPRESSION_WITH_PRODUCER(assignment_expression, Tape) {
   Token *eq_token;
   Assignment assignment;
   ExpressionTree *rhs;
 };
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(compound_statement, Tape) {
-  //   AList *expressions;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(compound_statement, Tape) {
+  AList *expressions;
+};
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(try_statement, Tape) {
-  //   ExpressionTree *try_body;
-  //   Assignment error_assignment_lhs;
-  //   const Token *try_token, *catch_token;
-  //   ExpressionTree *catch_body;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(try_statement, Tape) {
+  ExpressionTree *try_body;
+  Assignment error_assignment_lhs;
+  const Token *try_token, *catch_token;
+  ExpressionTree *catch_body;
+};
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Tape) {
-  //   const Token *raise_token;
-  //   ExpressionTree *exp;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Tape) {
+  const Token *raise_token;
+  ExpressionTree *exp;
+};
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Tape) { IfElse
-  // if_else; };
+DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Tape) { IfElse if_else; };
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Tape) {
-  //   const Token *return_token;
-  //   ExpressionTree *exp;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Tape) {
+  const Token *return_token;
+  ExpressionTree *exp;
+};
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Tape) {
-  //   enum { Break_break, Break_continue } type;
-  //   const Token *token;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Tape) {
+  enum { Break_break, Break_continue } type;
+  const Token *token;
+};
 
-  // DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) { const Token *token;
-  // };
+DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) { const Token *token; };
+
+DEFINE_EXPRESSION_WITH_PRODUCER(foreach_statement, Tape) {
+  Token *for_token, *in_token;
+  Assignment assignment_lhs;
+  ExpressionTree *iterable;
+  ExpressionTree *body;
+};
+
+DEFINE_EXPRESSION_WITH_PRODUCER(for_statement, Tape) {
+  Token *for_token;
+  ExpressionTree *init;
+  ExpressionTree *condition;
+  ExpressionTree *inc;
+  ExpressionTree *body;
+};
+
+DEFINE_EXPRESSION_WITH_PRODUCER(while_statement, Tape) {
+  Token *while_token;
+  ExpressionTree *condition;
+  ExpressionTree *body;
+};
+
+typedef struct {
+  const Token *token;
+} ClassName;
+
+typedef struct {
+  ClassName name;
+  AList *parent_classes;
+} ClassSignature;
+
+typedef struct {
+  const Token *name;
+  const Token *field_token;
+} FieldDef;
+
+typedef struct {
+  const Token *prefix;
+  const Token *class_name;
+  bool is_called, has_args;
+  ExpressionTree *args_tuple;
+} Annotation;
+
+typedef struct {
+  ClassSignature def;
+  Annotation annot;
+  AList *fields;
+  bool has_constructor, has_annot;
+  FunctionDef constructor;
+  AList *methods; // Function.
+} ClassDef;
+
+ClassDef populate_class(const SyntaxTree *stree);
+int produce_class(ClassDef *class, Tape *tape);
+void delete_class(ClassDef *class);
+
+typedef void (*FuncDefPopulator)(const SyntaxTree *fn_identifier,
+                                 FunctionDef *func);
+typedef Arguments (*FuncArgumentsPopulator)(const SyntaxTree *fn_identifier,
+                                            const Token *token);
+
+void add_arg(Arguments *args, Argument *arg);
+Arguments set_function_args(const SyntaxTree *stree, const Token *token);
+void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
+                                  bool *is_const, const Token **const_token,
+                                  bool *is_async, const Token **async_token);
+int produce_function(SemanticAnalyzer *analyzer, FunctionDef *func, Tape *tape);
+void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func);
+void delete_arguments(SemanticAnalyzer *analyzer, Arguments *args);
+int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape);
+
+typedef struct {
+  bool is_named;
+  Token *module_token;
+  Token *module_name;
+} ModuleName;
+
+typedef struct {
+  Token *import_token;
+  Token *module_name;
+} Import;
+
+typedef struct {
+  ModuleName name;
+  AList *imports;
+  AList *classes;
+  AList *functions;
+  AList *statements;
+} ModuleDef;
+
+DEFINE_EXPRESSION_WITH_PRODUCER(file_level_statement_list, Tape) {
+  ModuleDef def;
+};
 
 #endif /* LANG_SEMANTIC_ANALYZER_DEFINITIONS_H_ */

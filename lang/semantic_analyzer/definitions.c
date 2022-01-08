@@ -1331,9 +1331,6 @@ bool is_assignment_single(const SyntaxTree *stree) {
          IS_SYNTAX(stree, rule_field_expression);
 }
 
-Assignment populate_assignment(SemanticAnalyzer *analyzer,
-                               const SyntaxTree *stree);
-
 MultiAssignment populate_list(SemanticAnalyzer *analyzer,
                               const SyntaxTree *stree, TokenType open,
                               TokenType close) {
@@ -1433,9 +1430,6 @@ DELETE_IMPL(assignment_expression, SemanticAnalyzer *analyzer) {
   delete_assignment(analyzer, &assignment_expression->assignment);
   semantic_analyzer_delete(analyzer, assignment_expression->rhs);
 }
-
-int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
-                       Tape *tape, const Token *eq_token);
 
 int produce_assignment_multi(SemanticAnalyzer *analyzer, MultiAssignment *multi,
                              Tape *tape, const Token *eq_token) {
