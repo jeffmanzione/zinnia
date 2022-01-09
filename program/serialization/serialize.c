@@ -28,15 +28,15 @@ int serialize_primitive(WBuffer *buffer, Primitive val) {
   uint8_t val_type = (uint8_t)ptype(&val);
   i += serialize_type(buffer, uint8_t, val_type);
   switch (val_type) {
-  case INT:
+  case PRIMITIVE_INT:
     int_val = pint(&val);
     i += serialize_type(buffer, int64_t, int_val);
     break;
-  case FLOAT:
+  case PRIMITIVE_FLOAT:
     float_val = pfloat(&val);
     i += serialize_type(buffer, double, float_val);
     break;
-  case CHAR:
+  case PRIMITIVE_CHAR:
   default:
     char_val = pchar(&val);
     i += serialize_type(buffer, int8_t, char_val);

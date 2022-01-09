@@ -42,15 +42,15 @@ int deserialize_val(FILE *file, Primitive *val) {
 
   i += deserialize_type(file, uint8_t, &val_type);
   switch (val_type) {
-  case INT:
+  case PRIMITIVE_INT:
     i += deserialize_type(file, int64_t, &int_val);
     *val = primitive_int(int_val);
     break;
-  case FLOAT:
+  case PRIMITIVE_FLOAT:
     i += deserialize_type(file, double, &float_val);
     *val = primitive_float(float_val);
     break;
-  case CHAR:
+  case PRIMITIVE_CHAR:
   default:
     i += deserialize_type(file, int8_t, &char_val);
     *val = primitive_char(char_val);

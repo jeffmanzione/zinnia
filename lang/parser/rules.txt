@@ -664,7 +664,8 @@ annotation ->
       rule:annotation_with_arguments,
       rule:annotation_no_arguments,
       rule:annotation_not_called
-    )
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
   );
 
 class_definition_with_annotation ->

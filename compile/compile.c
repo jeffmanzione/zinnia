@@ -9,9 +9,13 @@
 #include <stdlib.h>
 
 #include "alloc/alloc.h"
+#include "lang/lexer/lang_lexer.h"
+#include "lang/lexer/token.h"
+#include "lang/parser/lang_parser.h"
 #include "lang/parser/parser.h"
-#include "lang/semantics/expression_tree.h"
-#include "lang/semantics/semantics.h"
+#include "lang/semantic_analyzer/definitions.h"
+#include "lang/semantic_analyzer/expression_tree.h"
+#include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/optimization/optimize.h"
 #include "program/tape.h"
 #include "program/tape_binary.h"
@@ -28,19 +32,52 @@
 
 Tape *_read_file(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);
-  SyntaxTree stree = parse_file(fi);
-  ExpressionTree *etree = populate_expression(&stree);
-  Tape *tape = tape_create();
-  produce_instructions(etree, tape);
-  delete_expression(etree);
-  syntax_tree_delete(&stree);
-  file_info_delete(fi);
 
-  if (opt) {
-    tape = optimize(tape);
+  Q tokens;
+  Q_init(&tokens);
+
+  lexer_tokenize(fi, &tokens);
+
+  Parser parser;
+  parser_init(&parser, rule_file_level_statement_list,
+              /*ignore_newline=*/false);
+  SyntaxTree *stree = parser_parse(&parser, &tokens);
+  stree = parser_prune_newlines(&parser, stree);
+
+  if (Q_size(&tokens) > 1) {
+    Q_iter iter = Q_iterator(&tokens);
+    for (; Q_has(&iter); Q_inc(&iter)) {
+      Token *token = *((Token **)Q_value(&iter));
+      if (token->type != TOKEN_NEWLINE) {
+        printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
+      }
+    }
+    ERROR("Could not parse.");
+    return NULL;
+  } else {
+    SemanticAnalyzer sa;
+    semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
+    ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
+
+    Tape *tape = tape_create();
+    semantic_analyzer_produce(&sa, etree, tape);
+
+    semantic_analyzer_delete(&sa, etree);
+    semantic_analyzer_finalize(&sa);
+
+    parser_delete_st(&parser, stree);
+    parser_finalize(&parser);
+
+    Q_finalize(&tokens);
+
+    file_info_delete(fi);
+
+    if (opt) {
+      tape = optimize(tape);
+    }
+
+    return tape;
   }
-
-  return tape;
 }
 
 void write_tape(const char fn[], const Tape *tape, bool out_ja,

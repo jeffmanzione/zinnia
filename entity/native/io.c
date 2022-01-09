@@ -7,9 +7,12 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef OS_WINDOWS
 #include <sys/inotify.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
@@ -28,15 +31,18 @@
 
 #define MAX_EVENTS 1024
 #define FILE_NAME_LENGTH_ESTIMATE 16
-#define EVENT_SIZE (sizeof(struct inotify_event))
-#define EVENT_BUFFER_LENGTH \
-  (MAX_EVENTS * (EVENT_SIZE + FILE_NAME_LENGTH_ESTIMATE))
 
 static Class *Class_WatchDir;
 
 typedef struct {
   FILE *fp;
 } _File;
+
+#ifndef OS_WINDOWS
+
+#define EVENT_SIZE (sizeof(struct inotify_event))
+#define EVENT_BUFFER_LENGTH                                                    \
+  (MAX_EVENTS * (EVENT_SIZE + FILE_NAME_LENGTH_ESTIMATE))
 
 typedef struct {
   bool is_closed;
@@ -48,6 +54,8 @@ typedef struct {
   int wd;
   char *dir;
 } _WatchDir;
+
+#endif
 
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
@@ -141,7 +149,8 @@ Entity _file_close(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
   ASSERT(NOT_NULL(f), NOT_NULL(f->fp));
-  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+  if (NULL == args || PRIMITIVE != args->type ||
+      PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(task, ctx, "Invalid input to gets.");
   }
   char *buf = ALLOC_ARRAY2(char, pint(&args->pri) + 1);
@@ -205,6 +214,7 @@ Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+#ifndef OS_WINDOWS
 void _watch_dir_init(Object *obj) {
   _WatchDir *wd = ALLOC2(_WatchDir);
   obj->_internal_obj = wd;
@@ -334,6 +344,7 @@ Entity _file_watcher_close(Task *task, Context *ctx, Object *obj,
   }
   return NONE_ENTITY;
 }
+#endif
 
 void io_add_native(ModuleManager *mm, Module *io) {
   Class *file = native_class(io, intern("__File"), __file_init, __file_delete);
@@ -344,6 +355,7 @@ void io_add_native(ModuleManager *mm, Module *io) {
   native_background_method(file, intern("__getall"), _file_getall);
   native_background_method(file, intern("__puts"), _file_puts);
 
+#ifndef OS_WINDOWS
   Class_WatchDir = native_class(io, intern("__WatchDir"), _watch_dir_init,
                                 _watch_dir_delete);
   Class *file_watcher = native_class(io, intern("__FileWatcher"),
@@ -354,4 +366,5 @@ void io_add_native(ModuleManager *mm, Module *io) {
   native_background_method(file_watcher, intern("__read"), _file_watcher_read);
   native_method(file_watcher, intern("__get_read"), _file_watcher_get_read);
   native_method(file_watcher, intern("__close"), _file_watcher_close);
+#endif
 }

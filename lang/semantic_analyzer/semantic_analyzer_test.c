@@ -51,6 +51,7 @@ REGISTRATION_FN(_semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(foreach_statement);
   REGISTER_EXPRESSION_WITH_PRODUCER(for_statement);
   REGISTER_EXPRESSION_WITH_PRODUCER(while_statement);
+  REGISTER_EXPRESSION_WITH_PRODUCER(file_level_statement_list);
 }
 
 DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
@@ -60,7 +61,7 @@ int main(int argc, const char *args[]) {
   intern_init();
   strings_init();
 
-  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\test.jv");
+  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\lib\\builtin.jv");
 
   // while (true) {
   Q tokens;

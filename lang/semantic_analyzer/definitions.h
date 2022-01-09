@@ -9,6 +9,8 @@
 #include "struct/alist.h"
 #include "struct/map.h"
 
+void semantic_analyzer_init_fn(Map *populators, Map *producers, Map *deleters);
+
 DEFINE_EXPRESSION_WITH_PRODUCER(identifier, Tape) { Token *id; };
 
 DEFINE_EXPRESSION_WITH_PRODUCER(constant, Tape) {
@@ -332,17 +334,19 @@ typedef struct {
   AList *methods; // Function.
 } ClassDef;
 
-ClassDef populate_class(const SyntaxTree *stree);
-int produce_class(ClassDef *class, Tape *tape);
-void delete_class(ClassDef *class);
+ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree);
+int produce_class(SemanticAnalyzer *analyzer, ClassDef *class, Tape *tape);
+void delete_class(SemanticAnalyzer *analyzer, ClassDef *class);
 
 typedef void (*FuncDefPopulator)(const SyntaxTree *fn_identifier,
                                  FunctionDef *func);
-typedef Arguments (*FuncArgumentsPopulator)(const SyntaxTree *fn_identifier,
+typedef Arguments (*FuncArgumentsPopulator)(SemanticAnalyzer *analyzer,
+                                            const SyntaxTree *fn_identifier,
                                             const Token *token);
 
 void add_arg(Arguments *args, Argument *arg);
-Arguments set_function_args(const SyntaxTree *stree, const Token *token);
+Arguments set_function_args(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
+                            const Token *token);
 void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
                                   bool *is_const, const Token **const_token,
                                   bool *is_async, const Token **async_token);

@@ -20,11 +20,11 @@ cc_library(
     srcs = ["object.c"],
     hdrs = ["object.h"],
     deps = [
-        "//lang/lexer:token",
         "//program:tape",
         "//util/sync:mutex",
         "@c_data_structures//struct:alist",
         "@c_data_structures//struct:keyed_list",
+        "@language_tools//lang/lexer:token",
         "@memory_wrapper//alloc/memory_graph",
         "@memory_wrapper//struct:map",
     ],

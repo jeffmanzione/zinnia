@@ -51,13 +51,13 @@ inline Entity entity_primitive(Primitive p) {
 
 void _primitive_print(const Primitive *p, FILE *file) {
   switch (p->_type) {
-  case CHAR:
+  case PRIMITIVE_CHAR:
     fprintf(file, "%c", (char)p->_char_val);
     break;
-  case INT:
+  case PRIMITIVE_INT:
     fprintf(file, "%d", p->_int_val);
     break;
-  case FLOAT:
+  case PRIMITIVE_FLOAT:
     fprintf(file, "%f", p->_float_val);
     break;
   default:

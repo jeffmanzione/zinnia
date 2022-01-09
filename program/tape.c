@@ -442,11 +442,11 @@ Primitive token_to_primitive(const Token *tok) {
   Primitive val;
   switch (tok->type) {
   case TOKEN_INTEGER:
-    val._type = INT;
+    val._type = PRIMITIVE_INT;
     val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
     break;
   case TOKEN_FLOATING:
-    val._type = FLOAT;
+    val._type = PRIMITIVE_FLOAT;
     val._float_val = strtod(tok->text, NULL);
     break;
   default:
@@ -526,7 +526,7 @@ DEB_FN(int, tape_ins_int, Tape *tape, Op op, int val, const Token *token) {
   sm->col = token->col;
 
   ins->type = INSTRUCTION_PRIMITIVE;
-  ins->val._type = INT;
+  ins->val._type = PRIMITIVE_INT;
   ins->val._int_val = val;
   return 1;
 }

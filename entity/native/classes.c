@@ -11,9 +11,11 @@
 #include "entity/native/native.h"
 #include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
+#include "lang/parser/lang_parser.h"
 #include "lang/parser/parser.h"
-#include "lang/semantics/expression_tree.h"
-#include "lang/semantics/semantics.h"
+#include "lang/semantic_analyzer/definitions.h"
+#include "lang/semantic_analyzer/expression_tree.h"
+#include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
@@ -62,12 +64,31 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
       vm_module_manager(task->parent_process->vm), m);
   file_info_append(module_fi, fi);
   fi = module_fi;
-  SyntaxTree stree = parse_file(fi);
-  ExpressionTree *etree = populate_expression(&stree);
 
-  produce_instructions(etree, tape);
-  delete_expression(etree);
-  syntax_tree_delete(&stree);
+  Q tokens;
+  Q_init(&tokens);
+
+  lexer_tokenize(fi, &tokens);
+
+  Parser parser;
+  parser_init(&parser, rule_file_level_statement_list,
+              /*ignore_newline=*/false);
+  SyntaxTree *stree = parser_parse(&parser, &tokens);
+  stree = parser_prune_newlines(&parser, stree);
+
+  SemanticAnalyzer sa;
+  semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
+  ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
+
+  semantic_analyzer_produce(&sa, etree, tape);
+
+  semantic_analyzer_delete(&sa, etree);
+  semantic_analyzer_finalize(&sa);
+
+  parser_delete_st(&parser, stree);
+  parser_finalize(&parser);
+
+  Q_finalize(&tokens);
 
   Map new_classes;
   map_init_default(&new_classes);

@@ -62,31 +62,31 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_int(0);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Int.");
-      }
-      if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_int(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_int(pchar(&args->pri));
-        case INT:
-          return *args;
-        case FLOAT:
-          return entity_int(pfloat(&args->pri));
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_int(0);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Int.");
+    }
+    if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_int(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case PRIMITIVE_CHAR:
+      return entity_int(pchar(&args->pri));
+    case PRIMITIVE_INT:
+      return *args;
+    case PRIMITIVE_FLOAT:
+      return entity_int(pfloat(&args->pri));
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -110,31 +110,31 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-    case NONE:
-      return entity_float(0.f);
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to Float.");
-      }
-      if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return entity_float(result);
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-          return entity_float(pchar(&args->pri));
-        case INT:
-          return entity_float(pfloat(&args->pri));
-        case FLOAT:
-          return *args;
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return entity_float(0.f);
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to Float.");
+    }
+    if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return entity_float(result);
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case PRIMITIVE_CHAR:
+      return entity_float(pchar(&args->pri));
+    case PRIMITIVE_INT:
+      return entity_float(pfloat(&args->pri));
+    case PRIMITIVE_FLOAT:
+      return *args;
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return entity_float(0.f);
 }
@@ -160,29 +160,29 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
     return NONE_ENTITY;
   }
   switch (args->type) {
-    case NONE:
-      return NONE_ENTITY;
-    case OBJECT:
-      if (!IS_CLASS(args, Class_String)) {
-        return raise_error(task, ctx, "Cannot convert input to bool Int.");
-      }
-      if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
-                           String_size((String *)args->obj->_internal_obj),
-                           args->obj->_internal_obj);
-      }
-      return result ? entity_int(1) : NONE_ENTITY;
-    case PRIMITIVE:
-      switch (ptype(&args->pri)) {
-        case CHAR:
-        case INT:
-        case FLOAT:
-          return entity_int(1);
-        default:
-          return raise_error(task, ctx, "Unknown primitive type.");
-      }
+  case NONE:
+    return NONE_ENTITY;
+  case OBJECT:
+    if (!IS_CLASS(args, Class_String)) {
+      return raise_error(task, ctx, "Cannot convert input to bool Int.");
+    }
+    if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
+      return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
+                         String_size((String *)args->obj->_internal_obj),
+                         args->obj->_internal_obj);
+    }
+    return result ? entity_int(1) : NONE_ENTITY;
+  case PRIMITIVE:
+    switch (ptype(&args->pri)) {
+    case PRIMITIVE_CHAR:
+    case PRIMITIVE_INT:
+    case PRIMITIVE_FLOAT:
+      return entity_int(1);
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown primitive type.");
+    }
+  default:
+    return raise_error(task, ctx, "Unknown type.");
   }
   return NONE_ENTITY;
 }
@@ -277,15 +277,15 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
-    case INT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
-      break;
-    case FLOAT:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
-      break;
-    default /*CHAR*/:
-      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-      break;
+  case PRIMITIVE_INT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    break;
+  case PRIMITIVE_FLOAT:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
+    break;
+  default /*CHAR*/:
+    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+    break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -329,7 +329,7 @@ Entity _string_neq(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_index(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args));
-  if (PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+  if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(task, ctx, "Bad string index input");
   }
   String *self = (String *)obj->_internal_obj;
@@ -364,11 +364,13 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   const Entity *index = tuple_get(tupl_args, 0);
   const Entity *val = tuple_get(tupl_args, 1);
 
-  if (NULL == index || PRIMITIVE != index->type || INT != ptype(&index->pri)) {
+  if (NULL == index || PRIMITIVE != index->type ||
+      PRIMITIVE_INT != ptype(&index->pri)) {
     return raise_error(task, ctx,
                        "Cannot index a string with something not an int.");
   }
-  if (NULL != val && PRIMITIVE == val->type && CHAR == ptype(&val->pri)) {
+  if (NULL != val && PRIMITIVE == val->type &&
+      PRIMITIVE_CHAR == ptype(&val->pri)) {
     String_set(str, pint(&index->pri), pchar(&val->pri));
   } else if (NULL != val && OBJECT == val->type &&
              Class_String == val->obj->_class &&
@@ -381,10 +383,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class) \
+#define IS_OBJECT_CLASS(e, class)                                              \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype) \
+#define IS_VALUE_TYPE(e, valtype)                                              \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -401,7 +403,7 @@ Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_OBJECT_CLASS(string_arg, Class_String)) {
     return raise_error(task, ctx, "Only a String can be in a String.");
   }
-  if (!IS_VALUE_TYPE(index, INT)) {
+  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
     return raise_error(task, ctx, "Expected a starting index.");
   }
   String *substr = (String *)string_arg->obj->_internal_obj;
@@ -440,7 +442,7 @@ Entity _string_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_OBJECT_CLASS(string_arg, Class_String)) {
     return raise_error(task, ctx, "Only a String can be in a String.");
   }
-  if (!IS_VALUE_TYPE(index, INT)) {
+  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
     return raise_error(task, ctx, "Expected a starting index.");
   }
   String *substr = (String *)string_arg->obj->_internal_obj;
@@ -483,12 +485,12 @@ Entity _string_substr(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, "Expected 2 arguments.");
   }
   const Entity *index_start = tuple_get(tupl_args, 0);
-  if (INT != ptype(&index_start->pri)) {
+  if (PRIMITIVE_INT != ptype(&index_start->pri)) {
     return raise_error(task, ctx, "Expected start_index to be Int.");
   }
 
   const Entity *index_end = tuple_get(tupl_args, 1);
-  if (INT != ptype(&index_end->pri)) {
+  if (PRIMITIVE_INT != ptype(&index_end->pri)) {
     return raise_error(task, ctx, "Expected end_index to be an Int.");
   }
 
@@ -551,7 +553,8 @@ Entity _string_trim(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_lshrink(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+  if (NULL == args || PRIMITIVE != args->type ||
+      PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(task, ctx, "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
@@ -564,7 +567,8 @@ Entity _string_lshrink(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_rshrink(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  if (NULL == args || PRIMITIVE != args->type || INT != ptype(&args->pri)) {
+  if (NULL == args || PRIMITIVE != args->type ||
+      PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(task, ctx, "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
@@ -742,13 +746,13 @@ Entity _range_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   const Entity *first = tuple_get(t, 0);
   const Entity *second = tuple_get(t, 1);
   const Entity *third = tuple_get(t, 2);
-  if (PRIMITIVE != first->type || INT != ptype(&first->pri)) {
+  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&first->pri)) {
     return raise_error(task, ctx, "Input to range() is invalid.");
   }
-  if (PRIMITIVE != first->type || INT != ptype(&second->pri)) {
+  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&second->pri)) {
     return raise_error(task, ctx, "Input to range() is invalid.");
   }
-  if (PRIMITIVE != first->type || INT != ptype(&third->pri)) {
+  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&third->pri)) {
     return raise_error(task, ctx, "Input to range() is invalid.");
   }
   _Range *range = (_Range *)obj->_internal_obj;

@@ -8,12 +8,14 @@
 
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 FunctionDef populate_function_variant(
-    const SyntaxTree *stree, RuleFn def, RuleFn signature_with_qualifier,
-    RuleFn signature_no_qualifier, RuleFn fn_identifier,
-    RuleFn function_arguments_no_args, RuleFn function_arguments_present,
-    FuncDefPopulator def_populator, FuncArgumentsPopulator args_populator);
+    SemanticAnalyzer *analyzer, const SyntaxTree *stree, RuleFn def,
+    RuleFn signature_with_qualifier, RuleFn signature_no_qualifier,
+    RuleFn fn_identifier, RuleFn function_arguments_no_args,
+    RuleFn function_arguments_present, FuncDefPopulator def_populator,
+    FuncArgumentsPopulator args_populator);
 
-FunctionDef populate_function(const SyntaxTree *stree);
+FunctionDef populate_function(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree);
 
 void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
   def->parent_classes = alist_create(ClassName, 2);
@@ -22,38 +24,41 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
     def->name.token = stree->token;
   } else if (IS_SYNTAX(stree, rule_class_name_and_inheritance)) {
     const SyntaxTree *class_inheritance = stree;
-    ASSERT(IS_SYNTAX(class_inheritance->first, rule_identifier));
-    def->name.token = class_inheritance->first->token;
-    ASSERT(IS_SYNTAX(class_inheritance->second, rule_parent_classes));
-    if (IS_SYNTAX(class_inheritance->second->second, rule_identifier)) {
-      ClassName name = {.token = class_inheritance->second->second->token};
+    ASSERT(CHILD_IS_SYNTAX(class_inheritance, 0, rule_identifier));
+    def->name.token = CHILD_SYNTAX_AT(class_inheritance, 0)->token;
+    ASSERT(CHILD_IS_SYNTAX(class_inheritance, 1, rule_parent_classes));
+    const SyntaxTree *parent_classes = CHILD_SYNTAX_AT(class_inheritance, 1);
+    if (CHILD_IS_SYNTAX(parent_classes, 1, rule_identifier)) {
+      ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token};
       alist_append(def->parent_classes, &name);
     } else {
-      ASSERT(
-          IS_SYNTAX(class_inheritance->second->second, rule_parent_class_list));
-      ClassName name = {.token =
-                            class_inheritance->second->second->first->token};
-      alist_append(def->parent_classes, &name);
-      const SyntaxTree *parent_class =
-          class_inheritance->second->second->second;
-      while (true) {
-        if (IS_SYNTAX(parent_class, rule_parent_class_list1)) {
-          if (IS_TOKEN(parent_class->first, SYMBOL_COMMA)) {
-            name.token = parent_class->second->token;
-            alist_append(def->parent_classes, &name);
-            break;
-          } else {
-            name.token = parent_class->first->second->token;
-            alist_append(def->parent_classes, &name);
-            parent_class = parent_class->second;
-          }
-        } else {
-          ASSERT(IS_SYNTAX(parent_class, rule_identifier));
-          name.token = parent_class->token;
-          alist_append(def->parent_classes, &name);
-          break;
-        }
-      }
+      ERROR("Multiple inheritance no longer supported.");
+      //   ASSERT(
+      //       IS_SYNTAX(class_inheritance->second->second,
+      //       rule_parent_class_list));
+      //   ClassName name = {.token =
+      //                         class_inheritance->second->second->first->token};
+      //   alist_append(def->parent_classes, &name);
+      //   const SyntaxTree *parent_class =
+      //       class_inheritance->second->second->second;
+      //   while (true) {
+      //     if (IS_SYNTAX(parent_class, rule_parent_class_list1)) {
+      //       if (IS_TOKEN(parent_class->first, SYMBOL_COMMA)) {
+      //         name.token = parent_class->second->token;
+      //         alist_append(def->parent_classes, &name);
+      //         break;
+      //       } else {
+      //         name.token = parent_class->first->second->token;
+      //         alist_append(def->parent_classes, &name);
+      //         parent_class = parent_class->second;
+      //       }
+      //     } else {
+      //       ASSERT(IS_SYNTAX(parent_class, rule_identifier));
+      //       name.token = parent_class->token;
+      //       alist_append(def->parent_classes, &name);
+      //       break;
+      //     }
+      //   }
     }
   } else {
     ERROR("Unknown class name composition.");
@@ -71,18 +76,18 @@ Argument populate_constructor_argument(SemanticAnalyzer *analyzer,
   const SyntaxTree *argument = stree;
   if (IS_SYNTAX(argument, rule_const_new_argument)) {
     arg.is_const = true;
-    arg.const_token = argument->first->token;
-    argument = argument->second;
+    arg.const_token = CHILD_SYNTAX_AT(argument, 0)->token;
+    argument = CHILD_SYNTAX_AT(argument, 1);
   }
   if (IS_SYNTAX(argument, rule_new_arg_elt_with_default)) {
     arg.has_default = true;
-    arg.default_value =
-        semantic_analyzer_populate(analyzer, argument->second->second);
-    argument = argument->first;
+    arg.default_value = semantic_analyzer_populate(
+        analyzer, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(argument, 1), 1));
+    argument = CHILD_SYNTAX_AT(argument, 0);
   }
   if (IS_SYNTAX(argument, rule_new_field_arg)) {
-    arg.arg_name = argument->second->token;
-    arg.field_token = argument->first->token;
+    arg.arg_name = CHILD_SYNTAX_AT(argument, 1)->token;
+    arg.field_token = CHILD_SYNTAX_AT(argument, 0)->token;
     arg.is_field = true;
   } else {
     ASSERT(IS_SYNTAX(argument, rule_identifier));
@@ -100,27 +105,26 @@ Arguments set_constructor_args(SemanticAnalyzer *analyzer,
     add_arg(&args, &arg);
     return args;
   }
-  Argument arg = populate_constructor_argument(analyzer, stree->first);
+  Argument arg =
+      populate_constructor_argument(analyzer, CHILD_SYNTAX_AT(stree, 0));
   add_arg(&args, &arg);
-  const SyntaxTree *cur = stree->second;
+  const SyntaxTree *cur = CHILD_SYNTAX_AT(stree, 1);
   while (true) {
-    if (IS_TOKEN(cur->first, SYMBOL_COMMA)) {
-      // Must be last arg.
-      Argument arg = populate_constructor_argument(analyzer, cur->second);
-      add_arg(&args, &arg);
+    Argument arg =
+        populate_constructor_argument(analyzer, CHILD_SYNTAX_AT(cur, 1));
+    add_arg(&args, &arg);
+    if (CHILD_COUNT(cur) == 2) {
       break;
     }
-    Argument arg = populate_constructor_argument(analyzer, cur->first->second);
-    add_arg(&args, &arg);
-    cur = cur->second;
+    cur = CHILD_SYNTAX_AT(cur, 2);
   }
   return args;
 }
 
 void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   ASSERT(IS_SYNTAX(fn_identifier, rule_method_identifier));
-  func->def_token = fn_identifier->first->token;
-  const SyntaxTree *fn_name = fn_identifier->second;
+  func->def_token = CHILD_SYNTAX_AT(fn_identifier, 0)->token;
+  const SyntaxTree *fn_name = CHILD_SYNTAX_AT(fn_identifier, 1);
   if (IS_SYNTAX(fn_name, rule_identifier)) {
     func->fn_name = fn_name->token;
     func->special_method = SpecialMethod__NONE;
@@ -130,12 +134,16 @@ void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   } else if (IS_TOKEN(fn_name, SYMBOL_NEQUIV)) {
     func->fn_name = fn_name->token;
     func->special_method = SpecialMethod__NEQUIV;
-  } else if (IS_TOKEN2(fn_name, SYMBOL_LBRACKET, SYMBOL_RBRACKET)) {
-    func->fn_name = fn_name->first->token;
+  } else if (CHILD_COUNT(fn_name) == 2 &&
+             CHILD_IS_TOKEN(fn_name, 0, SYMBOL_LBRACKET) &&
+             CHILD_IS_TOKEN(fn_name, 1, SYMBOL_RBRACKET)) {
+    func->fn_name = CHILD_SYNTAX_AT(fn_name, 0)->token;
     func->special_method = SpecialMethod__ARRAY_INDEX;
-  } else if (IS_TOKEN3(fn_name, SYMBOL_LBRACKET, SYMBOL_RBRACKET,
-                       SYMBOL_EQUALS)) {
-    func->fn_name = fn_name->first->token;
+  } else if (CHILD_COUNT(fn_name) == 3 &&
+             CHILD_IS_TOKEN(fn_name, 0, SYMBOL_LBRACKET) &&
+             CHILD_IS_TOKEN(fn_name, 1, SYMBOL_RBRACKET) &&
+             CHILD_IS_TOKEN(fn_name, 2, SYMBOL_EQUALS)) {
+    func->fn_name = CHILD_SYNTAX_AT(fn_name, 0)->token;
     func->special_method = SpecialMethod__ARRAY_SET;
   } else {
     ERROR("Unknown method name type.");
@@ -173,29 +181,29 @@ FieldDef populate_field_statement(const Token *field_token,
 }
 
 void populate_field_statements(const SyntaxTree *stree, ClassDef *class) {
-  ASSERT(IS_TOKEN(stree->first, KEYWORD_FIELD));
-  const Token *field_token = stree->first->token;
+  ASSERT(CHILD_IS_TOKEN(stree, 0, KEYWORD_FIELD));
+  const Token *field_token = CHILD_SYNTAX_AT(stree, 0)->token;
 
-  if (!IS_SYNTAX(stree->second, rule_identifier_list)) {
-    ASSERT(IS_SYNTAX(stree->second, rule_identifier));
-    FieldDef field = populate_field_statement(field_token, stree->second);
+  if (!CHILD_IS_SYNTAX(stree, 1, rule_identifier_list)) {
+    ASSERT(CHILD_IS_SYNTAX(stree, 1, rule_identifier));
+    FieldDef field =
+        populate_field_statement(field_token, CHILD_SYNTAX_AT(stree, 1));
     alist_append(class->fields, &field);
     return;
   }
-  FieldDef field = populate_field_statement(field_token, stree->second->first);
+  FieldDef field = populate_field_statement(
+      field_token, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 0));
   alist_append(class->fields, &field);
 
-  const SyntaxTree *statement = stree->second->second;
+  const SyntaxTree *statement = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 1);
   while (true) {
-    if (IS_TOKEN(statement->first, SYMBOL_COMMA)) {
-      FieldDef field = populate_field_statement(field_token, statement->second);
-      alist_append(class->fields, &field);
+    FieldDef field =
+        populate_field_statement(field_token, CHILD_SYNTAX_AT(statement, 1));
+    alist_append(class->fields, &field);
+    if (CHILD_COUNT(statement) == 2) {
       break;
     }
-    FieldDef field =
-        populate_field_statement(field_token, statement->first->second);
-    alist_append(class->fields, &field);
-    statement = statement->second;
+    statement = CHILD_SYNTAX_AT(statement, 2);
   }
 }
 
@@ -228,38 +236,38 @@ void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
 
 void populate_class_statements(SemanticAnalyzer *analyzer, ClassDef *class,
                                const SyntaxTree *stree) {
-  ASSERT(IS_TOKEN(stree->first, SYMBOL_LBRACE));
-  if (IS_TOKEN(stree->second, SYMBOL_RBRACE)) {
+  ASSERT(CHILD_IS_TOKEN(stree, 0, SYMBOL_LBRACE));
+  if (CHILD_IS_TOKEN(stree, 1, SYMBOL_RBRACE)) {
     // Empty body.
     return;
   }
-  if (!IS_SYNTAX(stree->second->first, rule_class_statement_list)) {
-    populate_class_statement(analyzer, class, stree->second->first);
+  if (!CHILD_IS_SYNTAX(stree, 1, rule_class_statement_list)) {
+    populate_class_statement(analyzer, class, CHILD_SYNTAX_AT(stree, 1));
     return;
   }
-  populate_class_statement(analyzer, class, stree->second->first->first);
-  const SyntaxTree *statement = stree->second->first->second;
+  populate_class_statement(analyzer, class,
+                           CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 0));
+  const SyntaxTree *statement = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 1);
   while (true) {
     if (!IS_SYNTAX(statement, rule_class_statement_list1)) {
       populate_class_statement(analyzer, class, statement);
       break;
     }
-    populate_class_statement(analyzer, class, statement->first);
-    statement = statement->second;
+    populate_class_statement(analyzer, class, CHILD_SYNTAX_AT(statement, 0));
+    statement = CHILD_SYNTAX_AT(statement, 1);
   }
 }
 
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
   // TODO HANDLE ANNOTATIONS.
-  ASSERT(!IS_LEAF(stree->first), IS_TOKEN(stree->first->first, CLASS));
   ClassDef class;
   class.has_constructor = false;
   class.has_annot = false;
   class.fields = alist_create(FieldDef, 4);
   class.methods = alist_create(FunctionDef, 6);
-  populate_class_def(&class.def, stree->first->second);
+  populate_class_def(&class.def, CHILD_SYNTAX_AT(stree, 1));
 
-  const SyntaxTree *body = stree->second;
+  const SyntaxTree *body = CHILD_SYNTAX_AT(stree, 2);
   if (IS_SYNTAX(body, rule_class_compound_statement)) {
     populate_class_statements(analyzer, &class, body);
   } else {
@@ -370,29 +378,29 @@ Annotation populate_annotation(SemanticAnalyzer *analyzer,
   }
   if (CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
     annot.class_name = CHILD_SYNTAX_AT(stree, 1)->token;
-  } else if (IS_SYNTAX(stree->second, rule_annotation_not_called)) {
-    annot.class_name = stree->second->second->second->token;
-    annot.prefix = stree->second->first->token;
-  } else if (IS_SYNTAX(stree->second, rule_annotation_no_arguments)) {
-    const SyntaxTree *class = stree->second->first;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_annotation_not_called)) {
+    annot.class_name = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 2)->token;
+    annot.prefix = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 0)->token;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_annotation_no_arguments)) {
+    const SyntaxTree *class = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 0);
     annot.is_called = true;
     annot.has_args = false;
     if (IS_SYNTAX(class, rule_identifier)) {
       annot.class_name = class->token;
     } else if (IS_SYNTAX(class, rule_annotation_not_called)) {
-      annot.class_name = class->second->second->token;
-      annot.prefix = class->first->token;
+      annot.class_name = CHILD_SYNTAX_AT(class, 2)->token;
+      annot.prefix = CHILD_SYNTAX_AT(class, 0)->token;
     }
-  } else if (IS_SYNTAX(stree->second, rule_annotation_with_arguments)) {
-    const SyntaxTree *class = stree->second->first;
-    const SyntaxTree *args_list = stree->second->second->second->first;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_annotation_with_arguments)) {
+    const SyntaxTree *class = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 0);
+    const SyntaxTree *args_list = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 1), 2);
     annot.is_called = true;
     annot.has_args = true;
     if (IS_SYNTAX(class, rule_identifier)) {
       annot.class_name = class->token;
     } else if (IS_SYNTAX(class, rule_annotation_not_called)) {
-      annot.class_name = class->second->second->token;
-      annot.prefix = class->first->token;
+      annot.class_name = CHILD_SYNTAX_AT(class, 2)->token;
+      annot.prefix = CHILD_SYNTAX_AT(class, 0)->token;
     }
     annot.args_tuple = semantic_analyzer_populate(analyzer, args_list);
   }
@@ -441,8 +449,9 @@ FunctionDef populate_function_variant(
     ASSERT(CHILD_IS_SYNTAX(func_sig, 1, function_arguments_present));
     const SyntaxTree *func_args =
         CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(func_sig, 1), 1);
-    func.args = args_populator(
-        func_args, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(func_sig, 1), 0)->token);
+    func.args =
+        args_populator(analyzer, func_args,
+                       CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(func_sig, 1), 0)->token);
   }
   func.body = semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
   return func;
@@ -538,7 +547,7 @@ void delete_module_def(SemanticAnalyzer *analyzer, ModuleDef *module) {
 
   for (AL_iter functions = alist_iter(module->functions); al_has(&functions);
        al_inc(&functions)) {
-    delete_function(analyzer, (ClassDef *)al_value(&functions));
+    delete_function(analyzer, (FunctionDef *)al_value(&functions));
   }
   alist_delete(module->functions);
 

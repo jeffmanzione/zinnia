@@ -5,6 +5,9 @@
 
 #include "entity/native/dynamic.h"
 
+#include "util/platform.h"
+
+#ifndef OS_WINDOWS
 #include <dlfcn.h>
 
 #include "alloc/arena/intern.h"
@@ -72,7 +75,10 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   Module *module = modulemanager_lookup(mm, module_name);
   return entity_object(module->_reflection);
 }
+#endif
 
 void dynamic_add_native(ModuleManager *mm, Module *dynamic) {
+#ifndef OS_WINDOWS
   native_function(dynamic, intern("__open_c_lib"), _open_c_lib);
+#endif
 }

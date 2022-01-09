@@ -42,9 +42,9 @@ int instruction_write(const Instruction *ins, FILE *file) {
 
 int _instruction_write_primitive(const Instruction *ins, FILE *file) {
   switch (ptype(&ins->val)) {
-  case INT:
+  case PRIMITIVE_INT:
     return fprintf(file, OP_FMT INT_FMT, op_to_str(ins->op), pint(&ins->val));
-  case FLOAT:
+  case PRIMITIVE_FLOAT:
     return fprintf(file, OP_FMT FLT_FMT, op_to_str(ins->op), pfloat(&ins->val));
   default:
     ERROR("Unkown primitive instruction.");

@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if !defined(OS_WINDOWS)
+#include "util/platform.h"
+
+#ifndef OS_WINDOWS
 typedef uint32_t SOCKET;
 #endif
 
@@ -51,7 +53,7 @@ SocketStatus sockethandle_send(SocketHandle *sh, const char *const msg,
                                int msg_len);
 int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len);
 
-SOCKET sockethandle_get_socket(SocketHandle *sh);
+// SOCKET sockethandle_get_socket(SocketHandle *sh);
 
 void sockethandle_close(SocketHandle *sh);
 

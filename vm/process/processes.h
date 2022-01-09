@@ -6,6 +6,7 @@
 #ifndef VM_PROCESS_PROCESSES_H_
 #define VM_PROCESS_PROCESSES_H_
 
+#include "alloc/arena/arena.h"
 #include "entity/module/module.h"
 #include "entity/object.h"
 #include "heap/heap.h"
@@ -14,6 +15,7 @@
 #include "struct/set.h"
 #include "util/sync/mutex.h"
 #include "util/sync/thread.h"
+
 
 typedef struct _VM VM;
 typedef struct __Context Context;
@@ -91,7 +93,7 @@ struct __Process {
   Set completed_tasks;
 
   Object *_reflection;
-  ThreadHandle thread;  // Null if main thread.
+  ThreadHandle thread; // Null if main thread.
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

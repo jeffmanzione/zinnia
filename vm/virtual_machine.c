@@ -80,10 +80,10 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP(op, symbol)                                                    \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
-    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                            \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
       return primitive_float(float_of(p1) symbol float_of(p2));                \
     }                                                                          \
-    if (INT == ptype(p1) || INT == ptype(p2)) {                                \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {            \
       return primitive_int(int_of(p1) symbol int_of(p2));                      \
     }                                                                          \
     return primitive_int(char_of(p1) symbol char_of(p2));                      \
@@ -92,10 +92,10 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP_INT(op, symbol)                                                \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
-    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                            \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
       ERROR("Op not valid for FP types.");                                     \
     }                                                                          \
-    if (INT == ptype(p1) || INT == ptype(p2)) {                                \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {            \
       return primitive_int(int_of(p1) symbol int_of(p2));                      \
     }                                                                          \
     return primitive_int(char_of(p1) symbol char_of(p2));                      \
@@ -839,7 +839,7 @@ void _execute_ANEW(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     ERROR("Invalid ANEW requires int primitive.");
   }
   int32_t num_args = pint(&ins->val);
@@ -870,7 +870,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     index = context_lookup(context, ins->id, &index_e);
     break;
   case INSTRUCTION_PRIMITIVE:
-    if (INT != ptype(&ins->val) || pint(&ins->val) < 0) {
+    if (PRIMITIVE_INT != ptype(&ins->val) || pint(&ins->val) < 0) {
       raise_error(task, context, "Invalid array index.");
       return false;
     }
@@ -886,7 +886,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   }
   if (Class_Array == arr_obj->_class) {
     Array *arr = (Array *)arr_obj->_internal_obj;
-    if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
+    if (PRIMITIVE != index->type || PRIMITIVE_INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
       raise_error(task, context, "Invalid array index.");
       return false;
@@ -901,7 +901,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   }
   if (Class_Tuple == arr_obj->_class) {
     Tuple *tuple = (Tuple *)arr_obj->_internal_obj;
-    if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
+    if (PRIMITIVE != index->type || PRIMITIVE_INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
       raise_error(task, context, "Invalid tuple index.");
       return false;
@@ -937,7 +937,7 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
 
   if (Class_Array == arr_entity.obj->_class) {
     if (NULL == index || PRIMITIVE != index->type ||
-        INT != ptype(&index->pri)) {
+        PRIMITIVE_INT != ptype(&index->pri)) {
       raise_error(task, context, "Cannot index with non-int.");
       return false;
     }
@@ -976,7 +976,7 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     ERROR("Invalid TUPL requires int primitive.");
   }
   int i;
@@ -1002,7 +1002,7 @@ void _execute_TLEN(VM *vm, Task *task, Context *context,
 
 void _execute_TGTE(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(task, context, "Invalid TLEN type.");
     return;
   }
@@ -1025,7 +1025,7 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
 
 void _execute_TGET(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(task, context, "Invalid TGET type.");
     return;
   }

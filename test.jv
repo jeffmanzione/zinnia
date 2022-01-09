@@ -1,20 +1,11 @@
 module test
 
-def test(a, b) const async {
-  io.println('test')
-}
-
 class TestImpl : Test {
-  field a
-
-  new(field b) {
+  new(a, field b = 1) {
     a = b
   }
 
-  method test() {
-    io.println(a, b)
-  }
+  method test() {}
 }
 
-t = TestImpl(5)
-t.test()
+TestImpl()

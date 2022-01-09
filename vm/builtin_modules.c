@@ -5,7 +5,10 @@
 
 #include "vm/builtin_modules.h"
 
+#ifdef OS_WINDOS
 #include <dirent.h>
+#endif
+
 #include <stdio.h>
 
 #include "alloc/arena/intern.h"
@@ -55,6 +58,7 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(
       mm, find_file_by_name(lib_location, "dynamic"), dynamic_add_native);
 
+#ifndef OS_WINDOWS
   DIR *lib = opendir(lib_location);
   struct dirent *dir;
   while ((dir = readdir(lib)) != NULL) {
@@ -65,4 +69,5 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
       mm_register_module(mm, fn);
     }
   }
+#endif
 }
