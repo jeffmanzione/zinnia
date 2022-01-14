@@ -4,6 +4,7 @@
 //     Author: Jeff Manzione
 
 #include "entity/native/classes.h"
+#include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/class/classes.h"
 #include "entity/entity.h"
@@ -22,6 +23,7 @@
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
 #include "vm/vm.h"
+
 
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {

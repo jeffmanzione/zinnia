@@ -95,15 +95,13 @@ ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
   ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
       &mm->_modules, intern(module_name), (void **)&module_info);
   if (old != NULL) {
-    ERROR("Module by name '%s' already exists.", module_name);
+    FATALF("Module by name '%s' already exists.", module_name);
   }
   module_info->file_name = (NULL != file_name) ? intern(file_name) : NULL;
   return module_info;
 }
 
-inline const char *module_info_file_name(ModuleInfo *mi) {
-  return mi->file_name;
-}
+const char *module_info_file_name(ModuleInfo *mi) { return mi->file_name; }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape,
                                    ModuleInfo *module_info) {
@@ -217,7 +215,7 @@ Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
         printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
       }
     }
-    ERROR("Could not parse.");
+    FATALF("Could not parse.");
   } else {
     SemanticAnalyzer sa;
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
@@ -259,7 +257,7 @@ Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
 Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
   FILE *file = fopen(module_info->file_name, "rb");
   if (NULL == file) {
-    ERROR("Cannot open file '%s'. Exiting...", module_info->file_name);
+    FATALF("Cannot open file '%s'. Exiting...", module_info->file_name);
   }
   Tape *tape = tape_create();
   tape_read_binary(tape, file);
@@ -333,7 +331,7 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
       } else if (ends_with(module_info->file_name, ".jv")) {
         module = _read_jl(mm, module_info);
       } else {
-        ERROR("Unknown file type.");
+        FATALF("Unknown file type.");
       }
     } else {
       module = &module_info->module;

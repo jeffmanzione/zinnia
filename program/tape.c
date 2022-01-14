@@ -88,9 +88,9 @@ void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
         (FunctionRef *)keyedlist_insert(&tape->func_refs, name, (void **)&ref);
   }
   if (NULL != old) {
-    ERROR("Attempting to add function %s, but a function by that name already "
-          "exists.",
-          name);
+    FATALF("Attempting to add function %s, but a function by that name already "
+           "exists.",
+           name);
   }
   ref->name = name;
   ref->index = index;
@@ -110,9 +110,9 @@ ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
   ClassRef *old =
       (ClassRef *)keyedlist_insert(&tape->class_refs, name, (void **)&ref);
   if (NULL != old) {
-    ERROR("Attempting to add class %s, but a function by that name already "
-          "exists.",
-          name);
+    FATALF("Attempting to add class %s, but a function by that name already "
+           "exists.",
+           name);
   }
   _classref_init(ref, name);
   ref->start_index = index;
@@ -139,15 +139,15 @@ void _field_ref_init(FieldRef *fref, const char name[]) { fref->name = name; }
 void tape_field(Tape *tape, const char *field) {
   ClassRef *cls = tape->current_class;
   if (NULL == cls) {
-    ERROR("Cannot have field outside of a class.");
+    FATALF("Cannot have field outside of a class.");
   }
   FieldRef *ref;
   FieldRef *old =
       (FieldRef *)keyedlist_insert(&cls->field_refs, field, (void **)&ref);
   if (NULL != old) {
-    ERROR("Attempting to add field '%s', but a field by that name already "
-          "exists.",
-          field);
+    FATALF("Attempting to add field '%s', but a field by that name already "
+           "exists.",
+           field);
   }
   _field_ref_init(ref, field);
 }
@@ -362,13 +362,13 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
       Q_remove(tokens, 0);
       Token *async_keyword = Q_remove(tokens, 0);
       if (0 != strcmp("async", async_keyword->text)) {
-        ERROR("Invalid function qualifier '%s' on '%s'.", async_keyword->text,
-              fn_name->text);
+        FATALF("Invalid function qualifier '%s' on '%s'.", async_keyword->text,
+               fn_name->text);
       }
       tape_label_async(tape, fn_name);
     }
     if (TOKEN_NEWLINE != _q_peek(tokens)->type) {
-      ERROR("Invalid token after @def.");
+      FATALF("Invalid token after @def.");
     }
     tape_label(tape, fn_name);
     return;
@@ -450,7 +450,7 @@ Primitive token_to_primitive(const Token *tok) {
     val._float_val = strtod(tok->text, NULL);
     break;
   default:
-    ERROR("Attempted to create a Value from '%s'.", tok->text);
+    FATALF("Attempted to create a Value from '%s'.", tok->text);
   }
   return val;
 }

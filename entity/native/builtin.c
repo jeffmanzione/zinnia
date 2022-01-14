@@ -35,6 +35,18 @@
 #define BUFFER_SIZE 256
 #define INFER_FROM_STRING 0
 
+bool _is_any_space(const char c) {
+  switch (c) {
+  case ' ':
+  case '\t':
+  case '\n':
+  case '\r':
+    return true;
+  default:
+    return false;
+  }
+}
+
 static Class *Class_Range;
 
 typedef struct {
@@ -519,7 +531,7 @@ Entity _string_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_ltrim(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   int i = 0;
-  while (is_any_space(str->table[i])) {
+  while (_is_any_space(str->table[i])) {
     ++i;
   }
   String_lshrink(str, i);
@@ -529,7 +541,9 @@ Entity _string_ltrim(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_rtrim(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   int i = 0;
-  while (is_any_space(str->table[String_size(str) - 1 - i])) {
+  while (_is_any_space(str->table[String_size(str) - 1 - i]) &&
+         i < String_size(str)) {
+    DEBUGF("HERE %d", String_size(str) - 1 - i);
     ++i;
   }
   String_rshrink(str, i);
@@ -539,12 +553,12 @@ Entity _string_rtrim(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_trim(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   int i = 0;
-  while (is_any_space(str->table[i])) {
+  while (_is_any_space(str->table[i])) {
     ++i;
   }
   String_lshrink(str, i);
   i = 0;
-  while (is_any_space(str->table[String_size(str) - 1 - i])) {
+  while (_is_any_space(str->table[String_size(str) - 1 - i])) {
     ++i;
   }
   String_rshrink(str, i);

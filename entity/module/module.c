@@ -36,13 +36,9 @@ void module_finalize(Module *module) {
   mutex_close(module->_write_mutex);
 }
 
-inline const char *module_name(const Module *const module) {
-  return module->_name;
-}
+const char *module_name(const Module *const module) { return module->_name; }
 
-inline const Tape *module_tape(const Module *const module) {
-  return module->_tape;
-}
+const Tape *module_tape(const Module *const module) { return module->_tape; }
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos, bool is_const, bool is_async) {
@@ -51,9 +47,10 @@ Function *module_add_function(Module *module, const char name[],
   Function *old =
       (Function *)keyedlist_insert(&module->_functions, name, (void **)&f);
   if (NULL != old) {
-    ERROR("Adding function %s to module %s that already has a function by this "
-          "name.",
-          name, module->_name);
+    FATALF(
+        "Adding function %s to module %s that already has a function by this "
+        "name.",
+        name, module->_name);
   }
   function_init(f, name, module, ins_pos, is_anon(name), is_const, is_async);
   return f;
@@ -86,10 +83,10 @@ Object *module_lookup(Module *module, const char name[]) {
   return NULL;
 }
 
-inline KL_iter module_functions(Module *module) {
+KL_iter module_functions(Module *module) {
   return keyedlist_iter(&module->_functions);
 }
 
-inline KL_iter module_classes(Module *module) {
+KL_iter module_classes(Module *module) {
   return keyedlist_iter(&module->_classes);
 }

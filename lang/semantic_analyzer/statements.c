@@ -196,7 +196,7 @@ POPULATE_IMPL(break_statement, const SyntaxTree *stree,
   } else if (IS_TOKEN(stree, KEYWORD_CONTINUE)) {
     break_statement->type = Break_continue;
   } else {
-    ERROR("Unknown break_statement: %s", stree->token->text);
+    FATALF("Unknown break_statement: %s", stree->token->text);
   }
 }
 
@@ -210,7 +210,7 @@ PRODUCE_IMPL(break_statement, SemanticAnalyzer *analyzer, Tape *target) {
     // Signals a continue.
     return tape_ins_int(target, JMP, INT_MAX, break_statement->token);
   } else {
-    ERROR("Unknown break_statement.");
+    FATALF("Unknown break_statement.");
   }
   return 0;
 }

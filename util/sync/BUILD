@@ -11,6 +11,19 @@ cc_library(
 )
 
 cc_library(
+    name = "critical_section",
+    srcs = ["critical_section.c"],
+    hdrs = ["critical_section.h"],
+    linkopts = ["-lpthread"],
+    deps = [
+        ":constants",
+        ":mutex",
+        "//util:platform",
+        "@memory_wrapper//alloc",
+    ],
+)
+
+cc_library(
     name = "mutex",
     srcs = ["mutex.c"],
     hdrs = ["mutex.h"],

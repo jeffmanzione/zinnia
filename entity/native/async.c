@@ -33,7 +33,7 @@ Object *future_create(Task *task) {
   return future_obj;
 }
 
-inline bool future_is_complete(Future *f) {
+bool future_is_complete(Future *f) {
   if (f->_is_complete) {
     return true;
   }
@@ -64,7 +64,7 @@ const Entity *future_get_value(Heap *heap, Object *obj) {
   return object_get(obj, RESULT_VAL);
 }
 
-inline Task *future_get_task(Future *f) { return f->task; }
+Task *future_get_task(Future *f) { return f->task; }
 
 void async_add_native(ModuleManager *mm, Module *async) {
   Class_Future = native_class(async, FUTURE_NAME, _future_init, _future_delete);

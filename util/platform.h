@@ -9,7 +9,6 @@
 #ifdef __unix__
 #define OS_LINUX
 #elif defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
-#include <windows.h>
 #define OS_WINDOWS
 #endif
 

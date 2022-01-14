@@ -9,6 +9,8 @@
 #include "struct/alist.h"
 #include "struct/map.h"
 
+DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
+
 void semantic_analyzer_init_fn(Map *populators, Map *producers, Map *deleters);
 
 DEFINE_EXPRESSION_WITH_PRODUCER(identifier, Tape) { Token *id; };

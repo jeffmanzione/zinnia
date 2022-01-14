@@ -6,6 +6,7 @@ self.IN = FileReader('__STDIN__', True)
 self.OUT = FileWriter('__STDOUT__', True)
 self.ERROR = FileWriter('__STDERR__', True)
 
+/*
 self.IN_ACCESS = 1
 self.IN_ATTRIB = 4
 self.IN_CLOSE = 24
@@ -25,7 +26,9 @@ self.IN_ISDIR = 1073741824
 self.IN_Q_OVERFLOW = 16384
 self.IN_UNMOUNT = 8192
 self.ALL_EVENTS = 4095
+*/
 
+/*
 self._IN_TO_STR = {
   1: 'ACCESS',
   4: 'ATTRIB',
@@ -46,6 +49,7 @@ self._IN_TO_STR = {
   16384: 'Q_OVERFLOW',
   8192: 'UNMOUNT'
 }
+*/
 
 class _FileInternal {
   field file

@@ -76,33 +76,31 @@ Context *task_back_context(Task *task) {
   return task->current;
 }
 
-inline Entity task_popstack(Task *task) {
+Entity task_popstack(Task *task) {
   ASSERT(alist_len(&task->entity_stack) > 0);
   Entity e = *task_peekstack(task);
   task_dropstack(task);
   return e;
 }
 
-inline const Entity *task_peekstack(Task *task) {
+const Entity *task_peekstack(Task *task) {
   ASSERT(alist_len(&task->entity_stack) > 0);
   return (Entity *)alist_get(&task->entity_stack,
                              alist_len(&task->entity_stack) - 1);
 }
 
-inline const Entity *task_peekstack_n(Task *task, int n) {
+const Entity *task_peekstack_n(Task *task, int n) {
   ASSERT(alist_len(&task->entity_stack) > n);
   return (Entity *)alist_get(&task->entity_stack,
                              alist_len(&task->entity_stack) - 1 - n);
 }
 
-inline void task_dropstack(Task *task) {
-  alist_remove_last(&task->entity_stack);
-}
+void task_dropstack(Task *task) { alist_remove_last(&task->entity_stack); }
 
-inline Entity *task_pushstack(Task *task) {
+Entity *task_pushstack(Task *task) {
   return (Entity *)alist_add(&task->entity_stack);
 }
 
-inline const Entity *task_get_resval(Task *task) { return &task->resval; }
+const Entity *task_get_resval(Task *task) { return &task->resval; }
 
-inline Entity *task_mutable_resval(Task *task) { return &task->resval; }
+Entity *task_mutable_resval(Task *task) { return &task->resval; }

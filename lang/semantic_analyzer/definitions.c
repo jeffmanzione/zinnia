@@ -45,6 +45,8 @@ REGISTRATION_FN(semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(file_level_statement_list);
 }
 
+IMPL_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
+
 POPULATE_IMPL(identifier, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
   identifier->id = stree->token;
 }
@@ -117,16 +119,17 @@ int tuple_expression_helper(SemanticAnalyzer *analyzer,
   // Start from end and go backward.
   for (i = tuple_len - 1; i >= 0; --i) {
     ExpressionTree *elt = EXTRACT_TREE(tuple_expression->list, i);
-    num_ins += semantic_analyzer_produce(analyzer, elt, tape) +
-               tape_ins_no_arg(tape, PUSH, tuple_expression->token);
+    num_ins += semantic_analyzer_produce(analyzer, elt, tape);
+    num_ins += tape_ins_no_arg(tape, PUSH, tuple_expression->token);
   }
   return num_ins;
 }
 
 PRODUCE_IMPL(tuple_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  return tuple_expression_helper(analyzer, tuple_expression, target) +
-         tape_ins_int(target, TUPL, alist_len(tuple_expression->list),
-                      tuple_expression->token);
+  int num_ins = tuple_expression_helper(analyzer, tuple_expression, target);
+  num_ins += tape_ins_int(target, TUPL, alist_len(tuple_expression->list),
+                          tuple_expression->token);
+  return num_ins;
 }
 
 POPULATE_IMPL(array_declaration, const SyntaxTree *stree,
@@ -164,8 +167,8 @@ PRODUCE_IMPL(array_declaration, SemanticAnalyzer *analyzer, Tape *target) {
     num_ins += tuple_expression_helper(analyzer, tuple_expression, target);
   } else {
     num_ins +=
-        semantic_analyzer_produce(analyzer, array_declaration->exp, target) +
-        tape_ins_no_arg(target, PUSH, array_declaration->token);
+        semantic_analyzer_produce(analyzer, array_declaration->exp, target);
+    num_ins += tape_ins_no_arg(target, PUSH, array_declaration->token);
   }
   num_ins += tape_ins_int(target, ANEW, num_members, array_declaration->token);
   return num_ins;
@@ -181,7 +184,7 @@ POPULATE_IMPL(primary_expression, const SyntaxTree *stree,
         semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
     return;
   }
-  ERROR("Unknown primary_expression.");
+  FATALF("Unknown primary_expression.");
 }
 
 DELETE_IMPL(primary_expression, SemanticAnalyzer *analyzer) {
@@ -202,7 +205,7 @@ POPULATE_IMPL(primary_expression_no_constants, const SyntaxTree *stree,
         semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
     return;
   }
-  ERROR("Unknown primary_expression_no_constants.");
+  FATALF("Unknown primary_expression_no_constants.");
 }
 
 PRODUCE_IMPL(primary_expression_no_constants, SemanticAnalyzer *analyzer,
@@ -263,10 +266,7 @@ void postfix_helper(SemanticAnalyzer *analyzer, const SyntaxTree *postfix,
     postfix_surround_helper(analyzer, postfix, suffixes, Postfix_array_index,
                             SYMBOL_LBRACKET, SYMBOL_RBRACKET);
   } else {
-    ERROR("Unknown postfix.");
-  }
-  if (CHILD_IS_SYNTAX(postfix, 1, rule_postfix_expression1)) {
-    postfix_helper(analyzer, CHILD_SYNTAX_AT(postfix, 1), suffixes);
+    FATALF("Unknown postfix.");
   }
 }
 
@@ -294,17 +294,17 @@ int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
     num_ins +=
         tape_ins_no_arg(tape, (NULL == cur->exp) ? CLLN : CALL, cur->token);
   } else if (cur->type == Postfix_array_index) {
-    num_ins += tape_ins_no_arg(tape, PUSH, cur->token) +
-               semantic_analyzer_produce(analyzer, cur->exp, tape) +
-               tape_ins_no_arg(tape, AIDX, cur->token);
+    num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
+    num_ins += semantic_analyzer_produce(analyzer, cur->exp, tape);
+    num_ins += tape_ins_no_arg(tape, AIDX, cur->token);
   } else if (cur->type == Postfix_field) {
     // FunctionDef calls on fields must be handled with CALL X.
     if (NULL != *next && (*next)->type == Postfix_fncall) {
-      num_ins += tape_ins_no_arg(tape, PUSH, cur->token) +
-                 ((*next)->exp != NULL
+      num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
+      num_ins += ((*next)->exp != NULL
                       ? semantic_analyzer_produce(analyzer, (*next)->exp, tape)
-                      : 0) +
-                 tape_ins(tape, (NULL == (*next)->exp) ? CLLN : CALL, cur->id);
+                      : 0);
+      num_ins += tape_ins(tape, (NULL == (*next)->exp) ? CLLN : CALL, cur->id);
       // Advance past the function call since we have already handled it.
       ++(*i);
       *next = (*i + 1 == num_postfix) ? NULL
@@ -313,7 +313,7 @@ int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
       num_ins += tape_ins(tape, GET, cur->id);
     }
   } else {
-    ERROR("Unknown postfix_expression.");
+    FATALF("Unknown postfix_expression.");
   }
   return num_ins;
 }
@@ -382,14 +382,14 @@ PRODUCE_IMPL(range_expression, SemanticAnalyzer *analyzer, Tape *target) {
         semantic_analyzer_produce(analyzer, range_expression->inc, target) +
         tape_ins_no_arg(target, PUSH, range_expression->token);
   }
+  num_ins += semantic_analyzer_produce(analyzer, range_expression->end, target);
+  num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
   num_ins +=
-      semantic_analyzer_produce(analyzer, range_expression->end, target) +
-      tape_ins_no_arg(target, PUSH, range_expression->token) +
-      semantic_analyzer_produce(analyzer, range_expression->start, target) +
-      tape_ins_no_arg(target, PUSH, range_expression->token) +
-      tape_ins_int(target, TUPL, range_expression->num_args,
-                   range_expression->token) +
-      tape_ins_no_arg(target, CALL, range_expression->token);
+      semantic_analyzer_produce(analyzer, range_expression->start, target);
+  num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
+  num_ins += tape_ins_int(target, TUPL, range_expression->num_args,
+                          range_expression->token);
+  num_ins += tape_ins_no_arg(target, CALL, range_expression->token);
   return num_ins;
 }
 
@@ -406,7 +406,7 @@ UnaryType unary_token_to_type(const Token *token) {
   case KEYWORD_AWAIT:
     return Unary_await;
   default:
-    ERROR("Unknown unary: %s", token->text);
+    FATALF("Unknown unary: %s", token->text);
   }
   return Unary_unknown;
 }
@@ -441,9 +441,9 @@ PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Tape *target) {
     num_ins += tape_ins_no_arg(target, NOTC, unary_expression->token);
     break;
   case Unary_negate:
-    num_ins += tape_ins_no_arg(target, PUSH, unary_expression->token) +
-               tape_ins_int(target, PUSH, -1, unary_expression->token) +
-               tape_ins_no_arg(target, MULT, unary_expression->token);
+    num_ins += tape_ins_no_arg(target, PUSH, unary_expression->token);
+    num_ins += tape_ins_int(target, PUSH, -1, unary_expression->token);
+    num_ins += tape_ins_no_arg(target, MULT, unary_expression->token);
     break;
   // TODO: Uncomment when const is implemented.
   // case Unary_const:
@@ -453,7 +453,7 @@ PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Tape *target) {
     num_ins += tape_ins_no_arg(target, WAIT, unary_expression->token);
     break;
   default:
-    ERROR("Unknown unary: %s", unary_expression->token);
+    FATALF("Unknown unary: %s", unary_expression->token);
   }
   return num_ins;
 }
@@ -493,7 +493,7 @@ BiType relational_type_for_token(const Token *token) {
   case SYMBOL_PIPE:
     return Bin_or;
   default:
-    ERROR("Unknown type: %s", token->text);
+    FATALF("Unknown type: %s", token->text);
   }
   return BiType_unknown;
 }
@@ -533,7 +533,7 @@ Op bi_to_ins(BiType type) {
   case Bin_or:
     return BOR;
   default:
-    ERROR("Unknown type: %s", type);
+    FATALF("Unknown type: %s", type);
   }
   return NOP;
 }
@@ -582,10 +582,10 @@ Op bi_to_ins(BiType type) {
     AL_iter iter = alist_iter(expr->suffixes);                                 \
     for (; al_has(&iter); al_inc(&iter)) {                                     \
       BiSuffix *suffix = (BiSuffix *)al_value(&iter);                          \
+      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);                   \
+      num_ins += semantic_analyzer_produce(analyzer, suffix->exp, tape);       \
+      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);                   \
       num_ins +=                                                               \
-          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
-          semantic_analyzer_produce(analyzer, suffix->exp, tape) +             \
-          tape_ins_no_arg(tape, PUSH, suffix->token) +                         \
           tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token);       \
     }                                                                          \
     return num_ins;                                                            \
@@ -698,14 +698,16 @@ DELETE_IMPL(in_expression, SemanticAnalyzer *analyzer) {
 }
 
 PRODUCE_IMPL(in_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  return semantic_analyzer_produce(analyzer, in_expression->collection,
-                                   target) +
-         tape_ins_no_arg(target, PUSH, in_expression->token) +
-         semantic_analyzer_produce(analyzer, in_expression->element, target) +
-         tape_ins_text(target, CALL, IN_FN_NAME, in_expression->token) +
-         (in_expression->is_not
-              ? tape_ins_no_arg(target, NOT, in_expression->token)
-              : 0);
+  int num_ins =
+      semantic_analyzer_produce(analyzer, in_expression->collection, target);
+  num_ins += tape_ins_no_arg(target, PUSH, in_expression->token);
+  num_ins +=
+      semantic_analyzer_produce(analyzer, in_expression->element, target);
+  num_ins += tape_ins_text(target, CALL, IN_FN_NAME, in_expression->token);
+  num_ins += (in_expression->is_not
+                  ? tape_ins_no_arg(target, NOT, in_expression->token)
+                  : 0);
+  return num_ins;
 }
 
 POPULATE_IMPL(is_expression, const SyntaxTree *stree,
@@ -723,11 +725,12 @@ DELETE_IMPL(is_expression, SemanticAnalyzer *analyzer) {
 }
 
 PRODUCE_IMPL(is_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  return semantic_analyzer_produce(analyzer, is_expression->exp, target) +
-         tape_ins_no_arg(target, PUSH, is_expression->token) +
-         semantic_analyzer_produce(analyzer, is_expression->type, target) +
-         tape_ins_no_arg(target, PUSH, is_expression->token) +
-         tape_ins_no_arg(target, IS, is_expression->token);
+  int num_ins = semantic_analyzer_produce(analyzer, is_expression->exp, target);
+  num_ins += tape_ins_no_arg(target, PUSH, is_expression->token);
+  num_ins += semantic_analyzer_produce(analyzer, is_expression->type, target);
+  num_ins += tape_ins_no_arg(target, PUSH, is_expression->token);
+  num_ins += tape_ins_no_arg(target, IS, is_expression->token);
+  return num_ins;
 }
 
 void populate_if_else(SemanticAnalyzer *analyzer, IfElse *if_else,
@@ -930,7 +933,7 @@ void _populate_function_qualifier(const SyntaxTree *fn_qualifier,
     *is_async = true;
     *async_token = fn_qualifier->token;
   } else {
-    ERROR("Unknown function qualifier.");
+    FATALF("Unknown function qualifier.");
   }
 }
 
@@ -948,7 +951,7 @@ void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
     _populate_function_qualifier(CHILD_SYNTAX_AT(fn_qualifiers, 1), is_const,
                                  const_token, is_async, async_token);
   } else {
-    ERROR("unknown function qualifier list.");
+    FATALF("unknown function qualifier list.");
   }
 }
 
@@ -980,9 +983,10 @@ void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
 
 int produce_argument(Argument *arg, Tape *tape) {
   if (arg->is_field) {
-    return tape_ins_no_arg(tape, PUSH, arg->arg_name) +
-           tape_ins_text(tape, RES, SELF, arg->arg_name) +
-           tape_ins(tape, arg->is_const ? FLDC : FLD, arg->arg_name);
+    int num_ins = tape_ins_no_arg(tape, PUSH, arg->arg_name);
+    num_ins += tape_ins_text(tape, RES, SELF, arg->arg_name);
+    num_ins += tape_ins(tape, arg->is_const ? FLDC : FLD, arg->arg_name);
+    return num_ins;
   }
   return tape_ins(tape, arg->is_const ? LETC : LET, arg->arg_name);
 }
@@ -993,18 +997,18 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
   for (i = 0; i < num_args; ++i) {
     Argument *arg = (Argument *)alist_get(args->args, i);
     if (arg->has_default) {
-      num_ins += tape_ins_no_arg(tape, PEEK, args->token) +
-                 tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+      num_ins += tape_ins_no_arg(tape, PEEK, args->token);
+      num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
 
       Tape *tmp = tape_create();
       int default_ins =
           semantic_analyzer_produce(analyzer, arg->default_value, tmp);
-      num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name) +
-                 tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
-                                 arg->arg_name) +
-                 tape_ins_int(tape, TGET, i, arg->arg_name) +
-                 tape_ins_int(tape, JMP, default_ins, arg->arg_name) +
-                 default_ins;
+      num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
+      num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
+                                 arg->arg_name);
+      num_ins += tape_ins_int(tape, TGET, i, arg->arg_name);
+      num_ins +=
+          tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
       tape_append(tape, tmp);
     } else {
       if (i == num_args - 1) {
@@ -1029,13 +1033,14 @@ int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
       Tape *defaults = tape_create();
       int num_default_ins =
           semantic_analyzer_produce(analyzer, arg->default_value, defaults);
-      num_ins += num_default_ins + tape_ins_no_arg(tape, PUSH, arg->arg_name) +
-                 tape_ins_int(tape, TGTE, 1, arg->arg_name) +
-                 tape_ins_int(tape, IF, num_default_ins + 1, arg->arg_name);
+      num_ins += num_default_ins;
+      num_ins += tape_ins_no_arg(tape, PUSH, arg->arg_name);
+      num_ins += tape_ins_int(tape, TGTE, 1, arg->arg_name);
+      num_ins += tape_ins_int(tape, IF, num_default_ins + 1, arg->arg_name);
       tape_append(tape, defaults);
-      num_ins += tape_ins_int(tape, JMP, 1, arg->arg_name) +
-                 tape_ins_no_arg(tape, RES, arg->arg_name) +
-                 tape_ins_int(tape, TGET, 0, arg->arg_name);
+      num_ins += tape_ins_int(tape, JMP, 1, arg->arg_name);
+      num_ins += tape_ins_no_arg(tape, RES, arg->arg_name);
+      num_ins += tape_ins_int(tape, TGET, 0, arg->arg_name);
     }
     num_ins += produce_argument(arg, tape);
     return num_ins;
@@ -1044,10 +1049,10 @@ int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
 
   // Handle case where only 1 arg is passed and the rest are optional.
   Argument *first = (Argument *)alist_get(args->args, 0);
-  num_ins += tape_ins_no_arg(tape, TLEN, first->arg_name) +
-             tape_ins_no_arg(tape, PUSH, first->arg_name) +
-             tape_ins_int(tape, PUSH, -1, first->arg_name) +
-             tape_ins_no_arg(tape, EQ, first->arg_name);
+  num_ins += tape_ins_no_arg(tape, TLEN, first->arg_name);
+  num_ins += tape_ins_no_arg(tape, PUSH, first->arg_name);
+  num_ins += tape_ins_int(tape, PUSH, -1, first->arg_name);
+  num_ins += tape_ins_no_arg(tape, EQ, first->arg_name);
 
   Tape *defaults = tape_create();
   int defaults_ins = 0;
@@ -1092,7 +1097,7 @@ int produce_function_name(FunctionDef *func, Tape *tape) {
   case SpecialMethod__ARRAY_SET:
     return tape_label_text(tape, ARRAYLIKE_SET_KEY);
   default:
-    ERROR("Unknown SpecialMethod.");
+    FATALF("Unknown SpecialMethod.");
   }
   return 0;
 }
@@ -1211,7 +1216,7 @@ MapDecEntry populate_map_dec_entry(SemanticAnalyzer *analyzer,
 POPULATE_IMPL(map_declaration, const SyntaxTree *stree,
               SemanticAnalyzer *analyzer) {
   if (!CHILD_IS_TOKEN(stree, 0, SYMBOL_LBRACE)) {
-    ERROR("Map declaration must start with '{'.");
+    FATALF("Map declaration must start with '{'.");
   }
   map_declaration->lbrce = CHILD_SYNTAX_AT(stree, 0)->token;
   // No entries.
@@ -1274,21 +1279,21 @@ DELETE_IMPL(map_declaration, SemanticAnalyzer *analyzer) {
 PRODUCE_IMPL(map_declaration, SemanticAnalyzer *analyzer, Tape *target) {
   int num_ins = 0, i;
   num_ins +=
-      tape_ins_text(target, PUSH, intern("struct"), map_declaration->lbrce) +
-      tape_ins_text(target, CLLN, intern("Map"), map_declaration->lbrce);
+      tape_ins_text(target, PUSH, intern("struct"), map_declaration->lbrce);
+  num_ins += tape_ins_text(target, CLLN, intern("Map"), map_declaration->lbrce);
   if (map_declaration->is_empty) {
     return num_ins;
   }
   num_ins += tape_ins_no_arg(target, PUSH, map_declaration->lbrce);
   for (i = 0; i < alist_len(map_declaration->entries); ++i) {
     MapDecEntry *entry = (MapDecEntry *)alist_get(map_declaration->entries, i);
-    num_ins += tape_ins_no_arg(target, DUP, entry->colon) +
-               semantic_analyzer_produce(analyzer, entry->rhs, target) +
-               tape_ins_no_arg(target, PUSH, entry->colon) +
-               semantic_analyzer_produce(analyzer, entry->lhs, target) +
-               tape_ins_no_arg(target, PUSH, entry->colon) +
-               tape_ins_int(target, TUPL, 2, entry->colon) +
-               tape_ins_text(target, CALL, ARRAYLIKE_SET_KEY, entry->colon);
+    num_ins += tape_ins_no_arg(target, DUP, entry->colon);
+    num_ins += semantic_analyzer_produce(analyzer, entry->rhs, target);
+    num_ins += tape_ins_no_arg(target, PUSH, entry->colon);
+    num_ins += semantic_analyzer_produce(analyzer, entry->lhs, target);
+    num_ins += tape_ins_no_arg(target, PUSH, entry->colon);
+    num_ins += tape_ins_int(target, TUPL, 2, entry->colon);
+    num_ins += tape_ins_text(target, CALL, ARRAYLIKE_SET_KEY, entry->colon);
   }
   num_ins += tape_ins_no_arg(target, RES, map_declaration->lbrce);
   return num_ins;
@@ -1317,7 +1322,7 @@ void populate_single_postfixes(SemanticAnalyzer *analyzer,
     postfix->type = Postfix_field;
     postfix->id = CHILD_SYNTAX_AT(stree, 1)->token;
   } else {
-    ERROR("Unknown field_expression1");
+    FATALF("Unknown field_expression1");
   }
 }
 
@@ -1359,7 +1364,7 @@ SingleAssignment populate_single(SemanticAnalyzer *analyzer,
   } else if (IS_SYNTAX(stree, rule_field_expression)) {
     populate_single_complex(analyzer, stree, &single);
   } else {
-    ERROR("Unknown single assignment.");
+    FATALF("Unknown single assignment.");
   }
   return single;
 }
@@ -1420,7 +1425,7 @@ Assignment populate_assignment(SemanticAnalyzer *analyzer,
     assignment.multi =
         populate_list(analyzer, stree, SYMBOL_LBRACE, SYMBOL_RBRACE);
   } else {
-    ERROR("Unknown assignment.");
+    FATALF("Unknown assignment.");
   }
   return assignment;
 }
@@ -1477,11 +1482,11 @@ int produce_assignment_multi(SemanticAnalyzer *analyzer, MultiAssignment *multi,
   num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
   for (i = 0; i < len; ++i) {
     Assignment *assign = (Assignment *)alist_get(multi->subargs, i);
-    num_ins += tape_ins_no_arg(tape, (i < len - i) ? PEEK : RES, eq_token) +
-               tape_ins_no_arg(tape, PUSH, eq_token) +
-               tape_ins_int(tape, RES, i, eq_token) +
-               tape_ins_no_arg(tape, AIDX, eq_token) +
-               produce_assignment(analyzer, assign, tape, eq_token);
+    num_ins += tape_ins_no_arg(tape, (i < len - i) ? PEEK : RES, eq_token);
+    num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
+    num_ins += tape_ins_int(tape, RES, i, eq_token);
+    num_ins += tape_ins_no_arg(tape, AIDX, eq_token);
+    num_ins += produce_assignment(analyzer, assign, tape, eq_token);
   }
   return num_ins;
 }
@@ -1500,8 +1505,8 @@ int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
     } else {
       ASSERT(single->type == SingleAssignment_complex,
              single->prefix_exp != NULL);
-      num_ins += tape_ins_no_arg(tape, PUSH, eq_token) +
-                 semantic_analyzer_produce(analyzer, single->prefix_exp, tape);
+      num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
+      num_ins += semantic_analyzer_produce(analyzer, single->prefix_exp, tape);
       int i, len = alist_len(single->suffixes);
       Postfix *next = (Postfix *)alist_get(single->suffixes, 0);
       for (i = 0; i < len - 1; ++i) {
@@ -1516,11 +1521,11 @@ int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
       if (postfix->type == Postfix_field) {
         num_ins += tape_ins(tape, FLD, postfix->id);
       } else if (postfix->type == Postfix_array_index) {
-        num_ins += tape_ins_no_arg(tape, PUSH, postfix->token) +
-                   semantic_analyzer_produce(analyzer, postfix->exp, tape) +
-                   tape_ins_no_arg(tape, ASET, postfix->token);
+        num_ins += tape_ins_no_arg(tape, PUSH, postfix->token);
+        num_ins += semantic_analyzer_produce(analyzer, postfix->exp, tape);
+        num_ins += tape_ins_no_arg(tape, ASET, postfix->token);
       } else {
-        ERROR("Unknown postfix.");
+        FATALF("Unknown postfix.");
       }
     }
   } else if (assign->type == Assignment_array ||
@@ -1528,14 +1533,15 @@ int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
     num_ins +=
         produce_assignment_multi(analyzer, &assign->multi, tape, eq_token);
   } else {
-    ERROR("Unknown multi.");
+    FATALF("Unknown multi.");
   }
   return num_ins;
 }
 
 PRODUCE_IMPL(assignment_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  return semantic_analyzer_produce(analyzer, assignment_expression->rhs,
-                                   target) +
-         produce_assignment(analyzer, &assignment_expression->assignment,
-                            target, assignment_expression->eq_token);
+  int num_ins =
+      semantic_analyzer_produce(analyzer, assignment_expression->rhs, target);
+  num_ins += produce_assignment(analyzer, &assignment_expression->assignment,
+                                target, assignment_expression->eq_token);
+  return num_ins;
 }

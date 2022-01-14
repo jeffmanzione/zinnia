@@ -29,21 +29,21 @@ void context_init(Context *ctx, Object *self, Object *member_obj,
 
 void context_finalize(Context *ctx) { ASSERT(NOT_NULL(ctx)); }
 
-inline const Instruction *context_ins(Context *ctx) {
+const Instruction *context_ins(Context *ctx) {
   ASSERT(NOT_NULL(ctx));
   return tape_get(ctx->tape, ctx->ins);
 }
 
-inline Heap *_context_heap(Context *ctx) {
+Heap *_context_heap(Context *ctx) {
   return ctx->parent_task->parent_process->heap;
 }
 
-inline Object *context_self(Context *ctx) {
+Object *context_self(Context *ctx) {
   ASSERT(NOT_NULL(ctx));
   return ctx->self.obj;
 }
 
-inline Module *context_module(Context *ctx) {
+Module *context_module(Context *ctx) {
   ASSERT(NOT_NULL(ctx));
   return ctx->module;
 }
@@ -149,6 +149,6 @@ void context_set(Context *ctx, const char id[], const Entity *e) {
   object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
 }
 
-inline void context_set_function(Context *ctx, const Function *func) {
+void context_set_function(Context *ctx, const Function *func) {
   ctx->func = func;
 }

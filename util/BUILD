@@ -36,8 +36,8 @@ cc_library(
     hdrs = ["socket.h"],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [
-            "-lws2_32",
-            "-lwsock32",
+            "-DEFAULTLIB:ws2_32.lib",
+            "-DEFAULTLIB:wsock32.lib",
         ],
         "//conditions:default": [],
     }),

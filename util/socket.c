@@ -14,7 +14,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #else
-#include <winsock2.h>
+#include <windows.h>
+// #include <winsock2.h>
 #endif
 
 #include "alloc/alloc.h"
@@ -36,14 +37,14 @@ struct __SocketHandle {
 };
 
 void sockets_init() {
-#if defined(OS_WINDOWS)
+#ifdef OS_WINDOWS
   WSADATA wsaData;
   WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
 }
 
 void sockets_cleanup() {
-#if defined(OS_WINDOWS)
+#ifdef OS_WINDOWS
   WSACleanup();
 #endif
 }
@@ -60,7 +61,7 @@ Socket *socket_create(int domain, int type, int protocol, unsigned long host,
 }
 
 bool socket_is_valid(const Socket *socket) {
-#if defined(OS_WINDOWS)
+#ifdef OS_WINDOWS
   return socket->sock != INVALID_SOCKET;
 #else
   return socket->sock >= 0;

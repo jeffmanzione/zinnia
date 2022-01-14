@@ -15,53 +15,13 @@
 #include "util/file/sfile.h"
 #include "vm/intern.h"
 
-REGISTRATION_FN(_semantic_analyzer_init_fn) {
-  REGISTER_EXPRESSION_WITH_PRODUCER(identifier);
-  REGISTER_EXPRESSION_WITH_PRODUCER(constant);
-  REGISTER_EXPRESSION_WITH_PRODUCER(string_literal);
-  REGISTER_EXPRESSION_WITH_PRODUCER(tuple_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(array_declaration);
-  REGISTER_EXPRESSION_WITH_PRODUCER(primary_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(primary_expression_no_constants);
-  REGISTER_EXPRESSION_WITH_PRODUCER(postfix_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(range_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(unary_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(multiplicative_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(additive_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(relational_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(equality_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(and_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(or_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(binary_and_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(binary_xor_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(binary_or_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(in_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(is_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(conditional_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(anon_function_definition);
-  REGISTER_EXPRESSION_WITH_PRODUCER(map_declaration);
-  REGISTER_EXPRESSION_WITH_PRODUCER(assignment_expression);
-  REGISTER_EXPRESSION_WITH_PRODUCER(compound_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(try_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(raise_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(selection_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(jump_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(break_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(exit_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(foreach_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(for_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(while_statement);
-  REGISTER_EXPRESSION_WITH_PRODUCER(file_level_statement_list);
-}
-
-DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
-
 int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
   strings_init();
 
-  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\lib\\builtin.jv");
+  FileInfo *fi =
+      file_info("C:\\Users\\jeffr\\git\\jeff-vm\\examples\\simple\\hello.jv");
 
   // while (true) {
   Q tokens;
@@ -88,7 +48,7 @@ int main(int argc, const char *args[]) {
     }
   } else {
     SemanticAnalyzer sa;
-    semantic_analyzer_init(&sa, _semantic_analyzer_init_fn);
+    semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
     ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
     Tape *tape = tape_create();

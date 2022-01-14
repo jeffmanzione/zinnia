@@ -35,7 +35,7 @@ int instruction_write(const Instruction *ins, FILE *file) {
   case INSTRUCTION_PRIMITIVE:
     return _instruction_write_primitive(ins, file);
   default:
-    ERROR("Unknown instruction type.");
+    FATALF("Unknown instruction type.");
     return -1;
   }
 }
@@ -47,7 +47,7 @@ int _instruction_write_primitive(const Instruction *ins, FILE *file) {
   case PRIMITIVE_FLOAT:
     return fprintf(file, OP_FMT FLT_FMT, op_to_str(ins->op), pfloat(&ins->val));
   default:
-    ERROR("Unkown primitive instruction.");
+    FATALF("Unkown primitive instruction.");
     return -1;
   }
 }

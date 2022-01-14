@@ -32,25 +32,27 @@ DELETE_IMPL(foreach_statement, SemanticAnalyzer *analyzer) {
 
 PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Tape *target) {
   int num_ins = 0;
+  num_ins += num_ins +=
+      tape_ins_no_arg(target, NBLK, foreach_statement->for_token);
   num_ins +=
-      tape_ins_no_arg(target, NBLK, foreach_statement->for_token) +
-      semantic_analyzer_produce(analyzer, foreach_statement->iterable, target) +
-      tape_ins_no_arg(target, PUSH, foreach_statement->in_token) +
-      tape_ins_text(target, CALL, ITER_FN_NAME, foreach_statement->in_token) +
-      tape_ins_no_arg(target, PUSH, foreach_statement->in_token);
+      semantic_analyzer_produce(analyzer, foreach_statement->iterable, target);
+  num_ins += tape_ins_no_arg(target, PUSH, foreach_statement->in_token);
+  num_ins +=
+      tape_ins_text(target, CALL, ITER_FN_NAME, foreach_statement->in_token);
+  num_ins += tape_ins_no_arg(target, PUSH, foreach_statement->in_token);
 
   Tape *tmp = tape_create();
-  int body_ins =
-      tape_ins_no_arg(tmp, DUP, foreach_statement->for_token) +
-      tape_ins_text(tmp, CALL, NEXT_FN_NAME, foreach_statement->in_token) +
-      produce_assignment(analyzer, &foreach_statement->assignment_lhs, tmp,
-                         foreach_statement->in_token) +
-      semantic_analyzer_produce(analyzer, foreach_statement->body, tmp);
+  int body_ins = tape_ins_no_arg(tmp, DUP, foreach_statement->for_token);
+  body_ins +=
+      tape_ins_text(tmp, CALL, NEXT_FN_NAME, foreach_statement->in_token);
+  body_ins += produce_assignment(analyzer, &foreach_statement->assignment_lhs,
+                                 tmp, foreach_statement->in_token);
+  body_ins += semantic_analyzer_produce(analyzer, foreach_statement->body, tmp);
 
-  int inc_lines =
-      tape_ins_no_arg(target, DUP, foreach_statement->in_token) +
-      tape_ins_text(target, CALL, HAS_NEXT_FN_NAME,
-                    foreach_statement->in_token) +
+  int inc_lines = tape_ins_no_arg(target, DUP, foreach_statement->in_token);
+  inc_lines += tape_ins_text(target, CALL, HAS_NEXT_FN_NAME,
+                             foreach_statement->in_token);
+  inc_lines +=
       tape_ins_int(target, IFN, body_ins + 1, foreach_statement->in_token);
 
   int i;
@@ -70,11 +72,11 @@ PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Tape *target) {
   }
 
   tape_append(target, tmp);
-  num_ins += body_ins + inc_lines +
-             tape_ins_int(target, JMP, -(inc_lines + body_ins + 1),
-                          foreach_statement->in_token) +
-             tape_ins_no_arg(target, RES, foreach_statement->in_token) +
-             tape_ins_no_arg(target, BBLK, foreach_statement->for_token);
+  num_ins += body_ins + inc_lines;
+  num_ins += tape_ins_int(target, JMP, -(inc_lines + body_ins + 1),
+                          foreach_statement->in_token);
+  num_ins += tape_ins_no_arg(target, RES, foreach_statement->in_token);
+  num_ins += tape_ins_no_arg(target, BBLK, foreach_statement->for_token);
   return num_ins;
 }
 
@@ -104,8 +106,8 @@ DELETE_IMPL(for_statement, SemanticAnalyzer *analyzer) {
 
 PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Tape *target) {
   int num_ins = 0;
-  num_ins += tape_ins_no_arg(target, NBLK, for_statement->for_token) +
-             semantic_analyzer_produce(analyzer, for_statement->init, target);
+  num_ins += tape_ins_no_arg(target, NBLK, for_statement->for_token);
+  num_ins += semantic_analyzer_produce(analyzer, for_statement->init, target);
   int condition_ins =
       semantic_analyzer_produce(analyzer, for_statement->condition, target);
   num_ins += condition_ins;
@@ -131,15 +133,15 @@ PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Tape *target) {
       pset_int(&ins->val, body_ins - i - 1);
     }
   }
-  num_ins += body_ins + inc_ins +
-             tape_ins_int(target, IFN, body_ins + inc_ins + 1,
+  num_ins += body_ins + inc_ins;
+  num_ins += tape_ins_int(target, IFN, body_ins + inc_ins + 1,
                           for_statement->for_token);
   tape_append(target, tmp_tape);
 
   num_ins +=
       tape_ins_int(target, JMP, -(body_ins + condition_ins + inc_ins + 1 + 1),
-                   for_statement->for_token) +
-      tape_ins_no_arg(target, BBLK, for_statement->for_token);
+                   for_statement->for_token);
+  num_ins += tape_ins_no_arg(target, BBLK, for_statement->for_token);
 
   return num_ins;
 }
@@ -162,8 +164,8 @@ DELETE_IMPL(while_statement, SemanticAnalyzer *analyzer) {
 
 PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Tape *target) {
   int num_ins = 0;
+  num_ins += tape_ins_no_arg(target, NBLK, while_statement->while_token);
   num_ins +=
-      tape_ins_no_arg(target, NBLK, while_statement->while_token) +
       semantic_analyzer_produce(analyzer, while_statement->condition, target);
 
   Tape *tmp_tape = tape_create();
@@ -186,8 +188,8 @@ PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Tape *target) {
                                            while_statement->while_token);
   tape_append(target, tmp_tape);
 
-  num_ins += tape_ins_int(target, JMP, -num_ins, while_statement->while_token) +
-             tape_ins_no_arg(target, BBLK, while_statement->while_token);
+  num_ins += tape_ins_int(target, JMP, -num_ins, while_statement->while_token);
+  num_ins += tape_ins_no_arg(target, BBLK, while_statement->while_token);
 
   return num_ins;
 }

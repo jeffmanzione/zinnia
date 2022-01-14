@@ -13,9 +13,9 @@
 #include "program/tape.h"
 #include "struct/alist.h"
 #include "struct/set.h"
+#include "util/sync/critical_section.h"
 #include "util/sync/mutex.h"
 #include "util/sync/thread.h"
-
 
 typedef struct _VM VM;
 typedef struct __Context Context;
@@ -82,7 +82,7 @@ struct __Process {
   Mutex task_create_lock;
   Mutex task_queue_lock;
 
-  Mutex task_waiting_lock;
+  CriticalSection task_waiting_cs;
   Condition *task_wait_cond;
 
   Mutex task_complete_lock;

@@ -58,10 +58,13 @@ ThreadPool *threadpool_create(size_t num_threads) {
 
 void threadpool_delete(ThreadPool *tp) {
   Q_finalize(&tp->work);
+  mutex_close(tp->work_mutex);
+  semaphore_close(tp->thread_sem);
   int i;
   for (i = 0; i < tp->num_threads; ++i) {
     thread_close(tp->threads[i]);
   }
+  DEALLOC(tp->threads);
   DEALLOC(tp);
 }
 

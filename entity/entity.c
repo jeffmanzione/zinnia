@@ -6,7 +6,7 @@
 
 Entity NONE_ENTITY = {.type = NONE};
 
-inline EntityType etype(const Entity *e) {
+EntityType etype(const Entity *e) {
   ASSERT(NOT_NULL(e));
   return e->type;
 }
@@ -16,35 +16,35 @@ const Object *object(const Entity *e) {
   return e->obj;
 }
 
-inline Object *object_m(Entity *e) {
+Object *object_m(Entity *e) {
   ASSERT(NOT_NULL(e));
   return e->obj;
 }
 
-inline Entity entity_char(const int8_t c) {
+Entity entity_char(const int8_t c) {
   Entity e = {.type = PRIMITIVE};
   pset_char(&e.pri, c);
   return e;
 }
 
-inline Entity entity_int(const int32_t i) {
+Entity entity_int(const int32_t i) {
   Entity e = {.type = PRIMITIVE};
   pset_int(&e.pri, i);
   return e;
 }
 
-inline Entity entity_float(const double d) {
+Entity entity_float(const double d) {
   Entity e = {.type = PRIMITIVE};
   pset_float(&e.pri, d);
   return e;
 }
 
-inline Entity entity_primitive_ptr(const Primitive *p) {
+Entity entity_primitive_ptr(const Primitive *p) {
   Entity e = {.type = PRIMITIVE, .pri = *p};
   return e;
 }
 
-inline Entity entity_primitive(Primitive p) {
+Entity entity_primitive(Primitive p) {
   Entity e = {.type = PRIMITIVE, .pri = p};
   return e;
 }
@@ -61,7 +61,7 @@ void _primitive_print(const Primitive *p, FILE *file) {
     fprintf(file, "%f", p->_float_val);
     break;
   default:
-    ERROR("Unknwn primitive type.");
+    FATALF("Unknwn primitive type.");
   }
 }
 
@@ -87,21 +87,21 @@ void entity_print(const Entity *e, FILE *file) {
     _object_print(e->obj, file);
     break;
   default:
-    ERROR("Unknown entity type: %d", e->type);
+    FATALF("Unknown entity type: %d", e->type);
   }
 }
 
-inline Entity entity_none() {
+Entity entity_none() {
   Entity e = {.type = NONE};
   return e;
 }
 
-inline Entity *object_get(Object *obj, const char field[]) {
+Entity *object_get(Object *obj, const char field[]) {
   ASSERT(NOT_NULL(obj), NOT_NULL(field));
   return (Entity *)keyedlist_lookup(&obj->_members, field);
 }
 
-inline Entity entity_object(Object *obj) {
+Entity entity_object(Object *obj) {
   Entity e = {.type = OBJECT, .obj = obj};
   return e;
 }

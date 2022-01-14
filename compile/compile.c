@@ -52,7 +52,7 @@ Tape *_read_file(const char fn[], bool opt) {
         printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
       }
     }
-    ERROR("Could not parse.");
+    FATALF("Could not parse.");
     return NULL;
   } else {
     SemanticAnalyzer sa;
@@ -108,8 +108,6 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
 }
 
 Map *compile(const Set *source_files, const ArgStore *store) {
-  parsers_init();
-  semantics_init();
   optimize_init();
 
   const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
@@ -129,8 +127,6 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   }
 
   optimize_finalize();
-  semantics_finalize();
-  parsers_finalize();
   return src_map;
 }
 

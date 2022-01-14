@@ -22,7 +22,7 @@ void add_reflection_to_process(Process *process) {
   heap_make_root(process->heap, process->_reflection);
 }
 
-inline ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
+ModuleManager *vm_module_manager(VM *vm) { return &vm->mm; }
 
 Process *vm_create_process(VM *vm) {
   Process *process;

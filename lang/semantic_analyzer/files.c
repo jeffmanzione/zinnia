@@ -32,36 +32,10 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
       ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token};
       alist_append(def->parent_classes, &name);
     } else {
-      ERROR("Multiple inheritance no longer supported.");
-      //   ASSERT(
-      //       IS_SYNTAX(class_inheritance->second->second,
-      //       rule_parent_class_list));
-      //   ClassName name = {.token =
-      //                         class_inheritance->second->second->first->token};
-      //   alist_append(def->parent_classes, &name);
-      //   const SyntaxTree *parent_class =
-      //       class_inheritance->second->second->second;
-      //   while (true) {
-      //     if (IS_SYNTAX(parent_class, rule_parent_class_list1)) {
-      //       if (IS_TOKEN(parent_class->first, SYMBOL_COMMA)) {
-      //         name.token = parent_class->second->token;
-      //         alist_append(def->parent_classes, &name);
-      //         break;
-      //       } else {
-      //         name.token = parent_class->first->second->token;
-      //         alist_append(def->parent_classes, &name);
-      //         parent_class = parent_class->second;
-      //       }
-      //     } else {
-      //       ASSERT(IS_SYNTAX(parent_class, rule_identifier));
-      //       name.token = parent_class->token;
-      //       alist_append(def->parent_classes, &name);
-      //       break;
-      //     }
-      //   }
+      FATALF("Multiple inheritance no longer supported.");
     }
   } else {
-    ERROR("Unknown class name composition.");
+    FATALF("Unknown class name composition.");
   }
 }
 
@@ -146,7 +120,7 @@ void set_method_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
     func->fn_name = CHILD_SYNTAX_AT(fn_name, 0)->token;
     func->special_method = SpecialMethod__ARRAY_SET;
   } else {
-    ERROR("Unknown method name type.");
+    FATALF("Unknown method name type.");
   }
 }
 
@@ -230,7 +204,7 @@ void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
       }
     }
   } else {
-    ERROR("Unknown class_statement.");
+    FATALF("Unknown class_statement.");
   }
 }
 
@@ -315,9 +289,9 @@ int produce_constructor(SemanticAnalyzer *analyzer, ClassDef *class,
     int i;
     for (i = 0; i < num_fields; ++i) {
       FieldDef *field = (FieldDef *)alist_get(class->fields, i);
-      num_ins += tape_ins_no_arg(tape, PNIL, field->name) +
-                 tape_ins_text(tape, RES, SELF, field->name) +
-                 tape_ins(tape, FLD, field->name);
+      num_ins += tape_ins_no_arg(tape, PNIL, field->name);
+      num_ins += tape_ins_text(tape, RES, SELF, field->name);
+      num_ins += tape_ins(tape, FLD, field->name);
     }
     num_ins += tape_ins_no_arg(tape, RES, class->def.name.token);
   }
@@ -345,7 +319,7 @@ int produce_constructor(SemanticAnalyzer *analyzer, ClassDef *class,
 int produce_class(SemanticAnalyzer *analyzer, ClassDef *class, Tape *tape) {
   int num_ins = 0;
   if (alist_len(class->def.parent_classes) > 1) {
-    ERROR("Cannot have more than one super class.");
+    FATALF("Cannot have more than one super class.");
   }
   num_ins += tape_class(tape, class->def.name.token);
   // Fields
@@ -374,7 +348,7 @@ Annotation populate_annotation(SemanticAnalyzer *analyzer,
                       .is_called = false,
                       .has_args = false};
   if (!IS_SYNTAX(stree, rule_annotation)) {
-    ERROR("Must be annotation.");
+    FATALF("Must be annotation.");
   }
   if (CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
     annot.class_name = CHILD_SYNTAX_AT(stree, 1)->token;
@@ -471,16 +445,16 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
                            ModuleDef *module) {
   if (IS_SYNTAX(stree, rule_module_statement)) {
     if (module->name.is_named) {
-      ERROR("Module named twice: first '%s' then '%s'.",
-            module->name.module_name->text,
-            CHILD_SYNTAX_AT(stree, 1)->token->text);
+      FATALF("Module named twice: first '%s' then '%s'.",
+             module->name.module_name->text,
+             CHILD_SYNTAX_AT(stree, 1)->token->text);
     }
     module->name.is_named = true;
     module->name.module_token = CHILD_SYNTAX_AT(stree, 0)->token;
     module->name.module_name = CHILD_SYNTAX_AT(stree, 1)->token;
   } else if (IS_SYNTAX(stree, rule_import_statement)) {
     if (!CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
-      ERROR("import AS not yet supported.");
+      FATALF("import AS not yet supported.");
     }
     Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
                      .module_name = CHILD_SYNTAX_AT(stree, 1)->token};
@@ -568,8 +542,8 @@ int produce_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
   const Annotation *annot = &class->annot;
 
   if (NULL != annot->prefix) {
-    num_ins += tape_ins(tape, RES, annot->prefix) +
-               tape_ins(tape, GTSH, annot->class_name);
+    num_ins += tape_ins(tape, RES, annot->prefix);
+    num_ins += tape_ins(tape, GTSH, annot->class_name);
   } else {
     num_ins += tape_ins(tape, PUSH, annot->class_name);
   }
@@ -580,9 +554,9 @@ int produce_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
   } else {
     num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
   }
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name) +
-             tape_ins(tape, RES, class->def.name.token) +
-             tape_ins_text(tape, CALL, intern("annotate"), annot->class_name);
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += tape_ins(tape, RES, class->def.name.token);
+  num_ins += tape_ins_text(tape, CALL, intern("annotate"), annot->class_name);
   return num_ins;
 }
 
@@ -613,9 +587,9 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
       continue;
     }
     ClassName *super = (ClassName *)alist_get(class->def.parent_classes, 0);
-    num_ins += tape_ins(tape, PUSH, class->def.name.token) +
-               tape_ins(tape, RES, super->token) +
-               tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
+    num_ins += tape_ins(tape, PUSH, class->def.name.token);
+    num_ins += tape_ins(tape, RES, super->token);
+    num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
   }
   // Statements
   for (i = 0; i < alist_len(module->statements); ++i) {
