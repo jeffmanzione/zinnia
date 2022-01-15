@@ -1,6 +1,5 @@
-
-; Run command: jlr examples/simple/arguments.jv -- --alpha --nobeta --gamma=yoyoyo
 module arguments
+; Run command: jlr examples/simple/arguments.jv -- --alpha --nobeta --gamma=yoyoyo
 
 import io
 

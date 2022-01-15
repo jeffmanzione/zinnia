@@ -96,7 +96,7 @@ struct __Process {
   Object *_reflection;
   ThreadHandle thread; // Null if main thread.
 
-  Work *waiting_background_work;
+  Q waiting_background_work;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

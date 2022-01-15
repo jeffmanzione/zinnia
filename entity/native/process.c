@@ -86,7 +86,7 @@ Entity __sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
 #if defined(OS_WINDOWS)
   // Accepts millis as an unsigned long instead of double seconds.
-  Sleep((uint64_t)(sleep_duration_sec * 1000));
+  Sleep(sleep_duration_sec * 1000);
 #else
   sleep(sleep_duration_sec);
 #endif

@@ -1188,9 +1188,12 @@ int produce_anon_function(SemanticAnalyzer *analyzer, FunctionDef *func,
   //   func_ins += tape_ins_no_arg(tmp, CNST, func->const_token);
   // }
   func_ins += tape_ins_no_arg(tmp, RET, func->def_token);
-  num_ins += tape_ins_int(tape, JMP, func_ins, func->def_token) +
-             (func->is_async ? tape_anon_label_async(tape, func->def_token)
-                             : tape_anon_label(tape, func->def_token));
+  num_ins += tape_ins_int(tape, JMP, func_ins, func->def_token);
+  if (func->is_async) {
+    num_ins += tape_anon_label_async(tape, func->def_token);
+  } else {
+    num_ins += tape_anon_label(tape, func->def_token);
+  }
   tape_append(tape, tmp);
   num_ins += func_ins + tape_ins_anon(tape, RES, func->def_token);
 

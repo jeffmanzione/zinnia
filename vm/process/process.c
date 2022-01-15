@@ -28,7 +28,7 @@ void process_init(Process *process) {
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
   process->_reflection = NULL;
-  process->waiting_background_work = NULL;
+  Q_init(&process->waiting_background_work);
 }
 
 void process_finalize(Process *process) {
@@ -57,6 +57,7 @@ void process_finalize(Process *process) {
   condition_delete(process->task_wait_cond);
   critical_section_delete(process->task_waiting_cs);
   mutex_close(process->task_complete_lock);
+  Q_finalize(&process->waiting_background_work);
 }
 
 void _task_add_reflection(Process *process, Task *task) {

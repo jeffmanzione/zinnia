@@ -287,7 +287,12 @@ void tape_append(Tape *head, Tape *tail) {
   for (; kl_has(&func_iter); kl_inc(&func_iter)) {
     FunctionRef *old_func = (FunctionRef *)kl_value(&func_iter);
     FunctionRef *cpy;
-    keyedlist_insert(&head->func_refs, old_func->name, (void **)&cpy);
+    if (NULL != head->current_class) {
+      keyedlist_insert(&head->current_class->func_refs, old_func->name,
+                       (void **)&cpy);
+    } else {
+      keyedlist_insert(&head->func_refs, old_func->name, (void **)&cpy);
+    }
     *cpy = *old_func;
     cpy->index += previous_head_length;
   }

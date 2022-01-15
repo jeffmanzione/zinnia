@@ -603,10 +603,11 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
       args->context = context;
       args->func = func;
       args->self = self;
-      task->parent_process->waiting_background_work = threadpool_create_work(
-          task->parent_process->vm->background_pool,
-          (VoidFnPtr)_execute_in_background,
-          (VoidFnPtr)_execute_in_background_callback, (VoidPtr)args);
+      *Q_add_last(&task->parent_process->waiting_background_work) =
+          threadpool_create_work(task->parent_process->vm->background_pool,
+                                 (VoidFnPtr)_execute_in_background,
+                                 (VoidFnPtr)_execute_in_background_callback,
+                                 (VoidPtr)args);
       return false;
     }
     *task_mutable_resval(task) =
@@ -1409,10 +1410,9 @@ top_of_fn:
     }
   }
 
-  if (NULL != process->waiting_background_work) {
-    threadpool_execute_work(vm->background_pool,
-                            process->waiting_background_work);
-    process->waiting_background_work = NULL;
+  while (!Q_is_empty(&process->waiting_background_work)) {
+    Work *w = (Work *)Q_dequeue(&process->waiting_background_work);
+    threadpool_execute_work(vm->background_pool, w);
   }
 
   if (_process_is_done(process)) {
