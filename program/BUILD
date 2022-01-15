@@ -31,6 +31,7 @@ cc_library(
     deps = [
         ":instruction",
         "//lang/lexer:lang_lexer",
+        "//util:string_util",
         "@c_data_structures//struct:alist",
         "@c_data_structures//struct:keyed_list",
         "@c_data_structures//struct:q",

@@ -14,6 +14,7 @@
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/q.h"
+#include "util/string_util.h"
 
 #define DEFAULT_TAPE_SZ 64
 
@@ -457,6 +458,7 @@ Primitive token_to_primitive(const Token *tok) {
 
 int tape_ins(Tape *tape, Op op, const Token *token) {
   ASSERT(NOT_NULL(tape), NOT_NULL(token));
+  char *unescaped_str;
   Instruction *ins = tape_add(tape);
   SourceMapping *sm = tape_add_source(tape, ins);
 
@@ -473,7 +475,9 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
     break;
   case TOKEN_STRING:
     ins->type = INSTRUCTION_STRING;
-    ins->str = token->text;
+    unescaped_str = unescape(token->text);
+    ins->str = intern(unescaped_str);
+    DEALLOC(unescaped_str);
     break;
   case TOKEN_WORD:
   default:

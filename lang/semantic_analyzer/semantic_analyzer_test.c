@@ -20,8 +20,7 @@ int main(int argc, const char *args[]) {
   intern_init();
   strings_init();
 
-  FileInfo *fi =
-      file_info("C:\\Users\\jeffr\\git\\jeff-vm\\examples\\simple\\hello.jv");
+  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\lib\\io.jv");
 
   // while (true) {
   Q tokens;

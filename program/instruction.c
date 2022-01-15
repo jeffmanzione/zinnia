@@ -24,9 +24,6 @@ int instruction_write(const Instruction *ins, FILE *file) {
   case INSTRUCTION_ID:
     return fprintf(file, OP_FMT ID_FMT, op_to_str(ins->op), ins->id);
   case INSTRUCTION_STRING:
-    // tmp = escape(ins->str + 1);
-    // num = fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op),
-    //               (int)(strlen(tmp) - 2), tmp);
     tmp = escape(ins->str);
     num = fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op), (int)(strlen(tmp)),
                   tmp);

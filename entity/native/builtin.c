@@ -56,7 +56,7 @@ typedef struct {
 } _Range;
 
 bool _str_to_int64(String *str, int64_t *result) {
-  char *cstr = strndup(str->table, String_size(str));
+  char *cstr = ALLOC_STRNDUP(str->table, String_size(str));
   char *endptr;
   *result = strtol(cstr, &endptr, INFER_FROM_STRING);
   // Error scenario.
@@ -104,7 +104,7 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 bool _str_to_float(String *str, double *result) {
-  char *cstr = strndup(str->table, String_size(str));
+  char *cstr = ALLOC_STRNDUP(str->table, String_size(str));
   char *endptr;
   *result = strtod(cstr, &endptr);
   // Error scenario.
@@ -152,7 +152,7 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 bool _str_to_bool(String *str, bool *result) {
-  char *cstr = strndup(str->table, String_size(str));
+  char *cstr = ALLOC_STRNDUP(str->table, String_size(str));
   if (0 == strcmp("True", cstr) || 0 == strcmp("true", cstr) ||
       0 == strcmp("T", cstr) || 0 == strcmp("t", cstr)) {
     *result = true;
@@ -874,7 +874,6 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
-  DEBUGF("HERERERERERE");
   if (!IS_TUPLE(args)) {
     return raise_error(task, ctx, "$set() can only be called with a Tuple.");
   }

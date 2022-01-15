@@ -28,6 +28,7 @@ void process_init(Process *process) {
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
   process->_reflection = NULL;
+  process->waiting_background_work = NULL;
 }
 
 void process_finalize(Process *process) {

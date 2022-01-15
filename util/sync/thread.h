@@ -14,7 +14,7 @@ typedef unsigned int ThreadId;
 #ifdef OS_WINDOWS
 #include <stdint.h>
 
-typedef void *ThreadHandle;
+typedef uintptr_t ThreadHandle;
 typedef unsigned (*VoidFn)(void *);
 #else
 #include <pthread.h>

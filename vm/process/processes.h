@@ -16,6 +16,7 @@
 #include "util/sync/critical_section.h"
 #include "util/sync/mutex.h"
 #include "util/sync/thread.h"
+#include "util/sync/threadpool.h"
 
 typedef struct _VM VM;
 typedef struct __Context Context;
@@ -54,7 +55,7 @@ typedef enum {
 } WaitReason;
 
 struct __Task {
-  TaskState state;
+  volatile TaskState state;
   WaitReason wait_reason;
 
   Process *parent_process;
@@ -94,6 +95,8 @@ struct __Process {
 
   Object *_reflection;
   ThreadHandle thread; // Null if main thread.
+
+  Work *waiting_background_work;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

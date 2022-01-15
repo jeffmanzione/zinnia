@@ -46,6 +46,7 @@ cc_library(
         "//util/sync:critical_section",
         "//util/sync:mutex",
         "//util/sync:thread",
+        "//util/sync:threadpool",
         "@c_data_structures//struct:alist",
         "@memory_wrapper//struct:set",
     ],

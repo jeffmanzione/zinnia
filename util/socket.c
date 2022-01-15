@@ -144,7 +144,7 @@ void sockethandle_delete(SocketHandle *sh) {
 }
 
 unsigned long socket_inet_address(const char *host, size_t host_len) {
-  char *host_str = strndup(host, host_len);
+  char *host_str = ALLOC_STRNDUP(host, host_len);
   unsigned long addr = inet_addr(host_str);
   free(host_str);
   return addr;

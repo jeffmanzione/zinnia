@@ -24,7 +24,6 @@
 #include "vm/process/processes.h"
 #include "vm/vm.h"
 
-
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
   if (!IS_TUPLE(args)) {
@@ -57,7 +56,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   }
   String *class_text = (String *)arg1->obj->_internal_obj;
 
-  char *c_str_text = strndup(class_text->table, String_size(class_text));
+  char *c_str_text = ALLOC_STRNDUP(class_text->table, String_size(class_text));
   SFILE *file = sfile_open(c_str_text);
 
   Tape *tape = (Tape *)m->_tape; // bless

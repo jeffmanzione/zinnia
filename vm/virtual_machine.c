@@ -469,7 +469,6 @@ void _execute_PUSH(VM *vm, Task *task, Context *context,
   default:
     FATALF("Invalid arg type=%d for PUSH.", ins->type);
   }
-  // DEBUGF("TEST2");
 }
 
 void _execute_PNIL(VM *vm, Task *task, Context *context,
@@ -604,10 +603,10 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
       args->context = context;
       args->func = func;
       args->self = self;
-      threadpool_execute(task->parent_process->vm->background_pool,
-                         (VoidFnPtr)_execute_in_background,
-                         (VoidFnPtr)_execute_in_background_callback,
-                         (VoidPtr)args);
+      task->parent_process->waiting_background_work = threadpool_create_work(
+          task->parent_process->vm->background_pool,
+          (VoidFnPtr)_execute_in_background,
+          (VoidFnPtr)_execute_in_background_callback, (VoidPtr)args);
       return false;
     }
     *task_mutable_resval(task) =
@@ -1347,10 +1346,10 @@ end_of_loop:
 
 void _mark_task_complete(Process *process, Task *task) {
   process_mark_task_complete(process, task);
-  // Only requeue parent task if it is waiting.
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
     Task *dependent_task = (Task *)value(&dependent_tasks);
+    // Only requeue parent task if it is waiting.
     if (TASK_WAITING != dependent_task->state) {
       continue;
     }
@@ -1387,7 +1386,7 @@ top_of_fn:
     entity_print(task_get_resval(task), stdout);
     fprintf(stdout, "\n");
 #endif
-    DEBUGF("TaskState=%s", task_state_str(task_state));
+    DEBUGF("TaskState=%s %p", task_state_str(task_state), task);
     switch (task_state) {
     case TASK_WAITING:
       process_insert_waiting_task(process, task);
@@ -1408,6 +1407,12 @@ top_of_fn:
     default:
       FATALF("Some unknown TaskState.");
     }
+  }
+
+  if (NULL != process->waiting_background_work) {
+    threadpool_execute_work(vm->background_pool,
+                            process->waiting_background_work);
+    process->waiting_background_work = NULL;
   }
 
   if (_process_is_done(process)) {

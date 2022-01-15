@@ -216,6 +216,7 @@ Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
       }
     }
     FATALF("Could not parse.");
+    return NULL;
   } else {
     SemanticAnalyzer sa;
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
