@@ -815,10 +815,9 @@ void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins) {
 
 void _execute_EXIT(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type) {
-    FATALF("Invalid resval type.");
+  if (INSTRUCTION_PRIMITIVE == ins->type) {
+    *task_mutable_resval(task) = entity_primitive(ins->val);
   }
-  *task_mutable_resval(task) = entity_primitive(ins->val);
   task->state = TASK_COMPLETE;
   context->ins++;
 }
@@ -1408,15 +1407,14 @@ top_of_fn:
     default:
       FATALF("Some unknown TaskState.");
     }
-  }
-
-  while (!Q_is_empty(&process->waiting_background_work)) {
-    Work *w = (Work *)Q_dequeue(&process->waiting_background_work);
-    threadpool_execute_work(vm->background_pool, w);
+    while (!Q_is_empty(&process->waiting_background_work)) {
+      Work *w = (Work *)Q_dequeue(&process->waiting_background_work);
+      threadpool_execute_work(vm->background_pool, w);
+    }
   }
 
   if (_process_is_done(process)) {
-    DEBUGF("PROCESS IS DONE");
+    DEBUGF("Process is complete.");
     return;
   }
 

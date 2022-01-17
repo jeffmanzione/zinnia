@@ -217,14 +217,32 @@ PRODUCE_IMPL(break_statement, SemanticAnalyzer *analyzer, Tape *target) {
 
 POPULATE_IMPL(exit_statement, const SyntaxTree *stree,
               SemanticAnalyzer *analyzer) {
-  ASSERT(IS_TOKEN(stree, KEYWORD_EXIT));
-  exit_statement->token = stree->token;
+  if (IS_TOKEN(stree, KEYWORD_EXIT)) {
+    exit_statement->token = stree->token;
+    exit_statement->value = NULL;
+  } else {
+    ASSERT(IS_SYNTAX(stree, rule_exit_statement));
+    exit_statement->token = CHILD_SYNTAX_AT(stree, 0)->token;
+    exit_statement->value =
+        semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
+  }
 }
 
 DELETE_IMPL(exit_statement, SemanticAnalyzer *analyzer) {
   // Nop.
+  if (NULL != exit_statement->value) {
+    semantic_analyzer_delete(analyzer, exit_statement->value);
+  }
 }
 
 PRODUCE_IMPL(exit_statement, SemanticAnalyzer *analyzer, Tape *target) {
-  return tape_ins_no_arg(target, EXIT, exit_statement->token);
+  int num_ins = 0;
+  if (NULL == exit_statement->value) {
+    num_ins += tape_ins_int(target, RES, 0, exit_statement->token);
+  } else {
+    num_ins +=
+        semantic_analyzer_produce(analyzer, exit_statement->value, target);
+  }
+  num_ins += tape_ins_no_arg(target, EXIT, exit_statement->token);
+  return num_ins;
 }

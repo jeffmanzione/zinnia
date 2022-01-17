@@ -20,7 +20,8 @@ int main(int argc, const char *args[]) {
   intern_init();
   strings_init();
 
-  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\lib\\async.jv");
+  FileInfo *fi = file_info(
+      "C:\\Users\\jeffr\\git\\jeff-vm\\examples\\sockets\\http_hello.jv");
 
   // while (true) {
   Q tokens;

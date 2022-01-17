@@ -95,6 +95,7 @@ class HttpRequest {
         }
         ret.extend(AMPER.join(param_arr))
       }
+      None  ; TODO: Why is this necessary?
       ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
           .extend(version).extend('\r\n')
       if _headers {

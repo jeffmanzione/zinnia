@@ -283,7 +283,10 @@ DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Tape) {
   const Token *token;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) { const Token *token; };
+DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) {
+  const Token *token;
+  ExpressionTree *value;
+};
 
 DEFINE_EXPRESSION_WITH_PRODUCER(foreach_statement, Tape) {
   Token *for_token, *in_token;

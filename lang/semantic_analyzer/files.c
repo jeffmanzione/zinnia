@@ -548,8 +548,8 @@ int produce_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
     num_ins += tape_ins(tape, PUSH, annot->class_name);
   }
   if (annot->has_args) {
-    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape) +
-               tape_ins_no_arg(tape, CALL, annot->class_name);
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
+    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
 
   } else {
     num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);

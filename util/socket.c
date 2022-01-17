@@ -15,10 +15,10 @@
 #include <unistd.h>
 #else
 #include <windows.h>
-// #include <winsock2.h>
 #endif
 
 #include "alloc/alloc.h"
+#include "debug/debug.h"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET 0
@@ -38,8 +38,8 @@ struct __SocketHandle {
 
 void sockets_init() {
 #ifdef OS_WINDOWS
-  WSADATA wsaData;
-  WSAStartup(MAKEWORD(2, 2), &wsaData);
+  WSADATA wsa_data = {0};
+  WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 }
 
@@ -51,6 +51,7 @@ void sockets_cleanup() {
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
+  DEBUGF("HERE5");
   Socket *sock = ALLOC2(Socket);
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
@@ -146,6 +147,6 @@ void sockethandle_delete(SocketHandle *sh) {
 unsigned long socket_inet_address(const char *host, size_t host_len) {
   char *host_str = ALLOC_STRNDUP(host, host_len);
   unsigned long addr = inet_addr(host_str);
-  free(host_str);
+  DEALLOC(host_str);
   return addr;
 }

@@ -356,7 +356,14 @@ selection_statement ->
     )
   );
 
-exit_statement -> token:KEYWORD_EXIT;
+exit_statement ->
+  OR(
+    AND(
+      token:KEYWORD_EXIT,
+      rule:assignment_expression
+    ),
+    token:KEYWORD_EXIT
+  );
 
 raise_statement -> AND(token:KEYWORD_RAISE, rule:assignment_expression);
 

@@ -379,8 +379,8 @@ PRODUCE_IMPL(range_expression, SemanticAnalyzer *analyzer, Tape *target) {
       tape_ins_text(target, PUSH, intern("range"), range_expression->token);
   if (NULL != range_expression->inc) {
     num_ins +=
-        semantic_analyzer_produce(analyzer, range_expression->inc, target) +
-        tape_ins_no_arg(target, PUSH, range_expression->token);
+        semantic_analyzer_produce(analyzer, range_expression->inc, target);
+    num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
   }
   num_ins += semantic_analyzer_produce(analyzer, range_expression->end, target);
   num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
@@ -1056,8 +1056,8 @@ int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
 
   Tape *defaults = tape_create();
   int defaults_ins = 0;
-  defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name) +
-                  produce_argument(first, defaults);
+  defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+  defaults_ins += produce_argument(first, defaults);
   for (i = 1; i < num_args; ++i) {
     Argument *arg = (Argument *)alist_get(args->args, i);
     if (arg->has_default) {

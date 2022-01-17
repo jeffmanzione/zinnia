@@ -1,7 +1,5 @@
 module async
 
-import io
-
 ; Represents the state of an asynchronous piece of work.
 class Future {
   ; Returns a future to the value of the result of this future with [fn]
@@ -22,15 +20,11 @@ class Future {
 ; ```
 ;
 class Completer {
-  field completed, _value, _future
+  field completed, _value
 
   new() {
     completed = False
     _value = None
-    _future = () async {
-      while ~ (() -> completed)() {}
-      return _value
-    }()
   }
 
   ; Completes the future with the value [v].
@@ -41,6 +35,12 @@ class Completer {
 
   ; Returns a future to the completed value.
   method as_future() {
-    return _future
+    if completed {
+      return async.value(_value)
+    }
+    return () async {
+      while ~(() -> completed)() {}
+      return _value
+    }()
   }
 }
