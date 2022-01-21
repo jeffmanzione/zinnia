@@ -13,11 +13,16 @@
 #include "alloc/arena/intern.h"
 #include "util/string.h"
 
-#ifdef _WIN32
-#define F_OK 0
+#include "util/platform.h"
+
+#ifdef OS_WINDOWS
 #include <io.h>
+#include <windows.h>
+
+#define F_OK 0
 #define ssize_t int
 #else
+#include <dirent.h>
 #include <unistd.h>
 #endif
 
@@ -55,4 +60,65 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   }
   DEALLOC(fn);
   return NULL;
+}
+
+struct __DirIter {
+#ifdef OS_WINDOWS
+  const char *dir_name;
+  WIN32_FIND_DATA ffd;
+  HANDLE h_find;
+#else
+  DIR *dir;
+#endif
+};
+
+DirIter *directory_iter(const char dir_name[]) {
+  DirIter *d = ALLOC2(DirIter);
+#ifdef OS_WINDOWS
+  d->dir_name = dir_name;
+  d->h_find = NULL;
+#else
+  d->dir = opendir(dir_name);
+#endif
+  return d;
+}
+
+void diriter_close(DirIter *d) {
+#ifdef OS_WINDOWS
+  if (NULL != d->h_find && INVALID_HANDLE_VALUE != d->h_find) {
+    FindClose(d->h_find);
+  }
+#else
+  if (NULL != d->dir) {
+    closedir(d->dir);
+  }
+#endif
+  DEALLOC(d);
+}
+
+const char *diriter_next_file(DirIter *d) {
+#ifdef OS_WINDOWS
+  if (INVALID_HANDLE_VALUE == d->h_find) {
+    return NULL;
+  }
+  // First call.
+  if (NULL == d->h_find) {
+    d->h_find = FindFirstFile(d->dir_name, &d->ffd);
+    if (INVALID_HANDLE_VALUE == d->h_find) {
+      // TODO: Should this complain?
+      return NULL;
+    }
+    return d->ffd.cFileName;
+  }
+  if (FindNextFile(d->h_find, &d->ffd)) {
+    return d->ffd.cFileName;
+  }
+  return NULL;
+#else
+  struct dirnet *dnet = readdir(d->dir);
+  if (NULL == dnet) {
+    return NULL;
+  }
+  return dnet->d_name;
+#endif
 }

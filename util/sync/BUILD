@@ -14,7 +14,10 @@ cc_library(
     name = "critical_section",
     srcs = ["critical_section.c"],
     hdrs = ["critical_section.h"],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-lpthread"],
+    }),
     deps = [
         ":constants",
         ":mutex",
@@ -27,7 +30,10 @@ cc_library(
     name = "mutex",
     srcs = ["mutex.c"],
     hdrs = ["mutex.h"],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-lpthread"],
+    }),
     deps = [
         ":constants",
         "//util:platform",
@@ -39,7 +45,10 @@ cc_library(
     name = "semaphore",
     srcs = ["semaphore.c"],
     hdrs = ["semaphore.h"],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-lpthread"],
+    }),
     deps = [
         ":constants",
         "//util:platform",
@@ -51,7 +60,10 @@ cc_library(
     name = "thread",
     srcs = ["thread.c"],
     hdrs = ["thread.h"],
-    linkopts = ["-lpthread"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-lpthread"],
+    }),
     deps = [
         ":constants",
         "//util:platform",

@@ -216,10 +216,13 @@ cc_library(
     name = "dynamic",
     srcs = ["dynamic.c"],
     hdrs = ["dynamic.h"],
-    linkopts = [
-        "-ldl",
-        "-rdynamic",
-    ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": [
+            "-ldl",
+            "-rdynamic",
+        ],
+    }),
     deps = [
         "//entity",
         "//entity:object",
