@@ -248,6 +248,9 @@ typedef struct {
 
 Assignment populate_assignment(SemanticAnalyzer *analyzer,
                                const SyntaxTree *stree);
+void delete_assignment(SemanticAnalyzer *analyzer, Assignment *assignment);
+int produce_assignment(SemanticAnalyzer *analyzer, Assignment *assign,
+                       Tape *tape, const Token *eq_token);
 
 DEFINE_EXPRESSION_WITH_PRODUCER(assignment_expression, Tape) {
   Token *eq_token;
@@ -272,6 +275,11 @@ DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Tape) {
 };
 
 DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Tape) { IfElse if_else; };
+
+void populate_if_else(SemanticAnalyzer *analyzer, IfElse *if_else,
+                      const SyntaxTree *stree);
+void delete_if_else(SemanticAnalyzer *analyzer, IfElse *if_else);
+int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else, Tape *tape);
 
 DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Tape) {
   const Token *return_token;

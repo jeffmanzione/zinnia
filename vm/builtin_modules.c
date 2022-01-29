@@ -25,7 +25,6 @@
 #include "util/platform.h"
 #include "util/string.h"
 
-
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(
       mm, find_file_by_name(lib_location, "builtin"), builtin_add_native);
@@ -71,7 +70,10 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
         ends_with(file_name, ".jb")) {
       mm_register_module(mm, fn);
     }
+    DEALLOC(fn);
   }
   diriter_close(di);
+#ifdef OS_WINDOWS
   DEALLOC(lib_buf);
+#endif
 }

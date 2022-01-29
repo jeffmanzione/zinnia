@@ -67,7 +67,7 @@ void condition_wait(Condition *cond) {
 #ifdef OS_WINDOWS
   SleepConditionVariableCS(&cond->cv, cond->cs, INFINITE);
 #else
-  pthread_cond_wait(&cond->cond, cond->mutex);
+  pthread_cond_wait(&cond->cond, cond->cs);
 #endif
 }
 

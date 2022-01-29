@@ -1,5 +1,7 @@
 #include "lang/semantic_analyzer/definitions.h"
 
+#include <limits.h>
+
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
 #include "lang/lexer/lang_lexer.h"

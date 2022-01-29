@@ -45,16 +45,18 @@ void modulemanager_init(ModuleManager *mm, Heap *heap) {
 
 void modulemanager_finalize(ModuleManager *mm) {
   ASSERT(NOT_NULL(mm));
+
   KL_iter iter = keyedlist_iter(&mm->_modules);
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
+    DEBUGF("%s", module_info_file_name(module_info));
     if (!module_info->is_loaded) {
       continue;
     }
-    module_finalize(&module_info->module);
     if (NULL != module_info->fi) {
       file_info_delete(module_info->fi);
     }
+    module_finalize(&module_info->module);
   }
   keyedlist_finalize(&mm->_modules);
   set_finalize(&mm->_files_processed);
@@ -296,7 +298,6 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
   ModuleInfo *module_info =
       (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_name);
   if (NULL != module_info) {
-    DEBUGF("Module '%s' already registered.", module_name);
     DEALLOC(dir_path);
     DEALLOC(ext);
     return module_info;

@@ -20,9 +20,14 @@
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
+#include "util/platform.h"
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
 #include "vm/vm.h"
+
+#ifndef OS_WINDOWS
+#include "lang/lexer/lang_lexer.h"
+#endif
 
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
@@ -97,6 +102,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                               &new_classes);
 
   if (1 != map_size(&new_classes)) {
+    DEALLOC(c_str_text);
     return raise_error(task, ctx, "Weird error adding a new class.");
   }
 

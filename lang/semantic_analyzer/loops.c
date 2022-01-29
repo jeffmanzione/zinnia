@@ -1,5 +1,7 @@
 #include "lang/semantic_analyzer/definitions.h"
 
+#include <limits.h>
+
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
 #include "lang/lexer/lang_lexer.h"
@@ -32,8 +34,7 @@ DELETE_IMPL(foreach_statement, SemanticAnalyzer *analyzer) {
 
 PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Tape *target) {
   int num_ins = 0;
-  num_ins += num_ins +=
-      tape_ins_no_arg(target, NBLK, foreach_statement->for_token);
+  num_ins += tape_ins_no_arg(target, NBLK, foreach_statement->for_token);
   num_ins +=
       semantic_analyzer_produce(analyzer, foreach_statement->iterable, target);
   num_ins += tape_ins_no_arg(target, PUSH, foreach_statement->in_token);

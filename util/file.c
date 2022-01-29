@@ -16,14 +16,17 @@
 #include "util/platform.h"
 
 #ifdef OS_WINDOWS
+
 #include <io.h>
 #include <windows.h>
-
 #define F_OK 0
 #define ssize_t int
+
 #else
+
 #include <dirent.h>
 #include <unistd.h>
+
 #endif
 
 char *find_file_by_name(const char dir[], const char file_prefix[]) {
@@ -115,7 +118,7 @@ const char *diriter_next_file(DirIter *d) {
   }
   return NULL;
 #else
-  struct dirnet *dnet = readdir(d->dir);
+  struct dirent *dnet = readdir(d->dir);
   if (NULL == dnet) {
     return NULL;
   }

@@ -39,7 +39,6 @@
 #include "vm/process/task.h"
 #include "vm/virtual_machine.h"
 
-
 void _set_args(Heap *heap, ArgStore *store) {
   Object *args = heap_new(heap, Class_Object);
   M_iter cl_args = map_iter((Map *)argstore_program_args(store));

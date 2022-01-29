@@ -61,10 +61,10 @@ bool _str_to_int64(String *str, int64_t *result) {
   *result = strtol(cstr, &endptr, INFER_FROM_STRING);
   // Error scenario.
   if (0 == result && endptr - cstr != String_size(str)) {
-    free(cstr);
+    DEALLOC(cstr);
     return false;
   }
-  free(cstr);
+  DEALLOC(cstr);
   return true;
 }
 
@@ -109,10 +109,10 @@ bool _str_to_float(String *str, double *result) {
   *result = strtod(cstr, &endptr);
   // Error scenario.
   if (0 == result && endptr - cstr != String_size(str)) {
-    free(cstr);
+    DEALLOC(cstr);
     return false;
   }
-  free(cstr);
+  DEALLOC(cstr);
   return true;
 }
 
@@ -156,13 +156,16 @@ bool _str_to_bool(String *str, bool *result) {
   if (0 == strcmp("True", cstr) || 0 == strcmp("true", cstr) ||
       0 == strcmp("T", cstr) || 0 == strcmp("t", cstr)) {
     *result = true;
+    DEALLOC(cstr);
     return true;
   }
   if (0 == strcmp("False", cstr) || 0 == strcmp("false", cstr) ||
       0 == strcmp("F", cstr) || 0 == strcmp("f", cstr)) {
     *result = false;
+    DEALLOC(cstr);
     return true;
   }
+  DEALLOC(cstr);
   return false;
 }
 
