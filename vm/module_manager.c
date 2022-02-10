@@ -45,7 +45,6 @@ void modulemanager_init(ModuleManager *mm, Heap *heap) {
 
 void modulemanager_finalize(ModuleManager *mm) {
   ASSERT(NOT_NULL(mm));
-
   KL_iter iter = keyedlist_iter(&mm->_modules);
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);

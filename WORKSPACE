@@ -41,5 +41,5 @@ git_repository(
 
 # local_repository(
 #     name = "language_tools",
-#     path = "/usr/src/language-tools",
+#     path = "C://Users/jeffr/git/language-tools",
 # )

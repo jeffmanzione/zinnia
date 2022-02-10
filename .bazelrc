@@ -1,3 +1,0 @@
-build:mingw --crosstool_top=//toolchain:toolchains
-build:mingw --cpu=x64_windows
-build:mingw --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
