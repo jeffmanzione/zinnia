@@ -1,3 +1,5 @@
+module exceptions
+
 import error
 import io
 

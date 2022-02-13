@@ -1,3 +1,5 @@
+module hello
+
 import io
 
 io.print('Enter your name: ')

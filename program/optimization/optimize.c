@@ -30,6 +30,7 @@ static AList *optimizers = NULL;
 void optimize_init() {
   optimizers = alist_create(Optimizer, 64);
   // register_optimizer("ResPush", optimizer_ResPush);
+
   register_optimizer("SetRes", optimizer_SetRes);
   register_optimizer("SetPush", optimizer_SetPush);
   register_optimizer("JmpRes", optimizer_JmpRes);
