@@ -95,6 +95,7 @@ class HttpRequest {
         }
         ret.extend(AMPER.join(param_arr))
       }
+      None  ; TODO: Why is this necessary?
       ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
           .extend(version).extend('\r\n')
       if _headers {
@@ -172,24 +173,18 @@ class HttpResponse {
   }
 }
 
-def redirect(request, target) {
-  response = 'HTTP/1.1 301 Internal Redirect\r\nLocation: '
-  if target.ends_with('/') and request.path.starts_with('/') {
-    response.extend(target).extend(request.path.substr(1))
-  } else if target.ends_with('/') or request.path.starts_with('/') or request.path.len() == 0 or target.len() == 0 {
-    response.extend(target).extend(request.path)
-  } else {
-    response.extend(target).extend('/').extend(request.path)
-  }
+def redirect(request, response, target) {
+  response.set_status_code(301)
+  location = target
   if request.params and (request.params.keys.len() > 0) {
-    response.extend(QUESTION)
+    location.extend(QUESTION)
     param_arr = []
     for (k, v) in request.params {
       param_arr.append(cat(k, EQUALS, v))
     }
-    response.extend(AMPER.join(param_arr))
+    location.extend(AMPER.join(param_arr))
   }
-  response.extend('\r\nNon-Authoritative-Reason: HSTS\r\n\r\n')
+  response._headers['Location'] = location
   return response
 }
 

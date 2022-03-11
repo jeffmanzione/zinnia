@@ -7,5 +7,6 @@
 #define JEFF_VM_UTIL_STRING_H_
 
 char *escape(const char str[]);
+char *unescape(const char str[]);
 
 #endif /* JEFF_VM_UTIL_STRING_H_ */

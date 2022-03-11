@@ -150,8 +150,8 @@ cc_library(
         "//entity/string",
         "//entity/tuple",
         "//heap",
-        "//lang/parser",
-        "//lang/semantics",
+        "//lang/parser:lang_parser",
+        "//lang/semantic_analyzer:definitions",
         "//vm",
         "//vm:module_manager",
         "//vm/process:processes",
@@ -216,10 +216,13 @@ cc_library(
     name = "dynamic",
     srcs = ["dynamic.c"],
     hdrs = ["dynamic.h"],
-    linkopts = [
-        "-ldl",
-        "-rdynamic",
-    ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": [
+            "-ldl",
+            "-rdynamic",
+        ],
+    }),
     deps = [
         "//entity",
         "//entity:object",

@@ -17,7 +17,9 @@ try {
     request = handle.receive()
     io.println(cat('Received request: ', request.type, ' ', request.path))
     response = net.HttpResponse()
-    if request.path == '/' or request.path == '/index.html' {
+    if request.path == '/index.html' {
+      net.redirect(request, response, '/')
+    } else if request.path == '/' or request.path == '/index.html' {
       response.add_content(index_html)
     } else if request.path == '/favicon.ico' {
       response.set_content_type('image/x-icon').add_content(favicon_ico)

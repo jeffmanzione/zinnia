@@ -80,10 +80,10 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP(op, symbol)                                                    \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
-    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                            \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
       return primitive_float(float_of(p1) symbol float_of(p2));                \
     }                                                                          \
-    if (INT == ptype(p1) || INT == ptype(p2)) {                                \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {            \
       return primitive_int(int_of(p1) symbol int_of(p2));                      \
     }                                                                          \
     return primitive_int(char_of(p1) symbol char_of(p2));                      \
@@ -92,10 +92,10 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP_INT(op, symbol)                                                \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
-    if (FLOAT == ptype(p1) || FLOAT == ptype(p2)) {                            \
-      ERROR("Op not valid for FP types.");                                     \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
+      FATALF("Op not valid for FP types.");                                    \
     }                                                                          \
-    if (INT == ptype(p1) || INT == ptype(p2)) {                                \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {            \
       return primitive_int(int_of(p1) symbol int_of(p2));                      \
     }                                                                          \
     return primitive_int(char_of(p1) symbol char_of(p2));                      \
@@ -146,7 +146,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
           entity_primitive(_execute_primitive_##op(&resval->pri, &ins->val));  \
       break;                                                                   \
     default:                                                                   \
-      ERROR("Invalid arg type=%d for " #op ".", ins->type);                    \
+      FATALF("Invalid arg type=%d for " #op ".", ins->type);                   \
     }                                                                          \
   }
 
@@ -199,7 +199,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
           int_of(&result) == 0 ? NONE_ENTITY : entity_primitive(result);       \
       break;                                                                   \
     default:                                                                   \
-      ERROR("Invalid arg type=%d for " #op ".", ins->type);                    \
+      FATALF("Invalid arg type=%d for " #op ".", ins->type);                   \
     }                                                                          \
   }
 
@@ -258,7 +258,7 @@ void _execute_BOR_with_obj(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = entity_primitive(ins->val);
     break;
   default:
-    ERROR("Invalid arg type=%d for BOR.", ins->type);
+    FATALF("Invalid arg type=%d for BOR.", ins->type);
   }
 }
 
@@ -324,7 +324,7 @@ void vm_delete(VM *vm) {
   DEALLOC(vm);
 }
 
-inline Process *vm_main_process(VM *vm) { return vm->main; }
+Process *vm_main_process(VM *vm) { return vm->main; }
 
 bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   const Entity *resval, *lookup;
@@ -386,13 +386,13 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
             : NONE_ENTITY;
     break;
   default:
-    ERROR("Invalid arg type=%d for EQ.", ins->type);
+    FATALF("Invalid arg type=%d for EQ.", ins->type);
   }
   return false;
 }
 
-inline void _execute_RES(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_RES(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   Entity *member;
   Entity tmp;
   Object *str;
@@ -410,16 +410,16 @@ inline void _execute_RES(VM *vm, Task *task, Context *context,
   case INSTRUCTION_STRING:
     str = heap_new(task->parent_process->heap, Class_String);
     // TODO: Maybe precompute the length of the string?
-    __string_init(str, ins->str + 1, strlen(ins->str) - 2);
+    __string_init(str, ins->str, strlen(ins->str));
     *task_mutable_resval(task) = entity_object(str);
     break;
   default:
-    ERROR("Invalid arg type=%d for RES.", ins->type);
+    FATALF("Invalid arg type=%d for RES.", ins->type);
   }
 }
 
-inline void _execute_PEEK(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+void _execute_PEEK(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   Entity *member;
   Entity tmp;
   switch (ins->type) {
@@ -431,21 +431,21 @@ inline void _execute_PEEK(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = (NULL == member) ? NONE_ENTITY : *member;
     break;
   default:
-    ERROR("Invalid arg type=%d for PEEK.", ins->type);
+    FATALF("Invalid arg type=%d for PEEK.", ins->type);
   }
 }
 
-inline void _execute_DUP(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_DUP(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Invalid arg type=%d for DUP.", ins->type);
+    FATALF("Invalid arg type=%d for DUP.", ins->type);
   }
   Entity peek = *task_peekstack(task);
   *task_pushstack(task) = peek;
 }
 
-inline void _execute_PUSH(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+void _execute_PUSH(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   Object *str;
   Entity *member;
   Entity tmp;
@@ -463,35 +463,34 @@ inline void _execute_PUSH(VM *vm, Task *task, Context *context,
   case INSTRUCTION_STRING:
     str = heap_new(task->parent_process->heap, Class_String);
     // TODO: Maybe precompute the length of the string?
-    __string_init(str, ins->str + 1, strlen(ins->str) - 2);
+    __string_init(str, ins->str, strlen(ins->str));
     *task_pushstack(task) = entity_object(str);
     break;
   default:
-    ERROR("Invalid arg type=%d for PUSH.", ins->type);
+    FATALF("Invalid arg type=%d for PUSH.", ins->type);
   }
-  // DEBUGF("TEST2");
 }
 
-inline void _execute_PNIL(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+void _execute_PNIL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Invalid arg type=%d for PNIL.", ins->type);
+    FATALF("Invalid arg type=%d for PNIL.", ins->type);
   }
   *task_pushstack(task) = NONE_ENTITY;
 }
 
-inline void _execute_RNIL(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+void _execute_RNIL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Invalid arg type=%d for RNIL.", ins->type);
+    FATALF("Invalid arg type=%d for RNIL.", ins->type);
   }
   *task_mutable_resval(task) = NONE_ENTITY;
 }
 
-inline void _execute_FLD(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_FLD(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
-    ERROR("Invalid arg type=%d for FLD.", ins->type);
+    FATALF("Invalid arg type=%d for FLD.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
   if (NULL == resval || OBJECT != resval->type) {
@@ -504,32 +503,32 @@ inline void _execute_FLD(VM *vm, Task *task, Context *context,
   object_set_member(task->parent_process->heap, resval->obj, ins->id, &obj);
 }
 
-inline void _execute_LET(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_LET(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   switch (ins->type) {
   case INSTRUCTION_ID:
     context_let(context, ins->id, task_get_resval(task));
     break;
   default:
-    ERROR("Invalid arg type=%d for LET.", ins->type);
+    FATALF("Invalid arg type=%d for LET.", ins->type);
   }
 }
 
-inline void _execute_SET(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_SET(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   switch (ins->type) {
   case INSTRUCTION_ID:
     context_set(context, ins->id, task_get_resval(context->parent_task));
     break;
   default:
-    ERROR("Invalid arg type=%d for SET.", ins->type);
+    FATALF("Invalid arg type=%d for SET.", ins->type);
   }
 }
 
-inline void _execute_GET(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_GET(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
-    ERROR("Invalid arg type=%d for GET.", ins->type);
+    FATALF("Invalid arg type=%d for GET.", ins->type);
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
@@ -541,10 +540,10 @@ inline void _execute_GET(VM *vm, Task *task, Context *context,
       object_get_maybe_wrap(e->obj, ins->id, task, context);
 }
 
-inline void _execute_GTSH(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+void _execute_GTSH(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
-    ERROR("Invalid arg type=%d for GTSH.", ins->type);
+    FATALF("Invalid arg type=%d for GTSH.", ins->type);
   }
   const Entity *e = task_get_resval(task);
   if (NULL == e || OBJECT != e->type) {
@@ -591,7 +590,7 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
-      ERROR("Invalid native function.");
+      FATALF("Invalid native function.");
     }
     if (func->_is_background) {
       Task *new_task = process_create_unqueued_task(task->parent_process);
@@ -604,10 +603,11 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
       args->context = context;
       args->func = func;
       args->self = self;
-      threadpool_execute(task->parent_process->vm->background_pool,
-                         (VoidFnPtr)_execute_in_background,
-                         (VoidFnPtr)_execute_in_background_callback,
-                         (VoidPtr)args);
+      *Q_add_last(&task->parent_process->waiting_background_work) =
+          threadpool_create_work(task->parent_process->vm->background_pool,
+                                 (VoidFnPtr)_execute_in_background,
+                                 (VoidFnPtr)_execute_in_background_callback,
+                                 (VoidPtr)args);
       return false;
     }
     *task_mutable_resval(task) =
@@ -660,8 +660,8 @@ bool _call_function(Task *task, Context *context, Function *func) {
                              context);
 }
 
-inline bool _execute_CALL(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
+bool _execute_CALL(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
   Entity fn;
   if (INSTRUCTION_ID == ins->type) {
     if (CLLN == ins->op) {
@@ -669,7 +669,12 @@ inline bool _execute_CALL(VM *vm, Task *task, Context *context,
     }
     Entity obj = task_popstack(task);
     if (OBJECT != obj.type) {
-      raise_error(task, context, "Calling function on non-object.");
+      const char *type_str = NONE == obj.type                    ? "None"
+                             : ptype(&obj.pri) == PRIMITIVE_CHAR ? "Char"
+                             : ptype(&obj.pri) == PRIMITIVE_INT  ? "Int"
+                                                                 : "Float";
+      raise_error(task, context, "Calling function '%s' on type %s.", ins->id,
+                  type_str);
       return false;
     }
     if (Class_Module == obj.obj->_class) {
@@ -745,8 +750,8 @@ bool _execute_WAIT(VM *vm, Task *task, Context *context,
   return false;
 }
 
-inline void _execute_RET(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_RET(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   Entity tmp;
   // if (NULL == task->parent_task) {
   //   return;
@@ -762,45 +767,44 @@ inline void _execute_RET(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = entity_primitive(ins->val);
     break;
   default:
-    ERROR("Invalid arg type=%d for RET.", ins->type);
+    FATALF("Invalid arg type=%d for RET.", ins->type);
   }
 }
 
-inline Context *_execute_NBLK(VM *vm, Task *task, Context *context,
-                              const Instruction *ins) {
+Context *_execute_NBLK(VM *vm, Task *task, Context *context,
+                       const Instruction *ins) {
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
     return task_create_context(context->parent_task, context->self.obj,
                                context->module, context->ins);
   default:
-    ERROR("Invalid arg type=%d for NBLK.", ins->type);
+    FATALF("Invalid arg type=%d for NBLK.", ins->type);
   }
   return NULL;
 }
 
-inline Context *_execute_BBLK(VM *vm, Task *task, Context *context,
-                              const Instruction *ins) {
+Context *_execute_BBLK(VM *vm, Task *task, Context *context,
+                       const Instruction *ins) {
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
     return task_back_context(task);
   default:
-    ERROR("Invalid arg type=%d for BBLK.", ins->type);
+    FATALF("Invalid arg type=%d for BBLK.", ins->type);
   }
   return NULL;
 }
 
-inline void _execute_JMP(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_JMP(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
-    ERROR("Invalid arg type=%d for JMP.", ins->type);
+    FATALF("Invalid arg type=%d for JMP.", ins->type);
   }
   context->ins += ins->val._int_val;
 }
 
-inline void _execute_IF(VM *vm, Task *task, Context *context,
-                        const Instruction *ins) {
+void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
-    ERROR("Invalid arg type=%d for IF.", ins->type);
+    FATALF("Invalid arg type=%d for IF.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
   bool is_false = (NULL == resval) || (NONE == resval->type);
@@ -809,20 +813,19 @@ inline void _execute_IF(VM *vm, Task *task, Context *context,
   }
 }
 
-inline void _execute_EXIT(VM *vm, Task *task, Context *context,
-                          const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type) {
-    ERROR("Invalid resval type.");
+void _execute_EXIT(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_PRIMITIVE == ins->type) {
+    *task_mutable_resval(task) = entity_primitive(ins->val);
   }
-  *task_mutable_resval(task) = entity_primitive(ins->val);
   task->state = TASK_COMPLETE;
   context->ins++;
 }
 
-inline void _execute_NOT(VM *vm, Task *task, Context *context,
-                         const Instruction *ins) {
+void _execute_NOT(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Invalid arg type=%d for NOT.", ins->type);
+    FATALF("Invalid arg type=%d for NOT.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
   *task_mutable_resval(task) =
@@ -832,15 +835,15 @@ inline void _execute_NOT(VM *vm, Task *task, Context *context,
 void _execute_ANEW(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_ID == ins->type) {
-    ERROR("Invalid ANEW, ID type.");
+    FATALF("Invalid ANEW, ID type.");
   }
   Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
   *task_mutable_resval(task) = entity_object(array_obj);
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    ERROR("Invalid ANEW requires int primitive.");
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
+    FATALF("Invalid ANEW requires int primitive.");
   }
   int32_t num_args = pint(&ins->val);
   int i;
@@ -870,7 +873,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     index = context_lookup(context, ins->id, &index_e);
     break;
   case INSTRUCTION_PRIMITIVE:
-    if (INT != ptype(&ins->val) || pint(&ins->val) < 0) {
+    if (PRIMITIVE_INT != ptype(&ins->val) || pint(&ins->val) < 0) {
       raise_error(task, context, "Invalid array index.");
       return false;
     }
@@ -878,7 +881,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
     index = &index_e;
     break;
   default:
-    ERROR("Invalid arg type=%d for AIDX.", ins->type);
+    FATALF("Invalid arg type=%d for AIDX.", ins->type);
   }
   if (NULL == index) {
     raise_error(task, context, "Invalid array index.");
@@ -886,7 +889,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   }
   if (Class_Array == arr_obj->_class) {
     Array *arr = (Array *)arr_obj->_internal_obj;
-    if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
+    if (PRIMITIVE != index->type || PRIMITIVE_INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
       raise_error(task, context, "Invalid array index.");
       return false;
@@ -901,7 +904,7 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   }
   if (Class_Tuple == arr_obj->_class) {
     Tuple *tuple = (Tuple *)arr_obj->_internal_obj;
-    if (PRIMITIVE != index->type || INT != ptype(&index->pri) ||
+    if (PRIMITIVE != index->type || PRIMITIVE_INT != ptype(&index->pri) ||
         pint(&index->pri) < 0) {
       raise_error(task, context, "Invalid tuple index.");
       return false;
@@ -937,7 +940,7 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
 
   if (Class_Array == arr_entity.obj->_class) {
     if (NULL == index || PRIMITIVE != index->type ||
-        INT != ptype(&index->pri)) {
+        PRIMITIVE_INT != ptype(&index->pri)) {
       raise_error(task, context, "Cannot index with non-int.");
       return false;
     }
@@ -967,7 +970,7 @@ bool _execute_ASET(VM *vm, Task *task, Context *context,
 void _execute_TUPL(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_ID == ins->type) {
-    ERROR("Invalid TUPL, ID type.");
+    FATALF("Invalid TUPL, ID type.");
   }
   uint32_t num_args = pint(&ins->val);
   Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
@@ -976,8 +979,8 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
-    ERROR("Invalid TUPL requires int primitive.");
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
+    FATALF("Invalid TUPL requires int primitive.");
   }
   int i;
   for (i = 0; i < num_args; ++i) {
@@ -989,7 +992,7 @@ void _execute_TUPL(VM *vm, Task *task, Context *context,
 void _execute_TLEN(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Invalid TLEN type.");
+    FATALF("Invalid TLEN type.");
   }
   const Entity *e = task_peekstack(task);
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
@@ -1002,7 +1005,7 @@ void _execute_TLEN(VM *vm, Task *task, Context *context,
 
 void _execute_TGTE(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(task, context, "Invalid TLEN type.");
     return;
   }
@@ -1025,7 +1028,7 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
 
 void _execute_TGET(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_PRIMITIVE != ins->type || INT != ptype(&ins->val)) {
+  if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(task, context, "Invalid TGET type.");
     return;
   }
@@ -1051,7 +1054,7 @@ void _execute_TGET(VM *vm, Task *task, Context *context,
 
 void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
-    ERROR("Weird type for IS.");
+    FATALF("Weird type for IS.");
   }
   Entity rhs = task_popstack(task);
   Entity lhs = task_popstack(task);
@@ -1074,11 +1077,9 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
 bool _execute_LMDL(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
-    ERROR("Weird type for LMDL.");
+    FATALF("Weird type for LMDL.");
   }
-  DEBUGF("LMDL '%s' %p \n", ins->id, ins->id);
   Module *module = modulemanager_lookup(&vm->mm, ins->id);
-  DEBUGF("%p", module);
   if (NULL == module) {
     raise_error(task, context, "Module '%s' not found.", ins->id);
     return false;
@@ -1101,7 +1102,7 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
 bool _execute_CTCH(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
-    ERROR("Invalid arg type=%d for CTCH.", ins->type);
+    FATALF("Invalid arg type=%d for CTCH.", ins->type);
   }
   context->catch_ins = context->ins + ins->val._int_val + 1;
   return true;
@@ -1335,7 +1336,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       }
       break;
     default:
-      ERROR("Unknown instruction: %s", op_to_str(ins->op));
+      FATALF("Unknown instruction: %s", op_to_str(ins->op));
     }
     context->ins++;
   }
@@ -1345,24 +1346,26 @@ end_of_loop:
 
 void _mark_task_complete(Process *process, Task *task) {
   process_mark_task_complete(process, task);
-  // Only requeue parent task if it is waiting.
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
     Task *dependent_task = (Task *)value(&dependent_tasks);
+    // Only requeue parent task if it is waiting.
     if (TASK_WAITING != dependent_task->state) {
       continue;
     }
     *task_mutable_resval(dependent_task) = *task_get_resval(task);
     process_enqueue_task(dependent_task->parent_process, dependent_task);
     process_remove_waiting_task(dependent_task->parent_process, dependent_task);
-    mutex_condition_broadcast(process->task_wait_cond);
+
+    // condition_broadcast(process->task_wait_cond);
   }
 }
 
 bool _process_is_done(Process *process) {
   bool is_done = false;
-  SYNCHRONIZED(process->task_waiting_lock, {
-    SYNCHRONIZED(process->task_queue_lock, {
+
+  SYNCHRONIZED(process->task_queue_lock, {
+    CRITICAL(process->task_waiting_cs, {
       if (set_size(&process->waiting_tasks) == 0 &&
           Q_size(&process->queued_tasks) == 0) {
         is_done = true;
@@ -1384,7 +1387,7 @@ top_of_fn:
     entity_print(task_get_resval(task), stdout);
     fprintf(stdout, "\n");
 #endif
-    DEBUGF("TaskState=%s", task_state_str(task_state));
+    DEBUGF("TaskState=%s %p", task_state_str(task_state), task);
     switch (task_state) {
     case TASK_WAITING:
       process_insert_waiting_task(process, task);
@@ -1403,22 +1406,27 @@ top_of_fn:
       _mark_task_complete(process, task);
       break;
     default:
-      ERROR("Some unknown TaskState.");
+      FATALF("Some unknown TaskState.");
+    }
+    while (!Q_is_empty(&process->waiting_background_work)) {
+      Work *w = (Work *)Q_dequeue(&process->waiting_background_work);
+      threadpool_execute_work(vm->background_pool, w);
     }
   }
 
   if (_process_is_done(process)) {
+    DEBUGF("Process is complete.");
     return;
   }
 
   int waiting_task_count;
-  SYNCHRONIZED(process->task_waiting_lock,
-               { waiting_task_count = set_size(&process->waiting_tasks); });
-  SYNCHRONIZED(process->task_waiting_lock, {
+  CRITICAL(process->task_waiting_cs,
+           { waiting_task_count = set_size(&process->waiting_tasks); });
+  CRITICAL(process->task_waiting_cs, {
     while (set_size(&process->waiting_tasks) != 0 &&
            set_size(&process->waiting_tasks) == waiting_task_count &&
            process_queue_size(process) == 0) {
-      mutex_condition_wait(process->task_wait_cond);
+      // condition_wait(process->task_wait_cond);
     }
   });
   goto top_of_fn;

@@ -13,8 +13,9 @@ typedef unsigned int ThreadId;
 
 #ifdef OS_WINDOWS
 #include <stdint.h>
-typedef unsigned long ThreadHandle;
-typedef unsigned __stdcall (*VoidFn)(void *);
+
+typedef uintptr_t ThreadHandle;
+typedef unsigned (*VoidFn)(void *);
 #else
 #include <pthread.h>
 typedef pthread_t ThreadHandle;

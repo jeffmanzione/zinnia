@@ -6,14 +6,17 @@
 #ifndef VM_PROCESS_PROCESSES_H_
 #define VM_PROCESS_PROCESSES_H_
 
+#include "alloc/arena/arena.h"
 #include "entity/module/module.h"
 #include "entity/object.h"
 #include "heap/heap.h"
 #include "program/tape.h"
 #include "struct/alist.h"
 #include "struct/set.h"
+#include "util/sync/critical_section.h"
 #include "util/sync/mutex.h"
 #include "util/sync/thread.h"
+#include "util/sync/threadpool.h"
 
 typedef struct _VM VM;
 typedef struct __Context Context;
@@ -52,7 +55,7 @@ typedef enum {
 } WaitReason;
 
 struct __Task {
-  TaskState state;
+  volatile TaskState state;
   WaitReason wait_reason;
 
   Process *parent_process;
@@ -80,7 +83,7 @@ struct __Process {
   Mutex task_create_lock;
   Mutex task_queue_lock;
 
-  Mutex task_waiting_lock;
+  CriticalSection task_waiting_cs;
   Condition *task_wait_cond;
 
   Mutex task_complete_lock;
@@ -91,7 +94,9 @@ struct __Process {
   Set completed_tasks;
 
   Object *_reflection;
-  ThreadHandle thread;  // Null if main thread.
+  ThreadHandle thread; // Null if main thread.
+
+  Q waiting_background_work;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

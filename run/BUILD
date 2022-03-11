@@ -10,8 +10,6 @@ cc_library(
     hdrs = ["run.h"],
     deps = [
         "//compile",
-        "//lang/parser",
-        "//lang/semantics",
         "//program/optimization:optimize",
         "//util:file",
         "//util/args:commandline",
@@ -25,6 +23,8 @@ cc_library(
         "//vm/process:processes",
         "//vm/process:task",
         "@file_utils//util:string",
+        "@language_tools//lang/parser",
+        "@language_tools//lang/semantic_analyzer",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
     ],

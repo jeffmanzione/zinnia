@@ -5,7 +5,6 @@
 
 #include "vm/builtin_modules.h"
 
-#include <dirent.h>
 #include <stdio.h>
 
 #include "alloc/arena/intern.h"
@@ -23,6 +22,7 @@
 #include "entity/native/socket.h"
 #include "util/file.h"
 #include "util/file/file_util.h"
+#include "util/platform.h"
 #include "util/string.h"
 
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
@@ -55,14 +55,25 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(
       mm, find_file_by_name(lib_location, "dynamic"), dynamic_add_native);
 
-  DIR *lib = opendir(lib_location);
-  struct dirent *dir;
-  while ((dir = readdir(lib)) != NULL) {
-    const char *fn = combine_path_file(lib_location, dir->d_name, NULL);
-    DEBUGF("'%s' '%s'", dir->d_name, fn);
-    if (ends_with(dir->d_name, ".jv") || ends_with(dir->d_name, ".ja") ||
-        ends_with(dir->d_name, ".jb")) {
+#ifdef OS_WINDOWS
+  char *lib_buf = ALLOC_ARRAY2(char, strlen(lib_location) + 3);
+  memmove(lib_buf, lib_location, strlen(lib_location));
+  memmove(lib_buf + strlen(lib_location), "/*", 3);
+  DirIter *di = directory_iter(lib_buf);
+#else
+  DirIter *di = directory_iter(lib_location);
+#endif
+  const char *file_name;
+  while ((file_name = diriter_next_file(di)) != NULL) {
+    const char *fn = combine_path_file(lib_location, file_name, NULL);
+    if (ends_with(file_name, ".jv") || ends_with(file_name, ".ja") ||
+        ends_with(file_name, ".jb")) {
       mm_register_module(mm, fn);
     }
+    DEALLOC(fn);
   }
+  diriter_close(di);
+#ifdef OS_WINDOWS
+  DEALLOC(lib_buf);
+#endif
 }

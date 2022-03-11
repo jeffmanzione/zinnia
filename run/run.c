@@ -13,12 +13,13 @@
 #include "alloc/arena/intern.h"
 #include "compile/compile.h"
 #include "entity/class/classes.h"
+#include "entity/entity.h"
 #include "entity/module/modules.h"
 #include "entity/object.h"
 #include "entity/string/string_helper.h"
 #include "lang/parser/parser.h"
-#include "lang/semantics/expression_tree.h"
-#include "lang/semantics/semantics.h"
+#include "lang/semantic_analyzer/expression_tree.h"
+#include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/optimization/optimize.h"
 #include "program/tape.h"
 #include "struct/map.h"
@@ -51,8 +52,6 @@ void _set_args(Heap *heap, ArgStore *store) {
 }
 
 void run(const Set *source_files, ArgStore *store) {
-  parsers_init();
-  semantics_init();
   optimize_init();
 
   const char *lib_location =
@@ -81,8 +80,6 @@ void run(const Set *source_files, ArgStore *store) {
 
   vm_delete(vm);
   optimize_finalize();
-  semantics_finalize();
-  parsers_finalize();
 }
 
 int jvr(int argc, const char *argv[]) {

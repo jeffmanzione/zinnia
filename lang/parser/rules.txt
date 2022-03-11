@@ -1,0 +1,739 @@
+identifier ->
+  OR(
+    token:TOKEN_WORD,
+    token:KEYWORD_CLASS,
+    token:KEYWORD_MODULE,
+    token:KEYWORD_ASYNC,
+    token:KEYWORD_THEN
+  );
+
+new_expression -> token:KEYWORD_NEW;
+
+constant -> OR(token:TOKEN_INTEGER, token:TOKEN_FLOATING);
+
+string_literal -> token:TOKEN_STRING;
+
+array_declaration ->
+  OR(
+    AND(token:SYMBOL_LBRACKET, token:SYMBOL_RBRACKET),
+    AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET)
+  );
+
+map_declaration_entry -> AND(rule:postfix_expression, token:SYMBOL_COLON, rule:postfix_expression);
+map_declaration_entry1 ->
+  OR(
+    AND(
+      token:SYMBOL_COMMA,
+      OPTIONAL(token:TOKEN_NEWLINE),
+      rule:map_declaration_entry,
+      OPTIONAL(token:TOKEN_NEWLINE),
+      rule:map_declaration_entry1
+    ),
+    E
+  );
+map_declaration_list -> AND(rule:map_declaration_entry, OPTIONAL(token:TOKEN_NEWLINE), rule:map_declaration_entry1);
+map_declaration ->
+  OR(
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE),
+    AND(
+      token:SYMBOL_LBRACE,
+      OPTIONAL(token:TOKEN_NEWLINE),
+      rule:map_declaration_list,
+      OPTIONAL(token:TOKEN_NEWLINE),
+      token:SYMBOL_RBRACE)
+  );
+
+length_expression -> AND(token:SYMBOL_PIPE, rule:tuple_expression, token:SYMBOL_PIPE);
+
+primary_expression ->
+  OR(
+    rule:anon_function_definition,
+    rule:identifier,
+    rule:new_expression,
+    rule:constant,
+    rule:string_literal,
+    rule:array_declaration,
+    rule:map_declaration,
+    rule:length_expression,
+    AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN)
+  );
+
+primary_expression_no_constants ->
+  OR(
+    rule:anon_function_definition,
+    rule:identifier,
+    rule:string_literal,
+    rule:array_declaration,
+    rule:map_declaration,
+    AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN)
+  );
+
+empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+
+function_call -> AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN);
+
+array_indexing -> AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET);
+
+member_access ->  AND(token:SYMBOL_PERIOD, OR(rule:identifier, rule:new_expression));
+
+postfix_expression1 ->
+  OR(
+    AND(rule:array_indexing, rule:postfix_expression1),
+    AND(rule:empty_parens, rule:postfix_expression1),
+    AND(rule:function_call, rule:postfix_expression1),
+    AND(OPTIONAL(token:TOKEN_NEWLINE), rule:member_access, rule:postfix_expression1),
+    E
+  );
+postfix_expression ->
+  OR(
+    AND(rule:primary_expression_no_constants, rule:postfix_expression1),
+    rule:primary_expression
+  );
+
+range_suffix -> AND(token:SYMBOL_COLON, rule:postfix_expression);
+
+range_expression ->
+  AND(
+    rule:postfix_expression,
+    OPTIONAL(rule:range_suffix),
+    OPTIONAL(rule:range_suffix)
+  );
+
+unary_expression ->
+  OR(
+    AND(token:SYMBOL_TILDE, rule:unary_expression),
+    AND(token:SYMBOL_EXCLAIM, rule:unary_expression),
+    AND(token:SYMBOL_MINUS, rule:unary_expression),
+    AND(token:KEYWORD_CONST, rule:unary_expression),
+    AND(token:KEYWORD_AWAIT, rule:unary_expression),
+    rule:range_expression
+  );
+
+binary_and_expression1 -> OR(AND(token:SYMBOL_AMPER, rule:binary_and_expression), E);
+binary_and_expression -> AND(rule:unary_expression, rule:binary_and_expression1);
+
+binary_xor_expression1 -> OR(AND(token:SYMBOL_CARET, rule:binary_xor_expression), E);
+binary_xor_expression -> AND(rule:binary_and_expression, rule:binary_xor_expression1);
+
+binary_or_expression1 -> OR(AND(token:SYMBOL_PIPE, rule:binary_or_expression), E);
+binary_or_expression -> AND(rule:binary_xor_expression, rule:binary_or_expression1);
+
+multiplicative_expression1 ->
+  OR(
+    AND(token:SYMBOL_STAR, rule:multiplicative_expression),
+    AND(token:SYMBOL_FSLASH, rule:multiplicative_expression),
+    AND(token:SYMBOL_PERCENT, rule:multiplicative_expression),
+    E
+  );
+multiplicative_expression -> AND(rule:binary_or_expression, rule:multiplicative_expression1);
+
+additive_expression1 ->
+  OR(
+    AND(token:SYMBOL_PLUS, rule:additive_expression),
+    AND(token:SYMBOL_MINUS, rule:additive_expression),
+    E
+  );
+additive_expression -> AND(rule:multiplicative_expression, rule:additive_expression1);
+
+in_expression ->
+  OR(
+    AND(
+      rule:additive_expression,
+      OR(token:KEYWORD_IN, token:KEYWORD_NOTIN),
+      rule:additive_expression
+    ),
+    rule:additive_expression
+  );
+
+relational_expression1 ->
+  OR(
+    AND(token:SYMBOL_LTHAN, rule:relational_expression),
+    AND(token:SYMBOL_GTHAN, rule:relational_expression),
+    AND(token:SYMBOL_LTHANEQ, rule:relational_expression),
+    AND(token:SYMBOL_GTHANEQ, rule:relational_expression),
+    E
+  );
+relational_expression -> AND(rule:in_expression, rule:relational_expression1);
+
+equality_expression1 ->
+  OR(
+    AND(token:SYMBOL_EQUIV, rule:equality_expression),
+    AND(token:SYMBOL_NEQUIV, rule:equality_expression),
+    E
+  );
+equality_expression -> AND(rule:relational_expression, rule:equality_expression1);
+
+and_expression1 ->
+  OR(
+    AND(token:KEYWORD_AND, rule:and_expression),
+    E
+  );
+and_expression -> AND(rule:equality_expression, rule:and_expression1);
+
+
+or_expression1 ->
+  OR(
+    AND(token:KEYWORD_OR, rule:or_expression),
+    E
+  );
+or_expression -> AND(rule:and_expression, rule:or_expression1);
+
+is_expression ->
+  OR(
+    AND(rule:or_expression, token:KEYWORD_IS, rule:or_expression),
+    rule:or_expression
+  );
+
+conditional_expression ->
+  OR(
+    AND(
+      token:KEYWORD_IF,
+      rule:is_expression,
+      OPTIONAL(token:KEYWORD_THEN),
+      rule:conditional_expression,
+      token:KEYWORD_ELSE,
+      rule:conditional_expression
+    ),
+    AND(
+      token:KEYWORD_IF,
+      rule:is_expression,
+      OPTIONAL(token:KEYWORD_THEN),
+      rule:conditional_expression
+    ),
+    rule:is_expression
+  );
+
+const_assignment_expression -> AND(token:KEYWORD_CONST, rule:identifier);
+
+array_index_assignment ->
+  AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET);
+
+function_call_args ->
+  OR(
+    AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN),
+    AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN)
+  );
+
+field_extension ->
+  OR(
+    rule:array_index_assignment,
+    rule:function_call_args,
+    E
+  );
+
+field_set_value -> AND(token:SYMBOL_PERIOD, rule:identifier);
+
+field_suffix -> OR(rule:field_set_value, rule:array_index_assignment);
+
+field_next -> AND(rule:field_suffix, rule:field_expression1);
+
+field_expression1 ->
+  OR(
+    AND(rule:field_extension, rule:field_next),
+    rule:field_next,
+    E
+  );
+field_expression -> AND(rule:identifier, rule:field_expression1);
+
+assignment_lhs_single -> OR(rule:const_assignment_expression, rule:field_expression);
+
+assignment_tuple_list -> LIST(token:SYMBOL_COMMA, rule:assignment_lhs);
+assignment_tuple -> AND(token:SYMBOL_LPAREN, rule:assignment_tuple_list, token:SYMBOL_RPAREN);
+
+assignment_array -> AND(token:SYMBOL_LBRACKET, rule:assignment_tuple_list, token:SYMBOL_RBRACKET);
+
+assignment_lhs ->
+  OR(
+    rule:assignment_tuple,
+    rule:assignment_array,
+    rule:assignment_lhs_single
+  );
+
+assignment_expression ->
+  OR(
+    AND(rule:assignment_lhs, token:SYMBOL_EQUALS, rule:conditional_expression),
+    rule:conditional_expression
+  );
+
+tuple_expression ->
+  LIST(
+    token:SYMBOL_COMMA,
+    AND(
+      OPTIONAL(token:TOKEN_NEWLINE),
+      rule:assignment_expression,
+      OPTIONAL(token:TOKEN_NEWLINE)
+    )
+  );
+
+expression_statement -> AND(rule:tuple_expression, OPTIONAL(token:TOKEN_NEWLINE));
+
+foreach_statement ->
+  OR(
+    AND(
+      token:KEYWORD_FOR,
+      token:SYMBOL_LPAREN,
+      rule:assignment_lhs,
+      token:KEYWORD_IN,
+      rule:conditional_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_FOR,
+      rule:assignment_lhs,
+      token:KEYWORD_IN,
+      rule:conditional_expression,
+      rule:statement
+    )
+  );
+
+for_statement ->
+  OR(
+    AND(
+      token:KEYWORD_FOR,
+      token:SYMBOL_LPAREN,
+      rule:assignment_expression,
+      token:SYMBOL_COMMA,
+      rule:conditional_expression,
+      token:SYMBOL_COMMA,
+      rule:assignment_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_FOR,
+      rule:assignment_expression,
+      token:SYMBOL_COMMA,
+      rule:conditional_expression,
+      token:SYMBOL_COMMA,
+      rule:assignment_expression,
+      rule:statement
+    )
+  );
+
+while_statement ->
+  OR(
+    AND(
+      token:KEYWORD_WHILE,
+      token:SYMBOL_LPAREN,
+      rule:conditional_expression,
+      token:SYMBOL_RPAREN,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_WHILE,
+      rule:conditional_expression,
+      rule:statement
+    )
+  );
+
+iteration_statement ->
+  OR(
+    rule:while_statement,
+    rule:foreach_statement,
+    rule:for_statement
+  );
+
+compound_statement ->
+  OR(
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE),
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), rule:statement_list, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE)
+  );
+
+selection_statement ->
+  OR(
+    AND(
+      token:KEYWORD_IF,
+      rule:tuple_expression,
+      rule:statement,
+      token:KEYWORD_ELSE,
+      rule:statement
+    ),
+    AND(
+      token:KEYWORD_IF,
+      rule:tuple_expression,
+      rule:statement
+    )
+  );
+
+exit_statement ->
+  OR(
+    AND(
+      token:KEYWORD_EXIT,
+      rule:assignment_expression
+    ),
+    token:KEYWORD_EXIT
+  );
+
+raise_statement -> AND(token:KEYWORD_RAISE, rule:assignment_expression);
+
+catch_assign ->
+  OR(
+    AND(token:SYMBOL_LPAREN, rule:assignment_lhs, token:SYMBOL_RPAREN),
+    rule:assignment_lhs
+  );
+
+try_statement ->
+  AND(
+    token:KEYWORD_TRY,
+    rule:statement,
+    token:KEYWORD_CATCH,
+    rule:catch_assign,
+    rule:statement
+  );
+
+jump_statement ->
+  OR(
+    AND(
+      token:KEYWORD_RETURN,
+      token:SYMBOL_LPAREN,
+      rule:tuple_expression,
+      token:SYMBOL_RPAREN
+    ),
+    AND(
+      token:KEYWORD_RETURN,
+      rule:tuple_expression
+    ),
+    token:KEYWORD_RETURN
+  );
+
+break_statement -> OR(token:KEYWORD_BREAK, token:KEYWORD_CONTINUE);
+
+break_statement_container -> AND(rule:break_statement, token:TOKEN_NEWLINE);
+
+default_value_expression ->
+  AND(
+    token:SYMBOL_EQUALS,
+    rule:conditional_expression
+  );
+
+const_expression ->
+  AND(
+    OPTIONAL(token:KEYWORD_CONST),
+    OR(
+      AND(
+        token:SYMBOL_LPAREN,
+        rule:function_argument_list,
+        token:SYMBOL_RPAREN
+      ),
+      rule:identifier
+    ),
+    OPTIONAL(rule:default_value_expression)
+  );
+
+function_arg_default_value ->
+  AND(
+    token:SYMBOL_EQUALS,
+    rule:conditional_expression
+  );
+
+function_arg_elt_with_default ->
+  AND(
+    rule:identifier,
+    rule:function_arg_default_value
+  );
+
+function_arg_elt ->
+  OR(
+    rule:function_arg_elt_with_default,
+    rule:identifier
+  );
+
+const_function_argument ->
+  AND(
+    token:KEYWORD_CONST,
+    rule:function_arg_elt
+  );
+
+function_argument ->
+  AND(
+    OPTIONAL(token:TOKEN_NEWLINE),
+    OR(
+      rule:const_function_argument,
+      rule:function_arg_elt
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+function_argument_list -> LIST(token:SYMBOL_COMMA, rule:function_argument);
+
+function_arguments_present ->
+  AND(
+    token:SYMBOL_LPAREN,
+    rule:function_argument_list,
+    token:SYMBOL_RPAREN
+  );
+
+function_arguments_no_args -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+
+function_arguments ->
+  OR(
+    rule:function_arguments_present,
+    rule:function_arguments_no_args
+  );
+
+def_identifier -> AND(token:KEYWORD_DEF, rule:identifier);
+
+function_signature_no_qualifier ->
+  AND(
+    rule:def_identifier,
+    rule:function_arguments
+  );
+
+function_qualifier -> OR(token:KEYWORD_ASYNC, token:KEYWORD_CONST);
+
+function_qualifier_list -> LIST(E, rule:function_qualifier);
+
+function_signature_with_qualifier ->
+  AND(rule:function_signature_no_qualifier, rule:function_qualifier_list);
+
+function_signature ->
+  OR(
+    rule:function_signature_with_qualifier,
+    rule:function_signature_no_qualifier
+  );
+
+function_definition -> AND(rule:function_signature, rule:statement);
+
+method_identifier ->
+  AND(
+    token:KEYWORD_METHOD,
+    OR(
+      rule:identifier,
+      token:SYMBOL_EQUIV,
+      token:SYMBOL_NEQUIV,
+      AND(token:SYMBOL_LBRACKET, token:SYMBOL_RBRACKET, token:SYMBOL_EQUALS),
+      AND(token:SYMBOL_LBRACKET, token:SYMBOL_RBRACKET)
+    )
+  );
+
+method_signature_no_qualifier ->
+  AND(rule:method_identifier, rule:function_arguments);
+
+method_signature_with_qualifier -> 
+  AND(rule:method_signature_no_qualifier, rule:function_qualifier_list);
+
+method_signature ->
+  OR(
+    rule:method_signature_with_qualifier,
+    rule:method_signature_no_qualifier
+  );
+
+method_definition -> AND(rule:method_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);
+
+new_arg_var -> OR(rule:new_field_arg, rule:identifier);
+
+new_field_arg -> AND(token:KEYWORD_FIELD, rule:identifier);
+
+new_arg_default_value -> AND(token:SYMBOL_EQUALS, rule:conditional_expression);
+
+new_arg_elt_with_default -> AND(rule:new_arg_var, rule:new_arg_default_value);
+
+new_arg_elt -> OR(rule:new_arg_elt_with_default, rule:new_arg_var);
+
+const_new_argument -> AND(token:KEYWORD_CONST, rule:new_arg_elt);
+
+new_argument ->
+  AND(
+    OPTIONAL(token:TOKEN_NEWLINE),
+    OR(rule:const_new_argument, rule:new_arg_elt),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+new_argument_list -> LIST(token:SYMBOL_COMMA, rule:new_argument);
+
+new_arguments_present -> AND(token:SYMBOL_LPAREN, rule:new_argument_list, token:SYMBOL_RPAREN);
+
+new_arguments_no_args -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+
+new_arguments -> OR(rule:new_arguments_present, rule:new_arguments_no_args);
+
+new_identifier -> rule:new_expression;
+
+new_signature_nonconst -> AND(rule:new_identifier, rule:new_arguments);
+
+new_signature_const -> AND(rule:new_signature_nonconst, token:KEYWORD_CONST);
+
+new_signature -> OR(rule:new_signature_const, rule:new_signature_nonconst);
+
+new_definition -> AND(rule:new_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);
+
+anon_signature_no_qualifier -> rule:function_arguments;
+
+anon_signature_with_qualifier ->
+  AND(
+    rule:anon_signature_no_qualifier,
+    rule:function_qualifier_list
+  );
+
+anon_signature ->
+  OR(
+    rule:anon_signature_with_qualifier,
+    rule:anon_signature_no_qualifier
+  );
+
+anon_function_lambda_lhs -> OR(rule:anon_signature, rule:identifier);
+
+anon_function_lambda_rhs -> AND(token:SYMBOL_RARROW, rule:assignment_expression);
+
+anon_function_definition ->
+  OR(
+    AND(
+      rule:anon_function_lambda_lhs,
+      rule:anon_function_lambda_rhs
+    ),
+    AND(
+      rule:anon_signature,
+      rule:compound_statement
+    )
+  );
+
+identifier_list -> LIST(token:SYMBOL_COMMA, rule:identifier);
+
+field_statement -> AND(token:KEYWORD_FIELD, rule:identifier_list);
+
+class_statement ->
+  AND(
+    OR(
+      rule:new_definition,
+      rule:field_statement,
+      rule:method_definition
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+class_statement_list ->
+  LIST(
+    E,
+    AND(
+      rule:class_statement,
+      OPTIONAL(token:TOKEN_NEWLINE)
+    )
+  );
+
+parent_class_list ->
+  LIST(
+    token:SYMBOL_COMMA,
+    rule:identifier
+  );
+
+parent_classes -> AND(token:SYMBOL_COLON, rule:parent_class_list);
+
+class_compound_statement ->
+  OR(
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE),
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), rule:class_statement_list, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE)
+  );
+
+class_name_and_inheritance -> AND(rule:identifier, OPTIONAL(rule:parent_classes));
+
+class_definition_no_annotation ->
+  AND(
+    token:KEYWORD_CLASS,
+    OPTIONAL(token:TOKEN_NEWLINE),
+    rule:class_name_and_inheritance,
+    OPTIONAL(token:TOKEN_NEWLINE),
+    OR(
+      rule:class_compound_statement,
+      AND(
+        rule:class_statement,
+        OPTIONAL(token:TOKEN_NEWLINE)
+      )
+    )
+  );
+
+annotation_not_called ->
+  OR(
+    AND(rule:identifier, token:SYMBOL_PERIOD, rule:identifier),
+    rule:identifier
+  );
+
+annotation_no_arguments ->
+  AND(
+    rule:annotation_not_called,
+    token:SYMBOL_LPAREN,
+    token:SYMBOL_RPAREN
+  );
+
+annotation_with_arguments ->
+  AND(
+    rule:annotation_not_called,
+    token:SYMBOL_LPAREN,
+    rule:tuple_expression,
+    token:SYMBOL_RPAREN
+
+  );
+
+annotation ->
+  AND(
+    token:SYMBOL_AT,
+    OR(
+      rule:annotation_with_arguments,
+      rule:annotation_no_arguments,
+      rule:annotation_not_called
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+class_definition_with_annotation ->
+  AND(
+    rule:annotation,
+    rule:class_definition_no_annotation
+  );
+
+class_definition ->
+  OR(
+    rule:class_definition_with_annotation,
+    rule:class_definition_no_annotation
+  );
+
+import_statement ->
+  OR(
+    AND(
+      token:KEYWORD_IMPORT,
+      rule:identifier,
+      token:KEYWORD_AS,
+      rule:identifier,
+      token:TOKEN_NEWLINE
+    ),
+    AND(
+      token:KEYWORD_IMPORT,
+      rule:identifier,
+      token:TOKEN_NEWLINE
+    )
+  );
+
+module_statement -> AND(token:KEYWORD_MODULE, rule:identifier, token:TOKEN_NEWLINE);
+
+statement ->
+  AND(
+    OPTIONAL(token:TOKEN_NEWLINE),
+    OR(
+      rule:exit_statement,
+      rule:raise_statement,
+      rule:try_statement,
+      rule:selection_statement,
+      rule:compound_statement,
+      rule:iteration_statement,
+      rule:jump_statement,
+      rule:break_statement_container,
+      rule:expression_statement
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+file_level_statement ->
+  AND(
+    OR(
+      rule:module_statement,
+      rule:import_statement,
+      rule:class_definition,
+      rule:function_definition,
+      rule:statement
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+file_level_statement_list -> LIST(E, rule:file_level_statement);
+
+statement_list -> LIST(E, rule:statement);

@@ -5,10 +5,16 @@
 
 #include "entity/native/process.h"
 
-#if defined(OS_WINDOWS)
-#include <synchapi.h>
+#include "util/platform.h"
+
+#ifdef OS_WINDOWS
+#include <windows.h>
 #else
 #include <unistd.h>
+#endif
+
+#ifdef OS_WINDOWS
+#include <synchapi.h>
 #endif
 
 #include "alloc/arena/intern.h"
@@ -69,7 +75,8 @@ Entity _create_process(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(p->_reflection);
 }
 
-Entity _sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity __sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
+  DEBUGF("START_OF_SLEEP");
   double sleep_duration_sec = 0;
   if (IS_INT(args)) {
     sleep_duration_sec = pint(&args->pri);
@@ -80,10 +87,11 @@ Entity _sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
 #if defined(OS_WINDOWS)
   // Accepts millis as an unsigned long instead of double seconds.
-  Sleep((uint64_t)(sleep_duration_sec * 1000));
+  Sleep(sleep_duration_sec * 1000);
 #else
   sleep(sleep_duration_sec);
 #endif
+  DEBUGF("END_OF_SLEEP");
   return NONE_ENTITY;
 }
 
@@ -91,5 +99,5 @@ void process_add_native(ModuleManager *mm, Module *process) {
   // Class_Remote =
   //     native_class(process, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
   native_function(process, intern("__create_process"), _create_process);
-  native_background_function(process, intern("__sleep"), _sleep);
+  native_background_function(process, intern("__sleep"), __sleep);
 }

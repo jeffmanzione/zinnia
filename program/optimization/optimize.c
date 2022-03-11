@@ -10,6 +10,7 @@
 
 #include "debug/debug.h"
 #include "entity/entity.h"
+#include "lang/lexer/lang_lexer.h"
 #include "lang/lexer/token.h"
 #include "program/instruction.h"
 #include "program/optimization/optimizers.h"
@@ -21,7 +22,7 @@
 
 #define _as_ptr(i) ((void *)(intptr_t)(i))
 
-#define is_goto(op) \
+#define is_goto(op)                                                            \
   (((op) == JMP) || ((op) == IFN) || ((op) == IF) || ((op) == CTCH))
 
 static AList *optimizers = NULL;
@@ -29,6 +30,7 @@ static AList *optimizers = NULL;
 void optimize_init() {
   optimizers = alist_create(Optimizer, 64);
   // register_optimizer("ResPush", optimizer_ResPush);
+
   register_optimizer("SetRes", optimizer_SetRes);
   register_optimizer("SetPush", optimizer_SetPush);
   register_optimizer("JmpRes", optimizer_JmpRes);
@@ -106,7 +108,8 @@ void oh_init(OptimizeHelper *oh, const Tape *tape) {
 void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
   const Tape *t = oh->tape;
   Token tok;
-  token_fill(&tok, WORD, 0, 0, tape_module_name(t));
+  token_fill(&tok, TOKEN_WORD, 0, 0, tape_module_name(t),
+             strlen(tape_module_name(t)));
   tape_module(new_tape, &tok);
   int i, old_len = tape_size(t);
   AList *old_index = alist_create(int, DEFAULT_ARRAY_SZ);
@@ -115,12 +118,12 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     char *text = NULL;
     if (NULL != (text = map_lookup(&oh->i_to_class_ends, _as_ptr(i)))) {
       Token tok;
-      token_fill(&tok, WORD, 0, 0, text);
+      token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       tape_endclass(new_tape, &tok);
     }
     if (NULL != (text = map_lookup(&oh->i_to_class_starts, _as_ptr(i)))) {
       Token tok;
-      token_fill(&tok, WORD, 0, 0, text);
+      token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       const ClassRef *cref = tape_get_class(t, text);
       if (0 == alist_len(&cref->supers)) {
         tape_class(new_tape, &tok);

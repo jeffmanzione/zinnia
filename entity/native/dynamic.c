@@ -5,7 +5,13 @@
 
 #include "entity/native/dynamic.h"
 
+#include "util/platform.h"
+
+#ifdef OS_WINDOWS
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include "alloc/arena/intern.h"
 #include "entity/class/classes.h"
@@ -52,24 +58,53 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str_arg0 = (String *)arg0->obj->_internal_obj;
   String *str_arg1 = (String *)arg1->obj->_internal_obj;
   String *str_arg2 = (String *)arg2->obj->_internal_obj;
-  char *file_name = strndup(str_arg0->table, String_size(str_arg0));
-  char *module_name = strndup(str_arg1->table, String_size(str_arg1));
-  char *init_fn_name = strndup(str_arg2->table, String_size(str_arg2));
+  char *file_name = ALLOC_STRNDUP(str_arg0->table, String_size(str_arg0));
+  char *module_name = ALLOC_STRNDUP(str_arg1->table, String_size(str_arg1));
+  char *init_fn_name = ALLOC_STRNDUP(str_arg2->table, String_size(str_arg2));
 
+#ifdef OS_WINDOWS
+  HMODULE dl_handle = LoadLibrary(file_name);
+#else
   void *dl_handle = dlopen(file_name, RTLD_LAZY);
+#endif
+
   if (NULL == dl_handle) {
+#ifdef OS_WINDOWS
+    return raise_error(task, ctx, "Invalid file_name for library: %s",
+                       file_name);
+#else
     return raise_error(task, ctx, "Invalid file_name for library: %s",
                        dlerror());
+#endif
   }
+
+#ifdef OS_WINDOWS
+  NativeCallback init_fn =
+      (NativeCallback)GetProcAddress(dl_handle, init_fn_name);
+#else
   NativeCallback init_fn = (NativeCallback)dlsym(dl_handle, init_fn_name);
+#endif
   if (NULL == init_fn) {
+    DEALLOC(file_name);
+    DEALLOC(module_name);
+    DEALLOC(init_fn_name);
+#ifdef OS_WINDOWS
+    return raise_error(task, ctx, "init_fn_name not found in library: %S.",
+                       file_name);
+#else
     return raise_error(task, ctx, "init_fn_name not found in library: %s",
                        dlerror());
+
+#endif
   }
   ModuleManager *mm = vm_module_manager(task->parent_process->vm);
   mm_register_dynamic_module(mm, module_name, init_fn);
   // Forces module to be loaded eagerly.
   Module *module = modulemanager_lookup(mm, module_name);
+
+  DEALLOC(file_name);
+  DEALLOC(module_name);
+  DEALLOC(init_fn_name);
   return entity_object(module->_reflection);
 }
 

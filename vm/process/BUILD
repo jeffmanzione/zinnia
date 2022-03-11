@@ -28,6 +28,7 @@ cc_library(
     deps = [
         ":processes",
         ":task",
+        "//util/sync:critical_section",
         "//util/sync:mutex",
         "@memory_wrapper//alloc/arena",
         "@memory_wrapper//struct:struct_defaults",
@@ -42,8 +43,10 @@ cc_library(
         "//entity/module",
         "//heap",
         "//program:tape",
+        "//util/sync:critical_section",
         "//util/sync:mutex",
         "//util/sync:thread",
+        "//util/sync:threadpool",
         "@c_data_structures//struct:alist",
         "@memory_wrapper//struct:set",
     ],

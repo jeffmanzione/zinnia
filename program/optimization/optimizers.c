@@ -205,7 +205,7 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *fourth = tape_get(tape, i);
     if (PUSH == first->op && INSTRUCTION_ID == first->type &&
         PUSH == second->op && INSTRUCTION_PRIMITIVE == second->type &&
-        INT == ptype(&second->val) && 1 == pint(&second->val) &&
+        PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
         (ADD == third->op || SUB == third->op) && SET == fourth->op &&
         INSTRUCTION_ID == fourth->type && first->id == fourth->id &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
@@ -229,9 +229,10 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *third = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_ID == first->type &&
         (ADD == second->op || SUB == second->op) &&
-        INSTRUCTION_PRIMITIVE == second->type && INT == ptype(&second->val) &&
-        1 == pint(&second->val) && SET == third->op &&
-        INSTRUCTION_ID == third->type && first->id == third->id &&
+        INSTRUCTION_PRIMITIVE == second->type &&
+        PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
+        SET == third->op && INSTRUCTION_ID == third->type &&
+        first->id == third->id &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1)) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2))) {

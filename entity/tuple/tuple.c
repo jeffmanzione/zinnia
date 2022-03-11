@@ -37,28 +37,28 @@ void __tuple_print(const Object *obj, FILE *out) {
   tuple_print(tuple, out);
 }
 
-inline Tuple *tuple_create(size_t size) {
+Tuple *tuple_create(size_t size) {
   Tuple *t = ALLOC(Tuple);
   t->size = size;
   t->table = ALLOC_ARRAY2(Entity, size);
   return t;
 }
 
-inline Entity *tuple_get_mutable(const Tuple *t, uint32_t index) {
+Entity *tuple_get_mutable(const Tuple *t, uint32_t index) {
   ASSERT(NOT_NULL(t), index >= 0, index < t->size);
   return t->table + index;
 }
 
-inline const Entity *tuple_get(const Tuple *t, uint32_t index) {
+const Entity *tuple_get(const Tuple *t, uint32_t index) {
   return tuple_get_mutable(t, index);
 }
 
-inline uint32_t tuple_size(const Tuple *t) {
+uint32_t tuple_size(const Tuple *t) {
   ASSERT_NOT_NULL(t);
   return t->size;
 }
 
-inline void tuple_delete(Tuple *t) {
+void tuple_delete(Tuple *t) {
   if (t->size > 0) {
     DEALLOC(t->table);
   }

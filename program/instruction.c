@@ -24,27 +24,27 @@ int instruction_write(const Instruction *ins, FILE *file) {
   case INSTRUCTION_ID:
     return fprintf(file, OP_FMT ID_FMT, op_to_str(ins->op), ins->id);
   case INSTRUCTION_STRING:
-    tmp = escape(ins->str + 1);
-    num = fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op),
-                  (int)(strlen(tmp) - 2), tmp);
+    tmp = escape(ins->str);
+    num = fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op), (int)(strlen(tmp)),
+                  tmp);
     DEALLOC(tmp);
     return num;
   case INSTRUCTION_PRIMITIVE:
     return _instruction_write_primitive(ins, file);
   default:
-    ERROR("Unknown instruction type.");
+    FATALF("Unknown instruction type.");
     return -1;
   }
 }
 
 int _instruction_write_primitive(const Instruction *ins, FILE *file) {
   switch (ptype(&ins->val)) {
-  case INT:
+  case PRIMITIVE_INT:
     return fprintf(file, OP_FMT INT_FMT, op_to_str(ins->op), pint(&ins->val));
-  case FLOAT:
+  case PRIMITIVE_FLOAT:
     return fprintf(file, OP_FMT FLT_FMT, op_to_str(ins->op), pfloat(&ins->val));
   default:
-    ERROR("Unkown primitive instruction.");
+    FATALF("Unkown primitive instruction.");
     return -1;
   }
 }

@@ -13,7 +13,7 @@
 //    char: int8_t
 //     int: int32_t
 //   float: double
-typedef enum { CHAR, INT, FLOAT } PrimitiveType;
+typedef enum { PRIMITIVE_CHAR, PRIMITIVE_INT, PRIMITIVE_FLOAT } PrimitiveType;
 
 typedef struct {
   PrimitiveType _type;

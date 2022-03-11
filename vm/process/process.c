@@ -20,13 +20,15 @@ void process_init(Process *process) {
   __arena_init(&process->context_arena, sizeof(Context), "Context");
   process->task_create_lock = mutex_create();
   process->task_queue_lock = mutex_create();
-  process->task_waiting_lock = mutex_create();
-  process->task_wait_cond = mutex_condition(process->task_waiting_lock);
+  process->task_waiting_cs = critical_section_create();
+  process->task_wait_cond =
+      critical_section_create_condition(process->task_waiting_cs);
   process->task_complete_lock = mutex_create();
   Q_init(&process->queued_tasks);
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
   process->_reflection = NULL;
+  Q_init(&process->waiting_background_work);
 }
 
 void process_finalize(Process *process) {
@@ -52,9 +54,10 @@ void process_finalize(Process *process) {
   heap_delete(process->heap);
   mutex_close(process->task_create_lock);
   mutex_close(process->task_queue_lock);
-  mutex_condition_delete(process->task_wait_cond);
-  mutex_close(process->task_waiting_lock);
+  condition_delete(process->task_wait_cond);
+  critical_section_delete(process->task_waiting_cs);
   mutex_close(process->task_complete_lock);
+  Q_finalize(&process->waiting_background_work);
 }
 
 void _task_add_reflection(Process *process, Task *task) {
@@ -80,7 +83,7 @@ Task *process_create_task(Process *process) {
   return task;
 }
 
-inline Task *process_pop_task(Process *process) {
+Task *process_pop_task(Process *process) {
   Task *task;
   SYNCHRONIZED(process->task_queue_lock, {
     if (0 == Q_size(&process->queued_tasks)) {
@@ -92,7 +95,7 @@ inline Task *process_pop_task(Process *process) {
   return task;
 }
 
-inline void process_enqueue_task(Process *process, Task *task) {
+void process_enqueue_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_queue_lock,
                { *Q_add_last(&process->queued_tasks) = task; });
 }
@@ -104,17 +107,17 @@ size_t process_queue_size(Process *process) {
   return size;
 }
 
-inline void process_insert_waiting_task(Process *process, Task *task) {
-  SYNCHRONIZED(process->task_waiting_lock,
-               { set_insert(&process->waiting_tasks, task); });
+void process_insert_waiting_task(Process *process, Task *task) {
+  CRITICAL(process->task_waiting_cs,
+           { set_insert(&process->waiting_tasks, task); });
 }
 
-inline void process_remove_waiting_task(Process *process, Task *task) {
-  SYNCHRONIZED(process->task_waiting_lock,
-               { set_remove(&process->waiting_tasks, task); });
+void process_remove_waiting_task(Process *process, Task *task) {
+  CRITICAL(process->task_waiting_cs,
+           { set_remove(&process->waiting_tasks, task); });
 }
 
-inline void process_mark_task_complete(Process *process, Task *task) {
+void process_mark_task_complete(Process *process, Task *task) {
   SYNCHRONIZED(process->task_complete_lock,
                { set_insert(&process->completed_tasks, task); });
 }

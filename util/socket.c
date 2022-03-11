@@ -14,10 +14,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #else
-#include <winsock2.h>
+#include <windows.h>
 #endif
 
 #include "alloc/alloc.h"
+#include "debug/debug.h"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET 0
@@ -36,20 +37,21 @@ struct __SocketHandle {
 };
 
 void sockets_init() {
-#if defined(OS_WINDOWS)
-  WSADATA wsaData;
-  WSAStartup(MAKEWORD(2, 2), &wsaData);
+#ifdef OS_WINDOWS
+  WSADATA wsa_data = {0};
+  WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 }
 
 void sockets_cleanup() {
-#if defined(OS_WINDOWS)
+#ifdef OS_WINDOWS
   WSACleanup();
 #endif
 }
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
+  DEBUGF("HERE5");
   Socket *sock = ALLOC2(Socket);
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
@@ -60,7 +62,7 @@ Socket *socket_create(int domain, int type, int protocol, unsigned long host,
 }
 
 bool socket_is_valid(const Socket *socket) {
-#if defined(OS_WINDOWS)
+#ifdef OS_WINDOWS
   return socket->sock != INVALID_SOCKET;
 #else
   return socket->sock >= 0;
@@ -124,7 +126,7 @@ int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
   return recv(sh->client_sock, buf, buf_len, 0);
 }
 
-SOCKET sockethandle_get_socket(SocketHandle *sh) { return sh->client_sock; }
+// SOCKET sockethandle_get_socket(SocketHandle *sh) { return sh->client_sock; }
 
 void sockethandle_close(SocketHandle *sh) {
   sh->is_closed = true;
@@ -143,8 +145,8 @@ void sockethandle_delete(SocketHandle *sh) {
 }
 
 unsigned long socket_inet_address(const char *host, size_t host_len) {
-  char *host_str = strndup(host, host_len);
+  char *host_str = ALLOC_STRNDUP(host, host_len);
   unsigned long addr = inet_addr(host_str);
-  free(host_str);
+  DEALLOC(host_str);
   return addr;
 }

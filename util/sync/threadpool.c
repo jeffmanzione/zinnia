@@ -6,11 +6,11 @@
 #include "util/sync/semaphore.h"
 #include "util/sync/thread.h"
 
-typedef struct {
+struct __Work {
   VoidFnPtr fn;
   VoidFnPtr callback;
   VoidPtr fn_args;
-} _Work;
+};
 
 struct __ThreadPool {
   size_t num_threads;
@@ -22,12 +22,12 @@ struct __ThreadPool {
 };
 
 void _do_work(ThreadPool *tp) {
-  _Work *w = NULL;
+  Work *w = NULL;
   for (;;) {
     semaphore_wait(tp->thread_sem);
     SYNCHRONIZED(tp->work_mutex, {
       if (!Q_is_empty(&tp->work)) {
-        w = (_Work *)Q_pop(&tp->work);
+        w = (Work *)Q_pop(&tp->work);
       } else {
         semaphore_post(tp->thread_sem);
       }
@@ -58,19 +58,32 @@ ThreadPool *threadpool_create(size_t num_threads) {
 
 void threadpool_delete(ThreadPool *tp) {
   Q_finalize(&tp->work);
+  mutex_close(tp->work_mutex);
+  semaphore_close(tp->thread_sem);
   int i;
   for (i = 0; i < tp->num_threads; ++i) {
     thread_close(tp->threads[i]);
   }
+  DEALLOC(tp->threads);
   DEALLOC(tp);
 }
 
 void threadpool_execute(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
                         VoidPtr fn_args) {
-  _Work *w = ALLOC2(_Work);
+  Work *w = threadpool_create_work(tp, fn, callback, fn_args);
+  threadpool_execute_work(tp, w);
+}
+
+Work *threadpool_create_work(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
+                             VoidPtr fn_args) {
+  Work *w = ALLOC2(Work);
   w->fn = fn;
   w->callback = callback;
   w->fn_args = fn_args;
+  return w;
+}
+
+void threadpool_execute_work(ThreadPool *tp, Work *w) {
   SYNCHRONIZED(tp->work_mutex, {
     *Q_add_last(&tp->work) = w;
     semaphore_post(tp->thread_sem);
