@@ -8,7 +8,7 @@ sock = net.HttpSocket(
   socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0',  80, 4, True))
 
 index_html = io.FileReader('./examples/sockets/web/index.html').getall()
-favicon_ico = io.FileReader('./examples/sockets/web/favicon.ico').getall()
+favicon_ico = io.FileReader('./examples/sockets/web/favicon.ico', True).getall()
 not_found_html = io.FileReader('./examples/sockets/web/not_found.html').getall()
 
 try {
