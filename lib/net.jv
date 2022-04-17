@@ -214,7 +214,7 @@ def parse_request(req) {
   try {
     parts = req.split(RETURN_NEWLINE)
     if parts.len() == 0 {
-      raise Error(cat('Invalid request: ', req))
+      raise error.Error(cat('Invalid request: ', req))
     }
     request = parts[0].trim()
     req_head = request.split(WHITE_SPACE)
