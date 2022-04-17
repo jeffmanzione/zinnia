@@ -1357,7 +1357,7 @@ void _mark_task_complete(Process *process, Task *task) {
     process_enqueue_task(dependent_task->parent_process, dependent_task);
     process_remove_waiting_task(dependent_task->parent_process, dependent_task);
 
-    // condition_broadcast(process->task_wait_cond);
+    condition_broadcast(process->task_wait_cond);
   }
 }
 
@@ -1426,7 +1426,7 @@ top_of_fn:
     while (set_size(&process->waiting_tasks) != 0 &&
            set_size(&process->waiting_tasks) == waiting_task_count &&
            process_queue_size(process) == 0) {
-      // condition_wait(process->task_wait_cond);
+      condition_wait(process->task_wait_cond);
     }
   });
   goto top_of_fn;
