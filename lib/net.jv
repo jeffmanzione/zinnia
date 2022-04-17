@@ -95,7 +95,6 @@ class HttpRequest {
         }
         ret.extend(AMPER.join(param_arr))
       }
-      None  ; TODO: Why is this necessary?
       ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
           .extend(version).extend('\r\n')
       if _headers {
@@ -214,7 +213,7 @@ def parse_request(req) {
   try {
     parts = req.split(RETURN_NEWLINE)
     if parts.len() == 0 {
-      raise Error(cat('Invalid request: ', req))
+      raise error.Error(cat('Invalid request: ', req))
     }
     request = parts[0].trim()
     req_head = request.split(WHITE_SPACE)
