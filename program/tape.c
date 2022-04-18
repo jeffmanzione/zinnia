@@ -355,19 +355,14 @@ Token *_next_token_skip_ln(Q *queue) {
 
 void tape_read_ins(Tape *const tape, Q *tokens) {
   ASSERT_NOT_NULL(tokens);
-  DEBUGF("HERE1");
   if (Q_size(tokens) < 1) {
     return;
   }
-  DEBUGF("HERE2");
   Token *first = _next_token_skip_ln(tokens);
-  DEBUGF("HERE3");
   if (NULL == first) {
     return;
   }
-  DEBUGF("HERE4");
   if (SYMBOL_AT == first->type) {
-    DEBUGF("HERE5");
     Token *fn_name = Q_remove(tokens, 0);
     if (SYMBOL_COLON == _q_peek(tokens)->type) {
       Q_remove(tokens, 0);
@@ -384,7 +379,6 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     tape_label(tape, fn_name);
     return;
   }
-  DEBUGF("HERE6");
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
     Token *class_name = Q_remove(tokens, 0);
     if (TOKEN_NEWLINE == _q_peek(tokens)->type) {
@@ -401,21 +395,17 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     Q_finalize(&parents);
     return;
   }
-  DEBUGF("HERE7");
   if (0 == strcmp(CLASSEND_KEYWORD, first->text)) {
     tape_endclass(tape, first);
     return;
   }
-  DEBUGF("HERE8");
   if (0 == strcmp(FIELD_KEYWORD, first->text)) {
     Token *field = Q_remove(tokens, 0);
     tape_field(tape, field->text);
     return;
   }
-  DEBUGF("HERE9 %s", first->text);
   Op op = str_to_op(first->text);
   Token *next = (Token *)_q_peek(tokens);
-  DEBUGF("HERE10 %s", next->text);
   if (TOKEN_NEWLINE == next->type || SYMBOL_POUND == next->type) {
     tape_ins_no_arg(tape, op, first);
   } else if (SYMBOL_MINUS == next->type) {
@@ -425,7 +415,6 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     Q_remove(tokens, 0);
     tape_ins(tape, op, next);
   }
-  DEBUGF("HERE11");
 }
 
 void tape_read(Tape *const tape, Q *tokens) {
@@ -438,10 +427,10 @@ void tape_read(Tape *const tape, Q *tokens) {
     tape->module_name = intern("$");
   }
 
-  Q_iter iter = Q_iterator(tokens);
-  for (; Q_has(&iter); Q_inc(&iter)) {
-    DEBUGF("'%s'", (*((Token **)Q_value(&iter)))->text);
-  }
+  // Q_iter iter = Q_iterator(tokens);
+  // for (; Q_has(&iter); Q_inc(&iter)) {
+  //   DEBUGF("'%s'", (*((Token **)Q_value(&iter)))->text);
+  // }
 
   while (Q_size(tokens) > 0) {
     tape_read_ins(tape, tokens);

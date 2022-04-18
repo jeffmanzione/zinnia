@@ -2,8 +2,7 @@
 
 #include "alloc/alloc.h"
 #include "struct/q.h"
-#include "util/sync/mutex.h"
-#include "util/sync/semaphore.h"
+#include "util/sync/critical_section.h"
 #include "util/sync/thread.h"
 
 struct __Work {
@@ -15,22 +14,19 @@ struct __Work {
 struct __ThreadPool {
   size_t num_threads;
   ThreadHandle *threads;
-
-  Semaphore thread_sem;
-  Mutex work_mutex;
+  CriticalSection work_mutex;
+  Condition *work_cond;
   Q work;
 };
 
 void _do_work(ThreadPool *tp) {
   Work *w = NULL;
   for (;;) {
-    semaphore_wait(tp->thread_sem);
-    SYNCHRONIZED(tp->work_mutex, {
-      if (!Q_is_empty(&tp->work)) {
-        w = (Work *)Q_pop(&tp->work);
-      } else {
-        semaphore_post(tp->thread_sem);
+    CRITICAL(tp->work_mutex, {
+      while (Q_is_empty(&tp->work)) {
+        condition_wait(tp->work_cond);
       }
+      w = (Work *)Q_pop(&tp->work);
     });
     if (NULL != w) {
       w->fn(w->fn_args);
@@ -46,8 +42,8 @@ ThreadPool *threadpool_create(size_t num_threads) {
   Q_init(&tp->work);
 
   tp->num_threads = num_threads;
-  tp->work_mutex = mutex_create();
-  tp->thread_sem = semaphore_create(0);
+  tp->work_mutex = critical_section_create();
+  tp->work_cond = critical_section_create_condition(tp->work_mutex);
   tp->threads = ALLOC_ARRAY2(ThreadHandle, num_threads);
   int i;
   for (i = 0; i < num_threads; ++i) {
@@ -58,8 +54,8 @@ ThreadPool *threadpool_create(size_t num_threads) {
 
 void threadpool_delete(ThreadPool *tp) {
   Q_finalize(&tp->work);
-  mutex_close(tp->work_mutex);
-  semaphore_close(tp->thread_sem);
+  critical_section_delete(tp->work_mutex);
+  condition_delete(tp->work_cond);
   int i;
   for (i = 0; i < tp->num_threads; ++i) {
     thread_close(tp->threads[i]);
@@ -84,8 +80,8 @@ Work *threadpool_create_work(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
 }
 
 void threadpool_execute_work(ThreadPool *tp, Work *w) {
-  SYNCHRONIZED(tp->work_mutex, {
+  CRITICAL(tp->work_mutex, {
     *Q_add_last(&tp->work) = w;
-    semaphore_post(tp->thread_sem);
+    condition_broadcast(tp->work_cond);
   });
 }

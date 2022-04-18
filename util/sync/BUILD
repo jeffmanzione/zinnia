@@ -76,8 +76,7 @@ cc_library(
     srcs = ["threadpool.c"],
     hdrs = ["threadpool.h"],
     deps = [
-        ":mutex",
-        ":semaphore",
+        ":critical_section",
         ":thread",
         "@c_data_structures//struct:q",
         "@memory_wrapper//alloc",
