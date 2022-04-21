@@ -6,11 +6,11 @@ The VM is written from scratch by me in C and meets the C90 standard. It compile
 
 ## Dependencies
 
-[bazel](https://bazel.build/) - Compile and building the entire application.
-[language-tools](https://github.com/jeffreymanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
-[memory-wrapper](https://github.com/jeffreymanzione/memory-wrapper) - Heap, intern, arena, and memory debugging.
-[file-utils](https://github.com/jeffreymanzione/file-utils) - Basic C file wrapper for reading files.
-[c-data-structures](https://github.com/jeffreymanzione/c-data-structures) - Some useful data structures.
+* [bazel](https://bazel.build/) - Compile and building the entire application.
+* [language-tools](https://github.com/jeffreymanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
+* [memory-wrapper](https://github.com/jeffreymanzione/memory-wrapper) - Heap, intern, arena, and memory debugging.
+* [file-utils](https://github.com/jeffreymanzione/file-utils) - Basic C file wrapper for reading files.
+* [c-data-structures](https://github.com/jeffreymanzione/c-data-structures) - Some useful data structures.
 
 ## Downloading and building this project
 
