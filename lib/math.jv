@@ -2,16 +2,6 @@
 module math
 
 ; A very small number that is greater than 0.
-;
-; This is useful for identifying numbers that are very small but aren't 0.
-; An example where this is useful:
-;
-; ```
-; for i=1, i > math.EPSILON, i=i/10 {
-;   io.println(i)
-; }
-; ```
-;
 self.EPSILON = 0.000001
 
 ; Pi approximated.

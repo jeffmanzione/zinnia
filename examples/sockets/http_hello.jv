@@ -1,6 +1,7 @@
-module http_hello
 ; Example program that listens on port 80 for HTTP requests, and responds with
 ; hello-world messages.
+
+module http_hello
 
 import io
 import net
