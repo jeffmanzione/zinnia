@@ -169,7 +169,10 @@ Entity _SocketHandle_receive(Task *task, Context *ctx, Object *obj,
 
   char buf[BUFFER_SIZE];
   int chars_received = sockethandle_receive(sh, buf, BUFFER_SIZE);
-
+  if (chars_received <= 0) {
+    return raise_error(task, ctx, "Invalid connection. recv() returned %d",
+                       chars_received);
+  }
   return entity_object(
       string_new(task->parent_process->heap, buf, chars_received));
 }

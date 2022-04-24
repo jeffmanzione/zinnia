@@ -51,7 +51,6 @@ void sockets_cleanup() {
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
-  DEBUGF("HERE5");
   Socket *sock = ALLOC2(Socket);
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
