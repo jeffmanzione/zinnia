@@ -4,12 +4,14 @@ def _jeff_vm_library_impl(ctx):
     src_files = [file for target in ctx.attr.srcs for file in target.files.to_list()]
     out_files = []
     for src in src_files:
-        out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
-        out_files.append(out_file)
-        out_dir = out_file.root.path + "/" + src.dirname
-        jvc_args = ["-a", "--assembly_out_dir=" + out_dir, src.short_path]
+        a_out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
+        out_files.append(a_out_file)
+        b_out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".jb"))
+        out_files.append(b_out_file)
+        out_dir = a_out_file.root.path + "/" + src.dirname
+        jvc_args = ["-a", "--assembly_out_dir=" + out_dir, "-b", "--binary_out_dir=" + out_dir, src.short_path]
         ctx.actions.run(
-            outputs = [out_file],
+            outputs = [a_out_file, b_out_file],
             inputs = [src],
             executable = compiler_executable,
             arguments = jvc_args,
