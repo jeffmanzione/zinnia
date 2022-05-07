@@ -9,7 +9,7 @@
 #include "struct/set.h"
 #include "util/args/commandline_arg.h"
 
-#define ARGSTORE_TEMPLATE_RETVAL(type, retval) \
+#define ARGSTORE_TEMPLATE_RETVAL(type, retval)                                 \
   retval argstore_lookup_##type(const ArgStore *store, ArgKey key)
 
 #define ARGSTORE_TEMPLATE(type) ARGSTORE_TEMPLATE_RETVAL(type, type)

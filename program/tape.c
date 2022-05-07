@@ -22,13 +22,17 @@
 #define CLASSEND_KEYWORD "endclass"
 #define MODULE_KEYWORD "module"
 #define FIELD_KEYWORD "field"
+#define SOURCE_KEYWORD "source"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
 
 struct _Tape {
   const char *module_name;
   AList ins;
+
   AList source_map;
+  char *external_source_fn;
+
   KeyedList class_refs;
   KeyedList func_refs;
 
@@ -45,6 +49,7 @@ Tape *tape_create() {
   keyedlist_init(&tape->class_refs, ClassRef, DEFAULT_ARRAY_SZ);
   keyedlist_init(&tape->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
   tape->current_class = NULL;
+  tape->external_source_fn = NULL;
   return tape;
 }
 
@@ -74,6 +79,16 @@ SourceMapping *tape_add_source(Tape *tape, Instruction *ins) {
   uintptr_t index = ins - (Instruction *)tape->ins._arr;
   ASSERT(index >= 0, index < tape_size(tape));
   return (SourceMapping *)alist_get(&tape->source_map, index);
+}
+
+void tape_set_external_source(Tape *const tape, const char file_name[]) {
+  ASSERT(NOT_NULL(tape));
+  // ASSERT(NOT_NULL(file_name));
+  tape->external_source_fn = (char *)file_name;
+}
+
+const char *tape_get_external_source(const Tape *const tape) {
+  return tape->external_source_fn;
 }
 
 void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
@@ -213,6 +228,9 @@ void tape_write(const Tape *tape, FILE *file) {
   if (tape->module_name && 0 != strcmp("$", tape->module_name)) {
     fprintf(file, "module %s\n", tape->module_name);
   }
+  if (NULL != tape->external_source_fn) {
+    fprintf(file, "source '%s'\n", tape->external_source_fn);
+  }
   AL_iter cls_iter = alist_iter((AList *)&tape->class_refs._list);
   AL_iter func_iter = alist_iter((AList *)&tape->func_refs._list);
   AL_iter cls_func_iter;
@@ -260,8 +278,7 @@ void tape_write(const Tape *tape, FILE *file) {
       SourceMapping *sm = (SourceMapping *)alist_get(&tape->source_map, i);
       if (sm->col >= 0 && sm->line >= 0) {
         int lpadding = max(INSTRUCTION_COMMENT_LPAD - chars_written, 0);
-        fprintf(file, "%*s; line=%d, col=%d", lpadding, PADDING, sm->line,
-                sm->col);
+        fprintf(file, "%*s #%d %d", lpadding, PADDING, sm->line, sm->col);
       }
       fprintf(file, "\n");
     }
@@ -415,6 +432,20 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     Q_remove(tokens, 0);
     tape_ins(tape, op, next);
   }
+
+  next = (Token *)_q_peek(tokens);
+  if (next != NULL && SYMBOL_POUND == next->type) {
+    Q_remove(tokens, 0);
+    Primitive line = token_to_primitive(Q_remove(tokens, 0));
+    Primitive col = token_to_primitive(Q_remove(tokens, 0));
+    SourceMapping *sm =
+        tape_add_source(tape, tape_get_mutable(tape, tape_size(tape) - 1));
+    sm->source_line = pint(&line);
+    sm->source_col = pint(&col);
+    sm->source_token =
+        token_create(sm->token->type, sm->source_line, sm->source_col,
+                     sm->token->text, strlen(sm->token->text));
+  }
 }
 
 void tape_read(Tape *const tape, Q *tokens) {
@@ -426,12 +457,15 @@ void tape_read(Tape *const tape, Q *tokens) {
   } else {
     tape->module_name = intern("$");
   }
-
-  // Q_iter iter = Q_iterator(tokens);
-  // for (; Q_has(&iter); Q_inc(&iter)) {
-  //   DEBUGF("'%s'", (*((Token **)Q_value(&iter)))->text);
-  // }
-
+  if (TOKEN_NEWLINE == ((Token *)_q_peek(tokens))->type) {
+    Q_remove(tokens, 0);
+  }
+  if (0 == strcmp(SOURCE_KEYWORD, ((Token *)_q_peek(tokens))->text)) {
+    Q_remove(tokens, 0);
+    Token *tok = (Token *)Q_remove(tokens, 0);
+    ASSERT(NOT_NULL(tok));
+    tape_set_external_source(tape, tok->text);
+  }
   while (Q_size(tokens) > 0) {
     tape_read_ins(tape, tokens);
   }

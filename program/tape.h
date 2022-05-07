@@ -18,6 +18,9 @@ typedef struct {
   // TODO: Something that points to the file, func, etc...
   int32_t line, col;
   const Token *token;
+  // Only set if there is another source file that generated the file read.
+  int32_t source_line, source_col;
+  const Token *source_token;
 } SourceMapping;
 
 typedef struct {
@@ -74,6 +77,9 @@ void tape_append(Tape *head, Tape *tail);
 
 void tape_write(const Tape *tape, FILE *file);
 void tape_read(Tape *const tape, Q *tokens);
+
+void tape_set_external_source(Tape *const tape, const char file_name[]);
+const char *tape_get_external_source(const Tape *const tape);
 
 // **********************
 // Specialized functions.

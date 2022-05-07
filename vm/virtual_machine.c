@@ -273,6 +273,17 @@ Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
                                   strlen(file_info_name(fi))));
 }
 
+Entity _module_source_filename(Task *task, Context *ctx, Object *obj,
+                               Entity *args) {
+  const char *source_fn = tape_get_external_source(obj->_module_obj->_tape);
+  if (NULL != source_fn) {
+    return entity_object(
+        string_new(task->parent_process->heap, source_fn, strlen(source_fn)));
+  } else {
+    return NONE_ENTITY;
+  }
+}
+
 Entity _stackline_linetext(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
   const FileInfo *fi = modulemanager_get_fileinfo(
@@ -288,7 +299,11 @@ void _add_filename_method(VM *vm) {
   Function *filename =
       native_method(Class_Module, intern("filename"), _module_filename);
   add_reflection_to_function(vm_main_process(vm)->heap,
-                             Class_StackLine->_reflection, filename);
+                             Class_Module->_reflection, filename);
+  Function *source_filename = native_method(
+      Class_Module, intern("source_filename"), _module_source_filename);
+  add_reflection_to_function(vm_main_process(vm)->heap,
+                             Class_Module->_reflection, source_filename);
   Function *linename =
       native_method(Class_StackLine, intern("linetext"), _stackline_linetext);
   add_reflection_to_function(vm_main_process(vm)->heap,

@@ -17,6 +17,7 @@
 #include "entity/tuple/tuple.h"
 #include "heap/heap.h"
 #include "vm/intern.h"
+#include "vm/process/context.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
@@ -25,7 +26,7 @@ Class *Class_StackLine;
 typedef struct {
   Module *module;
   Function *func;
-  Token *error_token;
+  Token *error_token, *source_error_token;
 } _StackLine;
 
 void _error_init(Object *obj) {}
@@ -54,7 +55,7 @@ Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
 uint32_t stackline_linenum(Object *stackline) {
   ASSERT(NOT_NULL(stackline), Class_StackLine == stackline->_class);
   _StackLine *sl = (_StackLine *)stackline->_internal_obj;
-  return sl->error_token->line;
+  return NULL != sl->error_token ? sl->error_token->line : -1;
 }
 
 Module *stackline_module(Object *stackline) {
@@ -77,18 +78,37 @@ Entity _stackline_function(Task *task, Context *ctx, Object *obj,
   return entity_object(sl->func->_reflection);
 }
 
-Entity _stackline_token(Task *task, Context *ctx, Object *obj, Entity *args) {
-  _StackLine *sl = (_StackLine *)obj->_internal_obj;
+Entity _token_tuple(Task *task, const Token *token) {
+  if (NULL == token) {
+    return NONE_ENTITY;
+  }
   Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
-  Entity token_text = entity_object(string_new(
-      task->parent_process->heap, sl->error_token->text, sl->error_token->len));
+  Entity token_text = entity_object(
+      string_new(task->parent_process->heap, token->text, token->len));
   tuple_set(task->parent_process->heap, tuple_obj, 0, &token_text);
-  Entity line = entity_int(sl->error_token->line);
+  Entity line = entity_int(token->line);
   tuple_set(task->parent_process->heap, tuple_obj, 1, &line);
-  Entity col = entity_int(sl->error_token->col);
+  Entity col = entity_int(token->col);
   tuple_set(task->parent_process->heap, tuple_obj, 2, &col);
   return entity_object(tuple_obj);
+}
+
+Entity _stackline_token(Task *task, Context *ctx, Object *obj, Entity *args) {
+  _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  return _token_tuple(task, sl->error_token);
+}
+
+Entity _stackline_source_token(Task *task, Context *ctx, Object *obj,
+                               Entity *args) {
+  _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  return _token_tuple(task, sl->source_error_token);
+}
+
+Entity _stackline_has_source_map(Task *task, Context *ctx, Object *obj,
+                                 Entity *args) {
+  _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  return NULL == sl->source_error_token ? NONE_ENTITY : entity_int(1);
 }
 
 Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -109,7 +129,11 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       sl->module = c->module;
       sl->func = (Function *)c->func; // blessed
       sl->error_token =
-          (Token *)tape_get_source(c->tape, c->ins)->token; // blessed
+          (Token *)tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1))
+              ->token; // blessed
+      sl->source_error_token =
+          (Token *)tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1))
+              ->source_token; // blessed
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }
@@ -136,4 +160,8 @@ void error_add_native(ModuleManager *mm, Module *error) {
   native_method(Class_StackLine, MODULE_KEY, _stackline_module);
   native_method(Class_StackLine, intern("function"), _stackline_function);
   native_method(Class_StackLine, intern("__token"), _stackline_token);
+  native_method(Class_StackLine, intern("__has_source_map"),
+                _stackline_has_source_map);
+  native_method(Class_StackLine, intern("__source_token"),
+                _stackline_source_token);
 }
