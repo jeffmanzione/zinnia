@@ -84,8 +84,14 @@ Entity _token_tuple(Task *task, const Token *token) {
   }
   Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
-  Entity token_text = entity_object(
-      string_new(task->parent_process->heap, token->text, token->len));
+
+  Entity token_text;
+  if (NULL == token->text) {
+    token_text = NONE_ENTITY;
+  } else {
+    token_text = entity_object(
+        string_new(task->parent_process->heap, token->text, token->len));
+  }
   tuple_set(task->parent_process->heap, tuple_obj, 0, &token_text);
   Entity line = entity_int(token->line);
   tuple_set(task->parent_process->heap, tuple_obj, 1, &line);

@@ -34,6 +34,13 @@ void tape_read_binary(Tape *const tape, FILE *file) {
   Token fake;
   fake.text = *((char **)alist_get(&strings, 0));
   tape_module(tape, &fake);
+
+  uint8_t has_source_map;
+  deserialize_type(file, uint8_t, &has_source_map);
+  if (has_source_map) {
+    tape_set_external_source(tape, *((char **)alist_get(&strings, 1)));
+  }
+
   uint16_t num_refs;
   deserialize_type(file, uint16_t, &num_refs);
   for (i = 0; i < num_refs; ++i) {
@@ -45,7 +52,7 @@ void tape_read_binary(Tape *const tape, FILE *file) {
   }
   uint16_t num_classes;
   deserialize_type(file, uint16_t, &num_classes);
-  for (i = 0; i < num_classes; i++) {
+  for (i = 0; i < num_classes; ++i) {
     uint16_t class_name_index, class_start, class_end, num_parents, num_methods;
     deserialize_type(file, uint16_t, &class_name_index);
     deserialize_type(file, uint16_t, &class_start);
@@ -77,10 +84,21 @@ void tape_read_binary(Tape *const tape, FILE *file) {
   }
   uint16_t num_ins;
   deserialize_type(file, uint16_t, &num_ins);
-  for (i = 0; i < num_ins; i++) {
+  for (i = 0; i < num_ins; ++i) {
     Instruction ins;
     deserialize_ins(file, &strings, &ins);
     tape_ins_raw(tape, &ins);
+    if (has_source_map) {
+      SourceMapping *sm =
+          (SourceMapping *)tape_get_source(tape, tape_size(tape) - 1);
+      uint16_t source_line;
+      uint16_t source_col;
+      deserialize_type(file, uint16_t, &source_line);
+      deserialize_type(file, uint16_t, &source_col);
+      sm->source_line = source_line;
+      sm->source_col = source_col;
+      sm->source_token = token_create(0, source_line, source_col, NULL, 0);
+    }
   }
   alist_finalize(&strings);
 }
@@ -94,6 +112,9 @@ void _insert_string(AList *strings, Map *string_index, const char str[]) {
 
 void _intern_all_strings(const Tape *tape, AList *strings, Map *string_index) {
   _insert_string(strings, string_index, tape_module_name(tape));
+  if (NULL != tape_get_external_source(tape)) {
+    _insert_string(strings, string_index, tape_get_external_source(tape));
+  }
   KL_iter class_iter = tape_classes(tape);
   for (; kl_has(&class_iter); kl_inc(&class_iter)) {
     _insert_string(strings, string_index, kl_key(&class_iter));
@@ -190,6 +211,9 @@ void tape_write_binary(const Tape *const tape, FILE *file) {
 
   _serialize_all_strings(&strings, &string_index, &buffer);
 
+  uint8_t has_source_map = NULL != tape_get_external_source(tape);
+  serialize_type(&buffer, uint8_t, has_source_map);
+
   uint16_t num_refs = (uint16_t)tape_func_count(tape);
   serialize_type(&buffer, uint16_t, num_refs);
   KL_iter refs = tape_functions(tape);
@@ -209,8 +233,15 @@ void tape_write_binary(const Tape *const tape, FILE *file) {
   uint16_t num_ins = (uint16_t)tape_size(tape);
   serialize_type(&buffer, uint16_t, num_ins);
   int i;
-  for (i = 0; i < num_ins; i++) {
+  for (i = 0; i < num_ins; ++i) {
     serialize_ins(&buffer, tape_get(tape, i), &string_index);
+    if (has_source_map) {
+      const SourceMapping *sm = tape_get_source(tape, i);
+      uint16_t source_line = sm->line;
+      uint16_t source_col = sm->col;
+      serialize_type(&buffer, uint16_t, source_line);
+      serialize_type(&buffer, uint16_t, source_col);
+    }
   }
 
   buffer_finalize(&buffer);
