@@ -647,7 +647,7 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
       _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
   context_set_function(fn_ctx, func);
   Task *module_main_task =
-      _maybe_load_module(fn_ctx->parent_task, self->_class->_module);
+      _maybe_load_module(fn_ctx->parent_task, (Module *)self->_class->_module);
   if (NULL != module_main_task) {
     fn_ctx->parent_task->state = TASK_WAITING;
     process_insert_waiting_task(fn_ctx->parent_task->parent_process,
