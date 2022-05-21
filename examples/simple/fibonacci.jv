@@ -1,4 +1,3 @@
-module fibonacci
 ; Example program which efficiently computes fibonacci numbers using memoize().
 
 import io

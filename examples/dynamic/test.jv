@@ -1,4 +1,3 @@
-module test
 ; Compile c library: bazel build -c opt //examples/dynamic:_custom
 ; Run with bazel-bin/run/jvr examples/dynamic/test.jv examples/dynamic/custom.jv
 

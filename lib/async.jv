@@ -1,4 +1,3 @@
-module async
 
 ; Represents the state of an asynchronous piece of work.
 class Future {

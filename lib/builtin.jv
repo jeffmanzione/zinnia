@@ -1,5 +1,3 @@
-module builtin
-
 import error
 import io
 import struct

@@ -8,8 +8,6 @@
 ; The client will prompt for a username and then allow clients to broadcast
 ; messages to the other clients.
 
-module chat
-
 import error
 import io
 import socket

@@ -1,5 +1,3 @@
-module io
-
 import struct
 
 self.IN = FileReader('__STDIN__', True)

@@ -1,5 +1,3 @@
-module build
-
 import classes
 
 class WithBuilder {
