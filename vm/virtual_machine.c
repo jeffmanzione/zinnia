@@ -273,6 +273,17 @@ Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
                                   strlen(file_info_name(fi))));
 }
 
+Entity _module_source_filename(Task *task, Context *ctx, Object *obj,
+                               Entity *args) {
+  const char *source_fn = tape_get_external_source(obj->_module_obj->_tape);
+  if (NULL != source_fn) {
+    return entity_object(
+        string_new(task->parent_process->heap, source_fn, strlen(source_fn)));
+  } else {
+    return NONE_ENTITY;
+  }
+}
+
 Entity _stackline_linetext(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
   const FileInfo *fi = modulemanager_get_fileinfo(
@@ -288,7 +299,11 @@ void _add_filename_method(VM *vm) {
   Function *filename =
       native_method(Class_Module, intern("filename"), _module_filename);
   add_reflection_to_function(vm_main_process(vm)->heap,
-                             Class_StackLine->_reflection, filename);
+                             Class_Module->_reflection, filename);
+  Function *source_filename = native_method(
+      Class_Module, intern("source_filename"), _module_source_filename);
+  add_reflection_to_function(vm_main_process(vm)->heap,
+                             Class_Module->_reflection, source_filename);
   Function *linename =
       native_method(Class_StackLine, intern("linetext"), _stackline_linetext);
   add_reflection_to_function(vm_main_process(vm)->heap,
@@ -557,7 +572,7 @@ void _execute_GTSH(VM *vm, Task *task, Context *context,
 
 Context *_execute_as_new_task(Task *task, Object *self, Module *m,
                               uint32_t ins_pos) {
-  Task *new_task = process_create_task(task->parent_process);
+  Task *new_task = process_create_unqueued_task(task->parent_process);
   new_task->parent_task = task;
   Context *ctx = task_create_context(new_task, self, m, ins_pos);
   *task_mutable_resval(new_task) = *task_get_resval(task);
@@ -582,6 +597,20 @@ void _execute_in_background_callback(BackgroundThreadArgs *args) {
   args->task->state = TASK_COMPLETE;
   _mark_task_complete(args->task->parent_process, args->task);
   DEALLOC(args);
+}
+
+Task *_maybe_load_module(Task *task, Module *module) {
+  if (module->_is_initialized) {
+    return NULL;
+  }
+  module->_is_initialized = true;
+  if (NULL == task_get_resval(task)) {
+    *task_mutable_resval(task) = NONE_ENTITY;
+  }
+  Context *new_ctx = _execute_as_new_task(task, module->_reflection, module, 0);
+  process_enqueue_task(task->parent_process, new_ctx->parent_task);
+  set_insert(&new_ctx->parent_task->dependent_tasks, task);
+  return new_ctx->parent_task;
 }
 
 // VERY IMPORTANT: context is only necessary for native functions!
@@ -617,6 +646,16 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   Context *fn_ctx =
       _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
   context_set_function(fn_ctx, func);
+  Task *module_main_task =
+      _maybe_load_module(fn_ctx->parent_task, (Module *)self->_class->_module);
+  if (NULL != module_main_task) {
+    fn_ctx->parent_task->state = TASK_WAITING;
+    process_insert_waiting_task(fn_ctx->parent_task->parent_process,
+                                fn_ctx->parent_task);
+  } else {
+    process_enqueue_task(fn_ctx->parent_task->parent_process,
+                         fn_ctx->parent_task);
+  }
   if (func->_is_anon) {
     fn_ctx->previous_context = parent_context;
   }
@@ -1087,16 +1126,7 @@ bool _execute_LMDL(VM *vm, Task *task, Context *context,
   object_set_member_obj(task->parent_process->heap,
                         context->module->_reflection, ins->id,
                         module->_reflection);
-  if (module->_is_initialized) {
-    return false;
-  }
-  module->_is_initialized = true;
-  if (NULL == task_get_resval(task)) {
-    *task_mutable_resval(task) = NONE_ENTITY;
-  }
-  Context *new_ctx = _execute_as_new_task(task, module->_reflection, module, 0);
-  set_insert(&new_ctx->parent_task->dependent_tasks, task);
-  return true;
+  return NULL != _maybe_load_module(task, module);
 }
 
 bool _execute_CTCH(VM *vm, Task *task, Context *context,
@@ -1356,7 +1386,6 @@ void _mark_task_complete(Process *process, Task *task) {
     *task_mutable_resval(dependent_task) = *task_get_resval(task);
     process_enqueue_task(dependent_task->parent_process, dependent_task);
     process_remove_waiting_task(dependent_task->parent_process, dependent_task);
-
     condition_broadcast(process->task_wait_cond);
   }
 }

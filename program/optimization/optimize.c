@@ -111,6 +111,7 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
   token_fill(&tok, TOKEN_WORD, 0, 0, tape_module_name(t),
              strlen(tape_module_name(t)));
   tape_module(new_tape, &tok);
+  tape_set_external_source(new_tape, tape_get_external_source(t));
   int i, old_len = tape_size(t);
   AList *old_index = alist_create(int, DEFAULT_ARRAY_SZ);
   AList *new_index = alist_create(int, DEFAULT_ARRAY_SZ);

@@ -108,6 +108,7 @@ size_t process_queue_size(Process *process) {
 }
 
 void process_insert_waiting_task(Process *process, Task *task) {
+  task->state = TASK_WAITING;
   CRITICAL(process->task_waiting_cs,
            { set_insert(&process->waiting_tasks, task); });
 }

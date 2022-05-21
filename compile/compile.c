@@ -60,6 +60,7 @@ Tape *_read_file(const char fn[], bool opt) {
     ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
     Tape *tape = tape_create();
+    tape_set_external_source(tape, fn);
     semantic_analyzer_produce(&sa, etree, tape);
 
     semantic_analyzer_delete(&sa, etree);

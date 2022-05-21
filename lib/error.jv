@@ -12,10 +12,25 @@ class Token {
 
 class StackLine {
   method token() {
-    return Token(__token())
+    tok = __token()
+    if tok {
+      return Token(tok)
+    }
+    return Token('', -1, -1)
+  }
+  method source_token() {
+    tok = __source_token()
+    if tok {
+      return Token(tok)
+    }
+    return Token('', -1, -1)
+  }
+  method has_source_map() {
+    return __has_source_map()
   }
   method to_s() {
-    tok = token()
+    tok = if has_source_map() then source_token() else token()
+    filename = if has_source_map() then module().source_filename() else module().filename()
     func = function()
     result = ''.extend(module().name())
     if func {
@@ -25,7 +40,7 @@ class StackLine {
       result.extend('.').extend(func.name())
     }
     return result.extend('(')
-        .extend(module().filename())
+        .extend(str(filename))
         .extend(':')
         .extend(str(tok.line + 1))
         .extend(')')
@@ -35,17 +50,19 @@ class StackLine {
 class Error {
   method to_s() {
     result = cat(self.class().name(), ': ', message, '\n')
-    error_token = stacktrace[0].token()
-    left_padding = _token_left_padding(error_token)
-    result.extend(str(error_token.line + 1)).extend(':')
-    result.extend(stacktrace[0].linetext())
-    for i=0, i < left_padding, i=i+1 {
-      result.extend(' ')
+    if stacktrace[0].linetext() {
+      error_token = stacktrace[0].token()
+      left_padding = _token_left_padding(error_token)
+      result.extend(str(error_token.line + 1)).extend(':')
+      result.extend(str(stacktrace[0].linetext()))
+      for i=0, i < left_padding, i=i+1 {
+        result.extend(' ')
+      }
+      for i=0, i < error_token.text.len(), i=i+1 {
+        result.extend('^')
+      }
+      result.extend('\n')
     }
-    for i=0, i < error_token.text.len(), i=i+1 {
-      result.extend('^')
-    }
-    result.extend('\n')
     for i=0, i<stacktrace.len(), i=i+1 {
       result.extend('  ').extend(str(stacktrace[i])).extend('\n')  
     }
