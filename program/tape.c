@@ -50,6 +50,7 @@ Tape *tape_create() {
   keyedlist_init(&tape->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
   tape->current_class = NULL;
   tape->external_source_fn = NULL;
+  tape->module_name = NULL;
   return tape;
 }
 

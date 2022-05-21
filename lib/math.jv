@@ -1,5 +1,4 @@
 ; Basic math functions.
-module math
 
 ; A very small number that is greater than 0.
 self.EPSILON = 0.000001

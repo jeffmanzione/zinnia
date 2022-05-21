@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "alloc/alloc.h"
+#include "alloc/arena/intern.h"
 #include "lang/lexer/lang_lexer.h"
 #include "lang/lexer/token.h"
 #include "lang/parser/lang_parser.h"
@@ -62,6 +63,17 @@ Tape *_read_file(const char fn[], bool opt) {
     Tape *tape = tape_create();
     tape_set_external_source(tape, fn);
     semantic_analyzer_produce(&sa, etree, tape);
+
+    if (NULL == tape_module_name(tape)) {
+      char *dir_path, *module_name_tmp, *ext;
+      split_path_file(fn, &dir_path, &module_name_tmp, &ext);
+      char *module_name = intern(module_name_tmp);
+      DEALLOC(module_name_tmp);
+      DEALLOC(dir_path);
+      DEALLOC(ext);
+      tape_module(tape, token_create(TOKEN_WORD, 0, 0, module_name,
+                                     strlen(module_name)));
+    }
 
     semantic_analyzer_delete(&sa, etree);
     semantic_analyzer_finalize(&sa);

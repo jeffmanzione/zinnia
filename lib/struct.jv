@@ -1,5 +1,3 @@
-module struct
-
 import builtin
 
 class Map {

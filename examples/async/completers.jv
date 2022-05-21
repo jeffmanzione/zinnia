@@ -1,5 +1,3 @@
-module completers
-
 import async
 import io
 import process

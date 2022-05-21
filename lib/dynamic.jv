@@ -1,5 +1,3 @@
-module dynamic
-
 import error
 
 def import_c_library(file_name, module_name, init_fn_name) {

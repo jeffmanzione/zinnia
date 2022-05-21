@@ -29,7 +29,7 @@
 struct _ModuleInfo {
   Module module;
   FileInfo *fi;
-  const char *file_name;
+  const char *file_name, *module_name_from_file;
   bool is_loaded, has_native_callback, is_dynamic;
   NativeCallback native_callback;
 };
@@ -99,6 +99,7 @@ ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
     FATALF("Module by name '%s' already exists.", module_name);
   }
   module_info->file_name = (NULL != file_name) ? intern(file_name) : NULL;
+  module_info->module_name_from_file = module_name;
   return module_info;
 }
 
@@ -225,6 +226,12 @@ Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
 
     Tape *tape = tape_create();
     semantic_analyzer_produce(&sa, etree, tape);
+    if (NULL == tape_module_name(tape)) {
+      tape_module(tape,
+                  token_create(TOKEN_WORD, 0, 0,
+                               module_info->module_name_from_file,
+                               strlen(module_info->module_name_from_file)));
+    }
 
     semantic_analyzer_delete(&sa, etree);
     semantic_analyzer_finalize(&sa);

@@ -1,5 +1,3 @@
-module error
-
 import io
 
 class Token {
