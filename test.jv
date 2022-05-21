@@ -1,0 +1,5 @@
+module test
+
+a = []
+
+a.remove(1)

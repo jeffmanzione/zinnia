@@ -95,6 +95,18 @@ Task *process_pop_task(Process *process) {
   return task;
 }
 
+Task *process_dequeue_task(Process *process) {
+  Task *task;
+  SYNCHRONIZED(process->task_queue_lock, {
+    if (0 == Q_size(&process->queued_tasks)) {
+      task = NULL;
+    } else {
+      task = Q_dequeue(&process->queued_tasks);
+    }
+  });
+  return task;
+}
+
 void process_enqueue_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_queue_lock,
                { *Q_add_last(&process->queued_tasks) = task; });
@@ -108,6 +120,7 @@ size_t process_queue_size(Process *process) {
 }
 
 void process_insert_waiting_task(Process *process, Task *task) {
+  task->state = TASK_WAITING;
   CRITICAL(process->task_waiting_cs,
            { set_insert(&process->waiting_tasks, task); });
 }
