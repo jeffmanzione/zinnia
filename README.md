@@ -35,7 +35,7 @@ bazel build -c opt //compile:jlc //run:jlr
 
 ## Compiling your program to assembly and bytecode
 
-Use `jlc` to compile your program.
+Use `jvc` to compile your program.
 
 * `-a`: Output assembly (default=`false`).
 * `-b`: Output binary (default=`false`).
@@ -44,19 +44,19 @@ Use `jlc` to compile your program.
 * `-assembly_out_dir`: Output location for JA files (default=`"./"`).
 
 ```shell
-./bazel-bin/compile/jlc -a -b my_program.jv
+./bazel-bin/compile/jvc -a -b my_program.jv
 ```
 
 ## Running your program
 
-Use `jlr` to run your program either from source, assembly, or bytecode.
+Use `jvr` to run your program either from source, assembly, or bytecode.
 
 ```shell
-./bazel-bin/run/jlr my_program.jv
+./bazel-bin/run/jvr my_program.jv
 # or
-./bazel-bin/run/jlr my_program.ja
+./bazel-bin/run/jvr my_program.ja
 # or
-./bazel-bin/run/jlr my_program.jb
+./bazel-bin/run/jvr my_program.jb
 ```
 
 ## Examples
