@@ -112,10 +112,10 @@ class Map {
   }
   method to_s() {
     kvs = []
-    for (k, v) in self {
+    each((k, v) {
       key = if k is String then '\''.extend(k).extend('\'') else str(k)
       kvs.append(cat(key, ': ', v))
-    }
+    })
     return cat('{', ', '.join(kvs), '}')
   }
 }

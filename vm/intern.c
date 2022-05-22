@@ -26,6 +26,7 @@ char *HAS_NEXT_FN_NAME;
 char *HASH_KEY;
 char *IN_FN_NAME;
 char *ITER_FN_NAME;
+char *MAIN_KEY;
 char *MODULE_KEY;
 char *MODULE_NAME;
 char *NAME_KEY;
@@ -68,6 +69,7 @@ void _strings_insert_constants() {
   HASH_KEY = intern("hash");
   IN_FN_NAME = intern("__in__");
   ITER_FN_NAME = intern("iter");
+  MAIN_KEY = intern("__main");
   MODULE_KEY = intern("module");
   MODULE_NAME = intern("Module");
   NAME_KEY = intern("name");
