@@ -49,7 +49,7 @@ class Map {
   }
   ; Returns True if there is an entry in the Map with the given key k, otherwise False.
   method __in__(k) {
-    if self[k] then True else False
+    self[k]
   }
   ; Removes the entry in the set with the given key k.
   method remove(k) {
