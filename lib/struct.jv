@@ -47,7 +47,7 @@ class Map {
     }
     return None
   }
-  ; Returns True if there is an entry in the Map with the given key k, otherwise False.
+  ; Returns the value associated with k, if there is one, otherwise None.
   method __in__(k) {
     self[k]
   }
@@ -169,7 +169,7 @@ class Set {
   method remove(k) {
     map.remove(k)
   }
-  ; Return True if element k is in the Set, otherwise False.
+  ; Return k if k is in the Set, otherwise None.
   method __in__(k) {
     k in map
   }
