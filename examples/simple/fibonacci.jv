@@ -14,3 +14,5 @@ fib = memoize((i) {
 io.println(cat('fib(5)=', fib(5)))
 io.println(cat('fib(10)=', fib(10)))
 io.println(cat('fib(20)=', fib(20)))
+io.println(cat('fib(30)=', fib(30)))
+io.println(cat('fib(40)=', fib(40)))
