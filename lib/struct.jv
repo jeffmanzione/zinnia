@@ -13,6 +13,7 @@ class Map {
     if pos < 0 pos = -pos
     return pos
   }
+  ; Associates the key k with the value v in the map.
   method []=(k, v) {
     pos = _hash(k)
     entries = table[pos]
@@ -32,6 +33,7 @@ class Map {
     keys.append(k)
     return None
   }
+  ; Returns the associated value with key k.
   method [](k) {
     pos = _hash(k)
     entries = table[pos]
@@ -45,9 +47,11 @@ class Map {
     }
     return None
   }
+  ; Returns True if there is an entry in the Map with the given key k, otherwise False.
   method __in__(k) {
-    return self[k]
+    if self[k] then True else False
   }
+  ; Removes the entry in the set with the given key k.
   method remove(k) {
     pos = _hash(k)
     entries = table[pos]
@@ -123,7 +127,7 @@ class Map {
 
 class Cache {
   field map
-  new(sz=255) {
+  new(sz=31) {
     map = Map(sz)
   }
   method get(k, factory, default=None) {
@@ -148,5 +152,25 @@ class LoadingCache {
   new(field cache=Cache(255), field factory) {}
   method get(k) {
     cache.get(k, factory) 
+  }
+}
+
+; A collection that contains no duplicate elements.
+class Set {
+  field map
+  new(sz=255) {
+    map = Map(sz)
+  }
+  ; Inserts a given element k into the Set.
+  method insert(k) {
+    map[k] = k
+  }
+  ; Removes a given element k from the Set.
+  method remove(k) {
+    map.remove(k)
+  }
+  ; Return True if element k is in the Set, otherwise False.
+  method __in__(k) {
+    k in map
   }
 }
