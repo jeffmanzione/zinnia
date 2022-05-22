@@ -45,6 +45,63 @@ class Map {
     }
     return None
   }
+  method __in__(k) {
+    return self[k]
+  }
+  method remove(k) {
+    pos = _hash(k)
+    entries = table[pos]
+    if ~entries {
+      return None
+    }
+    for i=0, i<entries.len(), i=i+1 {
+      if k == entries[i][0] {
+        old_v = entries[i][1]
+        entries.remove(i)
+        keys.remove_value(k)
+        return old_v
+      }
+    }
+    return None
+  }
+  method put_if_absent(k, v) {
+    if ~(k in self) {
+      self[k] = v
+    }
+  }
+  method compute(k, remapping_fn) {
+    old_value = self[k]
+    new_value = remapping_fn(k, old_value)
+    if new_value {
+      self[k] = new_value
+    } else if old_value {
+      remove(k)
+    }
+    return new_value
+  }
+  method compute_if_absent(k, mapping_fn) {
+    if ~(k in self) {
+      new_value = mapping_fn(k)
+      if new_value {
+        self[k] = new_value
+      }
+      return new_value
+    }
+    return None
+  }
+  method compute_if_present(k, remapping_fn) {
+    old_value = self[k]
+    if old_value {
+      new_value = remapping_fn(k, old_value)
+      if new_value {
+        self[k] = new_value
+      } else {
+        remove(k)
+      }
+      return new_value
+    }
+    return None
+  }
   method iter() {
     return KVIterator(keys.iter(), self)
   }
@@ -55,10 +112,10 @@ class Map {
   }
   method to_s() {
     kvs = []
-    each((k, v) {
+    for (k, v) in self {
       key = if k is String then '\''.extend(k).extend('\'') else str(k)
       kvs.append(cat(key, ': ', v))
-    })
+    }
     return cat('{', ', '.join(kvs), '}')
   }
 }
@@ -84,5 +141,12 @@ class Cache {
   }
   method clear(k) {
     map[k] = None
+  }
+}
+
+class LoadingCache {
+  new(field cache=Cache(255), field factory) {}
+  method get(k) {
+    cache.get(k, factory) 
   }
 }
