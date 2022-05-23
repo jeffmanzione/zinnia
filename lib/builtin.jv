@@ -153,7 +153,7 @@ class Array {
   method !=(other) {
     if (len() != other.len()) return True
     for i=0, i<len(), i=i+1 {
-      if (self[i] != other[i]) {
+      if self[i] != other[i] {
         return True
       }
     }
@@ -165,6 +165,15 @@ class Array {
       raise error.Error(cat('Index is out of bounds: ', i, ', Array length: ', len()))
     }
     return __remove(i)
+  }
+  method remove_value(v) {
+    for i=0, i<len(), i=i+1 {
+      if self[i] == v {
+        remove(i)
+        return True
+      }
+    }
+    return False
   }
   method to_s() {
     result = '['

@@ -67,9 +67,10 @@ void run(const Set *source_files, ArgStore *store) {
     ModuleInfo *module_info = mm_register_module(mm, src);
     if (NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
+      main_module->_is_initialized = true;
       Entity true_e = entity_int(1);
       object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                        intern("__main"), &true_e);
+                        MAIN_KEY, &true_e);
     }
   }
 

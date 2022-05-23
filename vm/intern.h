@@ -25,6 +25,7 @@ extern char *HAS_NEXT_FN_NAME;
 extern char *HASH_KEY;
 extern char *IN_FN_NAME;
 extern char *ITER_FN_NAME;
+extern char *MAIN_KEY;
 extern char *MODULE_KEY;
 extern char *MODULE_NAME;
 extern char *NAME_KEY;
