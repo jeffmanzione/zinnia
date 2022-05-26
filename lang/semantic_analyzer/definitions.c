@@ -1396,17 +1396,16 @@ MultiAssignment populate_list(SemanticAnalyzer *analyzer,
     alist_append(assignment.subargs, &subarg);
     SyntaxTree *cur = CHILD_SYNTAX_AT(list, 1);
     while (true) {
-      if (IS_TOKEN(CHILD_SYNTAX_AT(cur, 0), SYMBOL_COMMA)) {
+      if (CHILD_COUNT(cur) == 2) {
         // Last in tuple.
         subarg = populate_assignment(analyzer, CHILD_SYNTAX_AT(cur, 1));
         alist_append(assignment.subargs, &subarg);
         break;
       } else {
         // Not last.
-        subarg = populate_assignment(
-            analyzer, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(cur, 0), 1));
+        subarg = populate_assignment(analyzer, CHILD_SYNTAX_AT(cur, 1));
         alist_append(assignment.subargs, &subarg);
-        cur = CHILD_SYNTAX_AT(cur, 1);
+        cur = CHILD_SYNTAX_AT(cur, 2);
       }
     }
   }

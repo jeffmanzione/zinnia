@@ -1,3 +1,4 @@
+_ = None
 
 ; Represents the state of an asynchronous piece of work.
 class Future {

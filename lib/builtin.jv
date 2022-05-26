@@ -298,6 +298,21 @@ class Range {
   method to_s() {
     cat(start(), ':', inc(), ':', end())
   }
+  method __in__(n) {
+    (n <= end()) and (n >= start()) and (n % inc() == start() % inc())
+  }
+  method [](i) {
+    if (i < 0) raise error.Error(cat('Range index out of bounds. was ', i))
+    val = start() + i * inc()
+    if (val > end()) raise error.Error(cat('Range index out of bounds. was ', i))
+    val
+  }
+  method len() {
+    (end() - start()) / inc()
+  }
+  method iter() {
+    IndexIterator(self, 0, (end() - start()) / inc())
+  }
 }
 
 def range(params) {
