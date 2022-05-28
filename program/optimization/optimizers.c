@@ -38,7 +38,8 @@ void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *first = tape_get(tape, i - 1);
     const Instruction *second = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_NO_ARG != first->type &&
-        PUSH == second->op && INSTRUCTION_NO_ARG == second->type) {
+        PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
+        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
       o_SetOp(oh, i - 1, PUSH);
       o_Remove(oh, i);
       ++i;
@@ -183,6 +184,21 @@ void optimizer_PeekRes(OptimizeHelper *oh, const Tape *const tape, int start,
     if (PEEK == first->op && (RES == second->op || TLEN == second->op) &&
         NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
       o_Remove(oh, i - 1);
+    }
+  }
+}
+
+void optimizer_PeekPush(OptimizeHelper *oh, const Tape *const tape, int start,
+                        int end) {
+  int i;
+  for (i = start + 1; i < end; i++) {
+    const Instruction *first = tape_get(tape, i - 1);
+    const Instruction *second = tape_get(tape, i);
+    if (PEEK == first->op && INSTRUCTION_NO_ARG == first->type &&
+        PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
+        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+      o_SetOp(oh, i - 1, DUP);
+      o_Remove(oh, i);
     }
   }
 }
@@ -359,5 +375,22 @@ void optimizer_Nil(OptimizeHelper *oh, const Tape *const tape, int start,
       continue;
     }
     o_Replace(oh, i, _for_op(insc->op == RES ? RNIL : PNIL));
+  }
+}
+
+void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
+                       int end) {
+  int i;
+  for (i = start + 1; i < end; i++) {
+    const Instruction *first = tape_get(tape, i - 1);
+    const Instruction *second = tape_get(tape, i);
+    if (RES == first->op &&
+        (INSTRUCTION_ID == first->type ||
+         INSTRUCTION_PRIMITIVE == first->type) &&
+        AIDX == second->op && INSTRUCTION_NO_ARG == second->type &&
+        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+      o_SetOp(oh, i - 1, AIDX);
+      o_Remove(oh, i);
+    }
   }
 }

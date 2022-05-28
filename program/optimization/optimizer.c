@@ -9,14 +9,12 @@
 
 void add_adjustment(OptimizeHelper *oh, Adjustment *a, int index) {
   int i = alist_append(oh->adjustments, a);
-  map_insert(&oh->i_to_adj, (void *)(intptr_t)index,
-             alist_get(oh->adjustments, i));
+  map_insert(&oh->i_to_adj, as_ptr(index), as_ptr(i));
 }
 
 void add_insertion(OptimizeHelper *oh, Adjustment *a) {
   int i = alist_append(oh->adjustments, a);
-  map_insert(&oh->inserts, (void *)(intptr_t)a->insert_pos,
-             alist_get(oh->adjustments, i));
+  map_insert(&oh->inserts, as_ptr(a->insert_pos), as_ptr(i));
 }
 
 void o_Remove(OptimizeHelper *oh, int index) {

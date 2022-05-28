@@ -960,6 +960,9 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   const Function *aidx_fn =
       class_get_function(arr_obj->_class, ARRAYLIKE_INDEX_KEY);
   if (NULL != aidx_fn) {
+    if (INSTRUCTION_PRIMITIVE == ins->type || INSTRUCTION_ID == ins->type) {
+      *task_mutable_resval(task) = *index;
+    }
     return _call_function_base(task, context, aidx_fn, arr_obj, context);
   }
 

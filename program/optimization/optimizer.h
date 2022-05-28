@@ -13,6 +13,8 @@
 #include "struct/alist.h"
 #include "struct/map.h"
 
+#define as_ptr(i) ((void *)(intptr_t)(i))
+
 typedef struct {
   enum { SET_OP, REMOVE, SHIFT, SET_VAL, REPLACE } type;
   union {
