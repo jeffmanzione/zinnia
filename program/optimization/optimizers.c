@@ -248,9 +248,10 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
         INSTRUCTION_PRIMITIVE == second->type &&
         PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
         SET == third->op && INSTRUCTION_ID == third->type &&
-        first->id == third->id && NULL == map_lookup(&oh->i_gotos, as_ptr(i)) &&
+        first->id == third->id &&
         NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1)) &&
-        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 3))) {
       o_SetOp(oh, i - 2, ADD == second->op ? INC : DEC);
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
