@@ -39,7 +39,7 @@ void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_NO_ARG != first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_SetOp(oh, i - 1, PUSH);
       o_Remove(oh, i);
       ++i;
@@ -57,7 +57,7 @@ void optimizer_SetRes(OptimizeHelper *oh, const Tape *const tape, int start,
         INSTRUCTION_ID == first->type && RES == second->op &&
         INSTRUCTION_ID == second->type &&
         first->id == second->id // same pointer because string interning
-        && NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        && NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i);
     }
   }
@@ -73,7 +73,7 @@ void optimizer_SetPush(OptimizeHelper *oh, const Tape *const tape, int start,
         INSTRUCTION_ID == first->type && PUSH == second->op &&
         INSTRUCTION_ID == second->type &&
         first->id == second->id // same pointer because string interning
-        && NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        && NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Replace(oh, i, _for_op(PUSH));
     }
   }
@@ -87,7 +87,7 @@ void optimizer_GetPush(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (GET == first->op && INSTRUCTION_NO_ARG != first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i);
       o_SetOp(oh, i - 1, GTSH);
     }
@@ -125,7 +125,7 @@ void optimizer_PushRes(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *first = tape_get(tape, i - 1);
     const Instruction *second = tape_get(tape, i);
     if (PUSH != first->op || RES != second->op || first->type != second->type ||
-        NULL != map_lookup(&oh->i_gotos, (void *)(intptr_t)(i))) {
+        NULL != map_lookup(&oh->i_gotos, as_ptr(i))) {
       continue;
     }
     if (first->type == INSTRUCTION_STRING) {
@@ -154,7 +154,7 @@ void optimizer_ResPush2(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (RES == first->op && INSTRUCTION_NO_ARG == first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_SetOp(oh, i - 1, PEEK);
       o_Remove(oh, i);
     }
@@ -169,7 +169,7 @@ void optimizer_RetRet(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (RET == first->op && INSTRUCTION_NO_ARG == first->type &&
         RET == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i);
     }
   }
@@ -182,7 +182,7 @@ void optimizer_PeekRes(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *first = tape_get(tape, i - 1);
     const Instruction *second = tape_get(tape, i);
     if (PEEK == first->op && (RES == second->op || TLEN == second->op) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i - 1);
     }
   }
@@ -196,7 +196,7 @@ void optimizer_PeekPush(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (PEEK == first->op && INSTRUCTION_NO_ARG == first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_SetOp(oh, i - 1, DUP);
       o_Remove(oh, i);
     }
@@ -224,10 +224,10 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
         PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
         (ADD == third->op || SUB == third->op) && SET == fourth->op &&
         INSTRUCTION_ID == fourth->type && first->id == fourth->id &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 3))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 3))) {
       o_SetOp(oh, i - 3, ADD == third->op ? INC : DEC);
       o_Remove(oh, i - 2);
       o_Remove(oh, i - 1);
@@ -248,10 +248,9 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
         INSTRUCTION_PRIMITIVE == second->type &&
         PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
         SET == third->op && INSTRUCTION_ID == third->type &&
-        first->id == third->id &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 2))) {
+        first->id == third->id && NULL == map_lookup(&oh->i_gotos, as_ptr(i)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2))) {
       o_SetOp(oh, i - 2, ADD == second->op ? INC : DEC);
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
@@ -268,7 +267,7 @@ void optimizer_SetEmpty(OptimizeHelper *oh, const Tape *const tape, int start,
     if (TGET == first->op && INSTRUCTION_PRIMITIVE == first->type &&
         (SET == second->op || LET == second->op) &&
         INSTRUCTION_ID == second->type && 0 == strncmp(second->id, "_", 2) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
     }
@@ -283,7 +282,7 @@ void optimizer_PushResEmpty(OptimizeHelper *oh, const Tape *const tape,
     const Instruction *second = tape_get(tape, i);
     if (PUSH == first->op && INSTRUCTION_NO_ARG == first->type &&
         RES == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
     }
@@ -298,7 +297,7 @@ void optimizer_PeekPeek(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (PEEK == first->op && INSTRUCTION_NO_ARG == first->type &&
         PEEK == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i - 1);
     }
   }
@@ -312,7 +311,7 @@ void optimizer_PushRes2(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *second = tape_get(tape, i);
     if (PUSH == first->op && RES == second->op && first->type == second->type &&
         first->type == INSTRUCTION_NO_ARG &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i))) {
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
     }
@@ -338,7 +337,7 @@ bool is_math_op(Op op) {
 }
 
 // Run after ResPush.
-// Consider allowing second param to be ID. Would need ot add to
+// Consider allowing second param to be ID. Would need to add to
 // execute_INSTRUCTION_ID.
 void optimizer_SimpleMath(OptimizeHelper *oh, const Tape *const tape, int start,
                           int end) {
@@ -350,8 +349,8 @@ void optimizer_SimpleMath(OptimizeHelper *oh, const Tape *const tape, int start,
     if (PUSH == first->op && PUSH == second->op && is_math_op(third->op) &&
         (second->type == INSTRUCTION_PRIMITIVE ||
          second->type == INSTRUCTION_ID) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i)) &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       if (first->type == INSTRUCTION_NO_ARG) {
         o_Remove(oh, i - 2);
       } else {
@@ -388,7 +387,7 @@ void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
         (INSTRUCTION_ID == first->type ||
          INSTRUCTION_PRIMITIVE == first->type) &&
         AIDX == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == map_lookup(&oh->i_gotos, (void *)(intptr_t)(i - 1))) {
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_SetOp(oh, i - 1, AIDX);
       o_Remove(oh, i);
     }

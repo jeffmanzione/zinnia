@@ -159,10 +159,10 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     // instruction_write(ins, stdout);
     // printf(" <-- o\n");
     int new_len = tape_size(new_tape);
-    void *insert_index = map_lookup(&oh->inserts, as_ptr(i));
+    void *insert_index = map_lookup(&oh->inserts, as_ptr(i + 1));
     if (NULL != insert_index) {
       Adjustment *insert =
-          alist_get(oh->adjustments, (int)(intptr_t)insert_index);
+          alist_get(oh->adjustments, (int)(intptr_t)insert_index - 1);
       int j;
       for (j = insert->start; j < insert->end; j++) {
         alist_append(new_index, &new_len);
@@ -172,10 +172,10 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
         *tape_add_source(new_tape, new_ins) = *tape_get_source(t, j);
       }
     }
-    void *a_index = map_lookup(&oh->i_to_adj, as_ptr(i));
+    void *a_index = map_lookup(&oh->i_to_adj, as_ptr(i + 1));
     Adjustment *a = NULL;
     if (NULL != a_index) {
-      a = alist_get(oh->adjustments, (int)(intptr_t)a_index);
+      a = alist_get(oh->adjustments, (int)(intptr_t)a_index - 1);
     }
     if (NULL != a && REMOVE == a->type) {
       int new_index_val = new_len - 1;
