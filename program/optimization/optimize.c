@@ -20,8 +20,6 @@
 #include "struct/set.h"
 #include "struct/struct_defaults.h"
 
-#define _as_ptr(i) ((void *)(intptr_t)(i))
-
 #define is_goto(op)                                                            \
   (((op) == JMP) || ((op) == IFN) || ((op) == IF) || ((op) == CTCH))
 
@@ -29,8 +27,7 @@ static AList *optimizers = NULL;
 
 void optimize_init() {
   optimizers = alist_create(Optimizer, 64);
-  // register_optimizer("ResPush", optimizer_ResPush);
-
+  register_optimizer("ResPush", optimizer_ResPush);
   register_optimizer("SetRes", optimizer_SetRes);
   register_optimizer("SetPush", optimizer_SetPush);
   register_optimizer("JmpRes", optimizer_JmpRes);
@@ -38,6 +35,7 @@ void optimize_init() {
   register_optimizer("ResPush2", optimizer_ResPush2);
   register_optimizer("RetRet", optimizer_RetRet);
   register_optimizer("PeekRes", optimizer_PeekRes);
+  register_optimizer("PeekPush", optimizer_PeekPush);
   register_optimizer("SetEmpty", optimizer_SetEmpty);
   register_optimizer("PeekPeek", optimizer_PeekPeek);
   register_optimizer("PushResEmpty", optimizer_PushResEmpty);
@@ -46,6 +44,8 @@ void optimize_init() {
   register_optimizer("SimpleMath", optimizer_SimpleMath);
   register_optimizer("GetPush", optimizer_GetPush);
   register_optimizer("Nil", optimizer_Nil);
+  register_optimizer("ResAidx", optimizer_ResAidx);
+  register_optimizer("Increment", optimizer_Increment);
 }
 
 void optimize_finalize() { alist_delete(optimizers); }
@@ -59,7 +59,7 @@ void _populate_gotos(OptimizeHelper *oh) {
       continue;
     }
     int index = i + pint(&ins->val);
-    map_insert(&oh->i_gotos, _as_ptr(index), _as_ptr(i));
+    map_insert(&oh->i_gotos, as_ptr(index), as_ptr(i));
   }
 }
 
@@ -72,18 +72,18 @@ void _tape_populate_mappings(const Tape *tape, Map *i_to_refs,
   KL_iter refs_iter = tape_functions(tape);
   for (; kl_has(&refs_iter); kl_inc(&refs_iter)) {
     const FunctionRef *fref = (const FunctionRef *)kl_value(&refs_iter);
-    map_insert(i_to_refs, _as_ptr(fref->index), fref);
+    map_insert(i_to_refs, as_ptr(fref->index), fref);
   }
 
   KL_iter class_iter = tape_classes(tape);
   for (; kl_has(&class_iter); kl_inc(&class_iter)) {
     const ClassRef *cref = (const ClassRef *)kl_value(&class_iter);
-    map_insert(i_to_class_starts, _as_ptr(cref->start_index), cref->name);
-    map_insert(i_to_class_ends, _as_ptr(cref->end_index), cref->name);
+    map_insert(i_to_class_starts, as_ptr(cref->start_index), cref->name);
+    map_insert(i_to_class_ends, as_ptr(cref->end_index), cref->name);
     KL_iter methods_iter = keyedlist_iter((KeyedList *)&cref->func_refs);
     for (; kl_has(&methods_iter); kl_inc(&methods_iter)) {
       const FunctionRef *fref = (const FunctionRef *)kl_value(&methods_iter);
-      map_insert(i_to_refs, _as_ptr(fref->index), fref);
+      map_insert(i_to_refs, as_ptr(fref->index), fref);
     }
   }
 }
@@ -117,12 +117,12 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
   AList *new_index = alist_create(int, DEFAULT_ARRAY_SZ);
   for (i = 0; i <= old_len; ++i) {
     char *text = NULL;
-    if (NULL != (text = map_lookup(&oh->i_to_class_ends, _as_ptr(i)))) {
+    if (NULL != (text = map_lookup(&oh->i_to_class_ends, as_ptr(i)))) {
       Token tok;
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       tape_endclass(new_tape, &tok);
     }
-    if (NULL != (text = map_lookup(&oh->i_to_class_starts, _as_ptr(i)))) {
+    if (NULL != (text = map_lookup(&oh->i_to_class_starts, as_ptr(i)))) {
       Token tok;
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       const ClassRef *cref = tape_get_class(t, text);
@@ -145,7 +145,7 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       }
     }
     FunctionRef *fref;
-    if (NULL != (fref = map_lookup(&oh->i_to_refs, _as_ptr(i)))) {
+    if (NULL != (fref = map_lookup(&oh->i_to_refs, as_ptr(i)))) {
       if (fref->is_async) {
         tape_label_text_async(new_tape, fref->name);
       } else {
@@ -160,8 +160,10 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
     // instruction_write(ins, stdout);
     // printf(" <-- o\n");
     int new_len = tape_size(new_tape);
-    Adjustment *insert = map_lookup(&oh->inserts, _as_ptr(i));
-    if (NULL != insert) {
+    void *insert_index = map_lookup(&oh->inserts, as_ptr(i + 1));
+    if (NULL != insert_index) {
+      Adjustment *insert =
+          alist_get(oh->adjustments, (int)(intptr_t)insert_index - 1);
       int j;
       for (j = insert->start; j < insert->end; j++) {
         alist_append(new_index, &new_len);
@@ -171,7 +173,11 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
         *tape_add_source(new_tape, new_ins) = *tape_get_source(t, j);
       }
     }
-    Adjustment *a = map_lookup(&oh->i_to_adj, _as_ptr(i));
+    void *a_index = map_lookup(&oh->i_to_adj, as_ptr(i + 1));
+    Adjustment *a = NULL;
+    if (NULL != a_index) {
+      a = alist_get(oh->adjustments, (int)(intptr_t)a_index - 1);
+    }
     if (NULL != a && REMOVE == a->type) {
       int new_index_val = new_len - 1;
       alist_append(new_index, &new_index_val);

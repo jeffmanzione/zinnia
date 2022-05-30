@@ -6,6 +6,14 @@ self.SOCK_STREAM = 1
 
 __init()
 
+def create_server_socket(host, port) {
+  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, False)
+}
+
+def create_client_socket(host, port) {
+  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, True)
+}
+
 self.cleanup = () -> __cleanup()
 
 ; class Socket { }

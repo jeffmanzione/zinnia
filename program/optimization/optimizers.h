@@ -27,7 +27,8 @@ void optimizer_RetRet(OptimizeHelper *oh, const Tape *const tape, int start,
                       int end);
 void optimizer_PeekRes(OptimizeHelper *oh, const Tape *const tape, int start,
                        int end);
-
+void optimizer_PeekPush(OptimizeHelper *oh, const Tape *const tape, int start,
+                        int end);
 void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
                          int end);
 void optimizer_SetEmpty(OptimizeHelper *oh, const Tape *const tape, int start,
@@ -38,10 +39,11 @@ void optimizer_PeekPeek(OptimizeHelper *oh, const Tape *const tape, int start,
                         int end);
 void optimizer_PushRes2(OptimizeHelper *oh, const Tape *const tape, int start,
                         int end);
-
 void optimizer_SimpleMath(OptimizeHelper *oh, const Tape *const tape, int start,
                           int end);
 void optimizer_Nil(OptimizeHelper *oh, const Tape *const tape, int start,
                    int end);
+void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
+                       int end);
 
 #endif /* PROGRAM_OPTIMIZATION_OPTIMIZERS_H_ */

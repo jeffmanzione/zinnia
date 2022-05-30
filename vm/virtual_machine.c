@@ -218,6 +218,29 @@ PRIMITIVE_OP(BAND, &, MATH_OP_INT(BAND, &));
 PRIMITIVE_OP(BXOR, ^, MATH_OP_INT(BXOR, ^));
 PRIMITIVE_OP(BOR, |, MATH_OP_INT(BOR, |));
 
+void _execute_INC(VM *vm, Task *task, Context *context,
+                  const Instruction *ins) {
+  const int inc_amount = ins->op == INC ? 1 : -1;
+  Entity tmp;
+  Entity *stored = context_lookup(context, ins->id, &tmp);
+  if (NULL == stored || NONE == stored->type || OBJECT == stored->type) {
+    raise_error(task, context, "Can only increment a primitive.");
+  }
+  switch (ptype(&stored->pri)) {
+  case PRIMITIVE_CHAR:
+    stored->pri = primitive_char(pchar(&stored->pri) + inc_amount);
+    break;
+  case PRIMITIVE_INT:
+    stored->pri = primitive_int(pint(&stored->pri) + inc_amount);
+    break;
+  case PRIMITIVE_FLOAT:
+    stored->pri = primitive_float(pfloat(&stored->pri) + inc_amount);
+    break;
+  default:
+    FATALF("Unknown primitive type.");
+  }
+}
+
 void _execute_BOR_with_obj(VM *vm, Task *task, Context *context,
                            const Instruction *ins) {
   Entity first, second;
@@ -960,6 +983,9 @@ bool _execute_AIDX(VM *vm, Task *task, Context *context,
   const Function *aidx_fn =
       class_get_function(arr_obj->_class, ARRAYLIKE_INDEX_KEY);
   if (NULL != aidx_fn) {
+    if (INSTRUCTION_PRIMITIVE == ins->type || INSTRUCTION_ID == ins->type) {
+      *task_mutable_resval(task) = *index;
+    }
     return _call_function_base(task, context, aidx_fn, arr_obj, context);
   }
 
@@ -1269,6 +1295,10 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       break;
     case MOD:
       _execute_MOD(vm, task, context, ins);
+      break;
+    case INC:
+    case DEC:
+      _execute_INC(vm, task, context, ins);
       break;
     case AND:
       _execute_AND(vm, task, context, ins);
