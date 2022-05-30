@@ -26,3 +26,8 @@ jeff_vm_binary(
     name = "hello",
     main = "hello.jv",
 )
+
+jeff_vm_binary(
+    name = "range",
+    main = "range.jv",
+)
