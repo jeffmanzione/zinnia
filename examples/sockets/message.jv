@@ -1,0 +1,22 @@
+import io
+import socket
+
+server = () async {
+  server = socket.create_server_socket('0.0.0.0', 1453)
+  handle = await server.accept()
+  await handle.send('Hello, world!')
+  handle.close()
+  server.close()
+}()
+
+client = () async {
+  client = socket.create_client_socket('0.0.0.0', 1453)
+  handle = await client.connect()
+  io.println(await handle.receive())
+  client.close()
+}()
+
+await server
+await client
+
+socket.cleanup()

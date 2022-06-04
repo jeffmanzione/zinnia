@@ -1,3 +1,4 @@
+import io
 
 self.SOCKET_ERROR = -1
 self.AF_INET = 2
@@ -7,11 +8,11 @@ self.SOCK_STREAM = 1
 __init()
 
 def create_server_socket(host, port) {
-  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, False)
+  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, True)
 }
 
 def create_client_socket(host, port) {
-  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, True)
+  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, False)
 }
 
 self.cleanup = () -> __cleanup()
