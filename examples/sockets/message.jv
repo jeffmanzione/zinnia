@@ -19,6 +19,7 @@ client = () async {
   client.close()
 }()
 
+await server
 await client
 
 socket.cleanup()
