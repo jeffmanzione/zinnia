@@ -18,6 +18,8 @@
 #include "entity/tuple/tuple.h"
 #include "vm/intern.h"
 
+#include "util/platform.h"
+
 Entity _cos(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {
     return raise_error(task, ctx,
@@ -25,8 +27,8 @@ Entity _cos(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   const double r = float_of(&args->pri);
   return entity_float(cos(r));
-};
+}
 
 void _init_custom(ModuleManager *mm, Module *custom) {
-  native_function(custom, intern("cos"), _cos);
+  native_function(custom, mm->intern("cos"), _cos);
 }

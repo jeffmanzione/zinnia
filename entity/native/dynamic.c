@@ -63,11 +63,10 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   char *init_fn_name = ALLOC_STRNDUP(str_arg2->table, String_size(str_arg2));
 
 #ifdef OS_WINDOWS
-  HMODULE dl_handle = LoadLibrary(file_name);
+  HMODULE dl_handle = LoadLibrary(TEXT(file_name));
 #else
   void *dl_handle = dlopen(file_name, RTLD_LAZY);
 #endif
-
   if (NULL == dl_handle) {
 #ifdef OS_WINDOWS
     return raise_error(task, ctx, "Invalid file_name for library: %s",
@@ -84,24 +83,26 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
 #else
   NativeCallback init_fn = (NativeCallback)dlsym(dl_handle, init_fn_name);
 #endif
+
   if (NULL == init_fn) {
     DEALLOC(file_name);
     DEALLOC(module_name);
     DEALLOC(init_fn_name);
 #ifdef OS_WINDOWS
-    return raise_error(task, ctx, "init_fn_name not found in library: %S.",
-                       file_name);
+    return raise_error(task, ctx, "'%s' not found in library: %s.",
+                       init_fn_name, file_name);
 #else
-    return raise_error(task, ctx, "init_fn_name not found in library: %s",
+    return raise_error(task, ctx, "'%s' not found in library: %s", init_fn_name,
                        dlerror());
 
 #endif
   }
+
   ModuleManager *mm = vm_module_manager(task->parent_process->vm);
+  DEBUGF("%p", intern);
   mm_register_dynamic_module(mm, module_name, init_fn);
   // Forces module to be loaded eagerly.
   Module *module = modulemanager_lookup(mm, module_name);
-
   DEALLOC(file_name);
   DEALLOC(module_name);
   DEALLOC(init_fn_name);

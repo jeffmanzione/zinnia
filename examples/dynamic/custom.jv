@@ -1,6 +1,6 @@
 import dynamic
 
-self._custom = dynamic.import_c_library('./bazel-bin/examples/dynamic/lib_custom.so', '_custom', '_init_custom')
+self._custom = dynamic.import_c_library('./bazel-bin/examples/dynamic/_custom.dll', '_custom', '_init_custom')
 
 def cos(x) {
   self._custom.cos(x)

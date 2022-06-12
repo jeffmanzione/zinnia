@@ -13,10 +13,14 @@
 #include "struct/set.h"
 #include "util/file/file_info.h"
 
+typedef char *(*InternFn)(const char *);
+
 typedef struct {
   Set _files_processed;
   Heap *_heap;
   KeyedList _modules; // ModuleInfo
+  // Used to intern method names in dynamically-loaded modules.
+  InternFn intern;
 } ModuleManager;
 
 typedef struct _ModuleInfo ModuleInfo;

@@ -41,6 +41,7 @@ void modulemanager_init(ModuleManager *mm, Heap *heap) {
   mm->_heap = heap;
   keyedlist_init(&mm->_modules, ModuleInfo, 100);
   set_init_default(&mm->_files_processed);
+  mm->intern = intern;
 }
 
 void modulemanager_finalize(ModuleManager *mm) {
@@ -94,11 +95,11 @@ ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
   ASSERT(NOT_NULL(mm));
   ModuleInfo *module_info;
   ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
-      &mm->_modules, intern(module_name), (void **)&module_info);
+      &mm->_modules, mm->intern(module_name), (void **)&module_info);
   if (old != NULL) {
     FATALF("Module by name '%s' already exists.", module_name);
   }
-  module_info->file_name = (NULL != file_name) ? intern(file_name) : NULL;
+  module_info->file_name = (NULL != file_name) ? mm->intern(file_name) : NULL;
   module_info->module_name_from_file = module_name;
   return module_info;
 }
@@ -298,7 +299,7 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
   char *dir_path, *module_name_tmp, *ext;
   split_path_file(fn, &dir_path, &module_name_tmp, &ext);
 
-  char *module_name = intern(module_name_tmp);
+  char *module_name = mm->intern(module_name_tmp);
   DEALLOC(module_name_tmp);
   // Module already exists.
   ModuleInfo *module_info =
@@ -322,9 +323,9 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
                                        NativeCallback init_fn) {
   ModuleInfo *module_info =
-      _create_and_init_moduleinfo(mm, intern(module_name), NULL, init_fn,
+      _create_and_init_moduleinfo(mm, mm->intern(module_name), NULL, init_fn,
                                   /*is_dynamic*/ true);
-  module_init(&module_info->module, intern(module_name), NULL);
+  module_init(&module_info->module, mm->intern(module_name), NULL);
   return module_info;
 }
 
@@ -356,7 +357,7 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]) {
   ModuleInfo *module_info =
-      (ModuleInfo *)keyedlist_lookup(&mm->_modules, intern(module_name));
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, mm->intern(module_name));
   if (NULL == module_info) {
     return NULL;
   }

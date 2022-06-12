@@ -9,6 +9,9 @@
 #include "entity/object.h"
 #include "vm/module_manager.h"
 
-void _init_custom(ModuleManager *mm, Module *custom);
+#ifdef OS_WINDOWS
+__declspec(dllexport)
+#endif
+    void _init_custom(ModuleManager *mm, Module *custom);
 
 #endif /* EXAMPLE_CUSTOM_H_ */

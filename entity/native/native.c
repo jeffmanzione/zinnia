@@ -26,6 +26,7 @@ Function *native_background_method(Class *class, const char *name,
 
 Function *native_function(Module *module, const char name[],
                           NativeFn native_fn) {
+
   Function *fn = module_add_function(module, name, 0, false, false);
   fn->_is_native = true;
   fn->_native_fn = native_fn;

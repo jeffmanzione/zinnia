@@ -23,6 +23,12 @@ cc_library(
     alwayslink = True,
 )
 
+cc_binary(
+    name = "_custom.dll",
+    linkshared = 1,
+    deps = [":_custom"],
+)
+
 jeff_vm_library(
     name = "custom",
     srcs = ["custom.jv"],
