@@ -6,7 +6,7 @@ import process
 completer = async.Completer()
 
 () async {
-  process.sleep(2)  ; Wait 2 seconds. 
+  await process.sleep(2)  ; Wait 2 seconds. 
   io.println('Hard work done!')
   completer.complete()
 }()  ; Call the function.
