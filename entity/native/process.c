@@ -76,7 +76,6 @@ Entity _create_process(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity __sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
-  DEBUGF("START_OF_SLEEP");
   double sleep_duration_sec = 0;
   if (IS_INT(args)) {
     sleep_duration_sec = pint(&args->pri);
@@ -91,7 +90,6 @@ Entity __sleep(Task *task, Context *ctx, Object *obj, Entity *args) {
 #else
   sleep(sleep_duration_sec);
 #endif
-  DEBUGF("END_OF_SLEEP");
   return NONE_ENTITY;
 }
 

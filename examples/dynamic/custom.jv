@@ -2,6 +2,14 @@ import dynamic
 
 self._custom = dynamic.import_c_library('./bazel-bin/examples/dynamic/_custom.dll', '_custom', '_init_custom')
 
+def sin(x) {
+  self._custom.sin(x)
+}
+
 def cos(x) {
   self._custom.cos(x)
+}
+
+def tan(x) {
+  self._custom.tan(x)
 }

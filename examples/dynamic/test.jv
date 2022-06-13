@@ -4,4 +4,6 @@
 import custom
 import io
 
+io.println(custom.sin(1.5))
 io.println(custom.cos(1.5))
+io.println(custom.tan(1.5))
