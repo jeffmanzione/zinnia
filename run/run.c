@@ -12,7 +12,7 @@
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "compile/compile.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/entity.h"
 #include "entity/module/modules.h"
 #include "entity/object.h"

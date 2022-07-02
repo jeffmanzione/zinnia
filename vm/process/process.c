@@ -6,7 +6,7 @@
 #include "vm/process/process.h"
 
 #include "alloc/arena/arena.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "struct/struct_defaults.h"
 #include "util/sync/mutex.h"
 #include "vm/process/processes.h"

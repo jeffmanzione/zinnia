@@ -5,7 +5,7 @@
 
 #include "entity/string/string_helper.h"
 
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/string/string.h"
 
 Object *string_new(Heap *heap, const char src[], size_t len) {

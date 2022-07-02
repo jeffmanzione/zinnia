@@ -14,7 +14,7 @@
 #endif
 
 #include "alloc/arena/intern.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"

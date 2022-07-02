@@ -5,7 +5,7 @@
 
 #include "vm/vm.h"
 
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "vm/process/context.h"
 #include "vm/process/process.h"
 

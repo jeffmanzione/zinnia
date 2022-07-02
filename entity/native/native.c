@@ -7,7 +7,7 @@
 
 #include <stdbool.h>
 
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 
 Function *native_method(Class *class, const char name[], NativeFn native_fn) {
   Function *fn = class_add_function(class, name, 0, false, false);

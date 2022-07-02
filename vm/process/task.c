@@ -6,7 +6,7 @@
 #include "vm/process/task.h"
 
 #include "debug/debug.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
 #include "struct/struct_defaults.h"

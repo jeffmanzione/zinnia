@@ -9,7 +9,7 @@
 
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/module/modules.h"
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"

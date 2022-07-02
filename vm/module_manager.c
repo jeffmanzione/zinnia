@@ -7,7 +7,7 @@
 
 #include "alloc/arena/intern.h"
 #include "entity/class/class.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
 #include "entity/object.h"

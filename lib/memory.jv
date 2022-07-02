@@ -1,0 +1,25 @@
+_ = None
+; Container for garbage collection results
+class GCStatus {
+  new(field objects_collected,
+      field remaining_object_count,
+      field object_counts) {}
+
+  method to_s() {
+    result = cat(
+        'Objects collected: ',
+        objects_collected,
+        '\nRemaining objects: ',
+        remaining_object_count,
+        '\n')
+    for (_, (cls, count)) in object_counts {
+      result.extend(cat('  ', count, ' x ', cls.name(), '\n'))
+    }
+    return result
+  }
+}
+
+; Forces a garbage collection and returns the result of the colletion.
+def collect_garbage() async {
+  GCStatus(await __collect_garbage())
+}

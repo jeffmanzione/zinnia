@@ -19,6 +19,7 @@ Heap *heap_create(HeapConf *config);
 void heap_delete(Heap *heap);
 Object *heap_new(Heap *heap, const Class *class);
 uint32_t heap_collect_garbage(Heap *heap);
+uint32_t heap_object_count(const Heap *const heap);
 void heap_make_root(Heap *heap, Object *obj);
 
 void heap_inc_edge(Heap *heap, Object *parent, Object *child);
@@ -32,7 +33,17 @@ Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
 void array_add(Heap *heap, Object *array, const Entity *child);
 Entity array_remove(Heap *heap, Object *array, int32_t index);
 void array_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+Object *array_create(Heap *heap);
+
 void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2);
+Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3);
+
+typedef struct _HeapProfile HeapProfile;
+
+HeapProfile *heap_create_profile(const Heap *const heap);
+M_iter heapprofile_object_type_counts(const HeapProfile *const hp);
+void heapprofile_delete(HeapProfile *hp);
 
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e);
 

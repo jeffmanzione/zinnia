@@ -5,7 +5,7 @@
 
 #include "entity/native/async.h"
 
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/native/native.h"
 #include "vm/intern.h"
 #include "vm/process/task.h"

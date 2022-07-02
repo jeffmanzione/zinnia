@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "alloc/arena/intern.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/module/module.h"
 #include "entity/module/modules.h"
 #include "entity/native/async.h"

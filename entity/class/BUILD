@@ -17,11 +17,26 @@ cc_library(
 )
 
 cc_library(
+    name = "classes_def",
+    hdrs = [
+        "class.h",
+        "classes_def.h",
+    ],
+    deps = [
+        "//entity:object",
+    ],
+)
+
+cc_library(
     name = "classes",
     srcs = ["classes.c"],
-    hdrs = ["classes.h"],
+    hdrs = [
+        "classes.h",
+        "classes_def.h",
+    ],
     deps = [
         ":class",
+        ":classes_def",
         "//entity:object",
         "//entity/array",
         "//entity/function",

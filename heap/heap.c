@@ -12,6 +12,7 @@
 #include "alloc/memory_graph/memory_graph.h"
 #include "debug/debug.h"
 #include "entity/array/array.h"
+#include "entity/class/classes_def.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
@@ -21,6 +22,10 @@
 struct _Heap {
   MGraph *mg;
   __Arena object_arena;
+};
+
+struct _HeapProfile {
+  Map object_type_counts;
 };
 
 Object *_object_create(Heap *heap, const Class *class);
@@ -44,6 +49,10 @@ void heap_delete(Heap *heap) {
 
 uint32_t heap_collect_garbage(Heap *heap) {
   return mgraph_collect_garbage(heap->mg);
+}
+
+uint32_t heap_object_count(const Heap *const heap) {
+  return mgraph_node_count(heap->mg);
 }
 
 Object *heap_new(Heap *heap, const Class *class) {
@@ -107,18 +116,18 @@ Object *_object_create(Heap *heap, const Class *class) {
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
   // if (0 == strcmp(object->_class->_name, "Class")) {
-  //   printf("DELETING a Class('%s')\n", object->_class_obj->_name);
+  //   printf("\tDELETING a Class('%s')\n", object->_class_obj->_name);
   // } else if (0 == strcmp(object->_class->_name, "Module")) {
-  //   printf("DELETING a Module('%s')\n", object->_module_obj->_name);
+  //   printf("\tDELETING a Module('%s')\n", object->_module_obj->_name);
   // } else if (0 == strcmp(object->_class->_name, "Function")) {
-  //   printf("DELETING a Function('%s')\n", object->_function_obj->_name);
+  //   printf("\tDELETING a Function('%s')\n", object->_function_obj->_name);
   // } else if (0 == strcmp(object->_class->_name, "String")) {
-  //   printf("DELETING a String('%.*s', %p, %p)\n",
+  //   printf("\tDELETING a String('%.*s', %p, %p)\n",
   //          String_size(((String *)object->_internal_obj)),
   //          ((String *)object->_internal_obj)->table, object->_internal_obj,
   //          object);
   // } else {
-  //   printf("DELETING a '%s'\n", object->_class->_name);
+  //   printf("\tDELETING a '%s'\n", object->_class->_name);
   // }
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
@@ -169,6 +178,8 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
+Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
+
 // Does this need to handle overwrites?
 void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
@@ -181,14 +192,30 @@ void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
 }
 
+Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(2);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  return tuple_obj;
+}
+Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(3);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  tuple_set(heap, tuple_obj, 2, e3);
+  return tuple_obj;
+}
+
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   ASSERT(NOT_NULL(e));
   switch (e->type) {
-    case NONE:
-    case PRIMITIVE:
-      return *e;
-    default:
-      ASSERT(OBJECT == e->type);
+  case NONE:
+  case PRIMITIVE:
+    return *e;
+  default:
+    ASSERT(OBJECT == e->type);
   }
   Object *obj = e->obj;
   // Guarantee only one copied version of each object.
@@ -209,4 +236,32 @@ Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
     object_set_member(heap, cpy, kl_key(&members), &member_cpy);
   }
   return entity_object(cpy);
+}
+
+HeapProfile *heap_create_profile(const Heap *const heap) {
+  HeapProfile *hp = ALLOC2(HeapProfile);
+  map_init_default(&hp->object_type_counts);
+  const Set *nodes = mgraph_nodes(heap->mg);
+  M_iter iter = set_iter((Set *)nodes);
+  for (; has(&iter); inc(&iter)) {
+    const Node *node = (Node *)value(&iter);
+    const Object *obj = (const Object *)node_ptr(node);
+    void *existing = map_lookup(&hp->object_type_counts, obj->_class);
+    if (NULL == map_lookup(&hp->object_type_counts, obj->_class)) {
+      map_insert(&hp->object_type_counts, obj->_class, (void *)(intptr_t)1);
+    } else {
+      map_insert(&hp->object_type_counts, obj->_class,
+                 (void *)(intptr_t)(((int)(intptr_t)existing) + 1));
+    }
+  }
+  return hp;
+}
+
+M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
+  return map_iter(&hp->object_type_counts);
+}
+
+void heapprofile_delete(HeapProfile *hp) {
+  map_finalize(&hp->object_type_counts);
+  DEALLOC(hp);
 }

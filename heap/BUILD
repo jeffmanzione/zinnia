@@ -12,6 +12,7 @@ cc_library(
         "//entity",
         "//entity:object",
         "//entity/array",
+        "//entity/class:classes_def",
         "//entity/string",
         "//entity/tuple",
         "@c_data_structures//struct:alist",

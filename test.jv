@@ -1,0 +1,14 @@
+import io
+import memory
+import process
+
+ITER_COUNT = 20
+
+for i = 0, i < ITER_COUNT, i=i+1 {
+  await process.sleep(1.0)
+  gc_status = await memory.collect_garbage()
+  text = gc_status.to_s()
+  io.println(text)
+}
+
+io.println('Done.')

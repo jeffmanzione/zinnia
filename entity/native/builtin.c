@@ -8,7 +8,7 @@
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
-#include "entity/class/classes.h"
+#include "entity/class/classes_def.h"
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
@@ -277,13 +277,33 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
       _task_dec_all_context(heap, waiting_task);
     }
 
-    // M_iter completed_tasks = set_iter(&process->completed_tasks);
-    // for (; has(&completed_tasks); inc(&completed_tasks)) {
-    //   Task *completed_task = (Task *)value(&completed_tasks);
-    //   task_finalize(completed_task);
-    // }
+    M_iter completed_tasks = set_iter(&process->completed_tasks);
+    for (; has(&completed_tasks); inc(&completed_tasks)) {
+      Task *completed_task = (Task *)value(&completed_tasks);
+      set_remove(&process->completed_tasks, completed_task);
+      task_finalize(completed_task);
+    }
   });
-  return entity_int(deleted_nodes_count);
+
+  Object *object_counts = array_create(heap);
+
+  HeapProfile *hp = heap_create_profile(heap);
+  M_iter iter = heapprofile_object_type_counts(hp);
+  for (; has(&iter); inc(&iter)) {
+    Entity class_e = entity_object(((Class *)key(&iter))->_reflection);
+    Entity count_e = entity_int((int)(intptr_t)value(&iter));
+    Entity tuple_e = entity_object(tuple_create2(heap, &class_e, &count_e));
+    array_add(heap, object_counts, &tuple_e);
+  }
+  heapprofile_delete(hp);
+
+  Entity deleted_nodes_count_e = entity_int(deleted_nodes_count);
+  Entity remaining_object_count_e = entity_int(heap_object_count(heap));
+  Entity object_counts_e = entity_object(object_counts);
+  Object *result_tuple =
+      tuple_create3(heap, &deleted_nodes_count_e, &remaining_object_count_e,
+                    &object_counts_e);
+  return entity_object(result_tuple);
 }
 
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -468,7 +488,7 @@ Entity _string_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
                        "Index out of bounds. Was %d, array length is %d.",
                        index_int, String_size(str));
   }
-  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  Object *array_obj = array_create(task->parent_process->heap);
   if ((index_int + String_size(substr)) > String_size(str)) {
     return entity_object(array_obj);
   }
@@ -609,7 +629,7 @@ Entity _string_split(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx,
                        "Argument to String.split() must be a String.");
   }
-  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  Object *array_obj = array_create(task->parent_process->heap);
 
   int str_len = String_size(str);
   String *delim = (String *)args->obj->_internal_obj;
@@ -829,7 +849,7 @@ Entity _object_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Class);
-  Object *array_obj = heap_new(task->parent_process->heap, Class_Array);
+  Object *array_obj = array_create(task->parent_process->heap);
   Class *c = obj->_class_obj;
   KL_iter funcs = class_functions(c);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
