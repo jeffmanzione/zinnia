@@ -15,10 +15,15 @@
 
 Heap *_context_heap(Context *ctx);
 
-void context_init(Context *ctx, Object *self, Object *member_obj,
-                  Module *module, uint32_t instruction_pos) {
+void _context_add_reflection(Process *process, Context *context) {
+  context->_reflection = heap_new(process->heap, Class_Context);
+  context->_reflection->_internal_obj = context;
+}
+
+void context_init(Context *ctx, Object *self, Module *module,
+                  uint32_t instruction_pos) {
   ctx->self = entity_object(self);
-  ctx->member_obj = member_obj;
+  // ctx->member_obj = member_obj;
   ctx->module = module;
   ctx->tape = module->_tape;
   ctx->ins = instruction_pos;
@@ -26,6 +31,7 @@ void context_init(Context *ctx, Object *self, Object *member_obj,
   ctx->error = NULL;
   ctx->catch_ins = -1;
   ctx->previous_context = NULL;
+  _context_add_reflection(ctx->parent_task->parent_process, ctx);
 }
 
 void context_finalize(Context *ctx) { ASSERT(NOT_NULL(ctx)); }

@@ -13,6 +13,7 @@ extern char *CLASS_KEY;
 extern char *CLASS_NAME;
 extern char *CMP_FN_NAME;
 extern char *CONSTRUCTOR_KEY;
+extern char *CONTEXT_NAME;
 extern char *EQ_FN_NAME;
 extern char *ERROR_NAME;
 extern char *FALSE_KEYWORD;

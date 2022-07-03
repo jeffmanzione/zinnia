@@ -14,6 +14,7 @@ char *CLASS_KEY;
 char *CLASS_NAME;
 char *CMP_FN_NAME;
 char *CONSTRUCTOR_KEY;
+char *CONTEXT_NAME;
 char *EQ_FN_NAME;
 char *ERROR_NAME;
 char *FALSE_KEYWORD;
@@ -57,6 +58,7 @@ void _strings_insert_constants() {
   CLASS_NAME = intern("Class");
   CMP_FN_NAME = intern("__cmp__");
   CONSTRUCTOR_KEY = intern("new");
+  CONTEXT_NAME = intern("Context");
   EQ_FN_NAME = intern("__eq__");
   ERROR_NAME = intern("Error");
   FALSE_KEYWORD = intern("False");

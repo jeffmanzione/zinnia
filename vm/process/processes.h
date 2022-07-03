@@ -28,6 +28,7 @@ struct __Context {
   Context *previous_context;
 
   Object *member_obj;
+  Object *_reflection;
 
   Entity self;
   Module *module;

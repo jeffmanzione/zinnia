@@ -892,6 +892,9 @@ void _process_delete(Object *obj) {}
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 
+void _context_init(Object *obj) {}
+void _context_delete(Object *obj) {}
+
 void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("extend"), _string_extend);
   native_method(Class_String, CMP_FN_NAME, _string_cmp);
@@ -941,6 +944,8 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+  Class_Context =
+      native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
 
   native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);
