@@ -21,4 +21,6 @@ void process_insert_waiting_task(Process *process, Task *task);
 void process_remove_waiting_task(Process *process, Task *task);
 void process_mark_task_complete(Process *process, Task *task);
 
+void process_delete_task(Process *process, Task *task);
+
 #endif /* VM_PROCESS_PROCESS_H_ */

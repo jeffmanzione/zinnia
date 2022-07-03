@@ -258,7 +258,7 @@ HeapProfile *heap_create_profile(const Heap *const heap) {
 }
 
 M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
-  return map_iter(&hp->object_type_counts);
+  return map_iter((Map *)&hp->object_type_counts);
 }
 
 void heapprofile_delete(HeapProfile *hp) {

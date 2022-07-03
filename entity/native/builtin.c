@@ -214,6 +214,23 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Heap *heap = process->heap;
   uint32_t deleted_nodes_count = process_collect_garbage(process);
 
+  printf("Tasks:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+         "capacity=%u\n\tsubarena_count=%u\n",
+         __arena_item_size(&process->task_arena),
+         __arena_capacity(&process->task_arena),
+         __arena_item_count(&process->task_arena),
+         __arena_subarena_capacity(&process->task_arena),
+         __arena_subarena_count(&process->task_arena));
+
+  printf(
+      "Contexts:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+      "capacity=%u\n\tsubarena_count=%u\n",
+      __arena_item_size(&process->context_arena),
+      __arena_capacity(&process->context_arena),
+      __arena_item_count(&process->context_arena),
+      __arena_subarena_capacity(&process->context_arena),
+      __arena_subarena_count(&process->context_arena));
+
   Object *object_counts = array_create(heap);
 
   HeapProfile *hp = heap_create_profile(heap);

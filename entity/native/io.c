@@ -79,6 +79,7 @@ void __file_delete(Object *obj) {
   if (NULL != f->fp && f->fp != stdout && f->fp != stderr) {
     fclose(f->fp);
   }
+  DEALLOC(f);
 }
 
 Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {

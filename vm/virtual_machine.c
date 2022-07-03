@@ -1543,39 +1543,40 @@ uint32_t process_collect_garbage(Process *process) {
   Heap *heap = process->heap;
 
   SYNCHRONIZED(process->task_queue_lock, {
-    _task_inc_all_context(heap, process->current_task);
-    Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
-    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-      Task *queued_task = (Task *)Q_value(&queued_tasks);
-      _task_inc_all_context(heap, queued_task);
-    }
-    M_iter waiting_tasks = set_iter(&process->waiting_tasks);
-    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-      Task *waiting_task = (Task *)value(&waiting_tasks);
-      _task_inc_all_context(heap, waiting_task);
-    }
+    CRITICAL(process->task_waiting_cs, {
+      M_iter completed_tasks = set_iter(&process->completed_tasks);
+      for (; has(&completed_tasks); inc(&completed_tasks)) {
+        Task *completed_task = (Task *)value(&completed_tasks);
+        set_remove(&process->completed_tasks, completed_task);
+        process_delete_task(process, completed_task);
+      }
 
-    deleted_nodes_count = heap_collect_garbage(heap);
+      _task_inc_all_context(heap, process->current_task);
+      Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+      for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+        Task *queued_task = (Task *)Q_value(&queued_tasks);
+        _task_inc_all_context(heap, queued_task);
+      }
+      M_iter waiting_tasks = set_iter(&process->waiting_tasks);
+      for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+        Task *waiting_task = (Task *)value(&waiting_tasks);
+        _task_inc_all_context(heap, waiting_task);
+      }
 
-    _task_dec_all_context(heap, process->current_task);
-    queued_tasks = Q_iterator(&process->queued_tasks);
-    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-      Task *queued_task = (Task *)Q_value(&queued_tasks);
-      _task_dec_all_context(heap, queued_task);
-    }
-    waiting_tasks = set_iter(&process->waiting_tasks);
-    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-      Task *waiting_task = (Task *)value(&waiting_tasks);
-      _task_dec_all_context(heap, waiting_task);
-    }
+      deleted_nodes_count = heap_collect_garbage(heap);
 
-    M_iter completed_tasks = set_iter(&process->completed_tasks);
-    for (; has(&completed_tasks); inc(&completed_tasks)) {
-      Task *completed_task = (Task *)value(&completed_tasks);
-      set_remove(&process->completed_tasks, completed_task);
-      task_finalize(completed_task);
-    }
+      _task_dec_all_context(heap, process->current_task);
+      queued_tasks = Q_iterator(&process->queued_tasks);
+      for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+        Task *queued_task = (Task *)Q_value(&queued_tasks);
+        _task_dec_all_context(heap, queued_task);
+      }
+      waiting_tasks = set_iter(&process->waiting_tasks);
+      for (; has(&waiting_tasks); inc(&waiting_tasks)) {
+        Task *waiting_task = (Task *)value(&waiting_tasks);
+        _task_dec_all_context(heap, waiting_task);
+      }
+    });
   });
-
   return deleted_nodes_count;
 }

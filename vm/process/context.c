@@ -25,6 +25,7 @@ void context_init(Context *ctx, Object *self, Object *member_obj,
   ctx->func = NULL;
   ctx->error = NULL;
   ctx->catch_ins = -1;
+  ctx->previous_context = NULL;
 }
 
 void context_finalize(Context *ctx) { ASSERT(NOT_NULL(ctx)); }

@@ -12,8 +12,10 @@ class GCStatus {
         '\nRemaining objects: ',
         remaining_object_count,
         '\n')
-    for (_, (cls, count)) in object_counts {
-      result.extend(cat('  ', count, ' x ', cls.name(), '\n'))
+    if object_counts {
+      for (_, (cls, count)) in object_counts {
+        result.extend(cat('  ', count, ' x ', cls.name(), '\n'))
+      }
     }
     return result
   }

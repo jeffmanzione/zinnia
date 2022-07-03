@@ -122,3 +122,8 @@ void process_mark_task_complete(Process *process, Task *task) {
   SYNCHRONIZED(process->task_complete_lock,
                { set_insert(&process->completed_tasks, task); });
 }
+
+void process_delete_task(Process *process, Task *task) {
+  task_finalize(task);
+  __arena_dealloc(&process->task_arena, task);
+}
