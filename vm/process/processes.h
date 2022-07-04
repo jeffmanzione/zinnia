@@ -27,7 +27,6 @@ struct __Context {
   Task *parent_task;
   Context *previous_context;
 
-  Object *member_obj;
   Object *_reflection;
 
   Entity self;

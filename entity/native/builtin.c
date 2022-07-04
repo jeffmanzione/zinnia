@@ -214,22 +214,22 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Heap *heap = process->heap;
   uint32_t deleted_nodes_count = process_collect_garbage(process);
 
-  printf("Tasks:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
-         "capacity=%u\n\tsubarena_count=%u\n",
-         __arena_item_size(&process->task_arena),
-         __arena_capacity(&process->task_arena),
-         __arena_item_count(&process->task_arena),
-         __arena_subarena_capacity(&process->task_arena),
-         __arena_subarena_count(&process->task_arena));
+  // printf("Tasks:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+  //        "capacity=%u\n\tsubarena_count=%u\n",
+  //        __arena_item_size(&process->task_arena),
+  //        __arena_capacity(&process->task_arena),
+  //        __arena_item_count(&process->task_arena),
+  //        __arena_subarena_capacity(&process->task_arena),
+  //        __arena_subarena_count(&process->task_arena));
 
-  printf(
-      "Contexts:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
-      "capacity=%u\n\tsubarena_count=%u\n",
-      __arena_item_size(&process->context_arena),
-      __arena_capacity(&process->context_arena),
-      __arena_item_count(&process->context_arena),
-      __arena_subarena_capacity(&process->context_arena),
-      __arena_subarena_count(&process->context_arena));
+  // printf(
+  //     "Contexts:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+  //     "capacity=%u\n\tsubarena_count=%u\n",
+  //     __arena_item_size(&process->context_arena),
+  //     __arena_capacity(&process->context_arena),
+  //     __arena_item_count(&process->context_arena),
+  //     __arena_subarena_capacity(&process->context_arena),
+  //     __arena_subarena_count(&process->context_arena));
 
   Object *object_counts = array_create(heap);
 
@@ -512,7 +512,6 @@ Entity _string_rtrim(Task *task, Context *ctx, Object *obj, Entity *args) {
   int i = 0;
   while (_is_any_space(str->table[String_size(str) - 1 - i]) &&
          i < String_size(str)) {
-    DEBUGF("HERE %d", String_size(str) - 1 - i);
     ++i;
   }
   String_rshrink(str, i);
@@ -893,7 +892,11 @@ void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 
 void _context_init(Object *obj) {}
-void _context_delete(Object *obj) {}
+void _context_delete(Object *obj) {
+  Context *ctx = (Context *)obj->_internal_obj;
+  context_finalize(ctx);
+  __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
+}
 
 void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("extend"), _string_extend);

@@ -56,8 +56,8 @@ void task_finalize(Task *task) {
 Context *task_create_context(Task *task, Object *self, Module *module,
                              uint32_t instruction_pos) {
   Context *ctx = (Context *)__arena_alloc(&task->parent_process->context_arena);
-  context_init(ctx, self, module, instruction_pos);
   ctx->parent_task = task;
+  context_init(ctx, self, module, instruction_pos);
   ctx->previous_context = task->current;
   task->current = ctx;
   return ctx;
@@ -67,8 +67,6 @@ Context *task_back_context(Task *task) {
   uint32_t ins = task->current->ins;
   Context *to_delete = task->current;
   task->current = task->current->previous_context;
-  context_finalize(to_delete);
-  __arena_dealloc(&task->parent_process->context_arena, to_delete);
   // This was the last context.
   if (NULL == task->current) {
     return NULL;

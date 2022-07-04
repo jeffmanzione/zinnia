@@ -180,7 +180,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
-      if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
+      if (NULL == lookup || NULL != lookup && PRIMITIVE != lookup->type) {     \
         raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
@@ -1515,7 +1515,7 @@ void _task_inc_all_context(Heap *heap, Task *task) {
   }
   Context *ctx = task->current;
   while (NULL != ctx) {
-    heap_inc_edge(heap, task->_reflection, ctx->member_obj);
+    heap_inc_edge(heap, task->_reflection, ctx->_reflection);
     ctx = ctx->previous_context;
   }
 }
@@ -1533,7 +1533,7 @@ void _task_dec_all_context(Heap *heap, Task *task) {
   }
   Context *ctx = task->current;
   while (NULL != ctx) {
-    heap_dec_edge(heap, task->_reflection, ctx->member_obj);
+    heap_dec_edge(heap, task->_reflection, ctx->_reflection);
     ctx = ctx->previous_context;
   }
 }
