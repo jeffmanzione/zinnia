@@ -14,7 +14,7 @@
 
 void process_init(Process *process) {
   HeapConf conf = {.mgraph_config = {.eager_delete_edges = true,
-                                     .eager_delete_edges = true}};
+                                     .eager_delete_nodes = true}};
   process->heap = heap_create(&conf);
   __arena_init(&process->task_arena, sizeof(Task), "Task");
   __arena_init(&process->context_arena, sizeof(Context), "Context");

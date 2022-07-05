@@ -209,6 +209,8 @@ Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
   return fn_ref;
 }
 
+volatile int tmp = 0;
+
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Process *process = task->parent_process;
   Heap *heap = process->heap;
@@ -242,6 +244,12 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
     array_add(heap, object_counts, &tuple_e);
   }
   heapprofile_delete(hp);
+
+  // char buffer[32];
+  // sprintf(buffer, "%d.csv", tmp++);
+  // FILE *file = fopen(buffer, "w");
+  // alloc_to_csv(file);
+  // fclose(file);
 
   Entity deleted_nodes_count_e = entity_int(deleted_nodes_count);
   Entity remaining_object_count_e = entity_int(heap_object_count(heap));

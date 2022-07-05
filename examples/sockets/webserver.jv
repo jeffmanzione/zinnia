@@ -1,4 +1,5 @@
 import io
+import memory
 import net
 import socket
 
@@ -32,6 +33,7 @@ try {
       io.fprintln(io.ERROR, e)
     }
     handle.close()
+    await memory.collect_garbage()
   }
 } catch e {
   io.fprintln(io.ERROR, e)
