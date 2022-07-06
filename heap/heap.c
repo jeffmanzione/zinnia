@@ -20,6 +20,7 @@
 #include "struct/keyed_list.h"
 
 struct _Heap {
+  HeapConf config;
   MGraph *mg;
   __Arena object_arena;
 };
@@ -35,7 +36,8 @@ Heap *heap_create(HeapConf *config) {
   ASSERT(NOT_NULL(config));
   Heap *heap = ALLOC2(Heap);
   config->mgraph_config.ctx = heap;
-  heap->mg = mgraph_create(&config->mgraph_config);
+  heap->config = *config;
+  heap->mg = mgraph_create(&heap->config.mgraph_config);
   __arena_init(&heap->object_arena, sizeof(Object), "Object");
   return heap;
 }

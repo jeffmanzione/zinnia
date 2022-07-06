@@ -13,6 +13,7 @@ typedef struct _Heap Heap;
 
 typedef struct {
   MGraphConf mgraph_config;
+  uint32_t max_object_count;
 } HeapConf;
 
 Heap *heap_create(HeapConf *config);
