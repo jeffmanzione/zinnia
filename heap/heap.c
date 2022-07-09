@@ -23,6 +23,7 @@ struct _Heap {
   HeapConf config;
   MGraph *mg;
   __Arena object_arena;
+  uint32_t object_count_threshold_for_garbage_collection;
 };
 
 struct _HeapProfile {
@@ -37,6 +38,8 @@ Heap *heap_create(HeapConf *config) {
   Heap *heap = ALLOC2(Heap);
   config->mgraph_config.ctx = heap;
   heap->config = *config;
+  heap->object_count_threshold_for_garbage_collection =
+      config->max_object_count / 2;
   heap->mg = mgraph_create(&heap->config.mgraph_config);
   __arena_init(&heap->object_arena, sizeof(Object), "Object");
   return heap;
@@ -54,7 +57,25 @@ uint32_t heap_collect_garbage(Heap *heap) {
 }
 
 uint32_t heap_object_count(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
   return mgraph_node_count(heap->mg);
+}
+
+uint32_t heap_max_object_count(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
+  return heap->config.max_object_count;
+}
+
+uint32_t
+heap_object_count_threshold_for_garbage_collection(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
+  return heap->object_count_threshold_for_garbage_collection;
+}
+
+void heap_set_object_count_threshold_for_garbage_collection(
+    Heap *heap, uint32_t new_threshold) {
+  ASSERT(NOT_NULL(heap));
+  heap->object_count_threshold_for_garbage_collection = new_threshold;
 }
 
 Object *heap_new(Heap *heap, const Class *class) {

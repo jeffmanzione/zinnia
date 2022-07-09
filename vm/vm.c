@@ -11,7 +11,7 @@
 
 Process *create_process_no_reflection(VM *vm) {
   Process *process = alist_add(&vm->processes);
-  process_init(process);
+  process_init(process, &vm->base_heap_conf);
   process->vm = vm;
   return process;
 }

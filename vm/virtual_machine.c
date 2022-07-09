@@ -32,6 +32,7 @@
 
 #define DEFAULT_THREADPOOL_SIZE 6
 
+bool process_maybe_collect_garbage(Process *process);
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context);
 void _mark_task_complete(Process *process, Task *task);
@@ -333,9 +334,13 @@ void _add_filename_method(VM *vm) {
                              Class_StackLine->_reflection, linename);
 }
 
-VM *vm_create(const char *lib_location) {
+VM *vm_create(const char *lib_location, uint32_t max_process_object_count) {
   VM *vm = ALLOC2(VM);
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
+  HeapConf heap_conf = {
+      .mgraph_config = {.eager_delete_edges = true, .eager_delete_nodes = true},
+      .max_object_count = max_process_object_count};
+  vm->base_heap_conf = heap_conf;
   vm->process_create_lock = mutex_create();
   vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
@@ -1478,6 +1483,11 @@ top_of_fn:
     return;
   }
 
+  if (process_maybe_collect_garbage(process)) {
+    raise_error(task, task->current,
+                "Out of memory: Max object count for process exceeded.");
+  }
+
   int waiting_task_count;
   CRITICAL(process->task_waiting_cs,
            { waiting_task_count = set_size(&process->waiting_tasks); });
@@ -1579,4 +1589,28 @@ uint32_t process_collect_garbage(Process *process) {
     });
   });
   return deleted_nodes_count;
+}
+
+bool process_maybe_collect_garbage(Process *process) {
+  ASSERT(NOT_NULL(process));
+  Heap *heap = process->heap;
+  const uint32_t max_object_count = heap_max_object_count(heap);
+  uint32_t object_count = heap_object_count(heap);
+  // printf("object_count=%u, thresh=%u\n", object_count,
+  //        heap_object_count_threshold_for_garbage_collection(heap));
+  if (object_count < heap_object_count_threshold_for_garbage_collection(heap)) {
+    return false;
+  }
+  uint32_t collected_object_count = process_collect_garbage(process);
+  object_count = heap_object_count(heap);
+  if (object_count >= max_object_count) {
+    heap_set_object_count_threshold_for_garbage_collection(heap,
+                                                           max_object_count);
+    return true;
+  } else if (object_count >=
+             heap_object_count_threshold_for_garbage_collection(heap)) {
+    heap_set_object_count_threshold_for_garbage_collection(
+        heap, (max_object_count + object_count) / 2);
+  }
+  return false;
 }

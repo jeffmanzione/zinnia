@@ -21,6 +21,11 @@ void heap_delete(Heap *heap);
 Object *heap_new(Heap *heap, const Class *class);
 uint32_t heap_collect_garbage(Heap *heap);
 uint32_t heap_object_count(const Heap *const heap);
+uint32_t heap_max_object_count(const Heap *const heap);
+uint32_t
+heap_object_count_threshold_for_garbage_collection(const Heap *const heap);
+void heap_set_object_count_threshold_for_garbage_collection(
+    Heap *heap, uint32_t new_threshold);
 void heap_make_root(Heap *heap, Object *obj);
 
 void heap_inc_edge(Heap *heap, Object *parent, Object *child);

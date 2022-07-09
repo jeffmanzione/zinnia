@@ -12,10 +12,8 @@
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
-void process_init(Process *process) {
-  HeapConf conf = {.mgraph_config = {.eager_delete_edges = true,
-                                     .eager_delete_nodes = true}};
-  process->heap = heap_create(&conf);
+void process_init(Process *process, HeapConf *conf) {
+  process->heap = heap_create(conf);
   __arena_init(&process->task_arena, sizeof(Task), "Task");
   __arena_init(&process->context_arena, sizeof(Context), "Context");
   process->task_create_lock = mutex_create();

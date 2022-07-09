@@ -8,7 +8,7 @@
 
 #include "vm/process/processes.h"
 
-void process_init(Process *process);
+void process_init(Process *process, HeapConf *config);
 void process_finalize(Process *process);
 Task *process_create_unqueued_task(Process *process);
 Task *process_create_task(Process *process);
