@@ -12,11 +12,16 @@ git_repository(
     remote = "https://github.com/jeffreymanzione/file-utils.git",
 )
 
-git_repository(
+local_repository(
     name = "memory_wrapper",
-    branch = "master",
-    remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
+    path = "C://Users/jeffr/git/memory-wrapper",
 )
+
+# git_repository(
+#     name = "memory_wrapper",
+#     branch = "master",
+#     remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
+# )
 
 git_repository(
     name = "language_tools",

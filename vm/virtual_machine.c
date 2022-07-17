@@ -1205,8 +1205,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
 
   if (task->child_task_has_error) {
     const Entity *error_e = task_get_resval(task);
-    ASSERT(NOT_NULL(error_e), OBJECT == error_e->type,
-           Class_Error == error_e->obj->_class);
+    ASSERT(NOT_NULL(error_e));
+    ASSERT(OBJECT == error_e->type);
+    ASSERT(Class_Error == error_e->obj->_class);
     context->error = error_e->obj;
     task->child_task_has_error = false;
   }
@@ -1478,14 +1479,15 @@ top_of_fn:
     }
   }
 
+  if (process_maybe_collect_garbage(process)) {
+    FATALF("MEMORY LIMIT EXCEEDED");
+    raise_error(process->current_task, process->current_task->current,
+                "Out of memory: Max object count for process exceeded.");
+  }
+
   if (_process_is_done(process)) {
     DEBUGF("Process is complete.");
     return;
-  }
-
-  if (process_maybe_collect_garbage(process)) {
-    raise_error(task, task->current,
-                "Out of memory: Max object count for process exceeded.");
   }
 
   int waiting_task_count;
@@ -1526,6 +1528,10 @@ void _task_inc_all_context(Heap *heap, Task *task) {
   Context *ctx = task->current;
   while (NULL != ctx) {
     heap_inc_edge(heap, task->_reflection, ctx->_reflection);
+    heap_inc_edge(heap, ctx->_reflection, ctx->self.obj);
+    if (NULL != ctx->error) {
+      heap_inc_edge(heap, ctx->_reflection, ctx->error);
+    }
     ctx = ctx->previous_context;
   }
 }
@@ -1543,17 +1549,23 @@ void _task_dec_all_context(Heap *heap, Task *task) {
   }
   Context *ctx = task->current;
   while (NULL != ctx) {
+    heap_dec_edge(heap, ctx->_reflection, ctx->self.obj);
     heap_dec_edge(heap, task->_reflection, ctx->_reflection);
+    if (NULL != ctx->error) {
+      heap_dec_edge(heap, ctx->_reflection, ctx->error);
+    }
     ctx = ctx->previous_context;
   }
 }
 
 uint32_t process_collect_garbage(Process *process) {
+  ASSERT(NOT_NULL(process));
+  printf("process_collect_garbage\n");
   uint32_t deleted_nodes_count;
-  Heap *heap = process->heap;
 
   SYNCHRONIZED(process->task_queue_lock, {
     CRITICAL(process->task_waiting_cs, {
+      Heap *heap = process->heap;
       M_iter completed_tasks = set_iter(&process->completed_tasks);
       for (; has(&completed_tasks); inc(&completed_tasks)) {
         Task *completed_task = (Task *)value(&completed_tasks);
@@ -1564,12 +1576,14 @@ uint32_t process_collect_garbage(Process *process) {
       _task_inc_all_context(heap, process->current_task);
       Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
       for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-        Task *queued_task = (Task *)Q_value(&queued_tasks);
+        Task *queued_task = *(Task **)Q_value(&queued_tasks);
+        heap_inc_edge(heap, process->_reflection, queued_task->_reflection);
         _task_inc_all_context(heap, queued_task);
       }
       M_iter waiting_tasks = set_iter(&process->waiting_tasks);
       for (; has(&waiting_tasks); inc(&waiting_tasks)) {
         Task *waiting_task = (Task *)value(&waiting_tasks);
+        heap_inc_edge(heap, process->_reflection, waiting_task->_reflection);
         _task_inc_all_context(heap, waiting_task);
       }
 
@@ -1578,12 +1592,14 @@ uint32_t process_collect_garbage(Process *process) {
       _task_dec_all_context(heap, process->current_task);
       queued_tasks = Q_iterator(&process->queued_tasks);
       for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-        Task *queued_task = (Task *)Q_value(&queued_tasks);
+        Task *queued_task = *(Task **)Q_value(&queued_tasks);
+        heap_dec_edge(heap, process->_reflection, queued_task->_reflection);
         _task_dec_all_context(heap, queued_task);
       }
       waiting_tasks = set_iter(&process->waiting_tasks);
       for (; has(&waiting_tasks); inc(&waiting_tasks)) {
         Task *waiting_task = (Task *)value(&waiting_tasks);
+        heap_dec_edge(heap, process->_reflection, waiting_task->_reflection);
         _task_dec_all_context(heap, waiting_task);
       }
     });
@@ -1594,21 +1610,20 @@ uint32_t process_collect_garbage(Process *process) {
 bool process_maybe_collect_garbage(Process *process) {
   ASSERT(NOT_NULL(process));
   Heap *heap = process->heap;
-  const uint32_t max_object_count = heap_max_object_count(heap);
+  const uint32_t object_count_thresh =
+      heap_object_count_threshold_for_garbage_collection(heap);
   uint32_t object_count = heap_object_count(heap);
-  // printf("object_count=%u, thresh=%u\n", object_count,
-  //        heap_object_count_threshold_for_garbage_collection(heap));
-  if (object_count < heap_object_count_threshold_for_garbage_collection(heap)) {
+  if (object_count < object_count_thresh) {
     return false;
   }
   uint32_t collected_object_count = process_collect_garbage(process);
   object_count = heap_object_count(heap);
+  const uint32_t max_object_count = heap_max_object_count(heap);
   if (object_count >= max_object_count) {
     heap_set_object_count_threshold_for_garbage_collection(heap,
                                                            max_object_count);
     return true;
-  } else if (object_count >=
-             heap_object_count_threshold_for_garbage_collection(heap)) {
+  } else if (object_count >= object_count_thresh) {
     heap_set_object_count_threshold_for_garbage_collection(
         heap, (max_object_count + object_count) / 2);
   }

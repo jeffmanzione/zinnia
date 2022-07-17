@@ -84,7 +84,7 @@ Task *process_create_task(Process *process) {
 Task *process_pop_task(Process *process) {
   Task *task;
   SYNCHRONIZED(process->task_queue_lock, {
-    if (0 == Q_size(&process->queued_tasks)) {
+    if (Q_is_empty(&process->queued_tasks)) {
       task = NULL;
     } else {
       task = Q_pop(&process->queued_tasks);

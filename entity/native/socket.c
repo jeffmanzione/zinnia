@@ -33,6 +33,9 @@ void _Socket_delete(Object *obj) {
 }
 void _SocketHandle_init(Object *obj) {}
 void _SocketHandle_delete(Object *obj) {
+  if (NULL == obj->_internal_obj) {
+    return;
+  }
   sockethandle_delete((SocketHandle *)obj->_internal_obj);
 }
 

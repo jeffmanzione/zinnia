@@ -97,13 +97,16 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   Entity *old_member =
       (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
   ASSERT(NOT_NULL(entry_pos));
-  if (NULL != old_member && OBJECT == etype(old_member)) {
-    mgraph_dec(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object_m(old_member)->_node_ref);
+  const bool old_member_is_obj =
+      NULL != old_member && OBJECT == etype(old_member);
+  if (old_member_is_obj && old_member->obj == child->obj) {
+    return;
+  }
+  if (old_member_is_obj) {
+    heap_dec_edge(heap, parent, object_m(old_member));
   }
   if (OBJECT == etype(child)) {
-    mgraph_inc(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object(child)->_node_ref);
+    heap_inc_edge(heap, parent, object_m((Entity *)child));
   }
   (*entry_pos) = *child;
 }
@@ -115,11 +118,15 @@ Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
   Entity *old_member =
       (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
   ASSERT(NOT_NULL(entry_pos));
-  if (NULL != old_member && OBJECT == etype(old_member)) {
-    mgraph_dec(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object_m(old_member)->_node_ref);
+  const bool old_member_is_obj =
+      NULL != old_member && OBJECT == etype(old_member);
+  if (old_member_is_obj && old_member->obj == child) {
+    return entry_pos;
   }
-  mgraph_inc(heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+  if (old_member_is_obj) {
+    heap_dec_edge(heap, parent, object_m(old_member));
+  }
+  heap_inc_edge(heap, parent, (Object *)child);
   entry_pos->type = OBJECT;
   entry_pos->obj = (Object *)child;
   return entry_pos;
@@ -183,7 +190,7 @@ Entity array_remove(Heap *heap, Object *array, int32_t index) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), index >= 0);
   Entity e = Array_remove((Array *)array->_internal_obj, index);
   if (OBJECT == e.type) {
-    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e.obj->_node_ref);
+    heap_dec_edge(heap, array, e.obj);
   }
   return e;
 }
@@ -192,13 +199,13 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
-    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
+    heap_dec_edge(heap, array, e->obj);
   }
   *e = *child;
   if (OBJECT != child->type) {
     return;
   }
-  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+  heap_inc_edge(heap, array, child->obj);
 }
 
 Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
@@ -212,7 +219,7 @@ void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   if (OBJECT != child->type) {
     return;
   }
-  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+  heap_inc_edge(heap, array, child->obj);
 }
 
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {

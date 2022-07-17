@@ -47,6 +47,7 @@ Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
   char buffer[1024];
   int num_chars = vsprintf(buffer, fmt, args);
   va_end(args);
+  printf(">>>> %*s\n", num_chars, buffer);
   Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
   Object *err = error_new(task, context, error_msg);
   return raise_error_with_object(task, context, err);

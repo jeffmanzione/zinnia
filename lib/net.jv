@@ -266,6 +266,7 @@ class HttpSocketHandle {
     if ~(http_response is HttpResponse) {
       raise Error('HttpSocketHandle.send() expects an HttpResponse argument.')
     }
+    io.println('raw_handle', raw_handle)
     await raw_handle.send(http_response.to_s())
   }
   method close() {
