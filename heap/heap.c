@@ -99,7 +99,7 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   ASSERT(NOT_NULL(entry_pos));
   const bool old_member_is_obj =
       NULL != old_member && OBJECT == etype(old_member);
-  if (old_member_is_obj && old_member->obj == child->obj) {
+  if (old_member_is_obj && (old_member->obj == child->obj)) {
     return;
   }
   if (old_member_is_obj) {
@@ -143,22 +143,46 @@ Object *_object_create(Heap *heap, const Class *class) {
   return object;
 }
 
+void _print_object_summary(Object *object) {
+  ASSERT(NOT_NULL(object));
+  if (0 == strcmp(object->_class->_name, "Class")) {
+    printf("\tClass('%s')", object->_class_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "Module")) {
+    printf("\tModule('%s')", object->_module_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "Function")) {
+    printf("\tFunction('%s')", object->_function_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "String")) {
+    printf("\tString('%.*s', %p)",
+           String_size(((String *)object->_internal_obj)),
+           ((String *)object->_internal_obj)->table, object->_internal_obj);
+  } else {
+    printf("\t%s", object->_class->_name);
+  }
+  printf(" (%p)\n", object);
+
+  KL_iter members = keyedlist_iter(&object->_members);
+  for (; kl_has(&members); kl_inc(&members)) {
+    const Entity *member = (Entity *)kl_value(&members);
+    if (NULL != member && OBJECT == member->type) {
+      printf("\t\t(%p)\n", member->obj);
+    }
+  }
+  fflush(stdout);
+}
+
+void heap_print_debug_summary(Heap *heap) {
+  const Set *nodes = mgraph_nodes(heap->mg);
+  M_iter iter = set_iter((Set *)nodes);
+  for (; has(&iter); inc(&iter)) {
+    const Node *node = (Node *)value(&iter);
+    Object *obj = (Object *)node_ptr(node);
+    _print_object_summary(obj);
+  }
+}
+
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  // if (0 == strcmp(object->_class->_name, "Class")) {
-  //   printf("\tDELETING a Class('%s')\n", object->_class_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "Module")) {
-  //   printf("\tDELETING a Module('%s')\n", object->_module_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "Function")) {
-  //   printf("\tDELETING a Function('%s')\n", object->_function_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "String")) {
-  //   printf("\tDELETING a String('%.*s', %p, %p)\n",
-  //          String_size(((String *)object->_internal_obj)),
-  //          ((String *)object->_internal_obj)->table, object->_internal_obj,
-  //          object);
-  // } else {
-  //   printf("\tDELETING a '%s'\n", object->_class->_name);
-  // }
+  // _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
@@ -211,15 +235,15 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
 Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
 
 // Does this need to handle overwrites?
-void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
-  ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
-  Entity *e = tuple_get_mutable((Tuple *)array->_internal_obj, index);
+void tuple_set(Heap *heap, Object *tuple, int32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(tuple), NOT_NULL(child));
+  ASSERT(index >= 0, index < tuple_size((Tuple *)tuple->_internal_obj));
+  Entity *e = tuple_get_mutable((Tuple *)tuple->_internal_obj, index);
   *e = *child;
   if (OBJECT != child->type) {
     return;
   }
-  heap_inc_edge(heap, array, child->obj);
+  heap_inc_edge(heap, tuple, child->obj);
 }
 
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {

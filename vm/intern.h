@@ -6,6 +6,8 @@
 #ifndef VM_INTERN_H_
 #define VM_INTERN_H_
 
+extern char *ADDRESS_INT_KEY;
+extern char *ADDRESS_HEX_KEY;
 extern char *ARRAYLIKE_INDEX_KEY;
 extern char *ARRAYLIKE_SET_KEY;
 extern char *ARRAY_NAME;

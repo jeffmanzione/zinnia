@@ -20,6 +20,7 @@ Heap *heap_create(HeapConf *config);
 void heap_delete(Heap *heap);
 Object *heap_new(Heap *heap, const Class *class);
 uint32_t heap_collect_garbage(Heap *heap);
+void heap_print_debug_summary(Heap *heap);
 uint32_t heap_object_count(const Heap *const heap);
 uint32_t heap_max_object_count(const Heap *const heap);
 uint32_t

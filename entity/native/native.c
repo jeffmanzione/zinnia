@@ -48,3 +48,17 @@ Class *native_class(Module *module, const char name[], ObjInitFn init_fn,
   cls->_delete_fn = del_fn;
   return cls;
 }
+
+Object *native_background_new(Process *process, Class *class) {
+  Object *object;
+  SYNCHRONIZED(process->heap_access_lock,
+               { object = heap_new(process->heap, class); });
+  return object;
+}
+
+Object *native_background_string_new(Process *process, const char src[],
+                                     size_t len) {
+  Object *str = native_background_new(process, Class_String);
+  __string_init(str, src, len);
+  return str;
+}

@@ -92,6 +92,9 @@ struct __Process {
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;
+  Set background_tasks;
+
+  Mutex heap_access_lock;
 
   Object *_reflection;
   ThreadHandle thread; // Null if main thread.

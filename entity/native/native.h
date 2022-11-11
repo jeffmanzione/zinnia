@@ -35,4 +35,8 @@ Function *native_background_function(Module *module, const char name[],
 Class *native_class(Module *module, const char name[], ObjInitFn init_fn,
                     ObjDelFn del_fn);
 
+Object *native_background_new(Process *process, Class *class);
+Object *native_background_string_new(Process *process, const char src[],
+                                     size_t len);
+
 #endif /* ENTITY_NATIVE_NATIVE_H_ */

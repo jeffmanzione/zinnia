@@ -660,6 +660,21 @@ Entity _object_hash(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int((int32_t)(intptr_t)obj);
 }
 
+Entity _object_address_int(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  return entity_int((int32_t)(intptr_t)obj);
+}
+
+Entity _object_address_hex(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  Primitive val = args->pri;
+  char buffer[BUFFER_SIZE];
+  int num_written = snprintf(buffer, BUFFER_SIZE, "%p", obj);
+  ASSERT(num_written > 0);
+  return entity_object(
+      string_new(task->parent_process->heap, buffer, num_written));
+}
+
 Entity _class_module(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj->_class_obj->_module->_reflection);
 }
@@ -982,6 +997,8 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
   native_method(Class_Object, intern("$set"), _set_member);
+  native_method(Class_Object, ADDRESS_INT_KEY, _object_address_int);
+  native_method(Class_Object, ADDRESS_HEX_KEY, _object_address_hex);
 
   native_method(Class_Array, intern("len"), _array_len);
   native_method(Class_Array, intern("append"), _array_append);

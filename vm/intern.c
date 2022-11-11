@@ -7,6 +7,8 @@
 
 #include "alloc/arena/intern.h"
 
+char *ADDRESS_INT_KEY;
+char *ADDRESS_HEX_KEY;
 char *ARRAYLIKE_INDEX_KEY;
 char *ARRAYLIKE_SET_KEY;
 char *ARRAY_NAME;
@@ -51,6 +53,8 @@ char *TUPLE_NAME;
 char *VALUE_KEY;
 
 void _strings_insert_constants() {
+  ADDRESS_INT_KEY = intern("$adr");
+  ADDRESS_HEX_KEY = intern("$hex_addr");
   ARRAYLIKE_INDEX_KEY = intern("__index__");
   ARRAYLIKE_SET_KEY = intern("__set__");
   ARRAY_NAME = intern("Array");

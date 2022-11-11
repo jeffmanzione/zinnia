@@ -20,6 +20,7 @@ typedef struct _VM {
   Process *main;
   ThreadPool *background_pool;
   HeapConf base_heap_conf;
+  bool async_enabled;
 } VM;
 
 ModuleManager *vm_module_manager(VM *vm);
