@@ -453,9 +453,7 @@ void _execute_RES(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = entity_primitive(ins->val);
     break;
   case INSTRUCTION_STRING:
-    str = heap_new(task->parent_process->heap, Class_String);
-    // TODO: Maybe precompute the length of the string?
-    __string_init(str, ins->str, strlen(ins->str));
+    str = string_new(task->parent_process->heap, ins->str, strlen(ins->str));
     *task_mutable_resval(task) = entity_object(str);
     break;
   default:
@@ -624,6 +622,7 @@ void _execute_in_background(BackgroundThreadArgs *args) {
 }
 
 void _execute_in_background_callback(BackgroundThreadArgs *args) {
+  process_remove_background_task(args->task->parent_process, args->task);
   args->task->state = TASK_COMPLETE;
   _mark_task_complete(args->task->parent_process, args->task);
   DEALLOC(args);
@@ -658,24 +657,24 @@ BackgroundThreadArgs *_create_background_thread_args(Task *task,
 // Context is only necessary for native functions.
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context) {
+  Process *process = task->parent_process;
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
       FATALF("Invalid native function.");
     }
-    if (func->_is_background && task->parent_process->vm->async_enabled) {
-      Task *new_task = process_create_unqueued_task(task->parent_process);
-      new_task->parent_task = task;
+    if (func->_is_background && process->vm->async_enabled) {
       ASSERT(func->_is_async);
+      Task *new_task = process_create_unqueued_task(process);
+      new_task->parent_task = task;
       *task_mutable_resval(new_task) = *task_get_resval(task);
       *task_mutable_resval(task) = entity_object(future_create(new_task));
       BackgroundThreadArgs *args =
           _create_background_thread_args(new_task, context, func, self);
-      process_add_background_task(task->parent_process, new_task,
-                                  task->parent_process->vm->background_pool,
-                                  (VoidFnPtr)_execute_in_background,
-                                  (VoidFnPtr)_execute_in_background_callback,
-                                  (VoidPtr)args);
+      process_add_background_task(
+          process, new_task, process->vm->background_pool,
+          (VoidFnPtr)_execute_in_background,
+          (VoidFnPtr)_execute_in_background_callback, (VoidPtr)args);
       return false;
     }
     *task_mutable_resval(task) =
@@ -1528,7 +1527,8 @@ ThreadHandle process_run_in_new_thread(Process *process) {
              thread_create(AS_VOID_FN(_process_run_return_void_ptr), process);
 }
 
-void _task_inc_all_context(Heap *heap, Task *task) {
+void _task_inc_all_context(Process *process, Task *task) {
+  Heap *heap = process->heap;
   AL_iter stack = alist_iter(&task->entity_stack);
   for (; al_has(&stack); al_inc(&stack)) {
     Entity *e = al_value(&stack);
@@ -1550,7 +1550,8 @@ void _task_inc_all_context(Heap *heap, Task *task) {
   }
 }
 
-void _task_dec_all_context(Heap *heap, Task *task) {
+void _task_dec_all_context(Process *process, Task *task) {
+  Heap *heap = process->heap;
   AL_iter stack = alist_iter(&task->entity_stack);
   for (; al_has(&stack); al_inc(&stack)) {
     Entity *e = al_value(&stack);
@@ -1572,6 +1573,53 @@ void _task_dec_all_context(Heap *heap, Task *task) {
   }
 }
 
+void _delete_completed_tasks(Process *process) {
+  M_iter completed_tasks = set_iter(&process->completed_tasks);
+  for (; has(&completed_tasks); inc(&completed_tasks)) {
+    Task *completed_task = (Task *)value(&completed_tasks);
+    set_remove(&process->completed_tasks, completed_task);
+    process_delete_task(process, completed_task);
+  }
+}
+
+void _inc_queued_tasks(Process *process) {
+  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = *(Task **)Q_value(&queued_tasks);
+    heap_inc_edge(process->heap, process->_reflection,
+                  queued_task->_reflection);
+    _task_inc_all_context(process, queued_task);
+  }
+}
+
+void _dec_queued_tasks(Process *process) {
+  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = *(Task **)Q_value(&queued_tasks);
+    heap_dec_edge(process->heap, process->_reflection,
+                  queued_task->_reflection);
+    _task_dec_all_context(process, queued_task);
+  }
+}
+
+void _inc_tasks_set(Process *process, Set *task_set) {
+  M_iter tasks = set_iter(task_set);
+  for (; has(&tasks); inc(&tasks)) {
+    Task *task = (Task *)value(&tasks);
+    heap_inc_edge(process->heap, process->_reflection, task->_reflection);
+    _task_inc_all_context(process, task);
+  }
+}
+
+void _dec_task_set(Process *process, Set *task_set) {
+  M_iter tasks = set_iter(task_set);
+  for (; has(&tasks); inc(&tasks)) {
+    Task *task = (Task *)value(&tasks);
+    heap_dec_edge(process->heap, process->_reflection, task->_reflection);
+    _task_dec_all_context(process, task);
+  }
+}
+
 uint32_t process_collect_garbage(Process *process) {
   ASSERT(NOT_NULL(process));
   uint32_t deleted_nodes_count;
@@ -1582,56 +1630,20 @@ uint32_t process_collect_garbage(Process *process) {
         fflush(stdout);
         printf("garbage collection BEGIN\n");
         fflush(stdout);
-        Heap *heap = process->heap;
-        M_iter completed_tasks = set_iter(&process->completed_tasks);
-        for (; has(&completed_tasks); inc(&completed_tasks)) {
-          Task *completed_task = (Task *)value(&completed_tasks);
-          set_remove(&process->completed_tasks, completed_task);
-          process_delete_task(process, completed_task);
-        }
-        _task_inc_all_context(heap, process->current_task);
-        Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
-        for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-          Task *queued_task = *(Task **)Q_value(&queued_tasks);
-          heap_inc_edge(heap, process->_reflection, queued_task->_reflection);
-          _task_inc_all_context(heap, queued_task);
-        }
-        M_iter waiting_tasks = set_iter(&process->waiting_tasks);
-        for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-          Task *waiting_task = (Task *)value(&waiting_tasks);
-          heap_inc_edge(heap, process->_reflection, waiting_task->_reflection);
-          _task_inc_all_context(heap, waiting_task);
-        }
-        M_iter background_tasks = set_iter(&process->background_tasks);
-        for (; has(&background_tasks); inc(&background_tasks)) {
-          Task *background_task = (Task *)value(&background_tasks);
-          heap_inc_edge(heap, process->_reflection,
-                        background_task->_reflection);
-          _task_inc_all_context(heap, background_task);
-        }
 
-        deleted_nodes_count = heap_collect_garbage(heap);
+        _delete_completed_tasks(process);
 
-        _task_dec_all_context(heap, process->current_task);
-        queued_tasks = Q_iterator(&process->queued_tasks);
-        for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-          Task *queued_task = *(Task **)Q_value(&queued_tasks);
-          heap_dec_edge(heap, process->_reflection, queued_task->_reflection);
-          _task_dec_all_context(heap, queued_task);
-        }
-        waiting_tasks = set_iter(&process->waiting_tasks);
-        for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-          Task *waiting_task = (Task *)value(&waiting_tasks);
-          heap_dec_edge(heap, process->_reflection, waiting_task->_reflection);
-          _task_dec_all_context(heap, waiting_task);
-        }
-        background_tasks = set_iter(&process->background_tasks);
-        for (; has(&background_tasks); inc(&background_tasks)) {
-          Task *background_task = (Task *)value(&background_tasks);
-          heap_dec_edge(heap, process->_reflection,
-                        background_task->_reflection);
-          _task_dec_all_context(heap, background_task);
-        }
+        _task_inc_all_context(process, process->current_task);
+        _inc_queued_tasks(process);
+        _inc_tasks_set(process, &process->waiting_tasks);
+        _inc_tasks_set(process, &process->background_tasks);
+
+        deleted_nodes_count = heap_collect_garbage(process->heap);
+
+        _task_dec_all_context(process, process->current_task);
+        _dec_queued_tasks(process);
+        _dec_task_set(process, &process->waiting_tasks);
+        _dec_task_set(process, &process->background_tasks);
 
         fflush(stdout);
         printf("garbage collection END\n");
