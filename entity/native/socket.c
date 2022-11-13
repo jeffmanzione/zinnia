@@ -33,6 +33,9 @@ void _Socket_delete(Object *obj) {
 }
 void _SocketHandle_init(Object *obj) {}
 void _SocketHandle_delete(Object *obj) {
+  if (NULL == obj->_internal_obj) {
+    return;
+  }
   sockethandle_delete((SocketHandle *)obj->_internal_obj);
 }
 
@@ -85,10 +88,10 @@ Entity _Socket_close(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _Socket_accept(Task *task, Context *ctx, Object *obj, Entity *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
   Object *socket_handle =
-      heap_new(task->parent_process->heap, Class_SocketHandle);
+      native_background_new(task->parent_process, Class_SocketHandle);
   Entity arg = entity_object(obj);
   _SocketHandle_constructor(task, ctx, socket_handle, &arg);
   return entity_object(socket_handle);
@@ -98,7 +101,7 @@ Entity _SocketHandle_connect_constructor(Task *task, Context *ctx, Object *obj,
                                          Entity *args) {
   Socket *socket = (Socket *)args->obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
   SocketHandle *sh = socket_connect(socket);
   obj->_internal_obj = sh;
@@ -108,10 +111,10 @@ Entity _SocketHandle_connect_constructor(Task *task, Context *ctx, Object *obj,
 Entity _Socket_connect(Task *task, Context *ctx, Object *obj, Entity *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
   Object *socket_handle =
-      heap_new(task->parent_process->heap, Class_SocketHandle);
+      native_background_new(task->parent_process, Class_SocketHandle);
   Entity arg = entity_object(obj);
   _SocketHandle_connect_constructor(task, ctx, socket_handle, &arg);
   return entity_object(socket_handle);
@@ -121,7 +124,7 @@ Entity _SocketHandle_constructor(Task *task, Context *ctx, Object *obj,
                                  Entity *args) {
   Socket *socket = (Socket *)args->obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
   SocketHandle *sh = socket_accept(socket);
   obj->_internal_obj = sh;
@@ -141,7 +144,7 @@ Entity _SocketHandle_close(Task *task, Context *ctx, Object *obj,
 Entity _SocketHandle_send(Task *task, Context *ctx, Object *obj, Entity *args) {
   SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
   if (NULL == sh) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
   if (IS_CLASS(args, Class_String)) {
     String *msg = args->obj->_internal_obj;
@@ -156,7 +159,7 @@ Entity _SocketHandle_send(Task *task, Context *ctx, Object *obj, Entity *args) {
     }
     return NONE_ENTITY;
   } else {
-    return raise_error(task, ctx, "Cannot send non-string.");
+    return native_background_raise_error(task, ctx, "Cannot send non-string.");
   }
 }
 
@@ -164,17 +167,17 @@ Entity _SocketHandle_receive(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
   SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
   if (NULL == sh) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
 
   char buf[BUFFER_SIZE];
   int chars_received = sockethandle_receive(sh, buf, BUFFER_SIZE);
   if (chars_received <= 0) {
-    return raise_error(task, ctx, "Invalid connection. recv() returned %d",
-                       chars_received);
+    return native_background_raise_error(
+        task, ctx, "Invalid connection. recv() returned %d", chars_received);
   }
   return entity_object(
-      string_new(task->parent_process->heap, buf, chars_received));
+      native_background_string_new(task->parent_process, buf, chars_received));
 }
 
 Entity _init_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {

@@ -52,6 +52,21 @@ Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
   return raise_error_with_object(task, context, err);
 }
 
+Entity native_background_raise_error(Task *task, Context *context,
+                                     const char fmt[], ...) {
+  va_list args;
+  va_start(args, fmt);
+  char buffer[1024];
+  int num_chars = vsprintf(buffer, fmt, args);
+  va_end(args);
+  Object *err;
+  SYNCHRONIZED(task->parent_process->heap_access_lock, {
+    err = error_new(task, context,
+                    string_new(task->parent_process->heap, buffer, num_chars));
+  });
+  return raise_error_with_object(task, context, err);
+}
+
 uint32_t stackline_linenum(Object *stackline) {
   ASSERT(NOT_NULL(stackline), Class_StackLine == stackline->_class);
   _StackLine *sl = (_StackLine *)stackline->_internal_obj;

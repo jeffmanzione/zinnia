@@ -209,81 +209,29 @@ Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
   return fn_ref;
 }
 
-void _task_inc_all_context(Heap *heap, Task *task) {
-  AL_iter stack = alist_iter(&task->entity_stack);
-  for (; al_has(&stack); al_inc(&stack)) {
-    Entity *e = al_value(&stack);
-    if (OBJECT == e->type) {
-      heap_inc_edge(heap, task->_reflection, e->obj);
-    }
-  }
-  if (OBJECT == task->resval.type) {
-    heap_inc_edge(heap, task->_reflection, task->resval.obj);
-  }
-  Context *ctx = task->current;
-  while (NULL != ctx) {
-    heap_inc_edge(heap, task->_reflection, ctx->member_obj);
-    ctx = ctx->previous_context;
-  }
-}
-
-void _task_dec_all_context(Heap *heap, Task *task) {
-  AL_iter stack = alist_iter(&task->entity_stack);
-  for (; al_has(&stack); al_inc(&stack)) {
-    Entity *e = al_value(&stack);
-    if (OBJECT == e->type) {
-      heap_dec_edge(heap, task->_reflection, e->obj);
-    }
-  }
-  if (OBJECT == task->resval.type) {
-    heap_dec_edge(heap, task->_reflection, task->resval.obj);
-  }
-  Context *ctx = task->current;
-  while (NULL != ctx) {
-    heap_dec_edge(heap, task->_reflection, ctx->member_obj);
-    ctx = ctx->previous_context;
-  }
-}
+volatile int tmp = 0;
 
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Process *process = task->parent_process;
   Heap *heap = process->heap;
-  uint32_t deleted_nodes_count;
+  uint32_t deleted_nodes_count = process_collect_garbage(process);
 
-  SYNCHRONIZED(process->task_queue_lock, {
-    _task_inc_all_context(heap, process->current_task);
-    Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
-    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-      Task *queued_task = (Task *)Q_value(&queued_tasks);
-      _task_inc_all_context(heap, queued_task);
-    }
-    M_iter waiting_tasks = set_iter(&process->waiting_tasks);
-    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-      Task *waiting_task = (Task *)value(&waiting_tasks);
-      _task_inc_all_context(heap, waiting_task);
-    }
+  // printf("Tasks:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+  //        "capacity=%u\n\tsubarena_count=%u\n",
+  //        __arena_item_size(&process->task_arena),
+  //        __arena_capacity(&process->task_arena),
+  //        __arena_item_count(&process->task_arena),
+  //        __arena_subarena_capacity(&process->task_arena),
+  //        __arena_subarena_count(&process->task_arena));
 
-    deleted_nodes_count = heap_collect_garbage(heap);
-
-    _task_dec_all_context(heap, process->current_task);
-    queued_tasks = Q_iterator(&process->queued_tasks);
-    for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
-      Task *queued_task = (Task *)Q_value(&queued_tasks);
-      _task_dec_all_context(heap, queued_task);
-    }
-    waiting_tasks = set_iter(&process->waiting_tasks);
-    for (; has(&waiting_tasks); inc(&waiting_tasks)) {
-      Task *waiting_task = (Task *)value(&waiting_tasks);
-      _task_dec_all_context(heap, waiting_task);
-    }
-
-    M_iter completed_tasks = set_iter(&process->completed_tasks);
-    for (; has(&completed_tasks); inc(&completed_tasks)) {
-      Task *completed_task = (Task *)value(&completed_tasks);
-      set_remove(&process->completed_tasks, completed_task);
-      task_finalize(completed_task);
-    }
-  });
+  // printf(
+  //     "Contexts:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
+  //     "capacity=%u\n\tsubarena_count=%u\n",
+  //     __arena_item_size(&process->context_arena),
+  //     __arena_capacity(&process->context_arena),
+  //     __arena_item_count(&process->context_arena),
+  //     __arena_subarena_capacity(&process->context_arena),
+  //     __arena_subarena_count(&process->context_arena));
 
   Object *object_counts = array_create(heap);
 
@@ -296,6 +244,12 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
     array_add(heap, object_counts, &tuple_e);
   }
   heapprofile_delete(hp);
+
+  // char buffer[32];
+  // sprintf(buffer, "%d.csv", tmp++);
+  // FILE *file = fopen(buffer, "w");
+  // alloc_to_csv(file);
+  // fclose(file);
 
   Entity deleted_nodes_count_e = entity_int(deleted_nodes_count);
   Entity remaining_object_count_e = entity_int(heap_object_count(heap));
@@ -566,7 +520,6 @@ Entity _string_rtrim(Task *task, Context *ctx, Object *obj, Entity *args) {
   int i = 0;
   while (_is_any_space(str->table[String_size(str) - 1 - i]) &&
          i < String_size(str)) {
-    DEBUGF("HERE %d", String_size(str) - 1 - i);
     ++i;
   }
   String_rshrink(str, i);
@@ -705,6 +658,21 @@ Entity _object_class(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _object_hash(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int((int32_t)(intptr_t)obj);
+}
+
+Entity _object_address_int(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  return entity_int((int32_t)(intptr_t)obj);
+}
+
+Entity _object_address_hex(Task *task, Context *ctx, Object *obj,
+                           Entity *args) {
+  Primitive val = args->pri;
+  char buffer[BUFFER_SIZE];
+  int num_written = snprintf(buffer, BUFFER_SIZE, "%p", obj);
+  ASSERT(num_written > 0);
+  return entity_object(
+      string_new(task->parent_process->heap, buffer, num_written));
 }
 
 Entity _class_module(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -946,6 +914,13 @@ void _process_delete(Object *obj) {}
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 
+void _context_init(Object *obj) {}
+void _context_delete(Object *obj) {
+  Context *ctx = (Context *)obj->_internal_obj;
+  context_finalize(ctx);
+  __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
+}
+
 void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("extend"), _string_extend);
   native_method(Class_String, CMP_FN_NAME, _string_cmp);
@@ -995,6 +970,8 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+  Class_Context =
+      native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
 
   native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);
@@ -1020,6 +997,8 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
   native_method(Class_Object, intern("$set"), _set_member);
+  native_method(Class_Object, ADDRESS_INT_KEY, _object_address_int);
+  native_method(Class_Object, ADDRESS_HEX_KEY, _object_address_hex);
 
   native_method(Class_Array, intern("len"), _array_len);
   native_method(Class_Array, intern("append"), _array_append);

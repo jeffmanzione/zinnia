@@ -277,7 +277,7 @@ class HttpSocket {
   new(field raw_socket) {}
 
   method accept() {
-    return HttpSocketHandle(await raw_socket.accept())
+    HttpSocketHandle(await raw_socket.accept())
   }
   method close() {
     raw_socket.close()

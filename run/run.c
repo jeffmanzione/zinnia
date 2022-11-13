@@ -56,8 +56,10 @@ void run(const Set *source_files, ArgStore *store) {
 
   const char *lib_location =
       argstore_lookup_string(store, ArgKey__LIB_LOCATION);
-
-  VM *vm = vm_create(lib_location);
+  uint32_t max_process_object_count =
+      argstore_lookup_int(store, ArgKey__MAX_PROCESS_OBJECT_COUNT);
+  bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
+  VM *vm = vm_create(lib_location, max_process_object_count, async_enabled);
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = NULL;
 

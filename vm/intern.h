@@ -6,6 +6,8 @@
 #ifndef VM_INTERN_H_
 #define VM_INTERN_H_
 
+extern char *ADDRESS_INT_KEY;
+extern char *ADDRESS_HEX_KEY;
 extern char *ARRAYLIKE_INDEX_KEY;
 extern char *ARRAYLIKE_SET_KEY;
 extern char *ARRAY_NAME;
@@ -13,6 +15,7 @@ extern char *CLASS_KEY;
 extern char *CLASS_NAME;
 extern char *CMP_FN_NAME;
 extern char *CONSTRUCTOR_KEY;
+extern char *CONTEXT_NAME;
 extern char *EQ_FN_NAME;
 extern char *ERROR_NAME;
 extern char *FALSE_KEYWORD;

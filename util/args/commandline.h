@@ -22,6 +22,8 @@ typedef enum {
   ArgKey__ASSEMBLY_OUT_DIR,
   ArgKey__OPTIMIZE,
   ArgKey__LIB_LOCATION,
+  ArgKey__MAX_PROCESS_OBJECT_COUNT,
+  ArgKey__ASYNC,
   ArgKey__END,
 } ArgKey;
 

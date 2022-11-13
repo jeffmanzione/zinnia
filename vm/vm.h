@@ -19,6 +19,8 @@ typedef struct _VM {
   Mutex process_create_lock;
   Process *main;
   ThreadPool *background_pool;
+  HeapConf base_heap_conf;
+  bool async_enabled;
 } VM;
 
 ModuleManager *vm_module_manager(VM *vm);

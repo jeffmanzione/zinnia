@@ -15,16 +15,22 @@
 
 Heap *_context_heap(Context *ctx);
 
-void context_init(Context *ctx, Object *self, Object *member_obj,
-                  Module *module, uint32_t instruction_pos) {
+void _context_add_reflection(Context *context) {
+  context->_reflection = heap_new(_context_heap(context), Class_Context);
+  context->_reflection->_internal_obj = context;
+}
+
+void context_init(Context *ctx, Object *self, Module *module,
+                  uint32_t instruction_pos) {
   ctx->self = entity_object(self);
-  ctx->member_obj = member_obj;
   ctx->module = module;
   ctx->tape = module->_tape;
   ctx->ins = instruction_pos;
   ctx->func = NULL;
   ctx->error = NULL;
   ctx->catch_ins = -1;
+  ctx->previous_context = NULL;
+  _context_add_reflection(ctx);
 }
 
 void context_finalize(Context *ctx) { ASSERT(NOT_NULL(ctx)); }
@@ -60,14 +66,14 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   if (SELF == id) {
     return &ctx->self;
   }
-  Entity *member = object_get(ctx->member_obj, id);
+  Entity *member = object_get(ctx->_reflection, id);
   if (NULL != member) {
     return member;
   }
   Task *task = ctx->parent_task;
   Context *parent_context = ctx->previous_context;
   while (NULL != parent_context &&
-         NULL == (member = object_get(parent_context->member_obj, id))) {
+         NULL == (member = object_get(parent_context->_reflection, id))) {
     parent_context = parent_context->previous_context;
   }
   if (NULL != member) {
@@ -125,31 +131,31 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
 
 void context_let(Context *ctx, const char id[], const Entity *e) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id), NOT_NULL(e));
-  object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
+  object_set_member(_context_heap(ctx), ctx->_reflection, id, e);
 }
 
 void context_set(Context *ctx, const char id[], const Entity *e) {
   ASSERT(NOT_NULL(ctx), NOT_NULL(id), NOT_NULL(e));
   Entity *member = NULL;
-  if (NULL != object_get(ctx->member_obj, id)) {
-    object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
+  if (NULL != object_get(ctx->_reflection, id)) {
+    object_set_member(_context_heap(ctx), ctx->_reflection, id, e);
     return;
   }
   Context *parent_context = ctx->previous_context;
   while (NULL != parent_context &&
-         NULL == (member = object_get(parent_context->member_obj, id))) {
+         NULL == (member = object_get(parent_context->_reflection, id))) {
     parent_context = parent_context->previous_context;
   }
   if (NULL != member) {
-    object_set_member(_context_heap(parent_context), parent_context->member_obj,
-                      id, e);
+    object_set_member(_context_heap(parent_context),
+                      parent_context->_reflection, id, e);
     return;
   }
   if (NULL != object_get(ctx->self.obj, id)) {
     object_set_member(_context_heap(ctx), ctx->self.obj, id, e);
     return;
   }
-  object_set_member(_context_heap(ctx), ctx->member_obj, id, e);
+  object_set_member(_context_heap(ctx), ctx->_reflection, id, e);
 }
 
 void context_set_function(Context *ctx, const Function *func) {

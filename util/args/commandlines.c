@@ -26,4 +26,7 @@ void argconfig_run(ArgConfig *const config) {
   ASSERT(NOT_NULL(config));
   argconfig_add(config, ArgKey__LIB_LOCATION, "lib_location", '\0',
                 arg_string(path_to_libs()));
+  argconfig_add(config, ArgKey__MAX_PROCESS_OBJECT_COUNT, "heap_object_limit",
+                '\0', arg_int(4096 * 8));
+  argconfig_add(config, ArgKey__ASYNC, "async", '\0', arg_bool(true));
 }

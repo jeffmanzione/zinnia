@@ -79,6 +79,7 @@ void __file_delete(Object *obj) {
   if (NULL != f->fp && f->fp != stdout && f->fp != stderr) {
     fclose(f->fp);
   }
+  DEALLOC(f);
 }
 
 Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -151,13 +152,13 @@ Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(f), NOT_NULL(f->fp));
   if (NULL == args || PRIMITIVE != args->type ||
       PRIMITIVE_INT != ptype(&args->pri)) {
-    return raise_error(task, ctx, "Invalid input to gets.");
+    return native_background_raise_error(task, ctx, "Invalid input to gets.");
   }
   char *buf = ALLOC_ARRAY2(char, pint(&args->pri) + 1);
   Entity string;
   if (fgets(buf, pint(&args->pri), f->fp)) {
-    string = entity_object(
-        string_new(task->parent_process->heap, buf, pint(&args->pri)));
+    string = entity_object(native_background_string_new(task->parent_process,
+                                                        buf, pint(&args->pri)));
   } else {
     string = NONE_ENTITY;
   }
@@ -175,7 +176,8 @@ Entity _file_getline(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (-1 == nread) {
     string = NONE_ENTITY;
   } else {
-    string = entity_object(string_new(task->parent_process->heap, line, nread));
+    string = entity_object(
+        native_background_string_new(task->parent_process, line, nread));
   }
   if (line != NULL) {
     DEALLOC(line);
@@ -191,7 +193,7 @@ Entity _file_getall(Task *task, Context *ctx, Object *obj, Entity *args) {
   long fsize = ftell(f->fp);
   rewind(f->fp);
   // Create string and copy the file into it.
-  Object *str = string_new(task->parent_process->heap, NULL, fsize);
+  Object *str = native_background_string_new(task->parent_process, NULL, fsize);
   String *string = (String *)str->_internal_obj;
   String_set(string, fsize - 1, '\0');
   // Can be less than read on Windows because \r gets dropped.

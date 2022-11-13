@@ -11,8 +11,8 @@
 #include "program/instruction.h"
 #include "vm/process/processes.h"
 
-void context_init(Context *ctx, Object *self, Object *member_obj,
-                  Module *module, uint32_t instruction_pos);
+void context_init(Context *ctx, Object *self, Module *module,
+                  uint32_t instruction_pos);
 void context_finalize(Context *ctx);
 Object *context_self(Context *ctx);
 Module *context_module(Context *ctx);

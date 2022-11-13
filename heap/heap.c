@@ -20,8 +20,10 @@
 #include "struct/keyed_list.h"
 
 struct _Heap {
+  HeapConf config;
   MGraph *mg;
   __Arena object_arena;
+  uint32_t object_count_threshold_for_garbage_collection;
 };
 
 struct _HeapProfile {
@@ -35,7 +37,10 @@ Heap *heap_create(HeapConf *config) {
   ASSERT(NOT_NULL(config));
   Heap *heap = ALLOC2(Heap);
   config->mgraph_config.ctx = heap;
-  heap->mg = mgraph_create(&config->mgraph_config);
+  heap->config = *config;
+  heap->object_count_threshold_for_garbage_collection =
+      config->max_object_count / 2;
+  heap->mg = mgraph_create(&heap->config.mgraph_config);
   __arena_init(&heap->object_arena, sizeof(Object), "Object");
   return heap;
 }
@@ -52,7 +57,25 @@ uint32_t heap_collect_garbage(Heap *heap) {
 }
 
 uint32_t heap_object_count(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
   return mgraph_node_count(heap->mg);
+}
+
+uint32_t heap_max_object_count(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
+  return heap->config.max_object_count;
+}
+
+uint32_t
+heap_object_count_threshold_for_garbage_collection(const Heap *const heap) {
+  ASSERT(NOT_NULL(heap));
+  return heap->object_count_threshold_for_garbage_collection;
+}
+
+void heap_set_object_count_threshold_for_garbage_collection(
+    Heap *heap, uint32_t new_threshold) {
+  ASSERT(NOT_NULL(heap));
+  heap->object_count_threshold_for_garbage_collection = new_threshold;
 }
 
 Object *heap_new(Heap *heap, const Class *class) {
@@ -74,13 +97,16 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   Entity *old_member =
       (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
   ASSERT(NOT_NULL(entry_pos));
-  if (NULL != old_member && OBJECT == etype(old_member)) {
-    mgraph_dec(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object_m(old_member)->_node_ref);
+  const bool old_member_is_obj =
+      NULL != old_member && OBJECT == etype(old_member);
+  if (old_member_is_obj && (old_member->obj == child->obj)) {
+    return;
+  }
+  if (old_member_is_obj) {
+    heap_dec_edge(heap, parent, object_m(old_member));
   }
   if (OBJECT == etype(child)) {
-    mgraph_inc(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object(child)->_node_ref);
+    heap_inc_edge(heap, parent, object_m((Entity *)child));
   }
   (*entry_pos) = *child;
 }
@@ -92,11 +118,15 @@ Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
   Entity *old_member =
       (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
   ASSERT(NOT_NULL(entry_pos));
-  if (NULL != old_member && OBJECT == etype(old_member)) {
-    mgraph_dec(heap->mg, (Node *)parent->_node_ref,
-               (Node *)object_m(old_member)->_node_ref);
+  const bool old_member_is_obj =
+      NULL != old_member && OBJECT == etype(old_member);
+  if (old_member_is_obj && old_member->obj == child) {
+    return entry_pos;
   }
-  mgraph_inc(heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+  if (old_member_is_obj) {
+    heap_dec_edge(heap, parent, object_m(old_member));
+  }
+  heap_inc_edge(heap, parent, (Object *)child);
   entry_pos->type = OBJECT;
   entry_pos->obj = (Object *)child;
   return entry_pos;
@@ -113,22 +143,46 @@ Object *_object_create(Heap *heap, const Class *class) {
   return object;
 }
 
+void _print_object_summary(Object *object) {
+  ASSERT(NOT_NULL(object));
+  if (0 == strcmp(object->_class->_name, "Class")) {
+    printf("\tClass('%s')", object->_class_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "Module")) {
+    printf("\tModule('%s')", object->_module_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "Function")) {
+    printf("\tFunction('%s')", object->_function_obj->_name);
+  } else if (0 == strcmp(object->_class->_name, "String")) {
+    printf("\tString('%.*s', %p)",
+           String_size(((String *)object->_internal_obj)),
+           ((String *)object->_internal_obj)->table, object->_internal_obj);
+  } else {
+    printf("\t%s", object->_class->_name);
+  }
+  printf(" (%p)\n", object);
+
+  KL_iter members = keyedlist_iter(&object->_members);
+  for (; kl_has(&members); kl_inc(&members)) {
+    const Entity *member = (Entity *)kl_value(&members);
+    if (NULL != member && OBJECT == member->type) {
+      printf("\t\t(%p)\n", member->obj);
+    }
+  }
+  fflush(stdout);
+}
+
+void heap_print_debug_summary(Heap *heap) {
+  const Set *nodes = mgraph_nodes(heap->mg);
+  M_iter iter = set_iter((Set *)nodes);
+  for (; has(&iter); inc(&iter)) {
+    const Node *node = (Node *)value(&iter);
+    Object *obj = (Object *)node_ptr(node);
+    _print_object_summary(obj);
+  }
+}
+
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  // if (0 == strcmp(object->_class->_name, "Class")) {
-  //   printf("\tDELETING a Class('%s')\n", object->_class_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "Module")) {
-  //   printf("\tDELETING a Module('%s')\n", object->_module_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "Function")) {
-  //   printf("\tDELETING a Function('%s')\n", object->_function_obj->_name);
-  // } else if (0 == strcmp(object->_class->_name, "String")) {
-  //   printf("\tDELETING a String('%.*s', %p, %p)\n",
-  //          String_size(((String *)object->_internal_obj)),
-  //          ((String *)object->_internal_obj)->table, object->_internal_obj,
-  //          object);
-  // } else {
-  //   printf("\tDELETING a '%s'\n", object->_class->_name);
-  // }
+  // _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
@@ -160,7 +214,7 @@ Entity array_remove(Heap *heap, Object *array, int32_t index) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), index >= 0);
   Entity e = Array_remove((Array *)array->_internal_obj, index);
   if (OBJECT == e.type) {
-    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e.obj->_node_ref);
+    heap_dec_edge(heap, array, e.obj);
   }
   return e;
 }
@@ -169,27 +223,27 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child), index >= 0);
   Entity *e = Array_set_ref((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
-    mgraph_dec(heap->mg, (Node *)array->_node_ref, (Node *)e->obj->_node_ref);
+    heap_dec_edge(heap, array, e->obj);
   }
   *e = *child;
   if (OBJECT != child->type) {
     return;
   }
-  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+  heap_inc_edge(heap, array, child->obj);
 }
 
 Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
 
 // Does this need to handle overwrites?
-void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(array), NOT_NULL(child));
-  ASSERT(index >= 0, index < tuple_size((Tuple *)array->_internal_obj));
-  Entity *e = tuple_get_mutable((Tuple *)array->_internal_obj, index);
+void tuple_set(Heap *heap, Object *tuple, int32_t index, const Entity *child) {
+  ASSERT(NOT_NULL(heap), NOT_NULL(tuple), NOT_NULL(child));
+  ASSERT(index >= 0, index < tuple_size((Tuple *)tuple->_internal_obj));
+  Entity *e = tuple_get_mutable((Tuple *)tuple->_internal_obj, index);
   *e = *child;
   if (OBJECT != child->type) {
     return;
   }
-  mgraph_inc(heap->mg, (Node *)array->_node_ref, (Node *)child->obj->_node_ref);
+  heap_inc_edge(heap, tuple, child->obj);
 }
 
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
@@ -258,7 +312,7 @@ HeapProfile *heap_create_profile(const Heap *const heap) {
 }
 
 M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
-  return map_iter(&hp->object_type_counts);
+  return map_iter((Map *)&hp->object_type_counts);
 }
 
 void heapprofile_delete(HeapProfile *hp) {

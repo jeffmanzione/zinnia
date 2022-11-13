@@ -27,7 +27,7 @@ struct __Context {
   Task *parent_task;
   Context *previous_context;
 
-  Object *member_obj;
+  Object *_reflection;
 
   Entity self;
   Module *module;
@@ -92,6 +92,9 @@ struct __Process {
   Q queued_tasks;
   Set waiting_tasks;
   Set completed_tasks;
+  Set background_tasks;
+
+  Mutex heap_access_lock;
 
   Object *_reflection;
   ThreadHandle thread; // Null if main thread.

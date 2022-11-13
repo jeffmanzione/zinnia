@@ -12,14 +12,13 @@
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
-void process_init(Process *process) {
-  HeapConf conf = {.mgraph_config = {.eager_delete_edges = true,
-                                     .eager_delete_edges = true}};
-  process->heap = heap_create(&conf);
+void process_init(Process *process, HeapConf *conf) {
+  process->heap = heap_create(conf);
   __arena_init(&process->task_arena, sizeof(Task), "Task");
   __arena_init(&process->context_arena, sizeof(Context), "Context");
   process->task_create_lock = mutex_create();
   process->task_queue_lock = mutex_create();
+  process->heap_access_lock = mutex_create();
   process->task_waiting_cs = critical_section_create();
   process->task_wait_cond =
       critical_section_create_condition(process->task_waiting_cs);
@@ -27,6 +26,7 @@ void process_init(Process *process) {
   Q_init(&process->queued_tasks);
   set_init_default(&process->waiting_tasks);
   set_init_default(&process->completed_tasks);
+  set_init_default(&process->background_tasks);
   process->_reflection = NULL;
   Q_init(&process->waiting_background_work);
 }
@@ -49,11 +49,20 @@ void process_finalize(Process *process) {
     task_finalize((Task *)value(&m_iter));
   }
   set_finalize(&process->completed_tasks);
+
+  // Is this necessary?
+  m_iter = set_iter(&process->background_tasks);
+  for (; has(&m_iter); inc(&m_iter)) {
+    task_finalize((Task *)value(&m_iter));
+  }
+  set_finalize(&process->background_tasks);
+
   __arena_finalize(&process->task_arena);
   __arena_finalize(&process->context_arena);
   heap_delete(process->heap);
   mutex_close(process->task_create_lock);
   mutex_close(process->task_queue_lock);
+  mutex_close(process->heap_access_lock);
   condition_delete(process->task_wait_cond);
   critical_section_delete(process->task_waiting_cs);
   mutex_close(process->task_complete_lock);
@@ -86,7 +95,7 @@ Task *process_create_task(Process *process) {
 Task *process_pop_task(Process *process) {
   Task *task;
   SYNCHRONIZED(process->task_queue_lock, {
-    if (0 == Q_size(&process->queued_tasks)) {
+    if (Q_is_empty(&process->queued_tasks)) {
       task = NULL;
     } else {
       task = Q_pop(&process->queued_tasks);
@@ -121,4 +130,24 @@ void process_remove_waiting_task(Process *process, Task *task) {
 void process_mark_task_complete(Process *process, Task *task) {
   SYNCHRONIZED(process->task_complete_lock,
                { set_insert(&process->completed_tasks, task); });
+}
+
+void process_add_background_task(Process *process, Task *task,
+                                 ThreadPool *background_pool, VoidFnPtr fn,
+                                 VoidFnPtr callback, VoidPtr fn_args) {
+  SYNCHRONIZED(process->task_complete_lock, {
+    set_insert(&process->background_tasks, task);
+    *Q_add_last(&process->waiting_background_work) =
+        threadpool_create_work(background_pool, fn, callback, fn_args);
+  });
+}
+
+void process_remove_background_task(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_complete_lock,
+               { set_remove(&process->background_tasks, task); });
+}
+
+void process_delete_task(Process *process, Task *task) {
+  task_finalize(task);
+  __arena_dealloc(&process->task_arena, task);
 }

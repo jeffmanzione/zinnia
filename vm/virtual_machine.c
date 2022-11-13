@@ -32,6 +32,7 @@
 
 #define DEFAULT_THREADPOOL_SIZE 6
 
+bool process_maybe_collect_garbage(Process *process);
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context);
 void _mark_task_complete(Process *process, Task *task);
@@ -180,7 +181,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
-      if (NULL != lookup && PRIMITIVE != lookup->type) {                       \
+      if (NULL == lookup || NULL != lookup && PRIMITIVE != lookup->type) {     \
         raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
@@ -333,9 +334,15 @@ void _add_filename_method(VM *vm) {
                              Class_StackLine->_reflection, linename);
 }
 
-VM *vm_create(const char *lib_location) {
+VM *vm_create(const char *lib_location, uint32_t max_process_object_count,
+              bool async_enabled) {
   VM *vm = ALLOC2(VM);
+  vm->async_enabled = async_enabled;
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
+  HeapConf heap_conf = {
+      .mgraph_config = {.eager_delete_edges = true, .eager_delete_nodes = true},
+      .max_object_count = max_process_object_count};
+  vm->base_heap_conf = heap_conf;
   vm->process_create_lock = mutex_create();
   vm->background_pool = threadpool_create(DEFAULT_THREADPOOL_SIZE);
   vm->main = create_process_no_reflection(vm);
@@ -446,9 +453,7 @@ void _execute_RES(VM *vm, Task *task, Context *context,
     *task_mutable_resval(task) = entity_primitive(ins->val);
     break;
   case INSTRUCTION_STRING:
-    str = heap_new(task->parent_process->heap, Class_String);
-    // TODO: Maybe precompute the length of the string?
-    __string_init(str, ins->str, strlen(ins->str));
+    str = string_new(task->parent_process->heap, ins->str, strlen(ins->str));
     *task_mutable_resval(task) = entity_object(str);
     break;
   default:
@@ -617,6 +622,7 @@ void _execute_in_background(BackgroundThreadArgs *args) {
 }
 
 void _execute_in_background_callback(BackgroundThreadArgs *args) {
+  process_remove_background_task(args->task->parent_process, args->task);
   args->task->state = TASK_COMPLETE;
   _mark_task_complete(args->task->parent_process, args->task);
   DEALLOC(args);
@@ -636,30 +642,39 @@ Task *_maybe_load_module(Task *task, Module *module) {
   return new_ctx->parent_task;
 }
 
-// VERY IMPORTANT: context is only necessary for native functions!
+BackgroundThreadArgs *_create_background_thread_args(Task *task,
+                                                     Context *context,
+                                                     const Function *func,
+                                                     Object *self) {
+  BackgroundThreadArgs *args = ALLOC2(BackgroundThreadArgs);
+  args->task = task;
+  args->context = context;
+  args->func = func;
+  args->self = self;
+  return args;
+}
+
+// Context is only necessary for native functions.
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context) {
+  Process *process = task->parent_process;
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
       FATALF("Invalid native function.");
     }
-    if (func->_is_background) {
-      Task *new_task = process_create_unqueued_task(task->parent_process);
-      new_task->parent_task = task;
+    if (func->_is_background && process->vm->async_enabled) {
       ASSERT(func->_is_async);
+      Task *new_task = process_create_unqueued_task(process);
+      new_task->parent_task = task;
       *task_mutable_resval(new_task) = *task_get_resval(task);
       *task_mutable_resval(task) = entity_object(future_create(new_task));
-      BackgroundThreadArgs *args = ALLOC2(BackgroundThreadArgs);
-      args->task = new_task;
-      args->context = context;
-      args->func = func;
-      args->self = self;
-      *Q_add_last(&task->parent_process->waiting_background_work) =
-          threadpool_create_work(task->parent_process->vm->background_pool,
-                                 (VoidFnPtr)_execute_in_background,
-                                 (VoidFnPtr)_execute_in_background_callback,
-                                 (VoidPtr)args);
+      BackgroundThreadArgs *args =
+          _create_background_thread_args(new_task, context, func, self);
+      process_add_background_task(
+          process, new_task, process->vm->background_pool,
+          (VoidFnPtr)_execute_in_background,
+          (VoidFnPtr)_execute_in_background_callback, (VoidPtr)args);
       return false;
     }
     *task_mutable_resval(task) =
@@ -682,7 +697,7 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   if (func->_is_anon) {
     fn_ctx->previous_context = parent_context;
   }
-  if (func->_is_async) {
+  if (func->_is_async && task->parent_process->vm->async_enabled) {
     *task_mutable_resval(task) =
         entity_object(future_create(fn_ctx->parent_task));
     return false;
@@ -1200,8 +1215,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
 
   if (task->child_task_has_error) {
     const Entity *error_e = task_get_resval(task);
-    ASSERT(NOT_NULL(error_e), OBJECT == error_e->type,
-           Class_Error == error_e->obj->_class);
+    ASSERT(NOT_NULL(error_e));
+    ASSERT(OBJECT == error_e->type);
+    ASSERT(Class_Error == error_e->obj->_class);
     context->error = error_e->obj;
     task->child_task_has_error = false;
   }
@@ -1440,7 +1456,10 @@ void process_run(Process *process) {
 top_of_fn:
   while (NULL != (task = process_pop_task(process))) {
     process->current_task = task;
-    TaskState task_state = vm_execute_task(vm, task);
+    TaskState task_state;
+    SYNCHRONIZED(process->heap_access_lock,
+                 { task_state = vm_execute_task(vm, task); });
+    // Release heap mutex
 #ifdef DEBUG
     fprintf(stdout, "<-- ");
     entity_print(task_get_resval(task), stdout);
@@ -1465,12 +1484,18 @@ top_of_fn:
       _mark_task_complete(process, task);
       break;
     default:
-      FATALF("Some unknown TaskState.");
+      FATALF("Unknown TaskState = %d.", task_state);
     }
     while (!Q_is_empty(&process->waiting_background_work)) {
       Work *w = (Work *)Q_dequeue(&process->waiting_background_work);
       threadpool_execute_work(vm->background_pool, w);
     }
+  }
+
+  if (process_maybe_collect_garbage(process)) {
+    FATALF("MEMORY LIMIT EXCEEDED");
+    raise_error(process->current_task, process->current_task->current,
+                "Out of memory: Max object count for process exceeded.");
   }
 
   if (_process_is_done(process)) {
@@ -1500,4 +1525,165 @@ void *_process_run_return_void_ptr(void *ptr) {
 ThreadHandle process_run_in_new_thread(Process *process) {
   return process->thread =
              thread_create(AS_VOID_FN(_process_run_return_void_ptr), process);
+}
+
+void _task_inc_all_context(Process *process, Task *task) {
+  Heap *heap = process->heap;
+  if (NULL != task->parent_task) {
+    heap_inc_edge(heap, task->_reflection, task->parent_task->_reflection);
+  }
+  M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+  for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+    Task *dependent_task = (Task *)value(&dependent_tasks);
+    heap_inc_edge(heap, dependent_task->_reflection, task->_reflection);
+  }
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_inc_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_inc_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_inc_edge(heap, task->_reflection, ctx->_reflection);
+    heap_inc_edge(heap, ctx->_reflection, ctx->self.obj);
+    if (NULL != ctx->error) {
+      heap_inc_edge(heap, ctx->_reflection, ctx->error);
+    }
+    ctx = ctx->previous_context;
+  }
+}
+
+void _task_dec_all_context(Process *process, Task *task) {
+  Heap *heap = process->heap;
+  if (NULL != task->parent_task) {
+    heap_dec_edge(heap, task->_reflection, task->parent_task->_reflection);
+  }
+  M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+  for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+    Task *dependent_task = (Task *)value(&dependent_tasks);
+    heap_dec_edge(heap, dependent_task->_reflection, task->_reflection);
+  }
+  AL_iter stack = alist_iter(&task->entity_stack);
+  for (; al_has(&stack); al_inc(&stack)) {
+    Entity *e = al_value(&stack);
+    if (OBJECT == e->type) {
+      heap_dec_edge(heap, task->_reflection, e->obj);
+    }
+  }
+  if (OBJECT == task->resval.type) {
+    heap_dec_edge(heap, task->_reflection, task->resval.obj);
+  }
+  Context *ctx = task->current;
+  while (NULL != ctx) {
+    heap_dec_edge(heap, ctx->_reflection, ctx->self.obj);
+    heap_dec_edge(heap, task->_reflection, ctx->_reflection);
+    if (NULL != ctx->error) {
+      heap_dec_edge(heap, ctx->_reflection, ctx->error);
+    }
+    ctx = ctx->previous_context;
+  }
+}
+
+void _delete_completed_tasks(Process *process) {
+  M_iter completed_tasks = set_iter(&process->completed_tasks);
+  for (; has(&completed_tasks); inc(&completed_tasks)) {
+    Task *completed_task = (Task *)value(&completed_tasks);
+    set_remove(&process->completed_tasks, completed_task);
+    process_delete_task(process, completed_task);
+  }
+}
+
+void _inc_queued_tasks(Process *process) {
+  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = *(Task **)Q_value(&queued_tasks);
+    heap_inc_edge(process->heap, process->_reflection,
+                  queued_task->_reflection);
+    _task_inc_all_context(process, queued_task);
+  }
+}
+
+void _dec_queued_tasks(Process *process) {
+  Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
+  for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
+    Task *queued_task = *(Task **)Q_value(&queued_tasks);
+    heap_dec_edge(process->heap, process->_reflection,
+                  queued_task->_reflection);
+    _task_dec_all_context(process, queued_task);
+  }
+}
+
+void _inc_task_set(Process *process, Set *task_set) {
+  M_iter tasks = set_iter(task_set);
+  for (; has(&tasks); inc(&tasks)) {
+    Task *task = (Task *)value(&tasks);
+    heap_inc_edge(process->heap, process->_reflection, task->_reflection);
+    _task_inc_all_context(process, task);
+  }
+}
+
+void _dec_task_set(Process *process, Set *task_set) {
+  M_iter tasks = set_iter(task_set);
+  for (; has(&tasks); inc(&tasks)) {
+    Task *task = (Task *)value(&tasks);
+    heap_dec_edge(process->heap, process->_reflection, task->_reflection);
+    _task_dec_all_context(process, task);
+  }
+}
+
+uint32_t process_collect_garbage(Process *process) {
+  ASSERT(NOT_NULL(process));
+  uint32_t deleted_nodes_count;
+
+  SYNCHRONIZED(process->heap_access_lock, {
+    SYNCHRONIZED(process->task_queue_lock, {
+      CRITICAL(process->task_waiting_cs, {
+        _delete_completed_tasks(process);
+
+        _task_inc_all_context(process, process->current_task);
+        _inc_queued_tasks(process);
+        _inc_task_set(process, &process->waiting_tasks);
+        _inc_task_set(process, &process->background_tasks);
+
+        deleted_nodes_count = heap_collect_garbage(process->heap);
+
+        _task_dec_all_context(process, process->current_task);
+        _dec_queued_tasks(process);
+        _dec_task_set(process, &process->waiting_tasks);
+        _dec_task_set(process, &process->background_tasks);
+      });
+    });
+  });
+  return deleted_nodes_count;
+}
+
+bool process_maybe_collect_garbage(Process *process) {
+  ASSERT(NOT_NULL(process));
+
+  Heap *heap = process->heap;
+  const uint32_t object_count_thresh =
+      heap_object_count_threshold_for_garbage_collection(heap);
+  uint32_t object_count = heap_object_count(heap);
+  if (object_count < object_count_thresh) {
+    return false;
+  }
+  // heap_print_debug_summary(heap);
+  uint32_t collected_object_count = process_collect_garbage(process);
+  object_count = heap_object_count(heap);
+  const uint32_t max_object_count = heap_max_object_count(heap);
+
+  if (object_count >= max_object_count) {
+    heap_set_object_count_threshold_for_garbage_collection(heap,
+                                                           max_object_count);
+    return true;
+  } else if (object_count >= object_count_thresh) {
+    heap_set_object_count_threshold_for_garbage_collection(
+        heap, (max_object_count + object_count) / 2);
+  }
+  return false;
 }

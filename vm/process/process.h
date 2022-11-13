@@ -8,7 +8,7 @@
 
 #include "vm/process/processes.h"
 
-void process_init(Process *process);
+void process_init(Process *process, HeapConf *config);
 void process_finalize(Process *process);
 Task *process_create_unqueued_task(Process *process);
 Task *process_create_task(Process *process);
@@ -20,5 +20,12 @@ size_t process_queue_size(Process *process);
 void process_insert_waiting_task(Process *process, Task *task);
 void process_remove_waiting_task(Process *process, Task *task);
 void process_mark_task_complete(Process *process, Task *task);
+
+void process_add_background_task(Process *process, Task *task,
+                                 ThreadPool *background_pool, VoidFnPtr fn,
+                                 VoidFnPtr callback, VoidPtr fn_args);
+void process_remove_background_task(Process *process, Task *task);
+
+void process_delete_task(Process *process, Task *task);
 
 #endif /* VM_PROCESS_PROCESS_H_ */

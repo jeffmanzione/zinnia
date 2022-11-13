@@ -27,6 +27,25 @@ def hash(x) {
   return Int(x)
 }
 
+def cmp(o1, o2) {
+  if (o1 is Object) and ~(o2 is Object) {
+    return -1
+  }
+  if (o2 is Object) and ~(o1 is Object) {
+    return 1
+  }
+  if (o1 is Object) and o1.__cmp__ {
+    return o1.__cmp__(o2)
+  }
+  if o1 == o2 {
+     return 0
+  }
+  if o2 > o1 {
+    return 1
+  }
+  return -1
+}
+
 class Object {
   method to_s() {
     return cat(
@@ -340,33 +359,32 @@ def memoize(fn) {
   return memoized_fn
 }
 
-def _partition(seq, l, h) {
-  x = seq[h]
+def _partition(seq, l, h, cmp) {
+  pivot = seq[h]
   i = l - 1
   for j = l, j < h, j = j + 1 {
-    if seq[j] < x {
+    if cmp(seq[j], pivot) > 0 {
       i = i + 1
       tmp = seq[i]
       seq[i] = seq[j]
       seq[j] = tmp
     }
   }
-  i = i + 1
-  tmp = seq[i]
-  seq[i] = seq[h]
+  tmp = seq[i + 1]
+  seq[i + 1] = seq[h]
   seq[h] = tmp
-  return i - 1
+  return i + 1
 }
 
-def _quick_sort(seq, l, h) {
+def _quick_sort(seq, l, h, cmp) {
   if l < h {
-    p = _partition(seq, l, h)
-    _quick_sort(seq, l, p)
-    _quick_sort(seq, p + 1, h)
+    p = _partition(seq, l, h, cmp)
+    _quick_sort(seq, l, p - 1, cmp)
+    _quick_sort(seq, p + 1, h, cmp)
   }
   seq
 }
 
-def sort(seq) {
-  _quick_sort(seq, 0, seq.len()-1)
+def sort(seq, cmp=cmp) {
+  _quick_sort(seq, 0, seq.len()-1, cmp)
 }
