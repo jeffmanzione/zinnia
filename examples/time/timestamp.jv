@@ -1,0 +1,7 @@
+import io
+import process
+import time
+
+io.println(time.now())
+await process.sleep(1)
+io.println(time.now())

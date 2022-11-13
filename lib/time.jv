@@ -21,3 +21,27 @@ class Timer {
     return timestamps
   }
 }
+
+class Timestamp {
+  new(field year,
+      field month,
+      field day_of_month,
+      field hour,
+      field minute,
+      field second,
+      field millisecond) {}
+
+  method to_s() {
+    cat(year, '-', month, '-', day_of_month, 'T',
+        hour, ':', minute, ':', second,
+        '.', millisecond, 'Z')
+  }
+}
+
+def millis_to_timestamp(millis_since_epoch) {
+  Timestamp(__millis_to_timestamp(millis_since_epoch))
+}
+
+def now() {
+  millis_to_timestamp(now_usec() / 1000)
+}

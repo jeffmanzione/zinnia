@@ -244,6 +244,8 @@ cc_library(
         "//entity",
         "//entity:object",
         "//entity/native",
+        "//entity/native:error",
+        "//heap",
         "//util:time",
         "//vm:module_manager",
         "@memory_wrapper//alloc/arena:intern",

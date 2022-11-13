@@ -7,6 +7,8 @@
 
 #include "util/time.h"
 
+#include <stdio.h>
+
 #ifdef linux
 #include <time.h>
 #endif
@@ -40,4 +42,34 @@ int64_t current_usec_since_epoch() {
          DIFF_FROM_EPOCH_USEC;
 #endif
   return usec;
+}
+
+Timestamp timestamp_from_millis(int64_t millis_since_epoch) {
+#ifdef linux
+  char time_str[127];
+  double fractional_seconds;
+  int milliseconds;
+  struct tm tm;
+
+  memset(&tm, 0, sizeof(struct tm));
+  sprintf(time_str, "%lld UTC", millis_since_epoch / 1000);
+  strptime(time_str, "%s %U", &tm);
+
+  time_t seconds_since_epoch = mktime(&tm);
+
+  Timestamp ts = {.year = tm.tm_year,
+                  .month = tm.tm_mon,
+                  .day_of_month = tm.tm_mday,
+                  .hour = tm.tm_hour,
+                  .minute = tm.tm_sec,
+                  .millisecond =
+                      millis_since_epoch - (seconds_since_epoch * 1000)};
+  return ts;
+#endif
+
+#ifdef _WIN32
+  // TODO: Implement for Windows.
+  Timestamp ts;
+  return ts;
+#endif
 }
