@@ -51,10 +51,10 @@ void process_finalize(Process *process) {
   set_finalize(&process->completed_tasks);
 
   // Is this necessary?
-  // m_iter = set_iter(&process->background_tasks);
-  // for (; has(&m_iter); inc(&m_iter)) {
-  //   task_finalize((Task *)value(&m_iter));
-  // }
+  m_iter = set_iter(&process->background_tasks);
+  for (; has(&m_iter); inc(&m_iter)) {
+    task_finalize((Task *)value(&m_iter));
+  }
   set_finalize(&process->background_tasks);
 
   __arena_finalize(&process->task_arena);

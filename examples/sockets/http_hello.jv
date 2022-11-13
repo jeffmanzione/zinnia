@@ -19,11 +19,11 @@ is_done = False
   io.println('Detected user input. Will stop after next request.')
 }()
 
-handle_connection = (handle) async {
+handle_connection = (handle) {
   request = handle.receive()
   handle.send(net.HttpResponse().add_content('Hello, world!'))
-  ;io.println('Received request:')
-  ;io.println(request)
+  io.println('Received request:')
+  io.println(request)
   handle.close()
 }
 

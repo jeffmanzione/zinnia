@@ -1529,6 +1529,14 @@ ThreadHandle process_run_in_new_thread(Process *process) {
 
 void _task_inc_all_context(Process *process, Task *task) {
   Heap *heap = process->heap;
+  if (NULL != task->parent_task) {
+    heap_inc_edge(heap, task->_reflection, task->parent_task->_reflection);
+  }
+  M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+  for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+    Task *dependent_task = (Task *)value(&dependent_tasks);
+    heap_inc_edge(heap, dependent_task->_reflection, task->_reflection);
+  }
   AL_iter stack = alist_iter(&task->entity_stack);
   for (; al_has(&stack); al_inc(&stack)) {
     Entity *e = al_value(&stack);
@@ -1552,6 +1560,14 @@ void _task_inc_all_context(Process *process, Task *task) {
 
 void _task_dec_all_context(Process *process, Task *task) {
   Heap *heap = process->heap;
+  if (NULL != task->parent_task) {
+    heap_dec_edge(heap, task->_reflection, task->parent_task->_reflection);
+  }
+  M_iter dependent_tasks = set_iter(&task->dependent_tasks);
+  for (; has(&dependent_tasks); inc(&dependent_tasks)) {
+    Task *dependent_task = (Task *)value(&dependent_tasks);
+    heap_dec_edge(heap, dependent_task->_reflection, task->_reflection);
+  }
   AL_iter stack = alist_iter(&task->entity_stack);
   for (; al_has(&stack); al_inc(&stack)) {
     Entity *e = al_value(&stack);
@@ -1602,7 +1618,7 @@ void _dec_queued_tasks(Process *process) {
   }
 }
 
-void _inc_tasks_set(Process *process, Set *task_set) {
+void _inc_task_set(Process *process, Set *task_set) {
   M_iter tasks = set_iter(task_set);
   for (; has(&tasks); inc(&tasks)) {
     Task *task = (Task *)value(&tasks);
@@ -1627,16 +1643,12 @@ uint32_t process_collect_garbage(Process *process) {
   SYNCHRONIZED(process->heap_access_lock, {
     SYNCHRONIZED(process->task_queue_lock, {
       CRITICAL(process->task_waiting_cs, {
-        fflush(stdout);
-        printf("garbage collection BEGIN\n");
-        fflush(stdout);
-
         _delete_completed_tasks(process);
 
         _task_inc_all_context(process, process->current_task);
         _inc_queued_tasks(process);
-        _inc_tasks_set(process, &process->waiting_tasks);
-        _inc_tasks_set(process, &process->background_tasks);
+        _inc_task_set(process, &process->waiting_tasks);
+        _inc_task_set(process, &process->background_tasks);
 
         deleted_nodes_count = heap_collect_garbage(process->heap);
 
@@ -1644,10 +1656,6 @@ uint32_t process_collect_garbage(Process *process) {
         _dec_queued_tasks(process);
         _dec_task_set(process, &process->waiting_tasks);
         _dec_task_set(process, &process->background_tasks);
-
-        fflush(stdout);
-        printf("garbage collection END\n");
-        fflush(stdout);
       });
     });
   });

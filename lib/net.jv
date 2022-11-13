@@ -260,15 +260,12 @@ class HttpSocketHandle {
   new(field raw_handle) {}
 
   method receive() {
-    req = await raw_handle.receive()
-    io.println('1 raw_handle', self, self.$hex_addr(), raw_handle, raw_handle.$hex_addr())
-    return parse_request(req)
+    return parse_request(await raw_handle.receive())
   }
   method send(http_response) {
     if ~(http_response is HttpResponse) {
       raise Error('HttpSocketHandle.send() expects an HttpResponse argument.')
     }
-    io.println('2 raw_handle', self, self.$hex_addr(), raw_handle, raw_handle.$hex_addr())
     await raw_handle.send(http_response.to_s())
   }
   method close() {
@@ -280,11 +277,7 @@ class HttpSocket {
   new(field raw_socket) {}
 
   method accept() {
-    raw_handle = await raw_socket.accept()
-    io.println('3 raw_handle', raw_handle, raw_handle.$hex_addr())
-    http_handle = HttpSocketHandle(raw_handle)
-    io.println('4 raw_handle', http_handle, http_handle.$hex_addr(), raw_handle, raw_handle.$hex_addr())
-    return http_handle
+    HttpSocketHandle(await raw_socket.accept())
   }
   method close() {
     raw_socket.close()
