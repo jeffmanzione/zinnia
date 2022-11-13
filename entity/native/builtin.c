@@ -267,7 +267,7 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   int num_written = 0;
   switch (ptype(&val)) {
   case PRIMITIVE_INT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    num_written = snprintf(buffer, BUFFER_SIZE, "%lld", pint(&val));
     break;
   case PRIMITIVE_FLOAT:
     num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));

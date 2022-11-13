@@ -1,6 +1,42 @@
+import io
 
 self.MILLIS_PER_SECOND = 1000
-self.NANOS_PER_MILLIS = 1000
+self.NANOS_PER_MILLI = 1000
+
+class Timestamp {
+  new(field year,
+      field month,
+      field day_of_month,
+      field hour,
+      field minute,
+      field second,
+      field millisecond) {}
+
+  method to_s() {
+    cat(year, '-', month, '-', day_of_month, 'T',
+        hour, ':', minute, ':', second,
+        '.', millisecond, 'Z')
+  }
+
+  method to_micros() {
+    __timestamp_to_micros(
+        year,
+        month,
+        day_of_month,
+        hour,
+        minute,
+        second,
+        millisecond)
+  }
+}
+
+def now() {
+  Timestamp(__now_timestamp())
+}
+
+def timestamp_micros(micros_since_epoch) {
+  Timestamp(__micros_to_timestamp(micros_since_epoch))
+}
 
 class Timer {
   field start_usec, timestamps
@@ -20,28 +56,4 @@ class Timer {
   method elapsed_usec() {
     return timestamps
   }
-}
-
-class Timestamp {
-  new(field year,
-      field month,
-      field day_of_month,
-      field hour,
-      field minute,
-      field second,
-      field millisecond) {}
-
-  method to_s() {
-    cat(year, '-', month, '-', day_of_month, 'T',
-        hour, ':', minute, ':', second,
-        '.', millisecond, 'Z')
-  }
-}
-
-def millis_to_timestamp(millis_since_epoch) {
-  Timestamp(__millis_to_timestamp(millis_since_epoch))
-}
-
-def now() {
-  millis_to_timestamp(now_usec() / 1000)
 }

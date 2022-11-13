@@ -2,6 +2,8 @@ import io
 import process
 import time
 
-io.println(time.now())
+now = time.now()
+io.println(now, now.to_micros(), time.timestamp_micros(now.to_micros()))
 await process.sleep(1)
-io.println(time.now())
+now = time.now()
+io.println(now, now.to_micros(), time.timestamp_micros(now.to_micros()))

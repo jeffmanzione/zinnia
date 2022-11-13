@@ -6,7 +6,7 @@ import time
 timer = time.Timer()
 
 def nanos_to_seconds(nanos) {
-  Float(nanos) / time.MILLIS_PER_SECOND / time.NANOS_PER_MILLIS
+  Float(nanos) / time.MILLIS_PER_SECOND / time.NANOS_PER_MILLI
 }
 
 timer.start()

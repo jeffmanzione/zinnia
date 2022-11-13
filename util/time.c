@@ -16,60 +16,66 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <winnt.h>
-#define DIFF_FROM_EPOCH_USEC 116444736000000000LL / 10
+#define DIFF_FROM_EPOCH_USEC (11644473600LL * 1000 * 1000)
 #endif
 
 int64_t current_usec_since_epoch() {
-  int64_t usec = -1;
-#ifdef linux
-  struct timespec tms;
-  if (clock_gettime(CLOCK_REALTIME, &tms)) {
-    return -1;
-  }
-  usec = tms.tv_sec * USEC_PER_SEC + tms.tv_nsec / 1000;
-  if (tms.tv_nsec % 1000 >= 500) {
-    ++usec;
-  }
-#endif
-
-#ifdef _WIN32
-  FILETIME ft_now;
-  GetSystemTimeAsFileTime(&ft_now);
-  // Micros since Jan 1, 1601.
-  usec = ((LONGLONG)ft_now.dwLowDateTime +
-          ((LONGLONG)(ft_now.dwHighDateTime) << 32LL)) /
-             10 -
-         DIFF_FROM_EPOCH_USEC;
-#endif
-  return usec;
+  Timestamp ts = current_timestamp();
+  return timestamp_to_micros(&ts);
 }
 
-Timestamp timestamp_from_millis(int64_t millis_since_epoch) {
+int64_t timestamp_to_micros(Timestamp *ts) {
+  struct tm tm = {.tm_year = ts->year - 1900,
+                  .tm_mon = ts->month - 1,
+                  .tm_mday = ts->day_of_month,
+                  .tm_hour = ts->hour,
+                  .tm_min = ts->minute,
+                  .tm_sec = ts->second,
+                  .tm_isdst = -1};
+  time_t time = mktime(&tm);
+  int64_t time64 = (time * 1000 + ts->millisecond) * 1000;
+  return time64;
+}
+
+Timestamp micros_to_timestamp(int64_t micros_since_epoch) {
+  int64_t seconds_since_epoch = micros_since_epoch / 1000 / 1000;
+  struct tm *tm = localtime(&seconds_since_epoch);
+  int64_t millis = (micros_since_epoch / 1000) % 1000;
+  Timestamp ts = {.year = tm->tm_year + 1900,
+                  .month = tm->tm_mon + 1,
+                  .day_of_month = tm->tm_mday,
+                  .hour = tm->tm_hour,
+                  .minute = tm->tm_min,
+                  .second = tm->tm_sec,
+                  .millisecond = millis};
+  return ts;
+}
+
+Timestamp current_timestamp() {
+  int64_t usec = -1;
 #ifdef linux
-  char time_str[127];
-  double fractional_seconds;
-  int milliseconds;
-  struct tm tm;
-
-  memset(&tm, 0, sizeof(struct tm));
-  sprintf(time_str, "%lld UTC", millis_since_epoch / 1000);
-  strptime(time_str, "%s %U", &tm);
-
-  time_t seconds_since_epoch = mktime(&tm);
-
-  Timestamp ts = {.year = tm.tm_year,
-                  .month = tm.tm_mon,
+  time_t T = time(NULL);
+  struct tm tm = *localtime(&T);
+  Timestamp ts = {.year = tm.tm_year + 1900,
+                  .month = tm.tm_mon + 1,
                   .day_of_month = tm.tm_mday,
                   .hour = tm.tm_hour,
-                  .minute = tm.tm_sec,
+                  .minute = tm.tm_minute.second = tm.tm_sec,
                   .millisecond =
                       millis_since_epoch - (seconds_since_epoch * 1000)};
   return ts;
 #endif
 
 #ifdef _WIN32
-  // TODO: Implement for Windows.
-  Timestamp ts;
+  SYSTEMTIME st;
+  GetLocalTime(&st);
+  Timestamp ts = {.year = st.wYear,
+                  .month = st.wMonth,
+                  .day_of_month = st.wDay,
+                  .hour = st.wHour,
+                  .minute = st.wMinute,
+                  .second = st.wSecond,
+                  .millisecond = st.wMilliseconds};
   return ts;
 #endif
 }

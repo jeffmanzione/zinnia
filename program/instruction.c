@@ -9,7 +9,7 @@
 #define OP_FMT "  %-6s"
 #define ID_FMT "%s"
 #define STR_FMT "\'%.*s\'"
-#define INT_FMT "%d"
+#define INT_FMT "%lld"
 #define FLT_FMT "%f"
 #define OP_NO_ARG_FMT "  %s"
 

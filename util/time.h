@@ -14,10 +14,13 @@
 int64_t current_usec_since_epoch();
 
 typedef struct {
-  uint32_t year, month, day_of_month, hour, minute, second;
-  uint64_t millisecond;
+  int64_t year, month, day_of_month, hour, minute, second;
+  int64_t millisecond;
 } Timestamp;
 
-Timestamp timestamp_from_millis();
+int64_t current_usec_since_epoch();
+Timestamp current_timestamp();
+int64_t timestamp_to_micros(Timestamp *ts);
+Timestamp micros_to_timestamp(int64_t micros_since_epoch);
 
 #endif /* UTIL_TIME_H_ */

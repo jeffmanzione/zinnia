@@ -19,7 +19,7 @@ int8_t pchar(const Primitive *p) {
   return p->_char_val;
 }
 
-int32_t pint(const Primitive *p) {
+int64_t pint(const Primitive *p) {
   ASSERT(NOT_NULL(p), p->_type == PRIMITIVE_INT);
   return p->_int_val;
 }
@@ -35,7 +35,7 @@ void pset_char(Primitive *p, int8_t val) {
   p->_char_val = val;
 }
 
-void pset_int(Primitive *p, int32_t val) {
+void pset_int(Primitive *p, int64_t val) {
   ASSERT(NOT_NULL(p));
   p->_type = PRIMITIVE_INT;
   p->_int_val = val;
@@ -47,7 +47,7 @@ void pset_float(Primitive *p, double val) {
   p->_float_val = val;
 }
 
-Primitive primitive_int(int32_t val) {
+Primitive primitive_int(int64_t val) {
   Primitive p = {._type = PRIMITIVE_INT, ._int_val = val};
   return p;
 }
@@ -73,14 +73,14 @@ double float_of(const Primitive *p) {
   }
 }
 
-int32_t int_of(const Primitive *p) {
+int64_t int_of(const Primitive *p) {
   switch (ptype(p)) {
   case PRIMITIVE_INT:
     return pint(p);
   case PRIMITIVE_CHAR:
-    return (int32_t)pchar(p);
+    return (int64_t)pchar(p);
   default:
-    return (int32_t)pfloat(p);
+    return (int64_t)pfloat(p);
   }
 }
 
