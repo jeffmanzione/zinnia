@@ -51,8 +51,6 @@ SocketStatus sockethandle_send(SocketHandle *sh, const char *const msg,
                                int msg_len);
 int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len);
 
-// SOCKET sockethandle_get_socket(SocketHandle *sh);
-
 void sockethandle_close(SocketHandle *sh);
 
 void sockethandle_delete(SocketHandle *sh);

@@ -1,0 +1,23 @@
+
+self.MILLIS_PER_SECOND = 1000
+self.NANOS_PER_MILLIS = 1000
+
+class Timer {
+  field start_usec, timestamps
+  method reset() {
+    start_usec = 0
+    timestamps = []
+  }
+  method start() {
+    reset()
+    start_usec = now_usec()
+  }
+  method mark(mark_name) {
+    elapsed = now_usec() - start_usec
+    timestamps.append((mark_name, elapsed))
+    return elapsed
+  }
+  method elapsed_usec() {
+    return timestamps
+  }
+}

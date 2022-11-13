@@ -5,10 +5,13 @@ import io
 import net
 import socket
 
-; Creates the socket listening on port 80, wrapping it in HTTP.
-sock = net.HttpSocket(socket.create_server_socket('0.0.0.0', 80))
+ADDRESS = '0.0.0.0'
+PORT = 80
 
-io.println('Listening on port 80.')
+; Creates the socket listening on port 80, wrapping it in HTTP.
+sock = net.HttpSocket(socket.create_server_socket(ADDRESS, PORT))
+
+io.println(cat('Listening on ', ADDRESS, ':', PORT, '.'))
 io.println('End the program by pressing Enter.')
 
 is_done = False
@@ -20,15 +23,22 @@ is_done = False
 }()
 
 handle_connection = (handle) {
-  request = handle.receive()
-  handle.send(net.HttpResponse().add_content('Hello, world!'))
-  io.println('Received request:')
-  io.println(request)
+  io.println('Receiving request.')
+  request = await handle.receive()
+  if request {
+    io.println('Request:')
+    io.println(request)
+
+    io.println('Sending response.')
+    await handle.send(net.HttpResponse().add_content('Hello, world!'))
+  } else {
+    io.println('Connectiong gracefully closed.')
+  }
   handle.close()
 }
 
 while ~is_done {
-  handle_connection(sock.accept())
+  handle_connection(await sock.accept())
 }
 
 sock.close()
