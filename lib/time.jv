@@ -3,6 +3,36 @@ import io
 self.MILLIS_PER_SECOND = 1000
 self.NANOS_PER_MILLI = 1000
 
+def current_timestamp() {
+  Timestamp(__now_timestamp())
+}
+
+def timestamp_from_micros(micros) {
+  Timestamp(__micros_to_timestamp(micros))
+}
+
+def date_from_timestamp(timestamp) {
+  Date(timestamp.year, timestamp.month, timestamp.day_of_month)
+}
+
+def current_date() {
+  ts = current_timestamp()
+  ts.to_date()
+}
+
+def date_from_days_since_epoch(days) {
+  z = days + 719468
+  era = (if z >= 0 then z else (z - 146096)) / 146097
+  doe = z - era * 146097
+  yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+  y = yoe + era * 400
+  doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+  mp = (5 * doy + 2) / 153
+  d = doy - (153 * mp + 2) / 5 + 1
+  m = mp + (if mp < 10 then 3 else -9)
+  Date(y + (if m <= 2 then 1 else 0), m, d)
+}
+
 class Timestamp {
   new(field year,
       field month,
@@ -13,7 +43,9 @@ class Timestamp {
       field millisecond) {}
 
   method to_s() {
-    cat(year, '-', month, '-', day_of_month, 'T',
+    cat(year, '-',
+        (if month < 10 then '0' else ''), month, '-',
+        (if day_of_month < 10 then '0' else ''), day_of_month, 'T',
         hour, ':', minute, ':', second,
         '.', millisecond, 'Z')
   }
@@ -28,14 +60,44 @@ class Timestamp {
         second,
         millisecond)
   }
+
+  method to_date() {
+    Date(year, month, day_of_month)
+  }
 }
 
-def now() {
-  Timestamp(__now_timestamp())
-}
+class Date {
+  new(field year, field month, field day_of_month) {}
 
-def timestamp_micros(micros_since_epoch) {
-  Timestamp(__micros_to_timestamp(micros_since_epoch))
+  method get_days_since_epoch() {
+    y = year - (if month <= 2 then 1 else 0)
+    era = (if y >= 0 then y else y - 399) / 400
+    yoe = y - era * 400
+    doy = (153 * (month + (if month > 2 then -3 else 9)) + 2) / 5 + day_of_month - 1
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+    era * 146097 + doe - 719468
+  }
+
+  method to_s() {
+    cat(year, '-',
+        (if month < 10 then '0' else ''), month, '-',
+        (if day_of_month < 10 then '0' else ''), day_of_month)
+  }
+
+  method add_days(days) {
+    date_from_days_since_epoch(get_days_since_epoch() + days)
+  }
+
+  method to_timestamp() {
+    Timestamp(
+        year,
+        month,
+        day_of_month,
+        0,  ; hour 
+        0,  ; minute
+        0,  ; second
+        0)  ; millisecond
+  }
 }
 
 class Timer {
