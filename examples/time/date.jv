@@ -11,3 +11,5 @@ io.println(
 
 ; 2022-09-04
 io.println(date.add_days(23))
+io.println(date.add_months(5))
+io.println(date.add_years(7))

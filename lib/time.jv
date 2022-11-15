@@ -16,8 +16,7 @@ def date_from_timestamp(timestamp) {
 }
 
 def current_date() {
-  ts = current_timestamp()
-  ts.to_date()
+  current_timestamp().to_date()
 }
 
 def date_from_days_since_epoch(days) {
@@ -86,6 +85,17 @@ class Date {
 
   method add_days(days) {
     date_from_days_since_epoch(get_days_since_epoch() + days)
+  }
+
+  method add_months(months) {
+    new_month = month + months
+    Date(year + (new_month - 1) / 12,
+         (if new_month > 12 then new_month - 12 else new_month),
+         day_of_month)
+  }
+
+  method add_years(years) {
+    Date(year + years, month, day_of_month)
   }
 
   method to_timestamp() {
