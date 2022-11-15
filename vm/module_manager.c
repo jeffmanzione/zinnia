@@ -428,7 +428,8 @@ void fatal_on_token(const char file_name[], FileInfo *fi, Q *tokens) {
   const int error_line_start = max(0, line_in_file - ERROR_LINES_PRECEEDING);
   const int error_line_end = line_in_file + ERROR_LINES_PROCEEDING;
 
-  fprintf(stderr, "Could parse line %d, file: %s\n", line_in_file, file_name);
+  fprintf(stderr, "Could not parse line %d, file: %s\n", line_in_file,
+          file_name);
   for (int i = error_line_start; i <= error_line_end; ++i) {
     const LineInfo *li = file_info_lookup(fi, i);
     if (NULL == li) {
