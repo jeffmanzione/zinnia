@@ -50,4 +50,6 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
 const char *module_info_file_name(ModuleInfo *mi);
 
+void fatal_on_token(const char file_name[], FileInfo *fi, Q *tokens);
+
 #endif /* VM_MODULE_MANAGER_H_ */

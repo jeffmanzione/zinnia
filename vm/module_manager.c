@@ -26,6 +26,9 @@
 #include "util/string.h"
 #include "vm/intern.h"
 
+#define ERROR_LINES_PRECEEDING 1
+#define ERROR_LINES_PROCEEDING 2
+
 struct _ModuleInfo {
   Module module;
   FileInfo *fi;
@@ -211,14 +214,7 @@ Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
   stree = parser_prune_newlines(&parser, stree);
 
   if (Q_size(&tokens) > 1) {
-    Q_iter iter = Q_iterator(&tokens);
-    for (; Q_has(&iter); Q_inc(&iter)) {
-      Token *token = *((Token **)Q_value(&iter));
-      if (token->type != TOKEN_NEWLINE) {
-        printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
-      }
-    }
-    FATALF("Could not parse.");
+    fatal_on_token(module_info_file_name(module_info), fi, &tokens);
     return NULL;
   } else {
     SemanticAnalyzer sa;
@@ -409,4 +405,38 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
       *Q_add_last(&classes_to_process) = cref;
     }
   }
+}
+
+// Returns the first token if only newlines are present in [tokens].
+Token *_find_first_non_newline_token(Q *tokens) {
+  Token *token = (Token *)Q_get(tokens, 0);
+  Q_iter iter = Q_iterator(tokens);
+  for (; Q_has(&iter); Q_inc(&iter)) {
+    Token *tok = *((Token **)Q_value(&iter));
+    if (tok->type != TOKEN_NEWLINE) {
+      token = tok;
+      break;
+    }
+  }
+  return token;
+}
+
+void fatal_on_token(const char file_name[], FileInfo *fi, Q *tokens) {
+  Token *token = _find_first_non_newline_token(tokens);
+  // Apparently LineInfo is 1-based, but Token is 0-based here.
+  const int line_in_file = token->line + 1;
+  const int error_line_start = max(0, line_in_file - ERROR_LINES_PRECEEDING);
+  const int error_line_end = line_in_file + ERROR_LINES_PROCEEDING;
+
+  fprintf(stderr, "Could parse line %d, file: %s\n", line_in_file, file_name);
+  for (int i = error_line_start; i <= error_line_end; ++i) {
+    const LineInfo *li = file_info_lookup(fi, i);
+    if (NULL == li) {
+      continue;
+    }
+    const char *pre_line = (i == line_in_file) ? ">> " : "   ";
+    fprintf(stderr, "%s%d: %s", pre_line, i, li->line_text);
+  }
+  fprintf(stderr, "\nFatally exiting.");
+  exit(1);
 }
