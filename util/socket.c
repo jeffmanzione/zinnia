@@ -125,8 +125,6 @@ int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
   return recv(sh->client_sock, buf, buf_len, 0);
 }
 
-// SOCKET sockethandle_get_socket(SocketHandle *sh) { return sh->client_sock; }
-
 void sockethandle_close(SocketHandle *sh) {
   sh->is_closed = true;
 #ifdef OS_WINDOWS

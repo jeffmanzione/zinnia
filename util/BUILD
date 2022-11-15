@@ -47,3 +47,10 @@ cc_library(
         "@memory_wrapper//alloc",
     ],
 )
+
+cc_library(
+    name = "time",
+    srcs = ["time.c"],
+    hdrs = ["time.h"],
+    deps = [],
+)

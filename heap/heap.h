@@ -45,6 +45,14 @@ Object *array_create(Heap *heap);
 void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child);
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2);
 Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3);
+Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4);
+Object *tuple_create5(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5);
+Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5, Entity *e6);
+Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5, Entity *e6, Entity *e7);
 
 typedef struct _HeapProfile HeapProfile;
 

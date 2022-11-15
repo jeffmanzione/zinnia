@@ -27,7 +27,7 @@ Entity entity_char(const int8_t c) {
   return e;
 }
 
-Entity entity_int(const int32_t i) {
+Entity entity_int(const int64_t i) {
   Entity e = {.type = PRIMITIVE};
   pset_int(&e.pri, i);
   return e;
@@ -55,7 +55,7 @@ void _primitive_print(const Primitive *p, FILE *file) {
     fprintf(file, "%c", (char)p->_char_val);
     break;
   case PRIMITIVE_INT:
-    fprintf(file, "%d", p->_int_val);
+    fprintf(file, "%lld", p->_int_val);
     break;
   case PRIMITIVE_FLOAT:
     fprintf(file, "%f", p->_float_val);

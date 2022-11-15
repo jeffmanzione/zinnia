@@ -259,10 +259,15 @@ def parse_cookie(cookie) {
 class HttpSocketHandle {
   new(field raw_handle) {}
 
-  method receive() {
-    return parse_request(await raw_handle.receive())
+  method receive() async {
+    raw_request = await raw_handle.receive()
+    ; When the connection is gracefully closed, the response is None.
+    if ~raw_request {
+      return None
+    }
+    return parse_request(raw_request)
   }
-  method send(http_response) {
+  method send(http_response) async {
     if ~(http_response is HttpResponse) {
       raise Error('HttpSocketHandle.send() expects an HttpResponse argument.')
     }
@@ -276,7 +281,7 @@ class HttpSocketHandle {
 class HttpSocket {
   new(field raw_socket) {}
 
-  method accept() {
+  method accept() async {
     HttpSocketHandle(await raw_socket.accept())
   }
   method close() {

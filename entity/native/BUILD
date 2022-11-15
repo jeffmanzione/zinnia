@@ -235,3 +235,19 @@ cc_library(
         "//vm/process:processes",
     ],
 )
+
+cc_library(
+    name = "time",
+    srcs = ["time.c"],
+    hdrs = ["time.h"],
+    deps = [
+        "//entity",
+        "//entity:object",
+        "//entity/native",
+        "//entity/native:error",
+        "//heap",
+        "//util:time",
+        "//vm:module_manager",
+        "@memory_wrapper//alloc/arena:intern",
+    ],
+)

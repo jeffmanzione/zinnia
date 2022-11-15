@@ -253,12 +253,63 @@ Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
   tuple_set(heap, tuple_obj, 1, e2);
   return tuple_obj;
 }
+
 Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
   tuple_set(heap, tuple_obj, 0, e1);
   tuple_set(heap, tuple_obj, 1, e2);
   tuple_set(heap, tuple_obj, 2, e3);
+  return tuple_obj;
+}
+
+Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(4);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  tuple_set(heap, tuple_obj, 2, e3);
+  tuple_set(heap, tuple_obj, 3, e4);
+  return tuple_obj;
+}
+
+Object *tuple_create5(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(5);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  tuple_set(heap, tuple_obj, 2, e3);
+  tuple_set(heap, tuple_obj, 3, e4);
+  tuple_set(heap, tuple_obj, 4, e5);
+  return tuple_obj;
+}
+
+Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5, Entity *e6) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(6);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  tuple_set(heap, tuple_obj, 2, e3);
+  tuple_set(heap, tuple_obj, 3, e4);
+  tuple_set(heap, tuple_obj, 4, e5);
+  tuple_set(heap, tuple_obj, 5, e6);
+  return tuple_obj;
+}
+
+Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
+                      Entity *e4, Entity *e5, Entity *e6, Entity *e7) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(7);
+  tuple_set(heap, tuple_obj, 0, e1);
+  tuple_set(heap, tuple_obj, 1, e2);
+  tuple_set(heap, tuple_obj, 2, e3);
+  tuple_set(heap, tuple_obj, 3, e4);
+  tuple_set(heap, tuple_obj, 4, e5);
+  tuple_set(heap, tuple_obj, 5, e6);
+  tuple_set(heap, tuple_obj, 6, e7);
   return tuple_obj;
 }
 

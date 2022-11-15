@@ -1,0 +1,15 @@
+import io
+import time
+
+date = time.Date(2022, 8, 12)
+
+; (2022-8-12, 19216, 2022-8-12)
+io.println(
+    date,
+    date.get_days_since_epoch(),
+    time.date_from_days_since_epoch(date.get_days_since_epoch()))
+
+; 2022-09-04
+io.println(date.add_days(23))
+io.println(date.add_months(5))
+io.println(date.add_years(7))

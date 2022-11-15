@@ -34,7 +34,7 @@ const Object *object(const Entity *e);
 Object *object_m(Entity *e);
 
 Entity entity_char(const int8_t c);
-Entity entity_int(const int32_t i);
+Entity entity_int(const int64_t i);
 Entity entity_float(const double d);
 
 Entity entity_primitive_ptr(const Primitive *p);

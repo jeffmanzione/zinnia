@@ -89,11 +89,11 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
   case PRIMITIVE:
     switch (ptype(&args->pri)) {
     case PRIMITIVE_CHAR:
-      return entity_int(pchar(&args->pri));
+      return entity_int((int64_t)pchar(&args->pri));
     case PRIMITIVE_INT:
       return *args;
     case PRIMITIVE_FLOAT:
-      return entity_int(pfloat(&args->pri));
+      return entity_int((int64_t)pfloat(&args->pri));
     default:
       return raise_error(task, ctx, "Unknown primitive type.");
     }
@@ -137,9 +137,9 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
   case PRIMITIVE:
     switch (ptype(&args->pri)) {
     case PRIMITIVE_CHAR:
-      return entity_float(pchar(&args->pri));
+      return entity_float((double)pchar(&args->pri));
     case PRIMITIVE_INT:
-      return entity_float(pfloat(&args->pri));
+      return entity_float((double)pint(&args->pri));
     case PRIMITIVE_FLOAT:
       return *args;
     default:
@@ -267,7 +267,7 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   int num_written = 0;
   switch (ptype(&val)) {
   case PRIMITIVE_INT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%d", pint(&val));
+    num_written = snprintf(buffer, BUFFER_SIZE, "%lld", pint(&val));
     break;
   case PRIMITIVE_FLOAT:
     num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
