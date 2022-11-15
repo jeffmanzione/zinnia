@@ -46,14 +46,7 @@ Tape *_read_file(const char fn[], bool opt) {
   stree = parser_prune_newlines(&parser, stree);
 
   if (Q_size(&tokens) > 1) {
-    Q_iter iter = Q_iterator(&tokens);
-    for (; Q_has(&iter); Q_inc(&iter)) {
-      Token *token = *((Token **)Q_value(&iter));
-      if (token->type != TOKEN_NEWLINE) {
-        printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
-      }
-    }
-    FATALF("Could not parse.");
+    fatal_on_token(fn, fi, &tokens);
     return NULL;
   } else {
     SemanticAnalyzer sa;
