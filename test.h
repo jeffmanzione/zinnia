@@ -1,0 +1,16 @@
+const char LIB_async[] =
+    "_ = None\r\n\r\n; Represents the state of an asynchronous piece of "
+    "work.\r\nclass Future {\r\n  ; Returns a future to the value of the "
+    "result of this future with [fn]\r\n  ; applied.\r\n  method then(fn) "
+    "async {\r\n    return fn(await self)\r\n  }\r\n}\r\n\r\n; Allows for the "
+    "manual completion of a future.\r\n;\r\n; Example:\r\n; ```\r\n; "
+    "do_something = (c) async -> c.complete(\'Hello\')\r\n; completer = "
+    "async.Completer()\r\n; do_something(completer)\r\n; io.println(await "
+    "completer.as_future())\r\n; ```\r\n;\r\nclass Completer {\r\n  field "
+    "completed, _value\r\n\r\n  new() {\r\n    completed = False\r\n    _value "
+    "= None\r\n  }\r\n\r\n  ; Completes the future with the value [v].\r\n  "
+    "method complete(v) {\r\n    _value = v\r\n    completed = True\r\n  "
+    "}\r\n\r\n  ; Returns a future to the completed value.\r\n  method "
+    "as_future() {\r\n    if completed {\r\n      return "
+    "async.value(_value)\r\n    }\r\n    return () async {\r\n      while ~(() "
+    "-> completed)() {}\r\n      return _value\r\n    }()\r\n  }\r\n}\r\n";

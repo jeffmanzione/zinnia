@@ -21,11 +21,11 @@
 #include "entity/native/process.h"
 #include "entity/native/socket.h"
 #include "entity/native/time.h"
+#include "lib/lib.h"
 #include "util/file.h"
 #include "util/file/file_util.h"
 #include "util/platform.h"
 #include "util/string.h"
-
 
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(

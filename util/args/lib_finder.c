@@ -7,8 +7,6 @@
 
 #include <stdlib.h>
 
-#include "alloc/arena/intern.h"
-
 #define DEFAULT_PATH_TO_LIB "./lib"
 
 char *path_to_libs() {
@@ -16,5 +14,5 @@ char *path_to_libs() {
   if (NULL == path_var) {
     path_var = DEFAULT_PATH_TO_LIB;
   }
-  return intern(path_var);
+  return path_var;
 }

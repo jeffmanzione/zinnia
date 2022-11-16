@@ -11,8 +11,6 @@
 #include <stdint.h>
 #include <time.h>
 
-int64_t current_usec_since_epoch();
-
 typedef struct {
   int64_t year, month, day_of_month, hour, minute, second;
   int64_t millisecond;
