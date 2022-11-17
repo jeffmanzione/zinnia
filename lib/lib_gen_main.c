@@ -22,6 +22,10 @@ int main(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(input_file_name, &dir_path, &file_base, &ext);
     FILE *input_file = FILE_FN(input_file_name, "rb");
+    if (NULL == input_file) {
+      fprintf(stderr, "Could not open file: \"%s\".", input_file_name);
+      return EXIT_FAILURE;
+    }
     char *input;
     getall(input_file, &input);
     const char *escaped_input = escape(input);

@@ -27,36 +27,39 @@
 #include "util/platform.h"
 #include "util/string.h"
 
+#define LIB_DIR "lib/"
+#define LIB_EXT ".jv"
+
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
-  mm_register_module_with_callback(
-      mm, find_file_by_name(lib_location, "builtin"), builtin_add_native);
+  mm_register_module_with_callback(mm, LIB_DIR "builtin" LIB_EXT, LIB_builtin,
+                                   builtin_add_native);
   Module_builtin = modulemanager_lookup(mm, intern("builtin"));
 
-  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "io"),
+  mm_register_module_with_callback(mm, LIB_DIR "io" LIB_EXT, LIB_io,
                                    io_add_native);
   Module_io = modulemanager_lookup(mm, intern("io"));
 
-  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "error"),
+  mm_register_module_with_callback(mm, LIB_DIR "error" LIB_EXT, LIB_error,
                                    error_add_native);
   modulemanager_lookup(mm, intern("error"));
 
-  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "async"),
+  mm_register_module_with_callback(mm, LIB_DIR "async" LIB_EXT, LIB_async,
                                    async_add_native);
   modulemanager_lookup(mm, intern("async"));
 
-  mm_register_module(mm, find_file_by_name(lib_location, "struct"));
-  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "math"),
+  mm_register_module(mm, LIB_DIR "struct" LIB_EXT, LIB_struct);
+  mm_register_module_with_callback(mm, LIB_DIR "math" LIB_EXT, LIB_math,
                                    math_add_native);
-  mm_register_module_with_callback(
-      mm, find_file_by_name(lib_location, "classes"), classes_add_native);
-  mm_register_module_with_callback(
-      mm, find_file_by_name(lib_location, "process"), process_add_native);
-  mm_register_module_with_callback(
-      mm, find_file_by_name(lib_location, "socket"), socket_add_native);
-  mm_register_module(mm, find_file_by_name(lib_location, "net"));
-  mm_register_module_with_callback(
-      mm, find_file_by_name(lib_location, "dynamic"), dynamic_add_native);
-  mm_register_module_with_callback(mm, find_file_by_name(lib_location, "time"),
+  mm_register_module_with_callback(mm, LIB_DIR "classes" LIB_EXT, LIB_classes,
+                                   classes_add_native);
+  mm_register_module_with_callback(mm, LIB_DIR "process" LIB_EXT, LIB_process,
+                                   process_add_native);
+  mm_register_module_with_callback(mm, LIB_DIR "socket" LIB_EXT, LIB_socket,
+                                   socket_add_native);
+  mm_register_module(mm, LIB_DIR "net" LIB_EXT, LIB_net);
+  mm_register_module_with_callback(mm, LIB_DIR "dynamic" LIB_EXT, LIB_dynamic,
+                                   dynamic_add_native);
+  mm_register_module_with_callback(mm, LIB_DIR "time" LIB_EXT, LIB_time,
                                    time_add_native);
 
 #ifdef OS_WINDOWS
@@ -72,7 +75,7 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
     const char *fn = combine_path_file(lib_location, file_name, NULL);
     if (ends_with(file_name, ".jv") || ends_with(file_name, ".ja") ||
         ends_with(file_name, ".jb")) {
-      mm_register_module(mm, fn);
+      mm_register_module(mm, fn, NULL);
     }
     DEALLOC(fn);
   }

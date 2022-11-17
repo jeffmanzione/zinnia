@@ -23,6 +23,7 @@
 #include "program/tape_binary.h"
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
+#include "util/file/file_util.h"
 #include "util/string.h"
 #include "vm/intern.h"
 
@@ -32,8 +33,8 @@
 struct _ModuleInfo {
   Module module;
   FileInfo *fi;
-  const char *file_name, *module_name_from_file;
-  bool is_loaded, has_native_callback, is_dynamic;
+  const char *file_name, *module_name_from_file, *inlined_file;
+  bool is_inlined_file, is_loaded, has_native_callback, is_dynamic;
   NativeCallback native_callback;
 };
 
@@ -104,6 +105,8 @@ ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
   }
   module_info->file_name = (NULL != file_name) ? mm->intern(file_name) : NULL;
   module_info->module_name_from_file = module_name;
+  module_info->is_inlined_file = false;
+  module_info->inlined_file = NULL;
   return module_info;
 }
 
@@ -199,8 +202,15 @@ void add_reflection_to_module(ModuleManager *mm, Module *module) {
   }
 }
 
-Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
-  FileInfo *fi = file_info(module_info->file_name);
+FileInfo *_module_info_get_file(ModuleInfo *module_info) {
+  if (module_info->is_inlined_file) {
+    return file_info_sfile(sfile_open(module_info->inlined_file));
+  }
+  return file_info(module_info->file_name);
+}
+
+Module *_read_jv(ModuleManager *mm, ModuleInfo *module_info) {
+  FileInfo *fi = _module_info_get_file(module_info);
 
   Q tokens;
   Q_init(&tokens);
@@ -246,7 +256,7 @@ Module *_read_jl(ModuleManager *mm, ModuleInfo *module_info) {
 }
 
 Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
-  FileInfo *fi = file_info(module_info->file_name);
+  FileInfo *fi = _module_info_get_file(module_info);
   Q tokens;
   Q_init(&tokens);
   lexer_tokenize(fi, &tokens);
@@ -271,24 +281,29 @@ Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
   return &module_info->module;
 }
 
-ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[]) {
-  return mm_register_module_with_callback(mm, fn, NULL);
+ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[],
+                               const char *inlined_file) {
+  return mm_register_module_with_callback(mm, fn, inlined_file, NULL);
 }
 
-ModuleInfo *_create_and_init_moduleinfo(ModuleManager *mm,
-                                        const char *module_name,
-                                        const char *file_name,
-                                        NativeCallback native_callback,
-                                        bool is_dynamic) {
+ModuleInfo *
+_create_and_init_moduleinfo(ModuleManager *mm, const char *module_name,
+                            const char *file_name, const char *inlined_file,
+                            NativeCallback native_callback, bool is_dynamic) {
   ModuleInfo *module_info = _create_moduleinfo(mm, module_name, file_name);
   module_info->has_native_callback = native_callback != NULL;
   module_info->native_callback = native_callback;
   module_info->is_loaded = false;
   module_info->is_dynamic = is_dynamic;
+  if (NULL != inlined_file) {
+    module_info->is_inlined_file = true;
+    module_info->inlined_file = inlined_file;
+  }
   return module_info;
 }
 
 ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
+                                             const char *inlined_file,
                                              NativeCallback callback) {
   ASSERT(NOT_NULL(mm), NOT_NULL(fn));
 
@@ -306,8 +321,9 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
     return module_info;
   }
 
-  module_info = _create_and_init_moduleinfo(mm, module_name, fn, callback,
-                                            /*is_dynamic=*/false);
+  module_info =
+      _create_and_init_moduleinfo(mm, module_name, fn, inlined_file, callback,
+                                  /*is_dynamic=*/false);
 
   DEALLOC(dir_path);
   DEALLOC(ext);
@@ -318,9 +334,9 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
                                        NativeCallback init_fn) {
-  ModuleInfo *module_info =
-      _create_and_init_moduleinfo(mm, mm->intern(module_name), NULL, init_fn,
-                                  /*is_dynamic*/ true);
+  ModuleInfo *module_info = _create_and_init_moduleinfo(
+      mm, mm->intern(module_name), NULL, NULL, init_fn,
+      /*is_dynamic*/ true);
   module_init(&module_info->module, mm->intern(module_name), NULL);
   return module_info;
 }
@@ -334,7 +350,7 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
       } else if (ends_with(module_info->file_name, ".ja")) {
         module = _read_ja(mm, module_info);
       } else if (ends_with(module_info->file_name, ".jv")) {
-        module = _read_jl(mm, module_info);
+        module = _read_jv(mm, module_info);
       } else {
         FATALF("Unknown file type.");
       }
