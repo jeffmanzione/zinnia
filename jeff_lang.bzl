@@ -54,7 +54,6 @@ def jeff_vm_library(
 
 def _jeff_vm_binary_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
-    builtins = [file for target in ctx.attr.builtins for file in target.files.to_list()]
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
     input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
     input_files = [main_file] + input_files
@@ -68,9 +67,9 @@ def _jeff_vm_binary_impl(ctx):
     )
     return [
         DefaultInfo(
-            files = depset(input_files + builtins + [runner_executable, run_sh]),
+            files = depset(input_files + [runner_executable, run_sh]),
             executable = run_sh,
-            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh] + builtins),
+            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh]),
         ),
     ]
 
@@ -111,5 +110,4 @@ def jeff_vm_binary(name, main, srcs = [], deps = []):
         name = name,
         main = ":%s_main" % name,
         deps = deps,
-        builtins = ["//lib"],
     )

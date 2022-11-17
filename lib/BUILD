@@ -7,11 +7,6 @@ filegroup(
     srcs = glob(["*.jv"]),
 )
 
-# jeff_vm_library(
-#     name = "lib",
-#     srcs = [":lib_srcs"],
-# )
-
 cc_library(
     name = "lib_gen_main",
     srcs = ["lib_gen_main.c"],
