@@ -34,9 +34,6 @@ cd jeff-vm
 bazel build -c opt //compile:jvc //run:jvr
 ```
 
-| (Optional :100:) You can copy `./bazel-bin/compile/jvc` and `./bazel-bin/run/jvr` to a location on your `PATH` to make it easier to reference these binaries.
-|-|
-
 ## Compiling your program to assembly and bytecode
 
 Use `jvc` to compile your program.
@@ -48,7 +45,7 @@ Use `jvc` to compile your program.
 * `-assembly_out_dir`: Output location for JA files (default=`"./"`).
 
 ```shell
-./bazel-bin/compile/jvc -a -b my_program.jv
+jvc -a -b my_program.jv
 ```
 
 ## Running your program
@@ -56,11 +53,11 @@ Use `jvc` to compile your program.
 Use `jvr` to run your program either from source, assembly, or bytecode.
 
 ```shell
-./bazel-bin/run/jvr my_program.jv
+jvr my_program.jv
 # or
-./bazel-bin/run/jvr my_program.ja
+jvr my_program.ja
 # or
-./bazel-bin/run/jvr my_program.jb
+jvr my_program.jb
 ```
 
 ## Examples
