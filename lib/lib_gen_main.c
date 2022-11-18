@@ -10,6 +10,8 @@
 #include "util/file/file_util.h"
 #include "util/string_util.h"
 
+#define STRING_BLOCK_LEN 400
+
 int main(int argc, const char *args[]) {
   const char *out_file_name = args[1];
   FILE *out = FILE_FN(out_file_name, "w");
@@ -29,7 +31,21 @@ int main(int argc, const char *args[]) {
     char *input;
     getall(input_file, &input);
     const char *escaped_input = escape(input);
-    fprintf(out, "const char LIB_%s[] = \"%s\";\n\n", file_base, escaped_input);
+    fprintf(out, "const char LIB_%s[] =", file_base);
+    int start = 0, end = STRING_BLOCK_LEN;
+    for (; end <= strlen(escaped_input); end += STRING_BLOCK_LEN) {
+      while (escaped_input[end] != ' ' && end < strlen(escaped_input)) {
+        ++end;
+      }
+      int len = min(end - start, strlen(escaped_input + start));
+      fprintf(out, "\n  \"%.*s\"", len, escaped_input + start);
+      start = end;
+    }
+    if (start < strlen(escaped_input)) {
+      fprintf(out, "\n  \"%.*s\"", (int)strlen(escaped_input + start),
+              escaped_input + start);
+    }
+    fprintf(out, ";\n\n");
 
     DEALLOC(dir_path);
     DEALLOC(file_base);

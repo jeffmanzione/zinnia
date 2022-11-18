@@ -28,7 +28,7 @@
 #include "util/string.h"
 
 #define LIB_DIR "lib/"
-#define LIB_EXT ".jv"
+#define LIB_EXT ".ja"
 
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   mm_register_module_with_callback(mm, LIB_DIR "builtin" LIB_EXT, LIB_builtin,

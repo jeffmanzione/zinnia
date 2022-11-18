@@ -17,7 +17,6 @@ cc_library(
         "//util/args:commandlines",
         "//util/args:lib_finder",
         "//vm:module_manager",
-        "//vm:virtual_machine",
         "@c_data_structures//struct:q",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",
