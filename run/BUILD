@@ -33,7 +33,6 @@ cc_library(
 cc_binary(
     name = "jvr",
     srcs = ["jvr.c"],
-    data = ["//lib"],
     deps = [
         ":run",
     ],

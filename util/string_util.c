@@ -17,6 +17,7 @@ bool _should_escape(char c) {
   case '\"':
   case '\n':
   case '\r':
+  case '\\':
     return true;
   default:
     return false;
@@ -31,6 +32,8 @@ char _escape_char(char c) {
     return 't';
   case '\r':
     return 'r';
+  case '\\':
+    return '\\';
   default:
     return c;
   }

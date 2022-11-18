@@ -46,7 +46,5 @@ cc_library(
     name = "lib_finder",
     srcs = ["lib_finder.c"],
     hdrs = ["lib_finder.h"],
-    deps = [
-        "@memory_wrapper//alloc/arena:intern",
-    ],
+    deps = [],
 )

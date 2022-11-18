@@ -7,14 +7,4 @@
 
 #include <stdlib.h>
 
-#include "alloc/arena/intern.h"
-
-#define DEFAULT_PATH_TO_LIB "./lib"
-
-char *path_to_libs() {
-  char *path_var = getenv(PATH_ENV_VAR_NAME);
-  if (NULL == path_var) {
-    path_var = DEFAULT_PATH_TO_LIB;
-  }
-  return intern(path_var);
-}
+char *path_to_libs() { return getenv(PATH_ENV_VAR_NAME); }
