@@ -12,7 +12,11 @@ The VM is written from scratch by me in C and meets the C90 standard. It compile
 * [file-utils](https://github.com/jeffreymanzione/file-utils) - Basic C file wrapper for reading files.
 * [c-data-structures](https://github.com/jeffreymanzione/c-data-structures) - Some useful data structures.
 
-## Downloading and building this project
+## Downloading this project
+
+Download the latest binary releases on GitHub.
+
+## Building this project from source
 
 | :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install). I promise it is very easy to install! |
 |-|
