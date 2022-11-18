@@ -30,7 +30,7 @@ cd jeff-vm
 bazel build -c opt //compile:jvc //run:jvr
 ```
 
-| (Optional :100:) You can copy `./bazel-bin/compile/jvc` and `./bazel-bin/run/jvr` to a location on your `PATH` to make it easier to reference these binaries. Set your environment variable, `JV_LIB_PATH`, to point to the `lib/` directory in the git repo. This allows the built-in libraries to be used.|
+| (Optional :100:) You can copy `./bazel-bin/compile/jvc` and `./bazel-bin/run/jvr` to a location on your `PATH` to make it easier to reference these binaries.
 |-|
 
 ## Compiling your program to assembly and bytecode
