@@ -14,7 +14,7 @@ The VM is written from scratch by me in C and meets the C90 standard. It compile
 
 ## Downloading this project
 
-Download the latest binary releases on GitHub.
+Download the latest binaries released on GitHub.
 
 ## Building this project from source
 
