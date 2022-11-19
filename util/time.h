@@ -12,7 +12,12 @@
 #include <time.h>
 
 typedef struct {
-  int64_t year, month, day_of_month, hour, minute, second;
+  int64_t year;
+  int64_t month;
+  int64_t day_of_month;
+  int64_t hour;
+  int64_t minute;
+  int64_t second;
   int64_t millisecond;
 } Timestamp;
 

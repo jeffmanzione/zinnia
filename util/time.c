@@ -52,7 +52,6 @@ Timestamp micros_to_timestamp(int64_t micros_since_epoch) {
 }
 
 Timestamp current_timestamp() {
-  int64_t usec = -1;
 #ifdef linux
   time_t T = time(NULL);
   struct tm tm = *localtime(&T);
@@ -65,7 +64,6 @@ Timestamp current_timestamp() {
                       millis_since_epoch - (seconds_since_epoch * 1000)};
   return ts;
 #endif
-
 #ifdef _WIN32
   SYSTEMTIME st;
   GetLocalTime(&st);
