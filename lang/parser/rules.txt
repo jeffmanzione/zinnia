@@ -70,7 +70,19 @@ primary_expression_no_constants ->
 
 empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-function_call -> AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN);
+named_arg -> AND(rule:identifier, token:SYMBOL_COLON, rule:conditional_expression);
+
+named_arg_list -> LIST(token:SYMBOL_COMMA, rule:named_arg);
+
+function_call ->
+  AND(
+    token:SYMBOL_LPAREN,
+    OR(
+      rule:named_arg_list,
+      rule:tuple_expression
+    ),
+    token:SYMBOL_RPAREN
+  );
 
 array_indexing -> AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET);
 
@@ -457,10 +469,20 @@ function_argument ->
 
 function_argument_list -> LIST(token:SYMBOL_COMMA, rule:function_argument);
 
+function_named_arguments ->
+  AND(
+    token:SYMBOL_LBRACE,
+    rule:function_argument_list,
+    token:SYMBOL_RBRACE
+  );
+
 function_arguments_present ->
   AND(
     token:SYMBOL_LPAREN,
-    rule:function_argument_list,
+    OR(
+      rule:function_named_arguments,
+      rule:function_argument_list
+    ),
     token:SYMBOL_RPAREN
   );
 

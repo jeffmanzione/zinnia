@@ -11,6 +11,7 @@
 #include "entity/class/classes_def.h"
 #include "entity/function/function.h"
 #include "entity/module/module.h"
+#include "entity/named_list/named_list.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
@@ -26,6 +27,7 @@ Class *Class_Module;
 Class *Class_Array;
 Class *Class_String;
 Class *Class_Tuple;
+Class *Class_NamedList;
 Class *Class_Error;
 Class *Class_Process;
 Class *Class_Task;
@@ -42,6 +44,7 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Array = module_add_class(builtin, ARRAY_NAME, Class_Object);
   Class_String = module_add_class(builtin, STRING_NAME, Class_Object);
   Class_Tuple = module_add_class(builtin, TUPLE_NAME, Class_Object);
+  Class_NamedList = module_add_class(builtin, NAMED_LIST_NAME, Class_Object);
   Class_Error = NULL;
   Class_Process = NULL;
   Class_Task = NULL;
@@ -95,4 +98,12 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Tuple->_delete_fn = __tuple_delete;
   Class_Tuple->_print_fn = __tuple_print;
   Class_Tuple->_copy_fn = (ObjCopyFn)tuple_copy;
+
+  Class_NamedList->_super = Class_Object;
+  Class_NamedList->_reflection = heap_new(heap, Class_Class);
+  Class_NamedList->_reflection->_class_obj = Class_NamedList;
+  Class_NamedList->_init_fn = __named_list_create;
+  Class_NamedList->_delete_fn = __named_list_delete;
+  Class_NamedList->_print_fn = __named_list_print;
+  Class_NamedList->_copy_fn = (ObjCopyFn)named_list_copy;
 }

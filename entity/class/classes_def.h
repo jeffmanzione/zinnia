@@ -16,6 +16,7 @@ extern Class *Class_Module;
 extern Class *Class_Array;
 extern Class *Class_String;
 extern Class *Class_Tuple;
+extern Class *Class_NamedList;
 extern Class *Class_Error;
 
 extern Class *Class_Process;

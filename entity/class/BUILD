@@ -41,6 +41,7 @@ cc_library(
         "//entity/array",
         "//entity/function",
         "//entity/module",
+        "//entity/named_list",
         "//entity/string",
         "//entity/tuple",
         "//heap",

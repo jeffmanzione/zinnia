@@ -32,6 +32,7 @@ extern char *MAIN_KEY;
 extern char *MODULE_KEY;
 extern char *MODULE_NAME;
 extern char *NAME_KEY;
+extern char *NAMED_LIST_NAME;
 extern char *NEQ_FN_NAME;
 extern char *NEXT_FN_NAME;
 extern char *NIL_KEYWORD;

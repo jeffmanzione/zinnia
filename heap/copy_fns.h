@@ -14,5 +14,6 @@
 void array_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
 void tuple_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
 void string_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
-
+void named_list_copy(Heap *heap, Map *cpy_man, Object *target_obj,
+                     Object *src_obj);
 #endif /* HEAP_COPY_FNS_H_ */

@@ -81,6 +81,10 @@ typedef enum {
   SGET,
   // Async
   WAIT,
+  // Named list
+  NNEW,
+  NSET,
+  NXPD,
   // NOT A REAL OP
   OP_BOUND,
 } Op;
