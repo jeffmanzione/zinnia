@@ -921,7 +921,6 @@ void _context_init(Object *obj) {}
 void _context_delete(Object *obj) {
   Context *ctx = (Context *)obj->_internal_obj;
   context_finalize(ctx);
-  __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
 }
 
 void _builtin_add_string(Module *builtin) {

@@ -81,8 +81,10 @@ void run(const Set *source_files, ArgStore *store) {
   task_create_context(task, main_module->_reflection, main_module, 0);
   process_run(vm_main_process(vm));
 
+#ifdef DEBUG
   vm_delete(vm);
   optimize_finalize();
+#endif
 }
 
 int jvr(int argc, const char *argv[]) {
@@ -95,12 +97,14 @@ int jvr(int argc, const char *argv[]) {
 
   run(argstore_sources(store), store);
 
+#ifdef DEBUG
   argstore_delete(store);
   argconfig_delete(config);
 
   strings_finalize();
   token_finalize_all();
   alloc_finalize();
+#endif
 
   return EXIT_SUCCESS;
 }
