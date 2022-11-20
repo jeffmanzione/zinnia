@@ -1,0 +1,12 @@
+import classes
+import io
+
+test_builder = classes.factory.create_class('Test1', self)
+test_builder.get_constructor().with_parameter('test', True, '1 + 2')
+test_builder.add_method('to_s').with_statement('str(test)')
+
+io.println(test_builder)
+
+test_class = test_builder.build()
+
+io.println(test_class(), Test1())
