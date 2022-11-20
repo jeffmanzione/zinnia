@@ -54,9 +54,6 @@ Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
 Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
                       Entity *e4, Entity *e5, Entity *e6, Entity *e7);
 
-void named_list_set(Heap *heap, Object *obj, const char key[],
-                    const Entity *new);
-
 typedef struct _HeapProfile HeapProfile;
 
 HeapProfile *heap_create_profile(const Heap *const heap);

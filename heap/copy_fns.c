@@ -7,7 +7,6 @@
 
 #include "entity/array/array.h"
 #include "entity/entity.h"
-#include "entity/named_list/named_list.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
@@ -39,14 +38,4 @@ void string_copy(Heap *heap, Map *cpy_map, Object *target_obj,
                  Object *src_obj) {
   String *src = (String *)src_obj->_internal_obj;
   __string_init(target_obj, src->table, String_size(src));
-}
-
-void named_list_copy(Heap *heap, Map *cpy_map, Object *target_obj,
-                     Object *src_obj) {
-  NamedList *src = (NamedList *)src_obj->_internal_obj;
-  KL_iter iter = named_list_iter(src);
-  for (; kl_has(&iter); kl_inc(&iter)) {
-    Entity copy = entity_copy(heap, cpy_map, kl_value(&iter));
-    named_list_set(heap, target_obj, kl_key(&iter), &copy);
-  }
 }

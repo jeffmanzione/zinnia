@@ -1,7 +1,0 @@
-import io
-
-def test({a, b}) {
-  return a * b
-}
-
-io.println(test(a: 5, b: 2))

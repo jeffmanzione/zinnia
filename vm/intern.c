@@ -33,7 +33,6 @@ char *MAIN_KEY;
 char *MODULE_KEY;
 char *MODULE_NAME;
 char *NAME_KEY;
-char *NAMED_LIST_NAME;
 char *NEQ_FN_NAME;
 char *NEXT_FN_NAME;
 char *NIL_KEYWORD;
@@ -80,7 +79,6 @@ void _strings_insert_constants() {
   MODULE_KEY = intern("module");
   MODULE_NAME = intern("Module");
   NAME_KEY = intern("name");
-  NAMED_LIST_NAME = intern("NamedList");
   NEQ_FN_NAME = intern("__neq__");
   NEXT_FN_NAME = intern("next");
   NIL_KEYWORD = intern("None");

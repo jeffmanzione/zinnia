@@ -13,7 +13,6 @@
 #include "debug/debug.h"
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
-#include "entity/named_list/named_list.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/tuple/tuple.h"
@@ -100,8 +99,7 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   ASSERT(NOT_NULL(entry_pos));
   const bool old_member_is_obj =
       NULL != old_member && OBJECT == etype(old_member);
-  if (old_member_is_obj && OBJECT == etype(child) &&
-      (old_member->obj == child->obj)) {
+  if (old_member_is_obj && (old_member->obj == child->obj)) {
     return;
   }
   if (old_member_is_obj) {
@@ -313,29 +311,6 @@ Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   tuple_set(heap, tuple_obj, 5, e6);
   tuple_set(heap, tuple_obj, 6, e7);
   return tuple_obj;
-}
-
-// Does this need to handle overwrites?
-void named_list_set(Heap *heap, Object *obj, const char key[],
-                    const Entity *new) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(nl), NOT_NULL(key), NOT_NULL(new));
-  NamedList *nl = (NamedList *)obj->_internal_obj;
-  Entity *pos;
-  Entity *old = named_list_insert(nl, key, &pos);
-
-  const bool old_is_obj = NULL != old && OBJECT == etype(old);
-  const bool new_is_obj = OBJECT == etype(new);
-
-  if (old_is_obj && new_is_obj && (old->obj == new->obj)) {
-    return;
-  }
-  if (old_is_obj) {
-    heap_dec_edge(heap, obj, object_m(old));
-  }
-  if (new_is_obj) {
-    heap_inc_edge(heap, obj, object_m((Entity *)new));
-  }
-  *pos = *new;
 }
 
 Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {

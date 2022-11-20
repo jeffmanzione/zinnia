@@ -11,7 +11,6 @@
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
 #include "entity/module/modules.h"
-#include "entity/named_list/named_list.h"
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
@@ -1189,50 +1188,6 @@ void _execute_RAIS(VM *vm, Task *task, Context *context) {
   raise_error_with_object(task, context, err->obj);
 }
 
-void _execute_NNEW(VM *vm, Task *task, Context *context,
-                   const Instruction *ins) {
-  if (INSTRUCTION_NO_ARG != ins->type) {
-    FATALF("Invalid NNEW instruction type.");
-  }
-  Object *array_obj = heap_new(task->parent_process->heap, Class_NamedList);
-  *task_mutable_resval(task) = entity_object(array_obj);
-}
-
-// Assumes:
-//  - NamedList is top on stack.
-//  - resval is target.
-//  - member name is instruction id.
-//  - Does not popstack.
-bool _execute_NSET(VM *vm, Task *task, Context *context,
-                   const Instruction *ins) {
-  if (INSTRUCTION_ID != ins->type) {
-    FATALF("Invalid NSET must be an ID type.");
-  }
-  const Entity *list = task_peekstack(task);
-  if (!IS_CLASS(list, Class_NamedList)) {
-    raise_error(task, context, "Expected NamedList.");
-    return false;
-  }
-  const char *key = ins->id;
-  const Entity *value = task_get_resval(task);
-  named_list_set(task->parent_process->heap, (Object *)list->obj, key, value);
-  return true;
-}
-
-// Assumes the NamedList is in resval.
-void _execute_NXPD(VM *vm, Task *task, Context *context) {
-  const Entity *list = task_get_resval(task);
-  if (!IS_CLASS(list, Class_NamedList)) {
-    raise_error(task, context, "Expected NamedList of arguments.");
-    return false;
-  }
-  NamedList *nl = (NamedList *)list->obj->_internal_obj;
-  KL_iter iter = named_list_iter(nl);
-  for (; kl_has(&iter); kl_inc(&iter)) {
-    context_set(context, (char *)kl_key(&iter), (Entity *)kl_value(&iter));
-  }
-}
-
 bool _attemp_catch_error(Task *task, Context *ctx) {
   // *task_mutable_resval(task) = entity_object(ctx->error);
   while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)))
@@ -1455,15 +1410,6 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         context->ins++;
         goto end_of_loop;
       }
-      break;
-    case NNEW:
-      _execute_NNEW(vm, task, context);
-      break;
-    case NSET:
-      _execute_NSET(vm, task, context, ins);
-      break;
-    case NXPD:
-      _execute_NXPD(vm, task, context);
       break;
     default:
       FATALF("Unknown instruction: %s", op_to_str(ins->op));
