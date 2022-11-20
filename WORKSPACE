@@ -14,16 +14,11 @@ git_repository(
     shallow_since = "1668915628 +0000",
 )
 
-# git_repository(
-#     name = "memory_wrapper",
-#     commit = "6ca6fa2d5324d1573db272a52aff8984e72e7fab",
-#     remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
-#     shallow_since = "1667167060 -0700",
-# )
-
-local_repository(
+git_repository(
     name = "memory_wrapper",
-    path = "/usr/src/memory-wrapper",
+    commit = "6ca6fa2d5324d1573db272a52aff8984e72e7fab",
+    remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
+    shallow_since = "1667167060 -0700",
 )
 
 git_repository(
