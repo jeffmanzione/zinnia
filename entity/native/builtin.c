@@ -921,6 +921,9 @@ void _context_init(Object *obj) {}
 void _context_delete(Object *obj) {
   Context *ctx = (Context *)obj->_internal_obj;
   context_finalize(ctx);
+  // This can segfault if the process is cleaned up before the context.
+  // This segfault should only occur during DEBUG mode.
+  __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
 }
 
 void _builtin_add_string(Module *builtin) {
