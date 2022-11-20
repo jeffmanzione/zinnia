@@ -394,3 +394,75 @@ void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
     }
   }
 }
+
+void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
+                            int start, int end) {
+  // START:
+  //   push STR
+  //   push STR
+  //   add
+  // FOLLOWED BY:
+  //   push
+  //   pust STR
+  //   add
+
+  int i;
+  for (i = start + 2; i < end; i++) {
+    const Instruction *first = tape_get(tape, i - 2);
+    const Instruction *second = tape_get(tape, i - 1);
+    const Instruction *third = tape_get(tape, i);
+    if (PUSH == first->op && INSTRUCTION_STRING == first->type &&
+        PUSH == second->op && INSTRUCTION_STRING == second->type &&
+        ADD == third->op && INSTRUCTION_NO_ARG == third->type &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2)) &&
+        NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
+
+      Q strs;
+      Q_init(&strs);
+      *Q_add_last(&strs) = (char *)first->str;
+      *Q_add_last(&strs) = (char *)second->str;
+
+      int j;
+      for (j = i + 3; j < end; j += 3) {
+        const Instruction *push1 = tape_get(tape, j - 2);
+        const Instruction *push2 = tape_get(tape, j - 1);
+        const Instruction *add = tape_get(tape, j);
+        if (PUSH == push1->op && INSTRUCTION_NO_ARG == push1->type &&
+            PUSH == push2->op && INSTRUCTION_STRING == push2->type &&
+            ADD == add->op && INSTRUCTION_NO_ARG == add->type &&
+            NULL == map_lookup(&oh->i_gotos, as_ptr(j - 2)) &&
+            NULL == map_lookup(&oh->i_gotos, as_ptr(j - 1))) {
+          *Q_add_last(&strs) = (char *)push2->str;
+          o_Remove(oh, j - 2);
+          o_Remove(oh, j - 1);
+          o_Remove(oh, j);
+        } else {
+          break;
+        }
+      }
+
+      int total_len = 0;
+      Q_iter iter = Q_iterator(&strs);
+      for (; Q_has(&iter); Q_inc(&iter)) {
+        char *str = *(char **)Q_value(&iter);
+        total_len += strlen(str);
+      }
+      char *tmp_str = ALLOC_ARRAY2(char, total_len + 1);
+      tmp_str[0] = '\0';
+      iter = Q_iterator(&strs);
+      for (; Q_has(&iter); Q_inc(&iter)) {
+        char *str = *(char **)Q_value(&iter);
+        strcat(tmp_str, str);
+      }
+      tmp_str[total_len] = '\0';
+      char *new_str = intern(tmp_str);
+      Instruction new_ins = {
+          .op = RES, .type = INSTRUCTION_STRING, .str = new_str};
+      o_Replace(oh, i - 2, new_ins);
+      o_Remove(oh, i - 1);
+      o_Remove(oh, i);
+      DEALLOC(tmp_str);
+      i = j;
+    }
+  }
+}

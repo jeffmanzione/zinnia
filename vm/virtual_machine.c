@@ -220,6 +220,47 @@ PRIMITIVE_OP(BAND, &, MATH_OP_INT(BAND, &));
 PRIMITIVE_OP(BXOR, ^, MATH_OP_INT(BXOR, ^));
 PRIMITIVE_OP(BOR, |, MATH_OP_INT(BOR, |));
 
+Entity string_concat(Task *task, const Entity *s1, const Entity *s2) {
+  ASSERT(IS_CLASS(s1, Class_String));
+  ASSERT(IS_CLASS(s2, Class_String));
+  String *s1_str = (String *)s1->obj->_internal_obj;
+  String *s2_str = (String *)s2->obj->_internal_obj;
+  Object *new = string_new(task->parent_process->heap, s1_str->table,
+                           String_size(s1_str));
+  String *new_str = (String *)new->_internal_obj;
+  String_append(new_str, s2_str);
+  return entity_object(new);
+}
+
+void _execute_ADD_with_string(VM *vm, Task *task, Context *context,
+                              const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG == ins->type) {
+    const Entity *first_ptr = task_peekstack_n(task, 1);
+    const Entity *second_ptr = task_peekstack(task);
+    if (IS_CLASS(first_ptr, Class_String) &&
+        IS_CLASS(second_ptr, Class_String)) {
+      Entity second = task_popstack(task);
+      Entity first = task_popstack(task);
+      *task_mutable_resval(task) = string_concat(task, &first, &second);
+      return;
+    }
+  }
+  if (INSTRUCTION_ID == ins->type) {
+    const Entity *resval = task_get_resval(task);
+    if (IS_CLASS(resval, Class_String)) {
+      Entity tmp;
+      Entity *lookup = context_lookup(context, ins->id, &tmp);
+      if (!IS_CLASS(lookup, Class_String)) {
+        raise_error(task, context, "RHS for op '+' must be String.");
+        return;
+      }
+      *task_mutable_resval(task) = string_concat(task, resval, lookup);
+      return;
+    }
+  }
+  _execute_ADD(vm, task, context, ins);
+}
+
 void _execute_INC(VM *vm, Task *task, Context *context,
                   const Instruction *ins) {
   const int inc_amount = ins->op == INC ? 1 : -1;
@@ -505,9 +546,8 @@ void _execute_PUSH(VM *vm, Task *task, Context *context,
     *task_pushstack(task) = entity_primitive(ins->val);
     break;
   case INSTRUCTION_STRING:
-    str = heap_new(task->parent_process->heap, Class_String);
     // TODO: Maybe precompute the length of the string?
-    __string_init(str, ins->str, strlen(ins->str));
+    str = string_new(task->parent_process->heap, ins->str, strlen(ins->str));
     *task_pushstack(task) = entity_object(str);
     break;
   default:
@@ -1299,7 +1339,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       _execute_EXIT(vm, task, context, ins);
       goto end_of_loop;
     case ADD:
-      _execute_ADD(vm, task, context, ins);
+      _execute_ADD_with_string(vm, task, context, ins);
       break;
     case SUB:
       _execute_SUB(vm, task, context, ins);
