@@ -21,6 +21,4 @@ Process *vm_main_process(VM *vm);
 void process_run(Process *process);
 ThreadHandle process_run_in_new_thread(Process *process);
 
-uint32_t process_collect_garbage(Process *process);
-
 #endif /* VM_VIRTUAL_MACHINE_H_ */

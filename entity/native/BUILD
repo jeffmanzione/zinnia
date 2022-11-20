@@ -15,6 +15,7 @@ cc_library(
         "//entity/class",
         "//entity/class:classes",
         "//entity/function",
+        "//entity/string",
         "//vm/process:processes",
         "@memory_wrapper//debug",
     ],

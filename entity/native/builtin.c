@@ -5,9 +5,12 @@
 
 #include "entity/native/builtin.h"
 
+#include <inttypes.h>
+
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
+#include "entity/class/classes.h"
 #include "entity/class/classes_def.h"
 #include "entity/entity.h"
 #include "entity/native/error.h"
@@ -24,6 +27,7 @@
 #include "util/string.h"
 #include "util/util.h"
 #include "vm/intern.h"
+#include "vm/process/context.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 #include "vm/vm.h"
@@ -267,7 +271,7 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   int num_written = 0;
   switch (ptype(&val)) {
   case PRIMITIVE_INT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%lld", pint(&val));
+    num_written = snprintf(buffer, BUFFER_SIZE, "%" PRId64, pint(&val));
     break;
   case PRIMITIVE_FLOAT:
     num_written = snprintf(buffer, BUFFER_SIZE, "%f", pfloat(&val));
@@ -667,7 +671,6 @@ Entity _object_address_int(Task *task, Context *ctx, Object *obj,
 
 Entity _object_address_hex(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
-  Primitive val = args->pri;
   char buffer[BUFFER_SIZE];
   int num_written = snprintf(buffer, BUFFER_SIZE, "%p", obj);
   ASSERT(num_written > 0);

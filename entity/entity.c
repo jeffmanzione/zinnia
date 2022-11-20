@@ -1,5 +1,7 @@
 #include "entity/entity.h"
 
+#include <inttypes.h>
+
 #include "debug/debug.h"
 #include "entity/object.h"
 #include "entity/primitive.h"
@@ -55,7 +57,7 @@ void _primitive_print(const Primitive *p, FILE *file) {
     fprintf(file, "%c", (char)p->_char_val);
     break;
   case PRIMITIVE_INT:
-    fprintf(file, "%lld", p->_int_val);
+    fprintf(file, "%" PRId64, p->_int_val);
     break;
   case PRIMITIVE_FLOAT:
     fprintf(file, "%f", p->_float_val);

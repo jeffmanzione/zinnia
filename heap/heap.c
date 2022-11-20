@@ -18,6 +18,7 @@
 #include "entity/tuple/tuple.h"
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
+#include "struct/struct_defaults.h"
 
 struct _Heap {
   HeapConf config;

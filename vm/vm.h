@@ -30,4 +30,6 @@ void add_reflection_to_process(Process *process);
 Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
                              Context *ctx);
 
+uint32_t process_collect_garbage(Process *process);
+
 #endif /* VM_VM_H_ */

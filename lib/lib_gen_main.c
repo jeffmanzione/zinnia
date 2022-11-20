@@ -12,6 +12,10 @@
 
 #define STRING_BLOCK_LEN 400
 
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 int main(int argc, const char *args[]) {
   const char *out_file_name = args[1];
   FILE *out = FILE_FN(out_file_name, "w");
@@ -53,7 +57,7 @@ int main(int argc, const char *args[]) {
     DEALLOC(input);
     DEALLOC(escaped_input);
 
-    fclose(input_file);
+    // fclose(input_file);
   }
   fclose(out);
   return EXIT_SUCCESS;

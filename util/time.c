@@ -59,9 +59,9 @@ Timestamp current_timestamp() {
                   .month = tm.tm_mon + 1,
                   .day_of_month = tm.tm_mday,
                   .hour = tm.tm_hour,
-                  .minute = tm.tm_minute.second = tm.tm_sec,
-                  .millisecond =
-                      millis_since_epoch - (seconds_since_epoch * 1000)};
+                  .minute = tm.tm_min,
+                  .second = tm.tm_sec,
+                  .millisecond = 0};
   return ts;
 #endif
 #ifdef _WIN32

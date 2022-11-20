@@ -30,6 +30,8 @@
 #include "util/file/file_util.h"
 #include "util/string.h"
 #include "vm/intern.h"
+#include "vm/module_manager.h"
+
 
 Tape *_read_file(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);

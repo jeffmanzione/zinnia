@@ -1,15 +1,16 @@
 #include "program/instruction.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "alloc/alloc.h"
+#include "debug/debug.h"
 #include "util/string_util.h"
 
-#include "debug/debug.h"
 #define OP_FMT "  %-6s"
 #define ID_FMT "%s"
 #define STR_FMT "\'%.*s\'"
-#define INT_FMT "%lld"
+#define INT_FMT "%" PRId64
 #define FLT_FMT "%f"
 #define OP_NO_ARG_FMT "  %s"
 

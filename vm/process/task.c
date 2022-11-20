@@ -65,7 +65,6 @@ Context *task_create_context(Task *task, Object *self, Module *module,
 
 Context *task_back_context(Task *task) {
   uint32_t ins = task->current->ins;
-  Context *to_delete = task->current;
   task->current = task->current->previous_context;
   // This was the last context.
   if (NULL == task->current) {

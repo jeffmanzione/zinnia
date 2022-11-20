@@ -20,6 +20,7 @@ cc_library(
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena",
         "@memory_wrapper//alloc/memory_graph",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 

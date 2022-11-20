@@ -9,9 +9,9 @@ git_repository(
 
 git_repository(
     name = "file_utils",
-    commit = "aee40a3f86094eccca984d735f1b999c20ffcdc5",
+    commit = "7c24cd96fa81849dec3d0c8e2984bf15b32c6a0d",
     remote = "https://github.com/jeffreymanzione/file-utils.git",
-    shallow_since = "1668650126 -0800",
+    shallow_since = "1668915628 +0000",
 )
 
 git_repository(
