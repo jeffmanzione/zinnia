@@ -45,5 +45,7 @@ void optimizer_Nil(OptimizeHelper *oh, const Tape *const tape, int start,
                    int end);
 void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
                        int end);
+void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
+                            int start, int end);
 
 #endif /* PROGRAM_OPTIMIZATION_OPTIMIZERS_H_ */

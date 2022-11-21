@@ -46,6 +46,7 @@ void optimize_init() {
   register_optimizer("Nil", optimizer_Nil);
   register_optimizer("ResAidx", optimizer_ResAidx);
   register_optimizer("Increment", optimizer_Increment);
+  register_optimizer("StringConcat", optimizer_StringConcat);
 }
 
 void optimize_finalize() { alist_delete(optimizers); }
