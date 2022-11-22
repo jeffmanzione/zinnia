@@ -70,7 +70,19 @@ primary_expression_no_constants ->
 
 empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-function_call -> AND(token:SYMBOL_LPAREN, rule:tuple_expression, token:SYMBOL_RPAREN);
+named_argument -> AND(rule:identifier, token:SYMBOL_COLON, rule:conditional_expression);
+
+named_argument_list -> LIST(token:SYMBOL_COMMA, rule:named_argument);
+
+function_call ->
+  AND(
+    token:SYMBOL_LPAREN,
+    OR(
+      rule:named_argument_list,
+      rule:tuple_expression
+    ),
+    token:SYMBOL_RPAREN
+  );
 
 array_indexing -> AND(token:SYMBOL_LBRACKET, rule:tuple_expression, token:SYMBOL_RBRACKET);
 
@@ -413,7 +425,7 @@ const_expression ->
     OR(
       AND(
         token:SYMBOL_LPAREN,
-        rule:function_argument_list,
+        rule:function_parameter_list,
         token:SYMBOL_RPAREN
       ),
       rule:identifier
@@ -421,55 +433,65 @@ const_expression ->
     OPTIONAL(rule:default_value_expression)
   );
 
-function_arg_default_value ->
+function_parameter_default_value ->
   AND(
     token:SYMBOL_EQUALS,
     rule:conditional_expression
   );
 
-function_arg_elt_with_default ->
+function_parameter_elt_with_default ->
   AND(
     rule:identifier,
-    rule:function_arg_default_value
+    rule:function_parameter_default_value
   );
 
-function_arg_elt ->
+function_parameter_elt ->
   OR(
-    rule:function_arg_elt_with_default,
+    rule:function_parameter_elt_with_default,
     rule:identifier
   );
 
-const_function_argument ->
+const_function_parameter ->
   AND(
     token:KEYWORD_CONST,
-    rule:function_arg_elt
+    rule:function_parameter_elt
   );
 
-function_argument ->
+function_parameter ->
   AND(
     OPTIONAL(token:TOKEN_NEWLINE),
     OR(
-      rule:const_function_argument,
-      rule:function_arg_elt
+      rule:const_function_parameter,
+      rule:function_parameter_elt
     ),
     OPTIONAL(token:TOKEN_NEWLINE)
   );
 
-function_argument_list -> LIST(token:SYMBOL_COMMA, rule:function_argument);
+function_parameter_list -> LIST(token:SYMBOL_COMMA, rule:function_parameter);
 
-function_arguments_present ->
+function_named_parameters ->
+  AND(
+    token:SYMBOL_LBRACE,
+    rule:function_parameter_list,
+    token:SYMBOL_RBRACE
+  );
+
+function_parameters_present ->
   AND(
     token:SYMBOL_LPAREN,
-    rule:function_argument_list,
+    OR(
+      rule:function_named_parameters,
+      rule:function_parameter_list
+    ),
     token:SYMBOL_RPAREN
   );
 
-function_arguments_no_args -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+function_parameters_no_parameters -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-function_arguments ->
+function_parameters ->
   OR(
-    rule:function_arguments_present,
-    rule:function_arguments_no_args
+    rule:function_parameters_present,
+    rule:function_parameters_no_parameters
   );
 
 def_identifier -> AND(token:KEYWORD_DEF, rule:identifier);
@@ -477,7 +499,7 @@ def_identifier -> AND(token:KEYWORD_DEF, rule:identifier);
 function_signature_no_qualifier ->
   AND(
     rule:def_identifier,
-    rule:function_arguments
+    rule:function_parameters
   );
 
 function_qualifier -> OR(token:KEYWORD_ASYNC, token:KEYWORD_CONST);
@@ -508,7 +530,7 @@ method_identifier ->
   );
 
 method_signature_no_qualifier ->
-  AND(rule:method_identifier, rule:function_arguments);
+  AND(rule:method_identifier, rule:function_parameters);
 
 method_signature_with_qualifier -> 
   AND(rule:method_signature_no_qualifier, rule:function_qualifier_list);
@@ -521,36 +543,36 @@ method_signature ->
 
 method_definition -> AND(rule:method_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);
 
-new_arg_var -> OR(rule:new_field_arg, rule:identifier);
+new_parameter_var -> OR(rule:new_field_parameter, rule:identifier);
 
-new_field_arg -> AND(token:KEYWORD_FIELD, rule:identifier);
+new_field_parameter -> AND(token:KEYWORD_FIELD, rule:identifier);
 
-new_arg_default_value -> AND(token:SYMBOL_EQUALS, rule:conditional_expression);
+new_parameter_default_value -> AND(token:SYMBOL_EQUALS, rule:conditional_expression);
 
-new_arg_elt_with_default -> AND(rule:new_arg_var, rule:new_arg_default_value);
+new_parameter_elt_with_default -> AND(rule:new_parameter_var, rule:new_parameter_default_value);
 
-new_arg_elt -> OR(rule:new_arg_elt_with_default, rule:new_arg_var);
+new_parameter_elt -> OR(rule:new_parameter_elt_with_default, rule:new_parameter_var);
 
-const_new_argument -> AND(token:KEYWORD_CONST, rule:new_arg_elt);
+const_new_parameter -> AND(token:KEYWORD_CONST, rule:new_parameter_elt);
 
-new_argument ->
+new_parameter ->
   AND(
     OPTIONAL(token:TOKEN_NEWLINE),
-    OR(rule:const_new_argument, rule:new_arg_elt),
+    OR(rule:const_new_parameter, rule:new_parameter_elt),
     OPTIONAL(token:TOKEN_NEWLINE)
   );
 
-new_argument_list -> LIST(token:SYMBOL_COMMA, rule:new_argument);
+new_parameter_list -> LIST(token:SYMBOL_COMMA, rule:new_parameter);
 
-new_arguments_present -> AND(token:SYMBOL_LPAREN, rule:new_argument_list, token:SYMBOL_RPAREN);
+new_parameters_present -> AND(token:SYMBOL_LPAREN, rule:new_parameter_list, token:SYMBOL_RPAREN);
 
-new_arguments_no_args -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
+new_parameters_no_params -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-new_arguments -> OR(rule:new_arguments_present, rule:new_arguments_no_args);
+new_parameters -> OR(rule:new_parameters_present, rule:new_parameters_no_params);
 
 new_identifier -> rule:new_expression;
 
-new_signature_nonconst -> AND(rule:new_identifier, rule:new_arguments);
+new_signature_nonconst -> AND(rule:new_identifier, rule:new_parameters);
 
 new_signature_const -> AND(rule:new_signature_nonconst, token:KEYWORD_CONST);
 
@@ -558,7 +580,7 @@ new_signature -> OR(rule:new_signature_const, rule:new_signature_nonconst);
 
 new_definition -> AND(rule:new_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);
 
-anon_signature_no_qualifier -> rule:function_arguments;
+anon_signature_no_qualifier -> rule:function_parameters;
 
 anon_signature_with_qualifier ->
   AND(

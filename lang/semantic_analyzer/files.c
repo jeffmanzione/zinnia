@@ -10,8 +10,8 @@ void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 FunctionDef populate_function_variant(
     SemanticAnalyzer *analyzer, const SyntaxTree *stree, RuleFn def,
     RuleFn signature_with_qualifier, RuleFn signature_no_qualifier,
-    RuleFn fn_identifier, RuleFn function_arguments_no_args,
-    RuleFn function_arguments_present, FuncDefPopulator def_populator,
+    RuleFn fn_identifier, RuleFn function_parameters_no_parameters,
+    RuleFn function_parameters_present, FuncDefPopulator def_populator,
     FuncArgumentsPopulator args_populator);
 
 FunctionDef populate_function(SemanticAnalyzer *analyzer,
@@ -48,18 +48,18 @@ Argument populate_constructor_argument(SemanticAnalyzer *analyzer,
                   .has_default = false,
                   .default_value = NULL};
   const SyntaxTree *argument = stree;
-  if (IS_SYNTAX(argument, rule_const_new_argument)) {
+  if (IS_SYNTAX(argument, rule_const_new_parameter)) {
     arg.is_const = true;
     arg.const_token = CHILD_SYNTAX_AT(argument, 0)->token;
     argument = CHILD_SYNTAX_AT(argument, 1);
   }
-  if (IS_SYNTAX(argument, rule_new_arg_elt_with_default)) {
+  if (IS_SYNTAX(argument, rule_new_parameter_elt_with_default)) {
     arg.has_default = true;
     arg.default_value = semantic_analyzer_populate(
         analyzer, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(argument, 1), 1));
     argument = CHILD_SYNTAX_AT(argument, 0);
   }
-  if (IS_SYNTAX(argument, rule_new_field_arg)) {
+  if (IS_SYNTAX(argument, rule_new_field_parameter)) {
     arg.arg_name = CHILD_SYNTAX_AT(argument, 1)->token;
     arg.field_token = CHILD_SYNTAX_AT(argument, 0)->token;
     arg.is_field = true;
@@ -74,7 +74,7 @@ Arguments set_constructor_args(SemanticAnalyzer *analyzer,
                                const SyntaxTree *stree, const Token *token) {
   Arguments args = {.token = token, .count_required = 0, .count_optional = 0};
   args.args = alist_create(Argument, 4);
-  if (!IS_SYNTAX(stree, rule_new_argument_list)) {
+  if (!IS_SYNTAX(stree, rule_new_parameter_list)) {
     Argument arg = populate_constructor_argument(analyzer, stree);
     add_arg(&args, &arg);
     return args;
@@ -129,8 +129,8 @@ FunctionDef populate_method(SemanticAnalyzer *analyzer,
   return populate_function_variant(
       analyzer, stree, rule_method_definition,
       rule_method_signature_with_qualifier, rule_method_signature_no_qualifier,
-      rule_method_identifier, rule_function_arguments_no_args,
-      rule_function_arguments_present, set_method_def, set_function_args);
+      rule_method_identifier, rule_function_parameters_no_parameters,
+      rule_function_parameters_present, set_method_def, set_function_args);
 }
 
 void set_new_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
@@ -144,7 +144,7 @@ FunctionDef populate_constructor(SemanticAnalyzer *analyzer,
   return populate_function_variant(
       analyzer, stree, rule_new_definition, rule_new_signature_const,
       rule_new_signature_nonconst, rule_new_expression,
-      rule_new_arguments_no_args, rule_new_arguments_present, set_new_def,
+      rule_new_parameters_no_params, rule_new_parameters_present, set_new_def,
       set_constructor_args);
 }
 
@@ -377,8 +377,8 @@ void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
 FunctionDef populate_function_variant(
     SemanticAnalyzer *analyzer, const SyntaxTree *stree, RuleFn def,
     RuleFn signature_with_qualifier, RuleFn signature_no_qualifier,
-    RuleFn fn_identifier, RuleFn function_arguments_no_args,
-    RuleFn function_arguments_present, FuncDefPopulator def_populator,
+    RuleFn fn_identifier, RuleFn function_parameters_no_parameters,
+    RuleFn function_parameters_present, FuncDefPopulator def_populator,
     FuncArgumentsPopulator args_populator) {
   FunctionDef func = {.def_token = NULL,
                       .fn_name = NULL,
@@ -405,10 +405,10 @@ FunctionDef populate_function_variant(
   ASSERT(CHILD_IS_SYNTAX(func_sig, 0, fn_identifier));
   def_populator(CHILD_SYNTAX_AT(func_sig, 0), &func);
 
-  func.has_args =
-      !IS_SYNTAX(CHILD_SYNTAX_AT(func_sig, 1), function_arguments_no_args);
+  func.has_args = !IS_SYNTAX(CHILD_SYNTAX_AT(func_sig, 1),
+                             function_parameters_no_parameters);
   if (func.has_args) {
-    ASSERT(CHILD_IS_SYNTAX(func_sig, 1, function_arguments_present));
+    ASSERT(CHILD_IS_SYNTAX(func_sig, 1, function_parameters_present));
     const SyntaxTree *func_args =
         CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(func_sig, 1), 1);
     func.args =
@@ -425,7 +425,7 @@ FunctionDef populate_function(SemanticAnalyzer *analyzer,
       analyzer, stree, rule_function_definition,
       rule_function_signature_with_qualifier,
       rule_function_signature_no_qualifier, rule_def_identifier,
-      rule_function_arguments_no_args, rule_function_arguments_present,
+      rule_function_parameters_no_parameters, rule_function_parameters_present,
       set_function_def, set_function_args);
 }
 

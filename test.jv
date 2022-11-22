@@ -1,0 +1,7 @@
+import io
+
+def test(o) {
+  o.a + o.b + o.c
+}
+
+io.println(test(a: 5, b: 12, c: 20))

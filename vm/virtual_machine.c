@@ -181,8 +181,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
-      if ((NULL == lookup) ||                                                  \
-          ((NULL != lookup) && (PRIMITIVE != lookup->type))) {                 \
+      if (NULL == lookup || NULL != lookup && PRIMITIVE != lookup->type) {     \
         raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
@@ -510,6 +509,9 @@ void _execute_PEEK(VM *vm, Task *task, Context *context,
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
     *task_mutable_resval(task) = *task_peekstack(task);
+    break;
+  case INSTRUCTION_PRIMITIVE:
+    *task_mutable_resval(task) = *task_peekstack_n(task, pint(&ins->val));
     break;
   case INSTRUCTION_ID:
     member = context_lookup(context, ins->id, &tmp);
@@ -1339,7 +1341,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       _execute_EXIT(vm, task, context, ins);
       goto end_of_loop;
     case ADD:
-      _execute_ADD_with_string(vm, task, context, ins);
+      _execute_ADD(vm, task, context, ins);
       break;
     case SUB:
       _execute_SUB(vm, task, context, ins);
