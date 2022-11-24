@@ -46,6 +46,20 @@ DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression_no_constants, Tape) {
   ExpressionTree *exp;
 };
 
+typedef struct {
+  const Token *id;
+  const Token *colon;
+  ExpressionTree *value;
+} NamedArgument;
+
+DEFINE_EXPRESSION_WITH_PRODUCER(named_argument_list, Tape) {
+  Token *token;
+  // NamedArgument
+  AList *list;
+};
+
+DEFINE_EXPRESSION_WITH_PRODUCER(named_argument, Tape) { NamedArgument arg; };
+
 typedef enum {
   Postfix_none,
   Postfix_field,
@@ -182,6 +196,7 @@ typedef struct {
 typedef struct {
   const Token *token;
   int count_required, count_optional;
+  bool is_named;
   AList *args;
 } Arguments;
 

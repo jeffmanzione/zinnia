@@ -43,6 +43,8 @@ REGISTRATION_FN(semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(for_statement);
   REGISTER_EXPRESSION_WITH_PRODUCER(while_statement);
   REGISTER_EXPRESSION_WITH_PRODUCER(file_level_statement_list);
+  REGISTER_EXPRESSION_WITH_PRODUCER(named_argument);
+  REGISTER_EXPRESSION_WITH_PRODUCER(named_argument_list);
 }
 
 IMPL_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
@@ -216,6 +218,86 @@ PRODUCE_IMPL(primary_expression_no_constants, SemanticAnalyzer *analyzer,
 
 DELETE_IMPL(primary_expression_no_constants, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, primary_expression_no_constants->exp);
+}
+
+void _populate_named_argument(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree, NamedArgument *arg) {
+
+  arg->id = CHILD_SYNTAX_AT(stree, 0)->token;
+  arg->colon = CHILD_SYNTAX_AT(stree, 1)->token;
+  arg->value = semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 2));
+}
+
+POPULATE_IMPL(named_argument_list, const SyntaxTree *stree,
+              SemanticAnalyzer *analyzer) {
+  named_argument_list->list = alist_create(NamedArgument, DEFAULT_ARRAY_SZ);
+  _populate_named_argument(analyzer, CHILD_SYNTAX_AT(stree, 0),
+                           alist_add(named_argument_list->list));
+  DECLARE_IF_TYPE(tuple1, rule_named_argument_list1, CHILD_SYNTAX_AT(stree, 1));
+  // First comma.
+  named_argument_list->token = CHILD_SYNTAX_AT(tuple1, 0)->token;
+  while (true) {
+    ASSERT(CHILD_IS_TOKEN(tuple1, 0, SYMBOL_COMMA));
+    _populate_named_argument(analyzer, CHILD_SYNTAX_AT(tuple1, 1),
+                             alist_add(named_argument_list->list));
+    if (CHILD_COUNT(tuple1) == 2) {
+      break;
+    }
+    ASSERT(CHILD_COUNT(tuple1) == 3);
+    ASSIGN_IF_TYPE(tuple1, rule_named_argument_list1,
+                   CHILD_SYNTAX_AT(tuple1, 2));
+  }
+}
+
+PRODUCE_IMPL(named_argument_list, SemanticAnalyzer *analyzer, Tape *target) {
+  int num_ins =
+      tape_ins_text(target, PUSH, OBJECT_NAME, named_argument_list->token);
+  num_ins += tape_ins_no_arg(target, CLLN, named_argument_list->token);
+  num_ins += tape_ins_no_arg(target, PUSH, named_argument_list->token);
+
+  AL_iter iter = alist_iter(named_argument_list->list);
+  for (; al_has(&iter); al_inc(&iter)) {
+    NamedArgument *arg = (NamedArgument *)al_value(&iter);
+    num_ins += semantic_analyzer_produce(analyzer, arg->value, target);
+    num_ins += tape_ins_no_arg(target, PUSH, arg->colon);
+    num_ins += tape_ins_int(target, PEEK, 1, arg->colon);
+    num_ins += tape_ins(target, FLD, arg->id);
+  }
+
+  num_ins += tape_ins_no_arg(target, RES, named_argument_list->token);
+  return num_ins;
+}
+
+DELETE_IMPL(named_argument_list, SemanticAnalyzer *analyzer) {
+  AL_iter iter = alist_iter(named_argument_list->list);
+  for (; al_has(&iter); al_inc(&iter)) {
+    NamedArgument *arg = (NamedArgument *)al_value(&iter);
+    semantic_analyzer_delete(analyzer, arg->value);
+  }
+  alist_delete(named_argument_list->list);
+}
+
+POPULATE_IMPL(named_argument, const SyntaxTree *stree,
+              SemanticAnalyzer *analyzer) {
+  _populate_named_argument(analyzer, stree, &named_argument->arg);
+}
+
+PRODUCE_IMPL(named_argument, SemanticAnalyzer *analyzer, Tape *target) {
+  int num_ins =
+      tape_ins_text(target, PUSH, OBJECT_NAME, named_argument->arg.colon);
+  num_ins += tape_ins_no_arg(target, CLLN, named_argument->arg.colon);
+  num_ins += tape_ins_no_arg(target, PUSH, named_argument->arg.colon);
+  num_ins +=
+      semantic_analyzer_produce(analyzer, named_argument->arg.value, target);
+  num_ins += tape_ins_no_arg(target, PUSH, named_argument->arg.colon);
+  num_ins += tape_ins_int(target, PEEK, 1, named_argument->arg.colon);
+  num_ins += tape_ins(target, FLD, named_argument->arg.id);
+  num_ins += tape_ins_no_arg(target, RES, named_argument->arg.colon);
+  return num_ins;
+}
+
+DELETE_IMPL(named_argument, SemanticAnalyzer *analyzer) {
+  semantic_analyzer_delete(analyzer, named_argument->arg.value);
 }
 
 void postfix_period(const SyntaxTree *suffix, AList *suffixes) {
@@ -873,12 +955,12 @@ Argument populate_argument(SemanticAnalyzer *analyzer,
                   .has_default = false,
                   .default_value = NULL};
   const SyntaxTree *argument = stree;
-  if (IS_SYNTAX(argument, rule_const_function_argument)) {
+  if (IS_SYNTAX(argument, rule_const_function_parameter)) {
     arg.is_const = true;
     arg.const_token = CHILD_SYNTAX_AT(argument, 0)->token;
     argument = CHILD_SYNTAX_AT(argument, 1);
   }
-  if (IS_SYNTAX(argument, rule_function_arg_elt_with_default)) {
+  if (IS_SYNTAX(argument, rule_function_parameter_elt_with_default)) {
     arg.has_default = true;
     arg.default_value = semantic_analyzer_populate(
         analyzer, CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(argument, 1), 1));
@@ -900,9 +982,18 @@ void add_arg(Arguments *args, Argument *arg) {
 
 Arguments set_function_args(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
                             const Token *token) {
-  Arguments args = {.token = token, .count_required = 0, .count_optional = 0};
+  Arguments args = {
+      .token = token,
+      .count_required = 0,
+      .count_optional = 0,
+      .is_named = false,
+  };
   args.args = alist_create(Argument, 4);
-  if (!IS_SYNTAX(stree, rule_function_argument_list)) {
+  if (IS_SYNTAX(stree, rule_function_named_parameters)) {
+    args.is_named = true;
+    stree = CHILD_SYNTAX_AT(stree, 1);
+  }
+  if (!IS_SYNTAX(stree, rule_function_parameter_list)) {
     Argument arg = populate_argument(analyzer, stree);
     add_arg(&args, &arg);
     return args;
@@ -997,19 +1088,32 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
   for (i = 0; i < num_args; ++i) {
     Argument *arg = (Argument *)alist_get(args->args, i);
     if (arg->has_default) {
-      num_ins += tape_ins_no_arg(tape, PEEK, args->token);
-      num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+      if (args->is_named) {
+        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
+        num_ins += tape_ins(tape, GET, arg->arg_name);
 
-      Tape *tmp = tape_create();
-      int default_ins =
-          semantic_analyzer_produce(analyzer, arg->default_value, tmp);
-      num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
-      num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
-                                 arg->arg_name);
-      num_ins += tape_ins_int(tape, TGET, i, arg->arg_name);
-      num_ins +=
-          tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
-      tape_append(tape, tmp);
+        Tape *tmp = tape_create();
+        int default_ins =
+            semantic_analyzer_produce(analyzer, arg->default_value, tmp);
+
+        num_ins +=
+            tape_ins_int(tape, IF, default_ins, arg->arg_name) + default_ins;
+        tape_append(tape, tmp);
+      } else {
+        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
+        num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+
+        Tape *tmp = tape_create();
+        int default_ins =
+            semantic_analyzer_produce(analyzer, arg->default_value, tmp);
+        num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
+        num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
+                                   arg->arg_name);
+        num_ins += tape_ins_int(tape, TGET, i, args->token);
+        num_ins +=
+            tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
+        tape_append(tape, tmp);
+      }
     } else {
       if (i == num_args - 1) {
         // Pop for last arg.
@@ -1017,7 +1121,11 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
       } else {
         num_ins += tape_ins_no_arg(tape, PEEK, arg->arg_name);
       }
-      num_ins += tape_ins_int(tape, TGET, i, args->token);
+      if (args->is_named) {
+        num_ins += tape_ins(tape, GET, arg->arg_name);
+      } else {
+        num_ins += tape_ins_int(tape, TGET, i, args->token);
+      }
     }
     num_ins += produce_argument(arg, tape);
   }
@@ -1025,6 +1133,13 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
 }
 
 int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
+  if (args->is_named) {
+    int num_ins = tape_ins_int(tape, IF, 2, args->token);
+    num_ins += tape_ins_text(tape, PUSH, OBJECT_NAME, args->token);
+    num_ins += tape_ins_no_arg(tape, CLLN, args->token);
+    num_ins += tape_ins_no_arg(tape, PUSH, args->token);
+    return num_ins + produce_all_arguments(analyzer, args, tape);
+  }
   int num_args = alist_len(args->args);
   int i, num_ins = 0;
   if (num_args == 1) {
@@ -1146,9 +1261,10 @@ FunctionDef populate_anon_function(SemanticAnalyzer *analyzer,
     func.def_token = CHILD_SYNTAX_AT(func_arg_tuple, 0)->token;
   }
   func.fn_name = NULL;
-  func.has_args = !IS_SYNTAX(func_arg_tuple, rule_function_arguments_no_args);
+  func.has_args =
+      !IS_SYNTAX(func_arg_tuple, rule_function_parameters_no_parameters);
   if (func.has_args) {
-    ASSERT(IS_SYNTAX(func_arg_tuple, rule_function_arguments_present) ||
+    ASSERT(IS_SYNTAX(func_arg_tuple, rule_function_parameters_present) ||
            IS_SYNTAX(func_arg_tuple, rule_identifier));
     const SyntaxTree *func_args = CHILD_IS_SYNTAX(stree, 0, rule_identifier)
                                       ? func_arg_tuple
