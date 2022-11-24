@@ -196,6 +196,7 @@ typedef struct {
 typedef struct {
   const Token *token;
   int count_required, count_optional;
+  bool is_named;
   AList *args;
 } Arguments;
 

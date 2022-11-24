@@ -982,8 +982,17 @@ void add_arg(Arguments *args, Argument *arg) {
 
 Arguments set_function_args(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
                             const Token *token) {
-  Arguments args = {.token = token, .count_required = 0, .count_optional = 0};
+  Arguments args = {
+      .token = token,
+      .count_required = 0,
+      .count_optional = 0,
+      .is_named = false,
+  };
   args.args = alist_create(Argument, 4);
+  if (IS_SYNTAX(stree, rule_function_named_parameters)) {
+    args.is_named = true;
+    stree = CHILD_SYNTAX_AT(stree, 1);
+  }
   if (!IS_SYNTAX(stree, rule_function_parameter_list)) {
     Argument arg = populate_argument(analyzer, stree);
     add_arg(&args, &arg);
@@ -1079,19 +1088,32 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
   for (i = 0; i < num_args; ++i) {
     Argument *arg = (Argument *)alist_get(args->args, i);
     if (arg->has_default) {
-      num_ins += tape_ins_no_arg(tape, PEEK, args->token);
-      num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+      if (args->is_named) {
+        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
+        num_ins += tape_ins(tape, GET, arg->arg_name);
 
-      Tape *tmp = tape_create();
-      int default_ins =
-          semantic_analyzer_produce(analyzer, arg->default_value, tmp);
-      num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
-      num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
-                                 arg->arg_name);
-      num_ins += tape_ins_int(tape, TGET, i, arg->arg_name);
-      num_ins +=
-          tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
-      tape_append(tape, tmp);
+        Tape *tmp = tape_create();
+        int default_ins =
+            semantic_analyzer_produce(analyzer, arg->default_value, tmp);
+
+        num_ins +=
+            tape_ins_int(tape, IF, default_ins, arg->arg_name) + default_ins;
+        tape_append(tape, tmp);
+      } else {
+        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
+        num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+
+        Tape *tmp = tape_create();
+        int default_ins =
+            semantic_analyzer_produce(analyzer, arg->default_value, tmp);
+        num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
+        num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
+                                   arg->arg_name);
+        num_ins += tape_ins_int(tape, TGET, i, args->token);
+        num_ins +=
+            tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
+        tape_append(tape, tmp);
+      }
     } else {
       if (i == num_args - 1) {
         // Pop for last arg.
@@ -1099,7 +1121,11 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
       } else {
         num_ins += tape_ins_no_arg(tape, PEEK, arg->arg_name);
       }
-      num_ins += tape_ins_int(tape, TGET, i, args->token);
+      if (args->is_named) {
+        num_ins += tape_ins(tape, GET, arg->arg_name);
+      } else {
+        num_ins += tape_ins_int(tape, TGET, i, args->token);
+      }
     }
     num_ins += produce_argument(arg, tape);
   }
@@ -1107,6 +1133,13 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, Arguments *args,
 }
 
 int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
+  if (args->is_named) {
+    int num_ins = tape_ins_int(tape, IF, 2, args->token);
+    num_ins += tape_ins_text(tape, PUSH, OBJECT_NAME, args->token);
+    num_ins += tape_ins_no_arg(tape, CLLN, args->token);
+    num_ins += tape_ins_no_arg(tape, PUSH, args->token);
+    return num_ins + produce_all_arguments(analyzer, args, tape);
+  }
   int num_args = alist_len(args->args);
   int i, num_ins = 0;
   if (num_args == 1) {
