@@ -1,6 +1,10 @@
 import dynamic
 
-self._custom = dynamic.import_c_library('./bazel-bin/examples/dynamic/_custom.dll', '_custom', '_init_custom')
+self._custom = dynamic.import_c_library(
+  file_name: './bazel-bin/examples/dynamic/_custom.dll',
+  module_name: '_custom',
+  init_fn_name: '_init_custom'
+)
 
 def sin(x) {
   self._custom.sin(x)

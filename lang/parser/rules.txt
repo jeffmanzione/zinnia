@@ -70,7 +70,17 @@ primary_expression_no_constants ->
 
 empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-named_argument -> AND(rule:identifier, token:SYMBOL_COLON, rule:conditional_expression);
+
+named_argument ->
+  AND(
+    OPTIONAL(token:TOKEN_NEWLINE),
+    rule:identifier,
+    OPTIONAL(token:TOKEN_NEWLINE),
+    token:SYMBOL_COLON,
+    OPTIONAL(token:TOKEN_NEWLINE),
+    rule:conditional_expression,
+    OPTIONAL(token:TOKEN_NEWLINE)
+);
 
 named_argument_list -> LIST(token:SYMBOL_COMMA, rule:named_argument);
 

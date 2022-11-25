@@ -63,7 +63,7 @@ def _prioritize_bin(file):
     else:
         return 1
 
-def jeff_vm_library(name, srcs, bin):
+def jeff_vm_library(name, srcs, bin = True):
     return _jeff_vm_library(name = name, srcs = srcs, bin = bin)
 
 def _jeff_vm_binary_impl(ctx):

@@ -107,6 +107,7 @@ class FileEvent {
   }
 }
 
+/*
 class FileWatcher {
   field _fw, listeners, is_started
   new() {
@@ -160,6 +161,7 @@ class FileWatcher {
     }
   }
 }
+*/
 
 def fprint(f, a) {
   f.write(str(a))

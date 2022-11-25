@@ -1,6 +1,6 @@
 import error
 
-def import_c_library(file_name, module_name, init_fn_name) {
+def import_c_library({file_name, module_name, init_fn_name}) {
   if ~(file_name is String) {
     raise error.Error('file_name must be a String')
   }
