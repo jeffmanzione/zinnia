@@ -869,7 +869,7 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
+    return raise_error(task, ctx, "$set_method() can only be called with a Tuple.");
   }
   Tuple *t_args = (Tuple *)args->obj->_internal_obj;
   if (2 != tuple_size(t_args)) {

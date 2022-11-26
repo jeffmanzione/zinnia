@@ -38,6 +38,7 @@ cc_binary(
         "//lang/lexer:lang_lexer",
         "//lang/parser:lang_parser",
         "//program:tape",
+        "//vm:module_manager",
         "@c_data_structures//struct:q",
         "@file_utils//util/file:file_info",
         "@file_utils//util/file:sfile",

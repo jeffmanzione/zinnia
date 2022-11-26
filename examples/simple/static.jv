@@ -1,0 +1,9 @@
+import io
+
+class Message {
+  static HELLO = 'Hello, world!'
+  static BYE = 'Goodbye!'
+}
+
+io.println(Message.HELLO)
+io.println(Message.BYE)

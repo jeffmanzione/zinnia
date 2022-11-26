@@ -33,17 +33,18 @@ Process *vm_create_process(VM *vm) {
   return process;
 }
 
-Object *class_get_function_ref(const Class *cls, const char name[]) {
+Entity *class_get_field(const Class *cls, const char name[]) {
   const Class *class = cls;
   while (NULL != class) {
-    Entity *fref = object_get(cls->_reflection, name);
-    if (NULL != fref && fref->obj->_class == Class_FunctionRef) {
-      return fref->obj;
+    Entity *field = object_get(cls->_reflection, name);
+    if (NULL != field) {
+      return field;
     }
     class = class->_super;
   }
   return NULL;
 }
+
 
 Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
                              Context *ctx) {
@@ -55,11 +56,11 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
     if (NULL != f) {
       member = entity_object(f->_reflection);
     } else {
-      Object *fref = class_get_function_ref(obj->_class, field);
-      if (NULL == fref) {
+      Entity *field_value = class_get_field(obj->_class_obj, field);
+      if (NULL == field_value) {
         return NONE_ENTITY;
       }
-      return entity_object(fref);
+      return *field_value;
     }
   } else {
     member = *member_ptr;

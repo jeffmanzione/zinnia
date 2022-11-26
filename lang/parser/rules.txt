@@ -70,7 +70,6 @@ primary_expression_no_constants ->
 
 empty_parens -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
-
 named_argument ->
   AND(
     OPTIONAL(token:TOKEN_NEWLINE),
@@ -624,11 +623,20 @@ identifier_list -> LIST(token:SYMBOL_COMMA, rule:identifier);
 
 field_statement -> AND(token:KEYWORD_FIELD, rule:identifier_list);
 
+static_field_statement ->
+  AND(
+    token:KEYWORD_STATIC,
+    rule:identifier,
+    token:SYMBOL_EQUALS,
+    rule:conditional_expression
+  );
+
 class_statement ->
   AND(
     OR(
       rule:new_definition,
       rule:field_statement,
+      rule:static_field_statement,
       rule:method_definition
     ),
     OPTIONAL(token:TOKEN_NEWLINE)
