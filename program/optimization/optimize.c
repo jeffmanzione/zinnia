@@ -116,14 +116,19 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
   int i, old_len = tape_size(t);
   AList *old_index = alist_create(int, DEFAULT_ARRAY_SZ);
   AList *new_index = alist_create(int, DEFAULT_ARRAY_SZ);
+  bool in_class = false;
   for (i = 0; i <= old_len; ++i) {
     char *text = NULL;
-    if (NULL != (text = map_lookup(&oh->i_to_class_ends, as_ptr(i)))) {
+    if (in_class &&
+        NULL != (text = map_lookup(&oh->i_to_class_ends, as_ptr(i)))) {
+      in_class = false;
       Token tok;
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       tape_endclass(new_tape, &tok);
     }
-    if (NULL != (text = map_lookup(&oh->i_to_class_starts, as_ptr(i)))) {
+    if (!in_class &&
+        NULL != (text = map_lookup(&oh->i_to_class_starts, as_ptr(i)))) {
+      in_class = true;
       Token tok;
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       const ClassRef *cref = tape_get_class(t, text);
@@ -143,6 +148,12 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       for (; kl_has(&fields); kl_inc(&fields)) {
         FieldRef *fref = (FieldRef *)kl_value(&fields);
         tape_field(new_tape, fref->name);
+      }
+      // Handles case where class has no body.
+      if (NULL != map_lookup(&oh->i_to_class_ends, as_ptr(i)) &&
+          0 == strcmp(text, map_lookup(&oh->i_to_class_ends, as_ptr(i)))) {
+        in_class = false;
+        tape_endclass(new_tape, &tok);
       }
     }
     FunctionRef *fref;

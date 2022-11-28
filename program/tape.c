@@ -138,7 +138,8 @@ ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
 }
 
 void tape_end_class_at_index(Tape *tape, uint32_t index) {
-  ASSERT(NOT_NULL(tape), NOT_NULL(tape->current_class));
+  ASSERT(NOT_NULL(tape));
+  ASSERT(NOT_NULL(tape->current_class));
   tape->current_class->end_index = index;
   tape->current_class = NULL;
 }
@@ -277,7 +278,7 @@ void tape_write(const Tape *tape, FILE *file) {
     }
     if (in_class && al_has(&cls_iter)) {
       ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
-      if (class_ref->end_index == i || class_ref->end_index == i+1) {
+      if (class_ref->end_index == i || class_ref->end_index == i + 1) {
         in_class = false;
         fprintf(file, "endclass  ; %s\n", class_ref->name);
         al_inc(&cls_iter);

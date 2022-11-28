@@ -181,10 +181,10 @@ void populate_field_statements(const SyntaxTree *stree, ClassDef *class) {
   }
 }
 
-
-void populate_static_field_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree, ClassDef *class) {
+void populate_static_field_statement(SemanticAnalyzer *analyzer,
+                                     const SyntaxTree *stree, ClassDef *class) {
   StaticDef *def = alist_add(class->statics);
-  def->static_token = CHILD_SYNTAX_AT(stree,0)->token;
+  def->static_token = CHILD_SYNTAX_AT(stree, 0)->token;
   def->name = CHILD_SYNTAX_AT(stree, 1)->token;
   def->value = semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 3));
 }
@@ -324,7 +324,8 @@ int produce_constructor(SemanticAnalyzer *analyzer, ClassDef *class,
   return num_ins;
 }
 
-int produce_static(SemanticAnalyzer *analyzer, ClassDef *class, StaticDef *sta, Tape *tape) {
+int produce_static(SemanticAnalyzer *analyzer, ClassDef *class, StaticDef *sta,
+                   Tape *tape) {
   int num_ins = 0;
   num_ins += semantic_analyzer_produce(analyzer, sta->value, tape);
   num_ins += tape_ins_no_arg(tape, PUSH, sta->static_token);
@@ -342,8 +343,6 @@ int produce_statics(SemanticAnalyzer *analyzer, ClassDef *class, Tape *tape) {
   }
   return num_ins;
 }
-
-
 
 int produce_class(SemanticAnalyzer *analyzer, ClassDef *class, Tape *tape) {
   int num_ins = 0;
