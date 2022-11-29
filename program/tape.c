@@ -138,7 +138,8 @@ ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
 }
 
 void tape_end_class_at_index(Tape *tape, uint32_t index) {
-  ASSERT(NOT_NULL(tape), NOT_NULL(tape->current_class));
+  ASSERT(NOT_NULL(tape));
+  ASSERT(NOT_NULL(tape->current_class));
   tape->current_class->end_index = index;
   tape->current_class = NULL;
 }
@@ -238,17 +239,9 @@ void tape_write(const Tape *tape, FILE *file) {
   bool in_class = false;
   int i;
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
-    if (al_has(&cls_iter)) {
+    if (!in_class && al_has(&cls_iter)) {
       ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
-      if (in_class && class_ref->end_index == i) {
-        in_class = false;
-        fprintf(file, "endclass  ; %s\n", class_ref->name);
-        al_inc(&cls_iter);
-      }
-    }
-    if (al_has(&cls_iter)) {
-      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
-      if (!in_class && class_ref->start_index == i) {
+      if (class_ref->start_index == i) {
         in_class = true;
         cls_func_iter = alist_iter((AList *)&class_ref->func_refs._list);
         fprintf(file, "class %s\n", class_ref->name);
@@ -282,6 +275,14 @@ void tape_write(const Tape *tape, FILE *file) {
         fprintf(file, "%*s #%d %d", lpadding, PADDING, sm->line, sm->col);
       }
       fprintf(file, "\n");
+    }
+    if (in_class && al_has(&cls_iter)) {
+      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
+      if (class_ref->end_index == i || class_ref->end_index == i + 1) {
+        in_class = false;
+        fprintf(file, "endclass  ; %s\n", class_ref->name);
+        al_inc(&cls_iter);
+      }
     }
   }
 }

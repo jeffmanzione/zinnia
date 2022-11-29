@@ -14,13 +14,16 @@
 #include "util/file/file_info.h"
 #include "util/file/sfile.h"
 #include "vm/intern.h"
+#include "vm/module_manager.h"
 
 int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
   strings_init();
 
-  FileInfo *fi = file_info("C:\\Users\\jeffr\\git\\jeff-vm\\test.jv");
+  const char *fn = args[1];
+
+  FileInfo *fi = file_info(fn);
 
   // while (true) {
   Q tokens;
@@ -38,13 +41,8 @@ int main(int argc, const char *args[]) {
   printf("\n");
 
   if (Q_size(&tokens) > 1) {
-    Q_iter iter = Q_iterator(&tokens);
-    for (; Q_has(&iter); Q_inc(&iter)) {
-      Token *token = *((Token **)Q_value(&iter));
-      if (token->type != TOKEN_NEWLINE) {
-        printf("EXTRA TOKEN %d '%s'\n", token->type, token->text);
-      }
-    }
+    fatal_on_token(fn, fi, &tokens);
+    return -1;
   } else {
     SemanticAnalyzer sa;
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
@@ -62,6 +60,8 @@ int main(int argc, const char *args[]) {
     semantic_analyzer_finalize(&sa);
   }
 
+#ifdef DEBUG
+
   parser_delete_st(&parser, stree);
   parser_finalize(&parser);
 
@@ -74,5 +74,6 @@ int main(int argc, const char *args[]) {
   strings_finalize();
   intern_finalize();
   alloc_finalize();
+#endif
   return 0;
 }

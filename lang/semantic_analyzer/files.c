@@ -181,6 +181,14 @@ void populate_field_statements(const SyntaxTree *stree, ClassDef *class) {
   }
 }
 
+void populate_static_field_statement(SemanticAnalyzer *analyzer,
+                                     const SyntaxTree *stree, ClassDef *class) {
+  StaticDef *def = alist_add(class->statics);
+  def->static_token = CHILD_SYNTAX_AT(stree, 0)->token;
+  def->name = CHILD_SYNTAX_AT(stree, 1)->token;
+  def->value = semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 3));
+}
+
 void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
                               const SyntaxTree *stree) {
   if (IS_SYNTAX(stree, rule_field_statement)) {
@@ -191,6 +199,8 @@ void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
   } else if (IS_SYNTAX(stree, rule_new_definition)) {
     class->constructor = populate_constructor(analyzer, stree);
     class->has_constructor = true;
+  } else if (IS_SYNTAX(stree, rule_static_field_statement)) {
+    populate_static_field_statement(analyzer, stree, class);
   } else {
     FATALF("Unknown class_statement.");
   }
@@ -226,6 +236,7 @@ ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
   class.has_constructor = false;
   class.has_annot = false;
   class.fields = alist_create(FieldDef, 4);
+  class.statics = alist_create(StaticDef, 4);
   class.methods = alist_create(FunctionDef, 6);
   populate_class_def(&class.def, CHILD_SYNTAX_AT(stree, 1));
 
@@ -248,14 +259,23 @@ void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
   if (class->has_constructor) {
     delete_function(analyzer, &class->constructor);
   }
+
   alist_delete(class->def.parent_classes);
   alist_delete(class->fields);
+
   int i;
+  for (i = 0; i < alist_len(class->statics); ++i) {
+    StaticDef *sta = (StaticDef *)alist_get(class->statics, i);
+    semantic_analyzer_delete(analyzer, sta->value);
+  }
+  alist_delete(class->statics);
+
   for (i = 0; i < alist_len(class->methods); ++i) {
     FunctionDef *func = (FunctionDef *)alist_get(class->methods, i);
     delete_function(analyzer, func);
   }
   alist_delete(class->methods);
+
   if (class->has_annot) {
     delete_annotation(analyzer, &class->annot);
   }
@@ -300,6 +320,26 @@ int produce_constructor(SemanticAnalyzer *analyzer, ClassDef *class,
   } else {
     num_ins += tape_ins_text(tape, RES, SELF, class->def.name.token);
     num_ins += tape_ins_no_arg(tape, RET, class->def.name.token);
+  }
+  return num_ins;
+}
+
+int produce_static(SemanticAnalyzer *analyzer, ClassDef *class, StaticDef *sta,
+                   Tape *tape) {
+  int num_ins = 0;
+  num_ins += semantic_analyzer_produce(analyzer, sta->value, tape);
+  num_ins += tape_ins_no_arg(tape, PUSH, sta->static_token);
+  num_ins += tape_ins(tape, RES, class->def.name.token);
+  num_ins += tape_ins(tape, FLD, sta->name);
+  return num_ins;
+}
+
+int produce_statics(SemanticAnalyzer *analyzer, ClassDef *class, Tape *tape) {
+  int num_ins = 0;
+  int num_statics = alist_len(class->statics);
+  for (int i = 0; i < num_statics; ++i) {
+    StaticDef *sta = (StaticDef *)alist_get(class->statics, i);
+    num_ins += produce_static(analyzer, class, sta, tape);
   }
   return num_ins;
 }
@@ -559,6 +599,11 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   for (i = 0; i < alist_len(module->imports); ++i) {
     Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->module_name);
+  }
+  // Statics
+  for (i = 0; i < alist_len(module->classes); ++i) {
+    ClassDef *class = (ClassDef *)alist_get(module->classes, i);
+    num_ins += produce_statics(analyzer, class, tape);
   }
   // Annotations
   for (i = 0; i < alist_len(module->classes); ++i) {

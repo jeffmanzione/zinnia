@@ -1198,19 +1198,22 @@ int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
 }
 
 int produce_function_name(FunctionDef *func, Tape *tape) {
-  // TODO: Handle async special functions.
   switch (func->special_method) {
   case SpecialMethod__NONE:
     return func->is_async ? tape_label_async(tape, func->fn_name)
                           : tape_label(tape, func->fn_name);
   case SpecialMethod__EQUIV:
-    return tape_label_text(tape, EQ_FN_NAME);
+    return func->is_async ? tape_label_text_async(tape, EQ_FN_NAME)
+                          : tape_label_text(tape, EQ_FN_NAME);
   case SpecialMethod__NEQUIV:
-    return tape_label_text(tape, NEQ_FN_NAME);
+    return func->is_async ? tape_label_text_async(tape, NEQ_FN_NAME)
+                          : tape_label_text(tape, NEQ_FN_NAME);
   case SpecialMethod__ARRAY_INDEX:
-    return tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
+    return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_INDEX_KEY)
+                          : tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
   case SpecialMethod__ARRAY_SET:
-    return tape_label_text(tape, ARRAYLIKE_SET_KEY);
+    return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_SET_KEY)
+                          : tape_label_text(tape, ARRAYLIKE_SET_KEY);
   default:
     FATALF("Unknown SpecialMethod.");
   }

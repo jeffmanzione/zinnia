@@ -347,6 +347,12 @@ typedef struct {
 } FieldDef;
 
 typedef struct {
+  const Token *name;
+  const Token *static_token;
+  ExpressionTree *value;
+} StaticDef;
+
+typedef struct {
   const Token *prefix;
   const Token *class_name;
   bool is_called, has_args;
@@ -357,6 +363,7 @@ typedef struct {
   ClassSignature def;
   Annotation annot;
   AList *fields;
+  AList *statics;
   bool has_constructor, has_annot;
   FunctionDef constructor;
   AList *methods; // Function.
