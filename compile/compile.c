@@ -32,7 +32,6 @@
 #include "vm/intern.h"
 #include "vm/module_manager.h"
 
-
 Tape *_read_file(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);
 
@@ -147,6 +146,8 @@ int jvc(int argc, const char *argv[]) {
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
   Map *src_map = compile(argstore_sources(store), store);
+
+#ifdef DEBUG
   M_iter tapes = map_iter(src_map);
   for (; has(&tapes); inc(&tapes)) {
     tape_delete(value(&tapes));
@@ -158,6 +159,7 @@ int jvc(int argc, const char *argv[]) {
   strings_finalize();
   token_finalize_all();
   alloc_finalize();
+#endif
 
   return EXIT_SUCCESS;
 }
