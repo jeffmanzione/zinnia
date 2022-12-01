@@ -4,19 +4,20 @@ def _jeff_vm_library_impl(ctx):
     src_files = [file for target in ctx.attr.srcs for file in target.files.to_list()]
     out_files = []
     for src in src_files:
-        a_out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
-        out_files.append(a_out_file)
-        b_out_file = None
-        out_dir = a_out_file.root.path + "/" + src.dirname
-        jvc_args = [
-            "-a",
-            "--assembly_out_dir=" + out_dir,
-        ]
-        outputs = [a_out_file]
+        jvc_args = []
+        outputs = []
+
+        if ctx.attr.assembly:
+            a_out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".ja"))
+            out_files.append(a_out_file)
+            out_dir = a_out_file.root.path + "/" + src.dirname
+            jvc_args.extend(["-a", "--assembly_out_dir=" + out_dir])
+            outputs.append(a_out_file)
 
         if ctx.attr.bin:
             b_out_file = ctx.actions.declare_file(src.basename.replace(".jv", ".jb"))
             out_files.append(b_out_file)
+            out_dir = b_out_file.root.path + "/" + src.dirname
             jvc_args.extend(["-b", "--binary_out_dir=" + out_dir])
             outputs.append(b_out_file)
 
@@ -54,6 +55,10 @@ _jeff_vm_library = rule(
             default = True,
             doc = "Whether to output .jb files.",
         ),
+        "assembly": attr.bool(
+            default = True,
+            doc = "Whether to output .ja files.",
+        ),
     },
 )
 
@@ -63,8 +68,8 @@ def _prioritize_bin(file):
     else:
         return 1
 
-def jeff_vm_library(name, srcs, bin = True):
-    return _jeff_vm_library(name = name, srcs = srcs, bin = bin)
+def jeff_vm_library(name, srcs, bin = True, assembly = True):
+    return _jeff_vm_library(name = name, srcs = srcs, bin = bin, assembly = True)
 
 def _jeff_vm_binary_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
