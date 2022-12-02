@@ -1341,7 +1341,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       _execute_EXIT(vm, task, context, ins);
       goto end_of_loop;
     case ADD:
-      _execute_ADD(vm, task, context, ins);
+      _execute_ADD_with_string(vm, task, context, ins);
       break;
     case SUB:
       _execute_SUB(vm, task, context, ins);
