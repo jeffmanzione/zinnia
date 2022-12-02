@@ -17,13 +17,9 @@ tree.insert(0)
 tree.insert(10)
 tree.insert(12)
 
-for (i, n) in tree {
-  io.println(n)
-}
+io.println(tree.sorted())
 
 tree.remove(10)
 tree.remove(5)
 
-for (i, n) in tree {
-  io.println(n)
-}
+io.println(tree.sorted())
