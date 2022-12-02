@@ -206,6 +206,7 @@ class Tree {
     root = None
   }
 
+  ; Inserts [v] into the tree.
   method insert(v) {
     root = _insert_helper(v, root)
   }
@@ -220,29 +221,24 @@ class Tree {
       node.right = _insert_helper(v, node.right)
     }
 
-    node.height = 1 + math.max(
-        _height(node.left),
-        _height(node.right))
+    node.height = 1 + math.max(_height(node.left), _height(node.right))
 
     balance = _balance(node)
     if balance > 1 {
-      if v < node.left.value {
-        return _rotate_right(node)
-      } else {
+      if v >= node.left.value {
         node.left =  _rotate_left(node.left)
-        return _rotate_right(node)
       }
+      return _rotate_right(node)
     } else if balance < -1 {
-      if v > node.right.value {
-        return _rotate_left(node)
-      } else {
+      if v <= node.right.value {
         node.right = _rotate_right(node.right)
-        return _rotate_left(node)
       }
+      return _rotate_left(node)
     }
     node
   }
 
+  ; Removes [v] from the tree.
   method remove(v) {
     _remove_helper(v, root)
   }
