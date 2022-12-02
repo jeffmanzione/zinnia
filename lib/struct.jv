@@ -195,6 +195,7 @@ class _TreeNode {
 ; Properities
 ;   Insertion: O(logN)
 ;   Removal:   O(logN)
+;   Lookup:    O(logN)
 ;   Traversal: O(N)
 ;   Sorting:   O(N) - to construct list
 ;
@@ -281,6 +282,26 @@ class Tree {
       }
     }
     node
+  }
+
+  method __in__(v) {
+    _in(v, root)
+  }
+
+  method _in(v, node) {
+    if ~node {
+      return False
+    }
+    if v == node.value {
+      return True
+    }
+    if _in(v, node.left) {
+      return True
+    }
+    if _in(v, node.right) {
+      return True
+    }
+    return False
   }
 
   method _min_value_node(node) {

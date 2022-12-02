@@ -4,8 +4,6 @@ import struct
 
 tree = struct.Tree()
 
-;io.println(tree)
-
 tree.insert(5)
 tree.insert(1)
 tree.insert(7)
@@ -17,9 +15,19 @@ tree.insert(0)
 tree.insert(10)
 tree.insert(12)
 
+; [0, 1, 2, 3, 5, 6, 7, 10, 12, 15]
 io.println(tree.sorted())
+; 1
+io.println(5 in tree)
+; 1
+io.println(10 in tree)
 
 tree.remove(10)
 tree.remove(5)
 
+; [0, 1, 2, 3, 6, 7, 12, 15]
 io.println(tree.sorted())
+; None
+io.println(5 in tree)
+; None
+io.println(10 in tree)
