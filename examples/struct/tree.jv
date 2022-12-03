@@ -2,7 +2,7 @@ import io
 import struct
 
 
-tree = struct.Tree()
+tree = struct.TreeSet()
 
 tree.insert(5)
 tree.insert(1)

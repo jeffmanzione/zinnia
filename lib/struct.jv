@@ -201,7 +201,7 @@ class _TreeNode {
 ;
 ; This is implemented as a classic AVL Tree which incrementally balances during
 ; insertion.
-class Tree {
+class TreeSet {
   field root
   new(field cmp=cmp) {
     root = None
