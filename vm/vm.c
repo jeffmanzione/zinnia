@@ -45,7 +45,6 @@ Entity *class_get_field(const Class *cls, const char name[]) {
   return NULL;
 }
 
-
 Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
                              Context *ctx) {
   Entity member;
@@ -56,7 +55,7 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
     if (NULL != f) {
       member = entity_object(f->_reflection);
     } else {
-      Entity *field_value = class_get_field(obj->_class_obj, field);
+      Entity *field_value = class_get_field(obj->_class, field);
       if (NULL == field_value) {
         return NONE_ENTITY;
       }
