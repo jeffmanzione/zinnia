@@ -1,4 +1,6 @@
 import builtin
+import io
+import math
 
 class Map {
   field table, keys
@@ -172,5 +174,201 @@ class Set {
   ; Return k if k is in the Set, otherwise None.
   method __in__(k) {
     k in map
+  }
+}
+
+class _TreeNode {
+  field left, right, height
+  new(field value) {
+    left = None
+    right = None
+    height = 1
+  }
+  
+  method to_s() {
+    '_TreeNode(' + str(value) + ')'
+  }
+}
+
+; Stores a set of comparable values in a self-balancing binary tree.
+; 
+; Properities
+;   Insertion: O(logN)
+;   Removal:   O(logN)
+;   Lookup:    O(logN)
+;   Traversal: O(N)
+;   Sorting:   O(N) - to construct list
+;
+; This is implemented as a classic AVL Tree which incrementally balances during
+; insertion.
+class TreeSet {
+  field root
+  new(field cmp=cmp) {
+    root = None
+  }
+
+  ; Inserts [v] into the tree.
+  ; O(logN)
+  method insert(v) {
+    root = _insert_helper(v, root)
+  }
+
+  method _insert_helper(v, node) {
+    if ~node {
+      return _TreeNode(v)
+    }
+    if v < node.value {
+      node.left = _insert_helper(v, node.left)
+    } else {
+      node.right = _insert_helper(v, node.right)
+    }
+
+    node.height = 1 + math.max(_height(node.left), _height(node.right))
+
+    balance = _balance(node)
+    if balance > 1 {
+      if v >= node.left.value {
+        node.left =  _rotate_left(node.left)
+      }
+      return _rotate_right(node)
+    } else if balance < -1 {
+      if v <= node.right.value {
+        node.right = _rotate_right(node.right)
+      }
+      return _rotate_left(node)
+    }
+    node
+  }
+
+  ; Removes [v] from the tree.
+  ; O(logN)
+  method remove(v) {
+    _remove_helper(v, root)
+  }
+
+  method _remove_helper(v, node) {
+    if ~node {
+      return node
+    } else if v < node.value {
+      node.left = _remove_helper(v, node.left)
+    } else if v > node.value {
+      node.right = _remove_helper(v, node.right)
+    } else {
+      if ~node.left {
+        return node.right
+      } else if ~node.right {
+        return node.left
+      }
+      temp = _min_value_node(node.right)
+      node.value = temp.value
+      node.right = _remove_helper(temp.value, node.right)
+    }
+    
+    node.height = 1 + math.max(_height(node.left), _height(node.right))
+
+    balance = _balance(node)
+
+    if balance > 1 {
+      if _balance(node.left) >= 0 {
+        return _rotate_right(node)
+      } else {
+        node.left = _rotate_left(node.left)
+        return _rotate_right(node)
+      }
+    } else if balance < -1 {
+      if _balance(node.right) <= 0 {
+        return _rotate_left(node)
+      } else {
+        node.right = _rotate_right(node.right)
+        return _rotate_left(node)
+      }
+    }
+    node
+  }
+
+  ; O(logN)
+  method __in__(v) {
+    _in(v, root)
+  }
+
+  method _in(v, node) {
+    if ~node {
+      return False
+    }
+    c = cmp(v, node.value)
+    if c == 0 {
+      return True
+    }
+    if c > 0 and _in(v, node.left) {
+      return True
+    }
+    if c < 0 and _in(v, node.right) {
+      return True
+    }
+    return False
+  }
+
+  method _min_value_node(node) {
+    if ~node or ~node.left {
+      return node
+    }
+    _min_value_node(node.left)
+  }
+
+  method _height(node) {
+    if ~node {
+      return 0
+    }
+    return node.height
+  }
+
+  method _balance(node) {
+    if ~node {
+      return 0
+    }
+    return _height(node.left) - _height(node.right)
+  }
+
+  method _rotate_left(node) {
+    y = node.right
+    t2 = y.left
+    y.left = node
+    node.right = t2
+    node.height = 1 + math.max(_height(node.left), _height(node.right))
+    y.height = 1 + math.max(_height(y.left), _height(y.right))
+    return y
+  }
+
+  method _rotate_right(node) {
+    y = node.left
+    t3 = y.right
+    y.right = node
+    node.left = t3
+    node.height = 1 + math.max(_height(node.left), _height(node.right))
+    y.height = 1 + math.max(_height(y.left), _height(y.right))
+    return y
+  }
+
+  method _inorder(node, arr) {
+    if ~node {
+      return
+    }
+    _inorder(node.left, arr)
+    arr.append(node.value)
+    _inorder(node.right, arr)
+  }
+
+  ; Returns a sorted-order Array of the elements.
+  ; O(N)
+  method sorted() {
+    arr = []
+    _inorder(root, arr)
+    return arr
+  }
+
+  ; Returns an iterator over the tree elements in sorted order.
+  ; O(N)
+  method iter() {
+    IndexIterator(sorted())
   }
 }

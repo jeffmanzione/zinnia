@@ -453,7 +453,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
       raise_error(task, context, "RHS for op 'EQ' must be primitive.");
       return false;
     }
-    result = primitive_equals(&first.pri, &lookup->pri);
+    result = primitive_equals(&resval->pri, &lookup->pri);
     *task_mutable_resval(task) =
         ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
             ? entity_int(1)
@@ -1341,7 +1341,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       _execute_EXIT(vm, task, context, ins);
       goto end_of_loop;
     case ADD:
-      _execute_ADD(vm, task, context, ins);
+      _execute_ADD_with_string(vm, task, context, ins);
       break;
     case SUB:
       _execute_SUB(vm, task, context, ins);
