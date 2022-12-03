@@ -208,6 +208,7 @@ class Tree {
   }
 
   ; Inserts [v] into the tree.
+  ; O(logN)
   method insert(v) {
     root = _insert_helper(v, root)
   }
@@ -240,6 +241,7 @@ class Tree {
   }
 
   ; Removes [v] from the tree.
+  ; O(logN)
   method remove(v) {
     _remove_helper(v, root)
   }
@@ -284,6 +286,7 @@ class Tree {
     node
   }
 
+  ; O(logN)
   method __in__(v) {
     _in(v, root)
   }
@@ -355,14 +358,17 @@ class Tree {
     _inorder(node.right, arr)
   }
 
+  ; Returns a sorted-order Array of the elements.
+  ; O(N)
   method sorted() {
     arr = []
     _inorder(root, arr)
     return arr
   }
 
+  ; Returns an iterator over the tree elements in sorted order.
+  ; O(N)
   method iter() {
-    arr = sorted()
-    IndexIterator(arr)
+    IndexIterator(sorted())
   }
 }
