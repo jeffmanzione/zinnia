@@ -292,13 +292,14 @@ class Tree {
     if ~node {
       return False
     }
-    if v == node.value {
+    c = cmp(v, node.value)
+    if c == 0 {
       return True
     }
-    if _in(v, node.left) {
+    if c > 0 and _in(v, node.left) {
       return True
     }
-    if _in(v, node.right) {
+    if c < 0 and _in(v, node.right) {
       return True
     }
     return False

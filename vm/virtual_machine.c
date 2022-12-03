@@ -453,7 +453,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
       raise_error(task, context, "RHS for op 'EQ' must be primitive.");
       return false;
     }
-    result = primitive_equals(&first.pri, &lookup->pri);
+    result = primitive_equals(&resval->pri, &lookup->pri);
     *task_mutable_resval(task) =
         ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
             ? entity_int(1)
