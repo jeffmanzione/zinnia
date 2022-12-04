@@ -212,6 +212,14 @@ class TreeSet {
     root = _insert_helper(v, root)
   }
 
+  ; Inserts all members of [l] into the tree.
+  ; O(N*logN)
+  method insert_all(l) {
+    for i=0, i < l.len(), i=i+1 {
+      insert(l[i])
+    }
+  }
+
   method _insert_helper(v, node) {
     if ~node {
       return _TreeNode(v)
