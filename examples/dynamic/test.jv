@@ -1,5 +1,5 @@
-; Compile c library: bazel build -c opt //examples/dynamic:_custom
-; Run with bazel-bin/run/jvr examples/dynamic/test.jv examples/dynamic/custom.jv
+; To compile c library: bazel build -c opt //examples/dynamic:_custom
+; To run: jvr examples/dynamic/test.jv examples/dynamic/custom.jv
 
 import custom
 import io
