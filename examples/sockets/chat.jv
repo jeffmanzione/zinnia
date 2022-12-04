@@ -12,11 +12,25 @@ import error
 import io
 import socket
 
+
+ADDRESS = args.address | '0.0.0.0'
+PORT = Int(args.port | 1453)
+
+if __main {
+  app = None
+  if Bool(args.server) {
+    app = ChatServer
+  } else {
+    app = ChatClient
+  }
+  app(ADDRESS, PORT).start()
+}
+
 class ChatServer {
   field clients, sock
-  new(field port=1453) {
+  new(address='0.0.0.0', port=1453) {
     clients = {}
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0', port, 4, True)
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, True)
   }
   method start() {
     while True {
@@ -31,7 +45,6 @@ class ChatServer {
   }
   method _accept_connection() {
     conn = await sock.accept()
-    0
     (login, leftovers) = _receive_login(conn)
     io.println(cat('Logged in \'', login.username, '\'.'))
     client = clients[login.username]
@@ -68,8 +81,8 @@ class ChatServer {
 
 class ChatClient {
   field sock, connection
-  new(field port=1453) {
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0', port, 4, False)
+  new(address='0.0.0.0', port=1453) {
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, False)
     connection = await sock.connect()
   }
   method start() {
@@ -133,10 +146,4 @@ class _ClientConnection {
   method send_message(source_connection, message) {
     await connection.send(cat('message:', source_connection.login.username, ' said \'', message, '\''))
   }
-}
-
-if Bool(args.server) {
-  ChatServer(Int(args.port | 1453)).start()
-} else {
-  ChatClient(Int(args.port | 1453)).start()
 }
