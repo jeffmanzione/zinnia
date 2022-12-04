@@ -12,11 +12,9 @@ import error
 import io
 import socket
 
-
-ADDRESS = args.address | '0.0.0.0'
-PORT = Int(args.port | 1453)
-
 if __main {
+  ADDRESS = args.address | '0.0.0.0'
+  PORT = Int(args.port | 1453)
   app = None
   if Bool(args.server) {
     app = ChatServer
