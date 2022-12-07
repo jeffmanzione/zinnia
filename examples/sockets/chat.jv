@@ -45,13 +45,14 @@ class ChatServer {
   method _accept_connection() {
     conn = await sock.accept()
     (login, leftovers) = _receive_login(conn)
-    io.println(cat('Logged in \'', login.username, '\'.'))
     client = clients[login.username]
     if client {
       client.refresh(login, conn)
+      io.println(cat('Refreshed login for \'', login.username, '\'.'))
     } else {
       client = _ClientConnection(login, conn, _handle_message)
       clients[login.username] = client
+      io.println(cat('Logged in \'', login.username, '\'.'))
     }
     return (client, leftovers)
   }
@@ -138,8 +139,13 @@ class _ClientConnection {
   }
   method handle_all() async {
     while True {
-      msg = await connection.receive()
-      handle(msg.split('\n\n'))
+      try {
+        msg = await connection.receive()
+        handle(msg.split('\n\n'))
+      } catch e {
+        io.println('Connect closed for \'' + login.username + '\'.')
+        break
+      }
     }
   }
   method send_message(source_connection, message) {

@@ -35,7 +35,7 @@
 bool process_maybe_collect_garbage(Process *process);
 bool _call_function_base(Task *task, Context *context, const Function *func,
                          Object *self, Context *parent_context);
-void _mark_task_complete(Process *process, Task *task);
+void _mark_task_complete(Process *process, Task *task, bool should_push);
 void _execute_RES(VM *vm, Task *task, Context *context, const Instruction *ins);
 void _execute_PUSH(VM *vm, Task *task, Context *context,
                    const Instruction *ins);
@@ -667,7 +667,8 @@ void _execute_in_background(BackgroundThreadArgs *args) {
 void _execute_in_background_callback(BackgroundThreadArgs *args) {
   process_remove_background_task(args->task->parent_process, args->task);
   args->task->state = TASK_COMPLETE;
-  _mark_task_complete(args->task->parent_process, args->task);
+  _mark_task_complete(args->task->parent_process, args->task,
+                      /*should_push=*/false);
   DEALLOC(args);
 }
 
@@ -1463,7 +1464,7 @@ end_of_loop:
   return task->state;
 }
 
-void _mark_task_complete(Process *process, Task *task) {
+void _mark_task_complete(Process *process, Task *task, bool should_push) {
   process_mark_task_complete(process, task);
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
@@ -1473,7 +1474,11 @@ void _mark_task_complete(Process *process, Task *task) {
       continue;
     }
     *task_mutable_resval(dependent_task) = *task_get_resval(task);
-    process_enqueue_task(dependent_task->parent_process, dependent_task);
+    if (should_push) {
+      process_push_task(dependent_task->parent_process, dependent_task);
+    } else {
+      process_enqueue_task(dependent_task->parent_process, dependent_task);
+    }
     process_remove_waiting_task(dependent_task->parent_process, dependent_task);
     condition_broadcast(process->task_wait_cond);
   }
@@ -1508,7 +1513,8 @@ top_of_fn:
     entity_print(task_get_resval(task), stdout);
     fprintf(stdout, "\n");
 #endif
-    DEBUGF("TaskState=%s %p", task_state_str(task_state), task);
+    DEBUGF("TaskState=%s %p %p", task_state_str(task_state), task,
+           task->parent_task);
     switch (task_state) {
     case TASK_WAITING:
       process_insert_waiting_task(process, task);
@@ -1520,11 +1526,14 @@ top_of_fn:
         _call_function(task, (Context *)NULL, errorln->_function_obj);
       } else {
         task->parent_task->child_task_has_error = true;
-        _mark_task_complete(process, task);
+        _mark_task_complete(process, task, /*should_push=*/true);
+        *task_mutable_resval(task->parent_task) = *task_get_resval(task);
+        process_remove_waiting_task(process, task->parent_task);
+        process_push_task(process, task->parent_task);
       }
       break;
     case TASK_COMPLETE:
-      _mark_task_complete(process, task);
+      _mark_task_complete(process, task, /*should_push=*/false);
       break;
     default:
       FATALF("Unknown TaskState = %d.", task_state);

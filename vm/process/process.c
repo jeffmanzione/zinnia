@@ -101,12 +101,23 @@ Task *process_pop_task(Process *process) {
       task = Q_pop(&process->queued_tasks);
     }
   });
+
+  // Task can be complete if it was prioritized to the front of the queue.
+  // This happens to a parent task when a child has an error.
+  if (NULL != task && TASK_COMPLETE == task->state) {
+    return process_pop_task(process);
+  }
   return task;
 }
 
 void process_enqueue_task(Process *process, Task *task) {
   SYNCHRONIZED(process->task_queue_lock,
                { *Q_add_last(&process->queued_tasks) = task; });
+}
+
+void process_push_task(Process *process, Task *task) {
+  SYNCHRONIZED(process->task_queue_lock,
+               { Q_push(&process->queued_tasks, task); });
 }
 
 size_t process_queue_size(Process *process) {
