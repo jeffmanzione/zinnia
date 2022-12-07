@@ -21,16 +21,17 @@ if __main {
   } else {
     app = ChatClient
   }
-  app(ADDRESS, PORT).start()
+  app(address: ADDRESS, port: PORT).start()
 }
 
 class ChatServer {
   field clients, sock
-  new(address='0.0.0.0', port=1453) {
+  new({field address, field port}) {
     clients = {}
     sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, True)
   }
   method start() {
+    io.println('Started server at ' + str(address) + ':' + str(port))
     while True {
       try {
         (client, leftovers) = _accept_connection()
@@ -79,7 +80,7 @@ class ChatServer {
 
 class ChatClient {
   field sock, connection
-  new(address='0.0.0.0', port=1453) {
+  new({address, port}) {
     sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, False)
     connection = await sock.connect()
   }

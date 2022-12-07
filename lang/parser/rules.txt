@@ -573,7 +573,22 @@ new_parameter ->
 
 new_parameter_list -> LIST(token:SYMBOL_COMMA, rule:new_parameter);
 
-new_parameters_present -> AND(token:SYMBOL_LPAREN, rule:new_parameter_list, token:SYMBOL_RPAREN);
+new_named_parameters ->
+  AND(
+    token:SYMBOL_LBRACE,
+    rule:new_parameter_list,
+    token:SYMBOL_RBRACE
+  );
+
+new_parameters_present ->
+  AND(
+    token:SYMBOL_LPAREN,
+    OR(
+      rule:new_named_parameters,
+      rule:new_parameter_list
+    ),
+    token:SYMBOL_RPAREN
+  );
 
 new_parameters_no_params -> AND(token:SYMBOL_LPAREN, token:SYMBOL_RPAREN);
 
