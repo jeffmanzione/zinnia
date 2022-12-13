@@ -72,8 +72,17 @@ Argument populate_constructor_argument(SemanticAnalyzer *analyzer,
 
 Arguments set_constructor_args(SemanticAnalyzer *analyzer,
                                const SyntaxTree *stree, const Token *token) {
-  Arguments args = {.token = token, .count_required = 0, .count_optional = 0};
+  Arguments args = {
+      .token = token,
+      .count_required = 0,
+      .count_optional = 0,
+      .is_named = false,
+  };
   args.args = alist_create(Argument, 4);
+  if (IS_SYNTAX(stree, rule_new_named_parameters)) {
+    args.is_named = true;
+    stree = CHILD_SYNTAX_AT(stree, 1);
+  }
   if (!IS_SYNTAX(stree, rule_new_parameter_list)) {
     Argument arg = populate_constructor_argument(analyzer, stree);
     add_arg(&args, &arg);

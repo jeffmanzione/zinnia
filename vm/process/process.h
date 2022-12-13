@@ -14,6 +14,7 @@ Task *process_create_unqueued_task(Process *process);
 Task *process_create_task(Process *process);
 
 Task *process_pop_task(Process *process);
+void process_push_task(Process *process, Task *task);
 void process_enqueue_task(Process *process, Task *task);
 size_t process_queue_size(Process *process);
 
