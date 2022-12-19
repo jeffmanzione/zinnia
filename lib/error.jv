@@ -85,7 +85,3 @@ def _token_left_padding(token) {
   ; +1 for the colon.
   return token.col + line_text_space + 1
 }
-
-def test() {
-  None.test
-}
