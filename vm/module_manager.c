@@ -233,6 +233,8 @@ Module *_read_jv(ModuleManager *mm, ModuleInfo *module_info) {
 
     Tape *tape = tape_create();
     semantic_analyzer_produce(&sa, etree, tape);
+    tape_set_body(tape, fi);
+
     if (NULL == tape_module_name(tape)) {
       tape_module(tape,
                   token_create(TOKEN_WORD, 0, 0,

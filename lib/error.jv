@@ -49,10 +49,12 @@ class Error {
   method to_s() {
     result = cat(self.class().name(), ': ', message, '\n')
     if stacktrace[0].linetext() {
-      error_token = stacktrace[0].token()
+      stackline = stacktrace[0]
+      has_sourcemap = stackline.has_source_map()
+      error_token = if has_sourcemap then stackline.source_token() else stackline.token()
       left_padding = _token_left_padding(error_token)
       result.extend(str(error_token.line + 1)).extend(':')
-      result.extend(str(stacktrace[0].linetext()))
+      result.extend(str(if has_sourcemap then stackline.source_linetext() else stackline.linetext()))
       for i=0, i < left_padding, i=i+1 {
         result.extend(' ')
       }
@@ -82,4 +84,8 @@ def _token_left_padding(token) {
   }
   ; +1 for the colon.
   return token.col + line_text_space + 1
+}
+
+def test() {
+  None.test
 }

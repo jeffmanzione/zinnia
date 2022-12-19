@@ -23,6 +23,7 @@
 #define MODULE_KEYWORD "module"
 #define FIELD_KEYWORD "field"
 #define SOURCE_KEYWORD "source"
+#define BODY_KEYWORD "body"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
 
@@ -31,6 +32,7 @@ struct _Tape {
   AList ins;
 
   AList source_map;
+  AList source_lines;
   char *external_source_fn;
 
   KeyedList class_refs;
@@ -46,6 +48,7 @@ Tape *tape_create() {
   Tape *tape = ALLOC2(Tape);
   alist_init(&tape->ins, Instruction, DEFAULT_TAPE_SZ);
   alist_init(&tape->source_map, SourceMapping, DEFAULT_TAPE_SZ);
+  alist_init(&tape->source_lines, char *, DEFAULT_TAPE_SZ);
   keyedlist_init(&tape->class_refs, ClassRef, DEFAULT_ARRAY_SZ);
   keyedlist_init(&tape->func_refs, FunctionRef, DEFAULT_ARRAY_SZ);
   tape->current_class = NULL;
@@ -58,6 +61,7 @@ void tape_delete(Tape *tape) {
   ASSERT(NOT_NULL(tape));
   alist_finalize(&tape->ins);
   alist_finalize(&tape->source_map);
+  alist_finalize(&tape->source_lines);
   KL_iter class_i = keyedlist_iter(&tape->class_refs);
   for (; kl_has(&class_i); kl_inc(&class_i)) {
     _classref_finalize((ClassRef *)kl_value(&class_i));
@@ -185,6 +189,17 @@ const SourceMapping *tape_get_source(const Tape *tape, uint32_t index) {
   return (SourceMapping *)alist_get(&tape->source_map, index);
 }
 
+const char *tape_get_sourceline(const Tape *const tape, int line) {
+  if (line >= alist_len(&tape->source_lines)) {
+    return NULL;
+  }
+  const char *escaped_line = *(char **)alist_get(&tape->source_lines, line);
+  const char *unescaped_line = unescape(escaped_line);
+  const char *to_return = intern(unescaped_line);
+  DEALLOC(unescaped_line);
+  return to_return;
+}
+
 size_t tape_size(const Tape *tape) {
   ASSERT(NOT_NULL(tape));
   return alist_len(&tape->ins);
@@ -285,6 +300,13 @@ void tape_write(const Tape *tape, FILE *file) {
       }
     }
   }
+  const int num_src_lines = alist_len(&tape->source_lines);
+  if (num_src_lines > 0) {
+    fprintf(file, "body\n");
+    for (int i = 0; i < num_src_lines; ++i) {
+      fprintf(file, " '%s'\n", *(char **)alist_get(&tape->source_lines, i));
+    }
+  }
 }
 
 // Consumes tail.
@@ -372,14 +394,33 @@ Token *_next_token_skip_ln(Q *queue) {
   return first;
 }
 
-void tape_read_ins(Tape *const tape, Q *tokens) {
+void _tape_read_body(Tape *const tape, Q *tokens) {
+  while (Q_size(tokens) > 0) {
+    Token *tok = _next_token_skip_ln(tokens);
+    if (NULL == tok) {
+      break;
+    }
+    ASSERT(TOKEN_STRING == tok->type);
+    *(char **)alist_add(&tape->source_lines) = (char *)tok->text;
+  }
+}
+
+bool _is_body_token(const Token *tok) {
+  ASSERT(NOT_NULL(tok));
+  if (NULL == tok) {
+    return false;
+  }
+  return 0 == strcmp(BODY_KEYWORD, tok->text);
+}
+
+bool tape_read_ins(Tape *const tape, Q *tokens) {
   ASSERT_NOT_NULL(tokens);
   if (Q_size(tokens) < 1) {
-    return;
+    return false;
   }
   Token *first = _next_token_skip_ln(tokens);
-  if (NULL == first) {
-    return;
+  if (NULL == first || _is_body_token(first)) {
+    return false;
   }
   if (SYMBOL_AT == first->type) {
     Token *fn_name = Q_remove(tokens, 0);
@@ -396,13 +437,13 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
       FATALF("Invalid token after @def.");
     }
     tape_label(tape, fn_name);
-    return;
+    return true;
   }
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
     Token *class_name = Q_remove(tokens, 0);
     if (TOKEN_NEWLINE == _q_peek(tokens)->type) {
       tape_class(tape, class_name);
-      return;
+      return true;
     }
     Q parents;
     Q_init(&parents);
@@ -412,16 +453,16 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
     }
     tape_class_with_parents(tape, class_name, &parents);
     Q_finalize(&parents);
-    return;
+    return true;
   }
   if (0 == strcmp(CLASSEND_KEYWORD, first->text)) {
     tape_endclass(tape, first);
-    return;
+    return true;
   }
   if (0 == strcmp(FIELD_KEYWORD, first->text)) {
     Token *field = Q_remove(tokens, 0);
     tape_field(tape, field->text);
-    return;
+    return true;
   }
   Op op = str_to_op(first->text);
   Token *next = (Token *)_q_peek(tokens);
@@ -448,6 +489,7 @@ void tape_read_ins(Tape *const tape, Q *tokens) {
         token_create(sm->token->type, sm->source_line, sm->source_col,
                      sm->token->text, strlen(sm->token->text));
   }
+  return true;
 }
 
 void tape_read(Tape *const tape, Q *tokens) {
@@ -469,7 +511,12 @@ void tape_read(Tape *const tape, Q *tokens) {
     tape_set_external_source(tape, tok->text);
   }
   while (Q_size(tokens) > 0) {
-    tape_read_ins(tape, tokens);
+    if (!tape_read_ins(tape, tokens)) {
+      break;
+    }
+  }
+  if (Q_size(tokens) > 0) {
+    _tape_read_body(tape, tokens);
   }
 }
 
@@ -675,4 +722,15 @@ int tape_class_with_parents(Tape *tape, const Token *token, Q *q_parents) {
 int tape_endclass(Tape *tape, const Token *token) {
   tape_end_class(tape);
   return 0;
+}
+
+void tape_set_body(Tape *const tape, FileInfo *fi) {
+  ASSERT(NOT_NULL(tape));
+  ASSERT(NOT_NULL(fi));
+  int len = file_info_len(fi);
+  for (int i = 0; i < len; ++i) {
+    const char *line_escaped = escape(file_info_lookup(fi, i + 1)->line_text);
+    *(char **)alist_add(&tape->source_lines) = intern(line_escaped);
+    DEALLOC(line_escaped);
+  }
 }

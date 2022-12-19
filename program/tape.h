@@ -13,6 +13,7 @@
 #include "program/instruction.h"
 #include "struct/keyed_list.h"
 #include "struct/q.h"
+#include "util/file/file_info.h"
 
 typedef struct {
   // TODO: Something that points to the file, func, etc...
@@ -80,6 +81,9 @@ void tape_read(Tape *const tape, Q *tokens);
 
 void tape_set_external_source(Tape *const tape, const char file_name[]);
 const char *tape_get_external_source(const Tape *const tape);
+
+void tape_set_body(Tape *const tape, FileInfo *fi);
+const char *tape_get_sourceline(const Tape *const tape, int line);
 
 // **********************
 // Specialized functions.
