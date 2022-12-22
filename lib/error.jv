@@ -54,12 +54,17 @@ class Error {
       error_token = if has_sourcemap then stackline.source_token() else stackline.token()
       left_padding = _token_left_padding(error_token)
       result.extend(str(error_token.line + 1)).extend(':')
-      result.extend(str(if has_sourcemap then stackline.source_linetext() else stackline.linetext()))
-      for i=0, i < left_padding, i=i+1 {
-        result.extend(' ')
-      }
-      for i=0, i < error_token.text.len(), i=i+1 {
-        result.extend('^')
+      line_text = if has_sourcemap then stackline.source_linetext() else stackline.linetext()
+      if line_text {
+        result.extend(str(line_text))
+        for i=0, i < left_padding, i=i+1 {
+          result.extend(' ')
+        }
+        for i=0, i < error_token.text.len(), i=i+1 {
+          result.extend('^')
+        }
+      } else {
+        result.extend(' <missing-line>')
       }
       result.extend('\n')
     }
