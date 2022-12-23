@@ -2,7 +2,7 @@ import error
 import io
 
 try {
-  None.non_existent_field ; Will trigger an exception.
+  None.field_on_none ; Will trigger an exception.
 } catch e {
   io.fprintln(io.ERROR, e)
 }

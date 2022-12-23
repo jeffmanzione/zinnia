@@ -77,12 +77,11 @@ Tape *_read_file(const char fn[], bool opt) {
 
     Q_finalize(&tokens);
 
-    file_info_delete(fi);
-
     if (opt) {
       tape = optimize(tape);
     }
-
+    tape_set_body(tape, fi);
+    file_info_delete(fi);
     return tape;
   }
 }

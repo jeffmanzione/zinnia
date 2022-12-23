@@ -27,6 +27,7 @@ typedef struct {
   Module *module;
   Function *func;
   Token *error_token, *source_error_token;
+  const char *source_linetext;
 } _StackLine;
 
 void _error_init(Object *obj) {}
@@ -132,6 +133,16 @@ Entity _stackline_has_source_map(Task *task, Context *ctx, Object *obj,
   return NULL == sl->source_error_token ? NONE_ENTITY : entity_int(1);
 }
 
+Entity _stackline_source_linetext(Task *task, Context *ctx, Object *obj,
+                                  Entity *args) {
+  _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  return (NULL == sl->source_linetext)
+             ? NONE_ENTITY
+             : entity_object(string_new(task->parent_process->heap,
+                                        sl->source_linetext,
+                                        strlen(sl->source_linetext)));
+}
+
 Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_String != args->obj->_class) {
@@ -155,6 +166,10 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       sl->source_error_token =
           (Token *)tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1))
               ->source_token; // blessed
+      sl->source_linetext =
+          (NULL == sl->source_error_token)
+              ? NULL
+              : tape_get_sourceline(c->tape, sl->source_error_token->line);
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }
@@ -185,4 +200,6 @@ void error_add_native(ModuleManager *mm, Module *error) {
                 _stackline_has_source_map);
   native_method(Class_StackLine, intern("__source_token"),
                 _stackline_source_token);
+  native_method(Class_StackLine, intern("source_linetext"),
+                _stackline_source_linetext);
 }

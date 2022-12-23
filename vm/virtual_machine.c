@@ -181,7 +181,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
         return;                                                                \
       }                                                                        \
       lookup = context_lookup(context, ins->id, &tmp);                         \
-      if (NULL == lookup || NULL != lookup && PRIMITIVE != lookup->type) {     \
+      if ((NULL == lookup) || (NULL != lookup && PRIMITIVE != lookup->type)) { \
         raise_error(task, context, "RHS for op '%s' must be primitive.", #op); \
         return;                                                                \
       }                                                                        \
