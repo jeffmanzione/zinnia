@@ -41,6 +41,8 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        NativeCallback init_fn);
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]);
+Module *modulemanager_lookup_without_reading(ModuleManager *mm,
+                                             const char module_name[]);
 
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m);
