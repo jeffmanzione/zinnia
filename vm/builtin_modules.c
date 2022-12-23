@@ -72,4 +72,6 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE(mm, net, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, dynamic, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, time, lib_location);
+  REGISTER_MODULE(mm, builtin_ext, lib_location);
+  REGISTER_MODULE(mm, io_ext, lib_location);
 }
