@@ -912,7 +912,6 @@ Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, "$get() can only be called with a String.");
   }
   const String *str_key = (const String *)args->obj->_internal_obj;
-  // TODO: Maybe use _object_get_maybe_wrap instead.
   const char *key = intern_range(str_key->table, 0, String_size(str_key));
   return object_get_maybe_wrap(obj, key, task, ctx);
 }
@@ -938,6 +937,26 @@ Entity _process_start(Task *current_task, Context *current_ctx, Object *obj,
   Entity future = _create_future_for_process(current_task->parent_process,
                                              process, current_task);
   process_run_in_new_thread(process);
+  return future;
+}
+
+Entity _process_send(Task *current_task, Context *current_ctx, Object *obj,
+                     Entity *args) {
+  Process *process = (Process *)obj->_internal_obj;
+
+  Entity copy;
+  if (NULL == args || NONE == args->type) {
+    copy = NONE_ENTITY;
+  } else {
+    Map cps;
+    map_init_default(&cps);
+    SYNCHRONIZED(process->heap_access_lock,
+                 { copy = entity_copy(process->heap, &cps, args); });
+    map_finalize(&cps);
+  }
+
+  Entity future = NONE_ENTITY;
+
   return future;
 }
 
@@ -996,12 +1015,16 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("end"), _range_end);
 }
 
-void builtin_add_native(ModuleManager *mm, Module *builtin) {
-  builtin_classes(mm->_heap, builtin);
-
+void _builtin_add_process(Module *builtin) {
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
   native_method(Class_Process, intern("start"), _process_start);
+}
+
+void builtin_add_native(ModuleManager *mm, Module *builtin) {
+  builtin_classes(mm->_heap, builtin);
+
+  _builtin_add_process(builtin);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
   Class_Context =
       native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
@@ -1030,6 +1053,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
   native_method(Class_Object, intern("$set"), _set_member);
+  native_method(Class_Object, intern("$get"), _get_member);
   native_method(Class_Object, ADDRESS_INT_KEY, _object_address_int);
   native_method(Class_Object, ADDRESS_HEX_KEY, _object_address_hex);
 

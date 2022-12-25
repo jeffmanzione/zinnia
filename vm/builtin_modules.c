@@ -61,8 +61,6 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   modulemanager_lookup(mm, intern("error"));
 
   REGISTER_MODULE_WITH_CALLBACK(mm, async, lib_location);
-  modulemanager_lookup(mm, intern("async"));
-
   REGISTER_MODULE(mm, struct, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, math, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, classes, lib_location);

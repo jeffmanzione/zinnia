@@ -1,4 +1,5 @@
-_ = None
+import classes
+import io
 
 def create_process(fn, args=None) {
   __create_process(fn, args)
@@ -50,5 +51,32 @@ class Completer {
       while ~(() -> completed)() {}
       return _value
     }()
+  }
+}
+
+def all(futures) async {
+  for (_, f) in futures {
+    await f
+  }
+}
+
+class RemoteClass {
+  method annotate(cls) {
+    remote_class = classes.factory.create_class(
+        cat('Remote', cls.name()),
+        cls.module())
+    remote_class.get_constructor()
+        .with_parameter('remote_object', True)
+    cls.methods().each((m) {
+      method_name = m.name()
+      if method_name == 'run' or method_name == 'new' {
+        return
+      }
+      remote_class.add_method(method_name).with_parameter('args').as_async()
+          .with_statement(cat('return __remote_call(remote_object, \'', method_name, '\', args)'))
+    })
+    remote_class.add_method('start').as_async().with_statement('__remote_start(remote_object)')
+    remote = remote_class.build()
+    remote.$set_method('remote_class', () -> remote)
   }
 }

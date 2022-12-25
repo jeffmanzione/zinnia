@@ -16,6 +16,8 @@ class Test {
 ; Test object is copied to the new process.
 p = async.create_process((t) -> io.println(t), Test())
 
-await p.start()
+f = p.start()
 
 io.println('Original process.')
+
+await f
