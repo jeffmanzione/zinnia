@@ -1,5 +1,5 @@
 import io
-import process
+import async
 
 class Test {
   field a, b, c
@@ -14,7 +14,7 @@ class Test {
 }
 
 ; Test object is copied to the new process.
-p = process.create_process((t) -> io.println(t), Test())
+p = async.create_process((t) -> io.println(t), Test())
 
 await p.start()
 

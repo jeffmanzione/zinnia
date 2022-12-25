@@ -18,7 +18,6 @@
 #include "entity/native/error.h"
 #include "entity/native/io.h"
 #include "entity/native/math.h"
-#include "entity/native/process.h"
 #include "entity/native/socket.h"
 #include "entity/native/time.h"
 #include "lib/lib.h"
@@ -67,7 +66,6 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE(mm, struct, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, math, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, classes, lib_location);
-  REGISTER_MODULE_WITH_CALLBACK(mm, process, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, socket, lib_location);
   REGISTER_MODULE(mm, net, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, dynamic, lib_location);

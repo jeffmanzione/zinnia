@@ -1,8 +1,8 @@
 import io
-import process
+import async
 
 work = () async {
-  await process.sleep(2)  ; Wait 2 seconds. 
+  await async.sleep(2)  ; Wait 2 seconds. 
   io.println('Hard work done!')
 }()  ; Call the function.
 

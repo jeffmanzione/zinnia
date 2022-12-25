@@ -1,7 +1,0 @@
-def create_process(fn, args=None) {
-  __create_process(fn, args)
-}
-
-def sleep(duration_sec) {
-  return __sleep(duration_sec)
-}

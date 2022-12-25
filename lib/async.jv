@@ -1,5 +1,13 @@
 _ = None
 
+def create_process(fn, args=None) {
+  __create_process(fn, args)
+}
+
+def sleep(duration_sec) {
+  return __sleep(duration_sec)
+}
+
 ; Represents the state of an asynchronous piece of work.
 class Future {
   ; Returns a future to the value of the result of this future with [fn]
