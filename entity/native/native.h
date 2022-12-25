@@ -12,18 +12,6 @@
 #include "entity/object.h"
 #include "vm/process/processes.h"
 
-#define IS_CLASS(e, class)                                                     \
-  (NULL != (e) && OBJECT == (e)->type && ((class) == (e)->obj->_class))
-#define IS_NONE(e) ((NULL == (e)) || (NONE == (e)->type))
-#define IS_OBJECT(e) ((NULL != (e)) && (OBJECT == (e)->type))
-#define IS_PRIMITIVE(e) ((NULL != (e)) && (PRIMITIVE == (e)->type))
-#define IS_CHAR(e) (IS_PRIMITIVE(e) && (PRIMITIVE_CHAR == ptype(&(e)->pri)))
-#define IS_INT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_INT == ptype(&(e)->pri)))
-#define IS_FLOAT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_FLOAT == ptype(&(e)->pri)))
-
-#define IS_TUPLE(e)                                                            \
-  ((NULL != e) && (OBJECT == e->type) && (Class_Tuple == e->obj->_class))
-
 typedef Entity (*NativeFn)(Task *, Context *, Object *obj, Entity *args);
 
 Function *native_method(Class *class, const char *name, NativeFn native_fn);

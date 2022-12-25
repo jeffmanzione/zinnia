@@ -1552,6 +1552,12 @@ top_of_fn:
 
   if (_process_is_done(process)) {
     DEBUGF("Process is complete.");
+    if (NULL != process->future) {
+      Task *process_task = future_get_task(process->future);
+      process_task->state = TASK_COMPLETE;
+      _mark_task_complete(process_task->parent_process, process_task,
+                          /*should_push=*/false);
+    }
     return;
   }
 

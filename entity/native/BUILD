@@ -43,6 +43,7 @@ cc_library(
     srcs = ["builtin.c"],
     hdrs = ["builtin.h"],
     deps = [
+        ":async",
         ":error",
         ":native",
         "//entity",

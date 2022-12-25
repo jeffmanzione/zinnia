@@ -22,6 +22,7 @@ typedef struct _VM VM;
 typedef struct __Context Context;
 typedef struct __Task Task;
 typedef struct __Process Process;
+typedef struct _Future Future;
 
 struct __Context {
   Task *parent_task;
@@ -75,6 +76,7 @@ struct __Task {
 };
 
 struct __Process {
+
   VM *vm;
   Heap *heap;
 
@@ -100,6 +102,8 @@ struct __Process {
   ThreadHandle thread; // Null if main thread.
 
   Q waiting_background_work;
+
+  Future *future;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

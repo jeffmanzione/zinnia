@@ -1,0 +1,21 @@
+import io
+import process
+
+class Test {
+  field a, b, c
+  new() {
+    a = [1, 2, 3, 4, 5]
+    b = 12
+    c = (a, b)
+  }
+  method to_s() {
+    str('Spawned process ', a, b, c)
+  }
+}
+
+; Test object is copied to the new process.
+p = process.create_process((t) -> io.println(t), Test())
+
+await p.start()
+
+io.println('Original process.')

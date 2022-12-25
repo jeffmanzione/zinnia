@@ -13,6 +13,7 @@
 #include "entity/class/classes.h"
 #include "entity/class/classes_def.h"
 #include "entity/entity.h"
+#include "entity/native/async.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
@@ -28,9 +29,13 @@
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/context.h"
+#include "vm/process/process.h"
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 #include "vm/vm.h"
+
+// From vm/virtual_machine.h
+ThreadHandle process_run_in_new_thread(Process *process);
 
 #ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
@@ -869,7 +874,8 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "$set_method() can only be called with a Tuple.");
+    return raise_error(task, ctx,
+                       "$set_method() can only be called with a Tuple.");
   }
   Tuple *t_args = (Tuple *)args->obj->_internal_obj;
   if (2 != tuple_size(t_args)) {
@@ -913,6 +919,27 @@ Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 void _process_init(Object *obj) {}
 void _process_delete(Object *obj) {}
+
+// Not safe after new process is started.
+Entity _create_future_for_process(Process *process, Process *new_process,
+                                  Task *task) {
+  Task *new_task = process_create_unqueued_task(process);
+  new_task->parent_task = task;
+
+  Object *future_obj = future_create(new_task);
+  new_process->future = (Future *)future_obj->_internal_obj;
+
+  return entity_object(future_obj);
+}
+
+Entity _process_start(Task *current_task, Context *current_ctx, Object *obj,
+                      Entity *args) {
+  Process *process = (Process *)obj->_internal_obj;
+  Entity future = _create_future_for_process(current_task->parent_process,
+                                             process, current_task);
+  process_run_in_new_thread(process);
+  return future;
+}
 
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
@@ -974,6 +1001,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
 
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
+  native_method(Class_Process, intern("start"), _process_start);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
   Class_Context =
       native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);

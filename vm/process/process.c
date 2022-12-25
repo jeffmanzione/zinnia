@@ -67,6 +67,7 @@ void process_finalize(Process *process) {
   critical_section_delete(process->task_waiting_cs);
   mutex_close(process->task_complete_lock);
   Q_finalize(&process->waiting_background_work);
+  process->future = NULL;
 }
 
 void _task_add_reflection(Process *process, Task *task) {
