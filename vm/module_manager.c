@@ -380,7 +380,9 @@ Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]) {
 
 const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m) {
-  ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(m->_name));
+  ASSERT(NOT_NULL(mm));
+  ASSERT(NOT_NULL(m));
+  ASSERT(NOT_NULL(m->_name));
   const ModuleInfo *mi =
       (ModuleInfo *)keyedlist_lookup((KeyedList *)&mm->_modules, m->_name);
   if (NULL == mi) {

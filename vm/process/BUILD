@@ -66,3 +66,15 @@ cc_library(
         "@memory_wrapper//struct:struct_defaults",
     ],
 )
+
+cc_library(
+    name = "remote",
+    srcs = ["remote.c"],
+    hdrs = ["remote.h"],
+    deps = [
+        ":processes",
+        "//entity",
+        "//entity/class:classes",
+        "//heap",
+    ],
+)

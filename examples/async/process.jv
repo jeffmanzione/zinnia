@@ -14,10 +14,15 @@ class Test {
 }
 
 ; Test object is copied to the new process.
-p = async.create_process((t) -> io.println(t), Test())
+p = async.create_process(
+    fn: (t) {
+      io.println(t)
+      return t
+    },
+    args: Test())
 
 f = p.start()
 
 io.println('Original process.')
 
-await f
+io.println(await f)

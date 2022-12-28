@@ -31,6 +31,7 @@
 #include "vm/process/context.h"
 #include "vm/process/process.h"
 #include "vm/process/processes.h"
+#include "vm/process/remote.h"
 #include "vm/process/task.h"
 #include "vm/vm.h"
 
@@ -913,7 +914,7 @@ Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   const String *str_key = (const String *)args->obj->_internal_obj;
   const char *key = intern_range(str_key->table, 0, String_size(str_key));
-  return object_get_maybe_wrap(obj, key, task, ctx);
+  return object_get_maybe_wrap(obj, key, task->parent_process->heap, ctx);
 }
 
 void _process_init(Object *obj) {}
@@ -927,6 +928,9 @@ Entity _create_future_for_process(Process *process, Process *new_process,
 
   Object *future_obj = future_create(new_task);
   new_process->future = (Future *)future_obj->_internal_obj;
+
+  new_task->state = TASK_WAITING;
+  process_insert_waiting_task(process, new_task);
 
   return entity_object(future_obj);
 }
@@ -970,6 +974,18 @@ void _context_delete(Object *obj) {
   // This can segfault if the process is cleaned up before the context.
   // This segfault should only occur during DEBUG mode.
   __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
+}
+
+void _remote_init(Object *obj) { create_remote_on_object(obj); }
+
+void _remote_delete(Object *obj) {
+  remote_delete(extract_remote_from_obj(obj));
+}
+
+Entity _remote_process(Task *current_task, Context *current_ctx, Object *obj,
+                       Entity *args) {
+  Remote *remote = extract_remote_from_obj(obj);
+  return entity_object(remote_get_process(remote)->_reflection);
 }
 
 void _builtin_add_string(Module *builtin) {
@@ -1019,15 +1035,18 @@ void _builtin_add_process(Module *builtin) {
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
   native_method(Class_Process, intern("start"), _process_start);
+  Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
+  Class_Context =
+      native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
+  Class_Remote =
+      native_class(builtin, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
+  native_method(Class_Remote, intern("process"), _remote_process);
 }
 
 void builtin_add_native(ModuleManager *mm, Module *builtin) {
   builtin_classes(mm->_heap, builtin);
 
   _builtin_add_process(builtin);
-  Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
-  Class_Context =
-      native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
 
   native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);

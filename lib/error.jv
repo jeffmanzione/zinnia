@@ -28,9 +28,18 @@ class StackLine {
   }
   method to_s() {
     tok = if has_source_map() then source_token() else token()
-    filename = if has_source_map() then module().source_filename() else module().filename()
+    module_name = None
+    module_filename = None
+    if module() {
+      module_name = module().name()
+      module_filename = module().filename()
+    } else {
+      module_name = '<unknown-module>'
+      module_filename = '<unknown-file>'
+    }
+    filename = if has_source_map() then module().source_filename() else module_filename
     func = function()
-    result = ''.extend(module().name())
+    result = ''.extend(module_name)
     if func {
       if func.is_method() {
         result.extend('.').extend(func.parent_class().name())

@@ -73,6 +73,8 @@ struct __Task {
   bool is_finalized;
 
   Object *_reflection;
+
+  Future *remote_future;
 };
 
 struct __Process {
@@ -104,6 +106,8 @@ struct __Process {
   Q waiting_background_work;
 
   Future *future;
+  bool is_remote;
+  Task *remote_non_daemon_task;
 };
 
 #endif /* VM_PROCESS_PROCESSES_H_ */

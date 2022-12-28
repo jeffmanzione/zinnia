@@ -28,6 +28,7 @@
 #include "vm/process/context.h"
 #include "vm/process/process.h"
 #include "vm/process/processes.h"
+#include "vm/process/remote.h"
 #include "vm/process/task.h"
 
 #define DEFAULT_THREADPOOL_SIZE 6
@@ -281,6 +282,7 @@ void _execute_INC(VM *vm, Task *task, Context *context,
   default:
     FATALF("Unknown primitive type.");
   }
+  *task_mutable_resval(task) = *stored;
 }
 
 void _execute_BOR_with_obj(VM *vm, Task *task, Context *context,
@@ -351,6 +353,9 @@ Entity _module_source_filename(Task *task, Context *ctx, Object *obj,
 
 Entity _stackline_linetext(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
+  if (NULL == stackline_module(obj)) {
+    return NONE_ENTITY;
+  }
   const FileInfo *fi = modulemanager_get_fileinfo(
       vm_module_manager(task->parent_process->vm), stackline_module(obj));
   const LineInfo *li = file_info_lookup(fi, stackline_linenum(obj) + 1);
@@ -369,10 +374,10 @@ void _add_filename_method(VM *vm) {
       Class_Module, intern("source_filename"), _module_source_filename);
   add_reflection_to_function(vm_main_process(vm)->heap,
                              Class_Module->_reflection, source_filename);
-  Function *linename =
+  Function *linetext =
       native_method(Class_StackLine, intern("linetext"), _stackline_linetext);
   add_reflection_to_function(vm_main_process(vm)->heap,
-                             Class_StackLine->_reflection, linename);
+                             Class_StackLine->_reflection, linetext);
 }
 
 VM *vm_create(const char *lib_location, uint32_t max_process_object_count,
@@ -622,8 +627,8 @@ void _execute_GET(VM *vm, Task *task, Context *context,
                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
-  *task_mutable_resval(task) =
-      object_get_maybe_wrap(e->obj, ins->id, task, context);
+  *task_mutable_resval(task) = object_get_maybe_wrap(
+      e->obj, ins->id, task->parent_process->heap, context);
 }
 
 void _execute_GTSH(VM *vm, Task *task, Context *context,
@@ -637,7 +642,8 @@ void _execute_GTSH(VM *vm, Task *task, Context *context,
                 ins->id, (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
-  Entity get_result = object_get_maybe_wrap(e->obj, ins->id, task, context);
+  Entity get_result = object_get_maybe_wrap(
+      e->obj, ins->id, task->parent_process->heap, context);
   *task_pushstack(task) = get_result;
 }
 
@@ -754,7 +760,8 @@ bool _call_method(Task *task, Object *obj, Context *context,
                   const Instruction *ins) {
   ASSERT(NOT_NULL(obj), NOT_NULL(ins), INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
-  Entity method = object_get_maybe_wrap(obj, ins->id, task, context);
+  Entity method =
+      object_get_maybe_wrap(obj, ins->id, task->parent_process->heap, context);
   if (NONE == method.type) {
     raise_error(task, context, "Failed to find method '%s' on %s", ins->id,
                 class->_name);
@@ -1273,9 +1280,12 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     }
     const Instruction *ins = context_ins(context);
 #ifdef DEBUG
-    instruction_write(ins, stdout);
-    fprintf(stdout, "\n");
-    fflush(stdout);
+    SYNCHRONIZED(vm->process_create_lock, {
+      fprintf(stdout, "(p=%p, t=%p) ", task->parent_process, task);
+      instruction_write(ins, stdout);
+      fprintf(stdout, "\n");
+      fflush(stdout);
+    });
 #endif
     switch (ins->op) {
     case RES:
@@ -1466,6 +1476,24 @@ end_of_loop:
 
 void _mark_task_complete(Process *process, Task *task, bool should_push) {
   process_mark_task_complete(process, task);
+
+  if (NULL != task->remote_future) {
+    Task *remote_task = future_get_task(task->remote_future);
+    Process *remote_proces = remote_task->parent_process;
+    Map cpys;
+    map_init_default(&cpys);
+    SYNCHRONIZED(remote_proces->heap_access_lock, {
+      *task_mutable_resval(remote_task) = entity_copy(
+          remote_proces->heap, &cpys, task_get_resval(process->current_task));
+    });
+    map_finalize(&cpys);
+
+    process_remove_waiting_task(remote_proces, remote_task);
+    remote_task->state = TASK_COMPLETE;
+    _mark_task_complete(remote_proces, remote_task,
+                        /*should_push=*/false);
+  }
+
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
     Task *dependent_task = (Task *)value(&dependent_tasks);
@@ -1498,6 +1526,28 @@ bool _process_is_done(Process *process) {
   return is_done;
 }
 
+bool _process_should_broadcast(Process *process) {
+  if (NULL == process->future) {
+    return false;
+  }
+  bool should_broadcast = false;
+
+  SYNCHRONIZED(process->task_queue_lock, {
+    CRITICAL(process->task_waiting_cs, {
+      if (process->is_remote) {
+        should_broadcast = set_size(&process->waiting_tasks) == 1 &&
+                           Q_size(&process->queued_tasks) == 0 &&
+                           NULL != set_lookup(&process->waiting_tasks,
+                                              process->remote_non_daemon_task);
+      } else if (set_size(&process->waiting_tasks) == 0 &&
+                 Q_size(&process->queued_tasks) == 0) {
+        should_broadcast = true;
+      }
+    });
+  });
+  return should_broadcast;
+}
+
 void process_run(Process *process) {
   VM *vm = process->vm;
   Task *task;
@@ -1509,12 +1559,14 @@ top_of_fn:
                  { task_state = vm_execute_task(vm, task); });
     // Release heap mutex
 #ifdef DEBUG
-    fprintf(stdout, "<-- ");
-    entity_print(task_get_resval(task), stdout);
-    fprintf(stdout, "\n");
+    SYNCHRONIZED(vm->process_create_lock, {
+      fprintf(stdout, "<-- ");
+      entity_print(task_get_resval(task), stdout);
+      fprintf(stdout, "\n");
+      DEBUGF("TaskState=%s p=%p t=%p", task_state_str(task_state), process,
+             task);
+    });
 #endif
-    DEBUGF("TaskState=%s %p %p", task_state_str(task_state), task,
-           task->parent_task);
     switch (task_state) {
     case TASK_WAITING:
       process_insert_waiting_task(process, task);
@@ -1550,14 +1602,31 @@ top_of_fn:
                 "Out of memory: Max object count for process exceeded.");
   }
 
+  if (_process_should_broadcast(process)) {
+    Task *process_task = future_get_task(process->future);
+
+    if (process->is_remote) {
+      *task_mutable_resval(process_task) = entity_object(
+          create_remote_object(process_task->parent_process->heap, process,
+                               task_get_resval(process->current_task)->obj));
+    } else {
+      Map cpys;
+      map_init_default(&cpys);
+      SYNCHRONIZED(process_task->parent_process->heap_access_lock, {
+        *task_mutable_resval(process_task) =
+            entity_copy(process_task->parent_process->heap, &cpys,
+                        task_get_resval(process->current_task));
+      });
+      map_finalize(&cpys);
+    }
+    process_remove_waiting_task(process_task->parent_process, process_task);
+    process_task->state = TASK_COMPLETE;
+    _mark_task_complete(process_task->parent_process, process_task,
+                        /*should_push=*/false);
+  }
+
   if (_process_is_done(process)) {
     DEBUGF("Process is complete.");
-    if (NULL != process->future) {
-      Task *process_task = future_get_task(process->future);
-      process_task->state = TASK_COMPLETE;
-      _mark_task_complete(process_task->parent_process, process_task,
-                          /*should_push=*/false);
-    }
     return;
   }
 

@@ -29,6 +29,9 @@ void process_init(Process *process, HeapConf *conf) {
   set_init_default(&process->background_tasks);
   process->_reflection = NULL;
   Q_init(&process->waiting_background_work);
+  process->future = NULL;
+  process->is_remote = false;
+  process->remote_non_daemon_task = NULL;
 }
 
 void process_finalize(Process *process) {
@@ -67,7 +70,6 @@ void process_finalize(Process *process) {
   critical_section_delete(process->task_waiting_cs);
   mutex_close(process->task_complete_lock);
   Q_finalize(&process->waiting_background_work);
-  process->future = NULL;
 }
 
 void _task_add_reflection(Process *process, Task *task) {

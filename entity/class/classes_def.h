@@ -22,5 +22,6 @@ extern Class *Class_Process;
 extern Class *Class_Task;
 extern Class *Class_Context;
 extern Class *Class_Future;
+extern Class *Class_Remote;
 
 #endif /* ENTITY_CLASS_CLASSES_DEF_ */

@@ -329,7 +329,7 @@ Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   if (NULL != cpy) {
     return entity_object(cpy);
   }
-  if (IS_CLASS(e, Class_Module)) {
+  if (IS_CLASS(e, Class_Module) || IS_CLASS(e, Class_Class)) {
     map_insert(copy_map, obj, obj);
     return *e;
   }

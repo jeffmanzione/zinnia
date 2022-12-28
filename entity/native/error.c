@@ -33,7 +33,7 @@ typedef struct {
 void _error_init(Object *obj) {}
 void _error_delete(Object *obj) {}
 
-void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC2(_StackLine); }
+void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC(_StackLine); }
 void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
 Entity raise_error_with_object(Task *task, Context *context, Object *err) {
@@ -82,6 +82,9 @@ Module *stackline_module(Object *stackline) {
 
 Entity _stackline_module(Task *task, Context *ctx, Object *obj, Entity *args) {
   _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  if (NULL == sl->module) {
+    return NONE_ENTITY;
+  }
   return entity_object(sl->module->_reflection);
 }
 

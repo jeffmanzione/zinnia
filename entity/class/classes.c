@@ -31,6 +31,7 @@ Class *Class_Process;
 Class *Class_Task;
 Class *Class_Context;
 Class *Class_Future;
+Class *Class_Remote;
 
 void builtin_classes(Heap *heap, Module *builtin) {
   Class_Object = module_add_class(builtin, OBJECT_NAME, NULL);
@@ -47,6 +48,7 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Task = NULL;
   Class_Context = NULL;
   Class_Future = NULL;
+  Class_Remote = NULL;
 
   Class_Object->_super = NULL;
   Class_Object->_reflection = heap_new(heap, Class_Class);

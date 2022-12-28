@@ -3,11 +3,10 @@ import async
 
 @async.RemoteClass
 class Test {
-  field count, completer
+  field count
   
   new() {
     count = 0
-    completer = async.Completer()
   }
 
   method inc_count() {
@@ -15,31 +14,23 @@ class Test {
     return count
   }
 
-  method complete() {
-    completer.complete()
-  }
-
   method to_s() {
-    'Test(' + str(count) + ')'
-  }
-
-  method run() {
-    await completer.as_future()
+    ;io.print('')
+    return 'Test(' + str(count) + ')'
   }
 }
 
-io.println(RemoteTest, Test.module().$get(cat('Remote' + Test.name())))
+remote_test = async.create_remote(Test)
 
-;remote = async.create_remote(Test, 'hello')
-;future = remote.start()
+await async.all([
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count()])
 
-;await async.all([
-;    remote.inc_count(),
-;    remote.inc_count(),
-;    remote.inc_count()])
+io.println(await remote_test.to_s())
 
-;io.println(await remote.to_s())
 
-;remote.complete()
-
-;await future
