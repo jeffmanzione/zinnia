@@ -15,7 +15,6 @@ class Test {
   }
 
   method to_s() {
-    ;io.print('')
     return 'Test(' + str(count) + ')'
   }
 }
