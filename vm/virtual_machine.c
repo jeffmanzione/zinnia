@@ -1473,27 +1473,27 @@ end_of_loop:
   return task->state;
 }
 
-void _mark_task_complete(Process *process, Task *task, bool should_push) {
-  process_mark_task_complete(process, task);
+void _mark_remote_task_complete(Process *process, Task *task,
+                                bool should_push) {
+  Task *remote_task = future_get_task(task->remote_future);
+  Process *remote_proces = remote_task->parent_process;
+  Map cpys;
+  map_init_default(&cpys);
+  SYNCHRONIZED(remote_proces->heap_access_lock, {
+    *task_mutable_resval(remote_task) = entity_copy(
+        remote_proces->heap, &cpys, task_get_resval(process->current_task));
+  });
+  map_finalize(&cpys);
 
-  if (NULL != task->remote_future) {
-    Task *remote_task = future_get_task(task->remote_future);
-    Process *remote_proces = remote_task->parent_process;
-    Map cpys;
-    map_init_default(&cpys);
-    SYNCHRONIZED(remote_proces->heap_access_lock, {
-      *task_mutable_resval(remote_task) = entity_copy(
-          remote_proces->heap, &cpys, task_get_resval(process->current_task));
-    });
-    map_finalize(&cpys);
+  remote_task->state = task->state;
 
-    remote_task->state = task->state;
+  process_remove_waiting_task(remote_proces, remote_task);
+  _mark_task_complete(remote_proces, remote_task,
+                      /*should_push=*/should_push);
+}
 
-    process_remove_waiting_task(remote_proces, remote_task);
-    _mark_task_complete(remote_proces, remote_task,
-                        /*should_push=*/should_push);
-  }
-
+void _broadcast_to_dependent_tasks(Process *process, Task *task,
+                                   bool should_push) {
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
   for (; has(&dependent_tasks); inc(&dependent_tasks)) {
     Task *dependent_task = (Task *)value(&dependent_tasks);
@@ -1514,6 +1514,14 @@ void _mark_task_complete(Process *process, Task *task, bool should_push) {
   }
 }
 
+void _mark_task_complete(Process *process, Task *task, bool should_push) {
+  process_mark_task_complete(process, task);
+  if (NULL != task->remote_future) {
+    _mark_remote_task_complete(process, task, should_push);
+  }
+  _broadcast_to_dependent_tasks(process, task, should_push);
+}
+
 bool _process_is_done(Process *process) {
   bool is_done = false;
 
@@ -1528,7 +1536,7 @@ bool _process_is_done(Process *process) {
   return is_done;
 }
 
-bool _process_should_broadcast(Process *process) {
+bool _process_should_broadcast_to_parent(Process *process) {
   if (NULL == process->future) {
     return false;
   }
@@ -1548,6 +1556,49 @@ bool _process_should_broadcast(Process *process) {
     });
   });
   return should_broadcast;
+}
+
+void _process_broadcast_to_parent(Process *process) {
+  Task *process_task = future_get_task(process->future);
+
+  if (process->is_remote) {
+    *task_mutable_resval(process_task) = entity_object(
+        create_remote_object(process_task->parent_process->heap, process,
+                             task_get_resval(process->current_task)->obj));
+  } else {
+    Map cpys;
+    map_init_default(&cpys);
+    SYNCHRONIZED(process_task->parent_process->heap_access_lock, {
+      *task_mutable_resval(process_task) =
+          entity_copy(process_task->parent_process->heap, &cpys,
+                      task_get_resval(process->current_task));
+    });
+    map_finalize(&cpys);
+  }
+  process_remove_waiting_task(process_task->parent_process, process_task);
+  process_task->state = TASK_COMPLETE;
+  _mark_task_complete(process_task->parent_process, process_task,
+                      /*should_push=*/false);
+}
+
+void _process_handle_error(Process *process, Task *task) {
+  if (NULL == task->parent_task ||
+      task->parent_process != task->parent_task->parent_process) {
+    if (NULL != task->remote_future) {
+      _mark_task_complete(process, task, /*should_push=*/true);
+      return;
+    }
+    Object *errorln = module_lookup(Module_io, intern("errorln"));
+    ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
+    _call_function(task, (Context *)NULL, errorln->_function_obj);
+    return;
+  }
+  _mark_task_complete(task->parent_process, task,
+                      /*should_push=*/true);
+  *task_mutable_resval(task->parent_task) = *task_get_resval(task);
+  process_remove_waiting_task(task->parent_task->parent_process,
+                              task->parent_task);
+  process_push_task(task->parent_task->parent_process, task->parent_task);
 }
 
 void process_run(Process *process) {
@@ -1574,24 +1625,7 @@ top_of_fn:
       process_insert_waiting_task(process, task);
       break;
     case TASK_ERROR:
-      if (NULL == task->parent_task ||
-          task->parent_process != task->parent_task->parent_process) {
-        if (NULL != task->remote_future) {
-          _mark_task_complete(process, task, /*should_push=*/true);
-        } else {
-          Object *errorln = module_lookup(Module_io, intern("errorln"));
-          ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
-          _call_function(task, (Context *)NULL, errorln->_function_obj);
-        }
-      } else {
-        // task->parent_task->child_task_has_error = true;
-        _mark_task_complete(task->parent_process, task,
-                            /*should_push=*/true);
-        *task_mutable_resval(task->parent_task) = *task_get_resval(task);
-        process_remove_waiting_task(task->parent_task->parent_process,
-                                    task->parent_task);
-        process_push_task(task->parent_task->parent_process, task->parent_task);
-      }
+      _process_handle_error(process, task);
       break;
     case TASK_COMPLETE:
       _mark_task_complete(process, task, /*should_push=*/false);
@@ -1611,27 +1645,8 @@ top_of_fn:
                 "Out of memory: Max object count for process exceeded.");
   }
 
-  if (_process_should_broadcast(process)) {
-    Task *process_task = future_get_task(process->future);
-
-    if (process->is_remote) {
-      *task_mutable_resval(process_task) = entity_object(
-          create_remote_object(process_task->parent_process->heap, process,
-                               task_get_resval(process->current_task)->obj));
-    } else {
-      Map cpys;
-      map_init_default(&cpys);
-      SYNCHRONIZED(process_task->parent_process->heap_access_lock, {
-        *task_mutable_resval(process_task) =
-            entity_copy(process_task->parent_process->heap, &cpys,
-                        task_get_resval(process->current_task));
-      });
-      map_finalize(&cpys);
-    }
-    process_remove_waiting_task(process_task->parent_process, process_task);
-    process_task->state = TASK_COMPLETE;
-    _mark_task_complete(process_task->parent_process, process_task,
-                        /*should_push=*/false);
+  if (_process_should_broadcast_to_parent(process)) {
+    _process_broadcast_to_parent(process);
   }
 
   if (_process_is_done(process)) {
