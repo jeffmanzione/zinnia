@@ -1,3 +1,4 @@
+import async
 import io
 
 class Token {

@@ -118,6 +118,7 @@ Entity _create_process(Task *current_task, Context *current_ctx, Object *obj,
   Process *new_process = vm_create_process(vm);
   new_process->is_remote = !IS_NONE(is_remote_arg);
   Task *new_task = process_create_task(new_process);
+  new_task->parent_task = current_task;
   Context *new_ctx;
 
   const Function *f;
@@ -251,6 +252,7 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
   }
 
   Task *remote_task = process_create_unqueued_task(remote_process);
+  remote_task->parent_task = current_task;
 
   Context *remote_ctx = task_create_context(remote_task, remote_object,
                                             (Module *)f->_module, f->_ins_pos);

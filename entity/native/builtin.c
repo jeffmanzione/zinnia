@@ -944,26 +944,6 @@ Entity _process_start(Task *current_task, Context *current_ctx, Object *obj,
   return future;
 }
 
-Entity _process_send(Task *current_task, Context *current_ctx, Object *obj,
-                     Entity *args) {
-  Process *process = (Process *)obj->_internal_obj;
-
-  Entity copy;
-  if (NULL == args || NONE == args->type) {
-    copy = NONE_ENTITY;
-  } else {
-    Map cps;
-    map_init_default(&cps);
-    SYNCHRONIZED(process->heap_access_lock,
-                 { copy = entity_copy(process->heap, &cps, args); });
-    map_finalize(&cps);
-  }
-
-  Entity future = NONE_ENTITY;
-
-  return future;
-}
-
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
 

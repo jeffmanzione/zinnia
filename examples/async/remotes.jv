@@ -1,5 +1,6 @@
 import io
 import async
+import error
 
 @async.RemoteClass
 class Test {
@@ -14,6 +15,10 @@ class Test {
     return count
   }
 
+  method cause_error() {
+    raise error.Error('Oh no!')
+  }
+
   method to_s() {
     return 'Test(' + str(count) + ')'
   }
@@ -21,14 +26,16 @@ class Test {
 
 remote_test = async.create_remote(Test)
 
-await async.all([
+io.println(await async.all([
     remote_test.inc_count(),
     remote_test.inc_count(),
     remote_test.inc_count(),
     remote_test.inc_count(),
     remote_test.inc_count(),
     remote_test.inc_count(),
-    remote_test.inc_count()])
+    remote_test.inc_count()]))
+
+await remote_test.cause_error()
 
 io.println(await remote_test.to_s())
 

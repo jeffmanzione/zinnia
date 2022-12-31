@@ -56,9 +56,7 @@ class Completer {
 }
 
 def all(futures) async {
-  for (_, f) in futures {
-    await f
-  }
+  futures.map((f) -> await f)
 }
 
 class RemoteClass {

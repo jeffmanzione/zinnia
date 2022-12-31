@@ -1240,7 +1240,6 @@ void _execute_RAIS(VM *vm, Task *task, Context *context) {
 }
 
 bool _attemp_catch_error(Task *task, Context *ctx) {
-  // *task_mutable_resval(task) = entity_object(ctx->error);
   while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)))
     ;
   // There was no try/catch block.
@@ -1488,10 +1487,11 @@ void _mark_task_complete(Process *process, Task *task, bool should_push) {
     });
     map_finalize(&cpys);
 
+    remote_task->state = task->state;
+
     process_remove_waiting_task(remote_proces, remote_task);
-    remote_task->state = TASK_COMPLETE;
     _mark_task_complete(remote_proces, remote_task,
-                        /*should_push=*/false);
+                        /*should_push=*/should_push);
   }
 
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
@@ -1500,6 +1500,8 @@ void _mark_task_complete(Process *process, Task *task, bool should_push) {
     // Only requeue parent task if it is waiting.
     if (TASK_WAITING != dependent_task->state) {
       continue;
+    } else if (TASK_ERROR == task->state) {
+      dependent_task->child_task_has_error = true;
     }
     *task_mutable_resval(dependent_task) = *task_get_resval(task);
     if (should_push) {
@@ -1572,16 +1574,23 @@ top_of_fn:
       process_insert_waiting_task(process, task);
       break;
     case TASK_ERROR:
-      if (NULL == task->parent_task) {
-        Object *errorln = module_lookup(Module_io, intern("errorln"));
-        ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
-        _call_function(task, (Context *)NULL, errorln->_function_obj);
+      if (NULL == task->parent_task ||
+          task->parent_process != task->parent_task->parent_process) {
+        if (NULL != task->remote_future) {
+          _mark_task_complete(process, task, /*should_push=*/true);
+        } else {
+          Object *errorln = module_lookup(Module_io, intern("errorln"));
+          ASSERT(NOT_NULL(errorln), Class_Function == errorln->_class);
+          _call_function(task, (Context *)NULL, errorln->_function_obj);
+        }
       } else {
-        task->parent_task->child_task_has_error = true;
-        _mark_task_complete(process, task, /*should_push=*/true);
+        // task->parent_task->child_task_has_error = true;
+        _mark_task_complete(task->parent_process, task,
+                            /*should_push=*/true);
         *task_mutable_resval(task->parent_task) = *task_get_resval(task);
-        process_remove_waiting_task(process, task->parent_task);
-        process_push_task(process, task->parent_task);
+        process_remove_waiting_task(task->parent_task->parent_process,
+                                    task->parent_task);
+        process_push_task(task->parent_task->parent_process, task->parent_task);
       }
       break;
     case TASK_COMPLETE:

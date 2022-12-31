@@ -6,6 +6,7 @@
 #ifndef HEAP_HEAP_H_
 #define HEAP_HEAP_H_
 
+#include "debug/debug.h"
 #include "entity/entity.h"
 #include "entity/object.h"
 
@@ -18,7 +19,10 @@ typedef struct {
 
 Heap *heap_create(HeapConf *config);
 void heap_delete(Heap *heap);
-Object *heap_new(Heap *heap, const Class *class);
+
+DEB_FN(Object *, heap_new, Heap *heap, const Class *class);
+#define heap_new(heap, class) CALL_FN(heap_new__, heap, class);
+
 uint32_t heap_collect_garbage(Heap *heap);
 void heap_print_debug_summary(Heap *heap);
 uint32_t heap_object_count(const Heap *const heap);
