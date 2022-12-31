@@ -35,7 +35,11 @@ io.println(await async.all([
     remote_test.inc_count(),
     remote_test.inc_count()]))
 
-await remote_test.cause_error()
+try {
+  await remote_test.cause_error()
+} catch e {
+  io.errorln(e)
+}
 
 io.println(await remote_test.to_s())
 
