@@ -66,8 +66,8 @@ class Error {
       has_sourcemap = stackline.has_source_map()
       error_token = if has_sourcemap then stackline.source_token() else stackline.token()
       left_padding = _token_left_padding(error_token)
-      result.extend(color(0))
       result.extend(str(error_token.line + 1)).extend(':')
+      result.extend(color(0))
       line_text = if has_sourcemap then stackline.source_linetext() else stackline.linetext()
       if line_text {
         result.extend(line_text.substr(0, error_token.col))
