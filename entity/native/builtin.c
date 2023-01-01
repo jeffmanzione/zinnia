@@ -26,6 +26,7 @@
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
 #include "util/string.h"
+#include "util/string_util.h"
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/context.h"
@@ -289,6 +290,26 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(num_written > 0);
   return entity_object(
       string_new(task->parent_process->heap, buffer, num_written));
+}
+
+Entity _color(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_NONE(args) && !IS_CLASS(args, Class_String) && !IS_INT(args)) {
+    return raise_error(task, ctx, "Function 'color' expect an Int argument.");
+  }
+  Object *ret;
+  if (IS_NONE(args)) {
+    ret = string_new(task->parent_process->heap, "\x1b[m", strlen("\x1b[m"));
+  } else if (IS_CLASS(args, Class_String)) {
+    String *str = (String *)args->obj->_internal_obj;
+    char buf[16];
+    sprintf(buf, "\x1b[%*sm", String_size(str), str->table);
+    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+  } else {
+    char buf[16];
+    sprintf(buf, "\x1b[%lldm", pint(&args->pri));
+    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+  }
+  return entity_object(ret);
 }
 
 Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -1033,6 +1054,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_function(builtin, intern("Float"), _Float);
   native_function(builtin, intern("Bool"), __Bool);
   native_function(builtin, intern("__stringify"), _stringify);
+  native_function(builtin, intern("color"), _color);
 
   _builtin_add_string(builtin);
   _builtin_add_function(builtin);

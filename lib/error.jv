@@ -40,7 +40,7 @@ class StackLine {
     }
     filename = if has_source_map() then module().source_filename() else module_filename
     func = function()
-    result = ''.extend(module_name)
+    result = color('31;1').extend(module_name)
     if func {
       if func.is_method() {
         result.extend('.').extend(func.parent_class().name())
@@ -48,40 +48,51 @@ class StackLine {
       result.extend('.').extend(func.name())
     }
     return result.extend('(')
+    .extend(color(0))
         .extend(str(filename))
         .extend(':')
         .extend(str(tok.line + 1))
+        .extend(color('31;1'))
         .extend(')')
+        .extend(color(0))
   }
 }
 
 class Error {
   method to_s() {
-    result = cat(self.class().name(), ': ', message, '\n')
+    result = cat(color('31;1'), self.class().name(), ': ', message, '\n')
     if stacktrace[0].linetext() {
       stackline = stacktrace[0]
       has_sourcemap = stackline.has_source_map()
       error_token = if has_sourcemap then stackline.source_token() else stackline.token()
       left_padding = _token_left_padding(error_token)
+      result.extend(color(0))
       result.extend(str(error_token.line + 1)).extend(':')
       line_text = if has_sourcemap then stackline.source_linetext() else stackline.linetext()
       if line_text {
-        result.extend(str(line_text))
+        result.extend(line_text.substr(0, error_token.col))
+            .extend(color('41;1'))
+            .extend(error_token.text)
+            .extend(color(0))
+            .extend(line_text.substr(error_token.col + error_token.text.len()))
         for i=0, i < left_padding, i=i+1 {
           result.extend(' ')
         }
+        result.extend(color(0))
         for i=0, i < error_token.text.len(), i=i+1 {
           result.extend('^')
         }
+        result.extend(color('31;1'))
       } else {
         result.extend(' <missing-line>')
       }
-      result.extend('\n')
+      result.extend(color('31;1'))
+          .extend('\n')
     }
     for i=0, i<stacktrace.len(), i=i+1 {
       result.extend('  ').extend(str(stacktrace[i])).extend('\n')  
     }
-    return result
+    return result + color(0)
   }
 }
 
