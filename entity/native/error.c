@@ -33,7 +33,7 @@ typedef struct {
 void _error_init(Object *obj) {}
 void _error_delete(Object *obj) {}
 
-void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC2(_StackLine); }
+void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC(_StackLine); }
 void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
 Entity raise_error_with_object(Task *task, Context *context, Object *err) {
@@ -82,6 +82,9 @@ Module *stackline_module(Object *stackline) {
 
 Entity _stackline_module(Task *task, Context *ctx, Object *obj, Entity *args) {
   _StackLine *sl = (_StackLine *)obj->_internal_obj;
+  if (NULL == sl->module) {
+    return NONE_ENTITY;
+  }
   return entity_object(sl->module->_reflection);
 }
 
@@ -150,26 +153,37 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   object_set_member_obj(task->parent_process->heap, obj, intern("message"),
                         args->obj);
-
   Object *stacktrace = heap_new(task->parent_process->heap, Class_Array);
+  DEBUGF("HERE1");
   Task *t = task;
   while (NULL != t) {
+    DEBUGF("HERE2");
     Context *c;
-    for (c = t->current; c != NULL; c = c->previous_context) {
+    for (c = t->current; NULL != c; c = c->previous_context) {
+      DEBUGF("HERE3 t=%p c=%p", t, c);
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
+      DEBUGF("HERE4");
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
+      DEBUGF("HERE5");
       sl->module = c->module;
+      DEBUGF("HERE6");
       sl->func = (Function *)c->func; // blessed
-      sl->error_token =
-          (Token *)tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1))
-              ->token; // blessed
-      sl->source_error_token =
-          (Token *)tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1))
-              ->source_token; // blessed
-      sl->source_linetext =
-          (NULL == sl->source_error_token)
-              ? NULL
-              : tape_get_sourceline(c->tape, sl->source_error_token->line);
+      DEBUGF("HERE7");
+      const SourceMapping *sm =
+          tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1));
+      DEBUGF("%d %d %d %d", sm->line, sm->col, sm->source_line, sm->source_col);
+      sl->error_token = (Token *)sm->token; // blessed
+      DEBUGF("HERE8 sl->error_token='%s'", sl->error_token->text);
+      sl->source_error_token = (Token *)sm->source_token; // blessed
+      DEBUGF("HERE9 sl->source_error_token=%p", sl->source_error_token);
+      if (NULL != sl->source_error_token) {
+        DEBUGF("HERE9.1 line=%d", sl->source_error_token->line);
+        sl->source_linetext =
+            tape_get_sourceline(c->tape, sl->source_error_token->line);
+      } else {
+        sl->source_linetext = NULL;
+      }
+      DEBUGF("HERE10\n");
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }
@@ -187,12 +201,19 @@ Object *error_new(Task *task, Context *ctx, Object *error_msg) {
   return err;
 }
 
+void _stackline_copy(Heap *heap, Map *cpy_map, Object *target_obj,
+                     Object *src_obj) {
+  _StackLine *src = (_StackLine *)src_obj->_internal_obj;
+  _StackLine *target = (_StackLine *)target_obj->_internal_obj;
+  *target = *src;
+}
+
 void error_add_native(ModuleManager *mm, Module *error) {
   Class_Error = native_class(error, ERROR_NAME, _error_init, _error_delete);
   native_method(Class_Error, CONSTRUCTOR_KEY, _error_constructor);
-
   Class_StackLine =
       native_class(error, STACKLINE_NAME, _stackline_init, _stackline_delete);
+  Class_StackLine->_copy_fn = _stackline_copy;
   native_method(Class_StackLine, MODULE_KEY, _stackline_module);
   native_method(Class_StackLine, intern("function"), _stackline_function);
   native_method(Class_StackLine, intern("__token"), _stackline_token);

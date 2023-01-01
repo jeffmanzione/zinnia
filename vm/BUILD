@@ -95,7 +95,6 @@ cc_library(
         "//entity/native:error",
         "//entity/native:io",
         "//entity/native:math",
-        "//entity/native:process",
         "//entity/native:socket",
         "//entity/native:time",
         "//lib",

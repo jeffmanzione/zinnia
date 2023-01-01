@@ -1,0 +1,46 @@
+import io
+import async
+import error
+
+@async.RemoteClass
+class Test {
+  field count
+  
+  new() {
+    count = 0
+  }
+
+  method inc_count() {
+    count = count + 1
+    return count
+  }
+
+  method cause_error() {
+    raise error.Error('Oh no!')
+  }
+
+  method to_s() {
+    return 'Test(' + str(count) + ')'
+  }
+}
+
+remote_test = async.create_remote(Test)
+
+io.println(await async.all([
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count(),
+    remote_test.inc_count()]))
+
+try {
+  await remote_test.cause_error()
+} catch e {
+  io.errorln(e)
+}
+
+io.println(await remote_test.to_s())
+
+

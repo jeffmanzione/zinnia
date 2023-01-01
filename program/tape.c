@@ -76,6 +76,10 @@ Instruction *tape_add(Tape *tape) {
   // No sourcemap info present.
   sm->col = -1;
   sm->line = -1;
+  sm->source_col = -1;
+  sm->source_line = -1;
+  sm->source_token = NULL;
+  sm->token = NULL;
   return (Instruction *)alist_add(&tape->ins);
 }
 
@@ -190,7 +194,7 @@ const SourceMapping *tape_get_source(const Tape *tape, uint32_t index) {
 }
 
 const char *tape_get_sourceline(const Tape *const tape, int line) {
-  if (line >= alist_len(&tape->source_lines)) {
+  if (line < 0 || line >= alist_len(&tape->source_lines)) {
     return NULL;
   }
   const char *escaped_line = *(char **)alist_get(&tape->source_lines, line);

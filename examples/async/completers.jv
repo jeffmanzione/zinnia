@@ -1,12 +1,11 @@
 import async
 import io
-import process
 
 ; Completers represent futures that can be manually completed.
 completer = async.Completer()
 
 () async {
-  await process.sleep(2)  ; Wait 2 seconds. 
+  await async.sleep(2)  ; Wait 2 seconds. 
   io.println('Hard work done!')
   completer.complete()
 }()  ; Call the function.

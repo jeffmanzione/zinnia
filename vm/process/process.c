@@ -29,6 +29,9 @@ void process_init(Process *process, HeapConf *conf) {
   set_init_default(&process->background_tasks);
   process->_reflection = NULL;
   Q_init(&process->waiting_background_work);
+  process->future = NULL;
+  process->is_remote = false;
+  process->remote_non_daemon_task = NULL;
 }
 
 void process_finalize(Process *process) {

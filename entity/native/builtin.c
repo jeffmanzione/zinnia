@@ -13,6 +13,7 @@
 #include "entity/class/classes.h"
 #include "entity/class/classes_def.h"
 #include "entity/entity.h"
+#include "entity/native/async.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
@@ -28,9 +29,14 @@
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/context.h"
+#include "vm/process/process.h"
 #include "vm/process/processes.h"
+#include "vm/process/remote.h"
 #include "vm/process/task.h"
 #include "vm/vm.h"
+
+// From vm/virtual_machine.h
+ThreadHandle process_run_in_new_thread(Process *process);
 
 #ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
@@ -869,7 +875,8 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "$set_method() can only be called with a Tuple.");
+    return raise_error(task, ctx,
+                       "$set_method() can only be called with a Tuple.");
   }
   Tuple *t_args = (Tuple *)args->obj->_internal_obj;
   if (2 != tuple_size(t_args)) {
@@ -906,13 +913,36 @@ Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, "$get() can only be called with a String.");
   }
   const String *str_key = (const String *)args->obj->_internal_obj;
-  // TODO: Maybe use _object_get_maybe_wrap instead.
   const char *key = intern_range(str_key->table, 0, String_size(str_key));
-  return object_get_maybe_wrap(obj, key, task, ctx);
+  return object_get_maybe_wrap(obj, key, task->parent_process->heap, ctx);
 }
 
 void _process_init(Object *obj) {}
 void _process_delete(Object *obj) {}
+
+// Not safe after new process is started.
+Entity _create_future_for_process(Process *process, Process *new_process,
+                                  Task *task) {
+  Task *new_task = process_create_unqueued_task(process);
+  new_task->parent_task = task;
+
+  Object *future_obj = future_create(new_task);
+  new_process->future = (Future *)future_obj->_internal_obj;
+
+  new_task->state = TASK_WAITING;
+  process_insert_waiting_task(process, new_task);
+
+  return entity_object(future_obj);
+}
+
+Entity _process_start(Task *current_task, Context *current_ctx, Object *obj,
+                      Entity *args) {
+  Process *process = (Process *)obj->_internal_obj;
+  Entity future = _create_future_for_process(current_task->parent_process,
+                                             process, current_task);
+  process_run_in_new_thread(process);
+  return future;
+}
 
 void _task_init(Object *obj) {}
 void _task_delete(Object *obj) {}
@@ -924,6 +954,18 @@ void _context_delete(Object *obj) {
   // This can segfault if the process is cleaned up before the context.
   // This segfault should only occur during DEBUG mode.
   __arena_dealloc(&ctx->parent_task->parent_process->context_arena, ctx);
+}
+
+void _remote_init(Object *obj) { create_remote_on_object(obj); }
+
+void _remote_delete(Object *obj) {
+  remote_delete(extract_remote_from_obj(obj));
+}
+
+Entity _remote_process(Task *current_task, Context *current_ctx, Object *obj,
+                       Entity *args) {
+  Remote *remote = extract_remote_from_obj(obj);
+  return entity_object(remote_get_process(remote)->_reflection);
 }
 
 void _builtin_add_string(Module *builtin) {
@@ -969,14 +1011,22 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("end"), _range_end);
 }
 
-void builtin_add_native(ModuleManager *mm, Module *builtin) {
-  builtin_classes(mm->_heap, builtin);
-
+void _builtin_add_process(Module *builtin) {
   Class_Process =
       native_class(builtin, PROCESS_NAME, _process_init, _process_delete);
+  native_method(Class_Process, intern("start"), _process_start);
   Class_Task = native_class(builtin, TASK_NAME, _task_init, _task_delete);
   Class_Context =
       native_class(builtin, CONTEXT_NAME, _context_init, _context_delete);
+  Class_Remote =
+      native_class(builtin, REMOTE_CLASS_NAME, _remote_init, _remote_delete);
+  native_method(Class_Remote, intern("process"), _remote_process);
+}
+
+void builtin_add_native(ModuleManager *mm, Module *builtin) {
+  builtin_classes(mm->_heap, builtin);
+
+  _builtin_add_process(builtin);
 
   native_function(builtin, intern("__collect_garbage"), _collect_garbage);
   native_function(builtin, intern("Int"), _Int);
@@ -1002,6 +1052,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Object, HASH_KEY, _object_hash);
   native_method(Class_Object, intern("copy"), _object_copy);
   native_method(Class_Object, intern("$set"), _set_member);
+  native_method(Class_Object, intern("$get"), _get_member);
   native_method(Class_Object, ADDRESS_INT_KEY, _object_address_int);
   native_method(Class_Object, ADDRESS_HEX_KEY, _object_address_hex);
 

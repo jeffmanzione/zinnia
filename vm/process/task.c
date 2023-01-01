@@ -30,7 +30,7 @@ const char *wait_reason_str(WaitReason reason) { return _wait_reasons[reason]; }
 
 void task_init(Task *task) {
   task->state = TASK_NEW;
-  task->state = WAITING_TO_START;
+  task->wait_reason = WAITING_TO_START;
   alist_init(&task->entity_stack, Entity, DEFAULT_ARRAY_SZ);
   task->parent_task = NULL;
   set_init_default(&task->dependent_tasks);
@@ -38,6 +38,7 @@ void task_init(Task *task) {
   task->current = NULL;
   task->_reflection = NULL;
   task->is_finalized = false;
+  task->remote_future = NULL;
 }
 
 void task_finalize(Task *task) {

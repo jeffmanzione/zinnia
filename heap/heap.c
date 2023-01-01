@@ -10,7 +10,6 @@
 #include "alloc/alloc.h"
 #include "alloc/arena/arena.h"
 #include "alloc/memory_graph/memory_graph.h"
-#include "debug/debug.h"
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
 #include "entity/object.h"
@@ -79,10 +78,10 @@ void heap_set_object_count_threshold_for_garbage_collection(
   heap->object_count_threshold_for_garbage_collection = new_threshold;
 }
 
-Object *heap_new(Heap *heap, const Class *class) {
-  ASSERT(NOT_NULL(heap), NOT_NULL(class));
+DEB_FN(Object *, heap_new, Heap *heap, const Class *class) {
+  ASSERT(NOT_NULL(heap));
+  ASSERT(NOT_NULL(class));
   Object *object = _object_create(heap, class);
-  // Blessed
   object->_node_ref = mgraph_insert(heap->mg, object, (Deleter)_object_delete);
   return object;
 }
@@ -328,6 +327,10 @@ Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   Object *cpy = (Object *)map_lookup(copy_map, obj);
   if (NULL != cpy) {
     return entity_object(cpy);
+  }
+  if (IS_CLASS(e, Class_Module) || IS_CLASS(e, Class_Class)) {
+    map_insert(copy_map, obj, obj);
+    return *e;
   }
   cpy = heap_new(heap, obj->_class);
   map_insert(copy_map, obj, cpy);

@@ -45,7 +45,7 @@ Entity *class_get_field(const Class *cls, const char name[]) {
   return NULL;
 }
 
-Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
+Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
                              Context *ctx) {
   Entity member;
   const Entity *member_ptr =
@@ -66,7 +66,7 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Task *task,
   }
   if (OBJECT == member.type && Class_Function == member.obj->_class) {
     return entity_object(
-        wrap_function_in_ref(member.obj->_function_obj, obj, task, ctx));
+        wrap_function_in_ref(member.obj->_function_obj, obj, heap, ctx));
   }
   return member;
 }
