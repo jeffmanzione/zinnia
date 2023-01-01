@@ -2,12 +2,42 @@ import classes
 import error
 import io
 
+; Returns a future that completes in at least [duration_sec] seconds.
+def sleep(duration_sec) {
+  __sleep(duration_sec)
+}
+
+; Returns a newly-spawned process that executes [fn] with arguments [args].
 def create_process({fn, args=None, is_remote=False}) {
   __create_process(fn, args, is_remote)
 }
 
-def sleep(duration_sec) {
-  return __sleep(duration_sec)
+; Returns a remote instance of [cls] with arguments [args] that can control
+; the concrete instance of [cls] in a newly-spawned process.
+;
+; The remote class returned controls the actual class in a separate process.
+; Calls to the remote class return a future to the result of the execution of
+; work that is executed on the concrete class in the spawned process.
+;
+; Throws an error if [cls] is not annotated with [RemoteClass].
+; 
+; Example:
+; ```
+; @async.RemoteClass
+; class Test {
+;   new(field n) {}
+;   method mult_n(num) num * n
+; }
+; remote_instance = async.create_remote(Test, 5)
+; io.println(await remote_instance.mult_n(6)) /* Prints '30\n' */
+; ``` 
+def create_remote(cls, args=None) {
+  remote_class = _get_remote_class(cls)
+  process = create_process(
+      fn: (cls, args) -> cls(args),
+      args: (cls, args),
+      is_remote: True)
+  return remote_class(await process.start())
 }
 
 ; Represents the state of an asynchronous piece of work.
@@ -55,10 +85,13 @@ class Completer {
   }
 }
 
+; Returns a future that completes when all futures in [futures] complete.
 def all(futures) async {
   futures.map((f) -> await f)
 }
 
+; Generates a new class named ['Remote' + cls.name()] that allows comunication
+; from parent to child processes.
 class RemoteClass {
   method annotate(cls) {
     remote_class = classes.factory.create_class(
@@ -89,13 +122,4 @@ def _get_remote_class(cls) {
     raise error.Error('Could not find remote class for ' + cls.name() + '.')
   }
   return remote
-}
-
-def create_remote(cls, args=None) {
-  remote_class = _get_remote_class(cls)
-  process = create_process(
-      fn: (cls, args) -> cls(args),
-      args: (cls, args),
-      is_remote: True)
-  return remote_class(await process.start())
 }
