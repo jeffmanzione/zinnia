@@ -294,7 +294,8 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _color(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_NONE(args) && !IS_CLASS(args, Class_String) && !IS_INT(args)) {
-    return raise_error(task, ctx, "Function 'color' expect an Int argument.");
+    return raise_error(
+        task, ctx, "Function 'color' expect Int, String, or None argument.");
   }
   Object *ret;
   if (IS_NONE(args)) {
