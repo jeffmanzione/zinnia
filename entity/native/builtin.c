@@ -26,6 +26,7 @@
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
 #include "util/string.h"
+#include "util/string_util.h"
 #include "util/util.h"
 #include "vm/intern.h"
 #include "vm/process/context.h"
@@ -289,6 +290,27 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(num_written > 0);
   return entity_object(
       string_new(task->parent_process->heap, buffer, num_written));
+}
+
+Entity _color(Task *task, Context *ctx, Object *obj, Entity *args) {
+  if (!IS_NONE(args) && !IS_CLASS(args, Class_String) && !IS_INT(args)) {
+    return raise_error(
+        task, ctx, "Function 'color' expect Int, String, or None argument.");
+  }
+  Object *ret;
+  if (IS_NONE(args)) {
+    ret = string_new(task->parent_process->heap, "\x1b[m", strlen("\x1b[m"));
+  } else if (IS_CLASS(args, Class_String)) {
+    String *str = (String *)args->obj->_internal_obj;
+    char buf[16];
+    sprintf(buf, "\x1b[%*sm", String_size(str), str->table);
+    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+  } else {
+    char buf[16];
+    sprintf(buf, "\x1b[%lldm", pint(&args->pri));
+    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+  }
+  return entity_object(ret);
 }
 
 Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -744,15 +766,21 @@ Entity _function_ref_obj(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(f_obj);
 }
 
-void _range_init(Object *obj) { obj->_internal_obj = ALLOC2(_Range); }
+void _range_init(Object *obj) { obj->_internal_obj = ALLOC(_Range); }
 void _range_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
+void _range_copy(Heap *heap, Map *cpy_map, Object *target_obj,
+                 Object *src_obj) {
+  _Range *src = (_Range *)src_obj->_internal_obj;
+  _Range *target = (_Range *)target_obj->_internal_obj;
+  *target = *src;
+}
+
 Entity _range_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL == args || OBJECT != args->type ||
-      Class_Tuple != args->obj->_class) {
+  if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(task, ctx, "Input to range() is not a tuple.");
   }
-  Tuple *t = (Tuple *)args->obj->_internal_obj;
+  const Tuple *t = (Tuple *)args->obj->_internal_obj;
   if (3 != tuple_size(t)) {
     return raise_error(task, ctx, "Invalid tuple size for range(). Was %d",
                        tuple_size(t));
@@ -1009,6 +1037,7 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("start"), _range_start);
   native_method(Class_Range, intern("inc"), _range_inc);
   native_method(Class_Range, intern("end"), _range_end);
+  Class_Range->_copy_fn = _range_copy;
 }
 
 void _builtin_add_process(Module *builtin) {
@@ -1033,6 +1062,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_function(builtin, intern("Float"), _Float);
   native_function(builtin, intern("Bool"), __Bool);
   native_function(builtin, intern("__stringify"), _stringify);
+  native_function(builtin, intern("color"), _color);
 
   _builtin_add_string(builtin);
   _builtin_add_function(builtin);

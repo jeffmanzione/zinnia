@@ -154,36 +154,24 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   object_set_member_obj(task->parent_process->heap, obj, intern("message"),
                         args->obj);
   Object *stacktrace = heap_new(task->parent_process->heap, Class_Array);
-  DEBUGF("HERE1");
   Task *t = task;
   while (NULL != t) {
-    DEBUGF("HERE2");
     Context *c;
     for (c = t->current; NULL != c; c = c->previous_context) {
-      DEBUGF("HERE3 t=%p c=%p", t, c);
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
-      DEBUGF("HERE4");
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
-      DEBUGF("HERE5");
       sl->module = c->module;
-      DEBUGF("HERE6");
       sl->func = (Function *)c->func; // blessed
-      DEBUGF("HERE7");
       const SourceMapping *sm =
           tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1));
-      DEBUGF("%d %d %d %d", sm->line, sm->col, sm->source_line, sm->source_col);
-      sl->error_token = (Token *)sm->token; // blessed
-      DEBUGF("HERE8 sl->error_token='%s'", sl->error_token->text);
+      sl->error_token = (Token *)sm->token;               // blessed
       sl->source_error_token = (Token *)sm->source_token; // blessed
-      DEBUGF("HERE9 sl->source_error_token=%p", sl->source_error_token);
       if (NULL != sl->source_error_token) {
-        DEBUGF("HERE9.1 line=%d", sl->source_error_token->line);
         sl->source_linetext =
             tape_get_sourceline(c->tape, sl->source_error_token->line);
       } else {
         sl->source_linetext = NULL;
       }
-      DEBUGF("HERE10\n");
       Entity sl_e = entity_object(stackline);
       array_add(task->parent_process->heap, stacktrace, &sl_e);
     }

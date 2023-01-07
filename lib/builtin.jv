@@ -272,10 +272,30 @@ class FunctionRef {
   }
 }
 
+class Range {
+  method to_s() {
+    cat(start(), ':', inc(), ':', end())
+  }
+  method __in__(n) {
+    (n <= end()) and (n >= start()) and (n % inc() == start() % inc())
+  }
+  method [](i) {
+    if (i < 0) raise error.Error(cat('Range index out of bounds. was ', i))
+    val = start() + i * inc()
+    if (val > end()) raise error.Error(cat('Range index out of bounds. was ', i))
+    val
+  }
+  method len() {
+    (self.end() - self.start()) / self.inc()
+  }
+  method iter() {
+    IndexIterator(self, 0, len())
+  }
+}
+
 self.Iteartor = builtin_ext.Iterator
 self.IndexIterator = builtin_ext.IndexIterator
 self.KVIterator = builtin_ext.KVIterator
-self.Range = builtin_ext.Range
 self.range = builtin_ext.range
 self.memoize = builtin_ext.memoize
 self.sort = builtin_ext.sort
