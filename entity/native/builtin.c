@@ -765,15 +765,21 @@ Entity _function_ref_obj(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(f_obj);
 }
 
-void _range_init(Object *obj) { obj->_internal_obj = ALLOC2(_Range); }
+void _range_init(Object *obj) { obj->_internal_obj = ALLOC(_Range); }
 void _range_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
+void _range_copy(Heap *heap, Map *cpy_map, Object *target_obj,
+                 Object *src_obj) {
+  _Range *src = (_Range *)src_obj->_internal_obj;
+  _Range *target = (_Range *)target_obj->_internal_obj;
+  *target = *src;
+}
+
 Entity _range_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL == args || OBJECT != args->type ||
-      Class_Tuple != args->obj->_class) {
+  if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(task, ctx, "Input to range() is not a tuple.");
   }
-  Tuple *t = (Tuple *)args->obj->_internal_obj;
+  const Tuple *t = (Tuple *)args->obj->_internal_obj;
   if (3 != tuple_size(t)) {
     return raise_error(task, ctx, "Invalid tuple size for range(). Was %d",
                        tuple_size(t));
@@ -1030,6 +1036,7 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("start"), _range_start);
   native_method(Class_Range, intern("inc"), _range_inc);
   native_method(Class_Range, intern("end"), _range_end);
+  Class_Range->_copy_fn = _range_copy;
 }
 
 void _builtin_add_process(Module *builtin) {

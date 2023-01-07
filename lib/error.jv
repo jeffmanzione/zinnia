@@ -48,7 +48,7 @@ class StackLine {
       result.extend('.').extend(func.name())
     }
     return result.extend('(')
-    .extend(color(0))
+        .extend(color(0))
         .extend(str(filename))
         .extend(':')
         .extend(str(tok.line + 1))
@@ -72,7 +72,7 @@ class Error {
       if line_text {
         result.extend(line_text.substr(0, error_token.col))
             .extend(color('41;1'))
-            .extend(error_token.text)
+            .extend(line_text.substr(error_token.col, error_token.text.len()))
             .extend(color(0))
             .extend(line_text.substr(error_token.col + error_token.text.len()))
         for i=0, i < left_padding, i=i+1 {

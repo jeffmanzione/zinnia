@@ -335,6 +335,9 @@ Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == fi) {
     return NONE_ENTITY;
   }
+  if (NULL == file_info_name(fi)) {
+    return NONE_ENTITY;
+  }
   return entity_object(string_new(task->parent_process->heap,
                                   file_info_name(fi),
                                   strlen(file_info_name(fi))));
