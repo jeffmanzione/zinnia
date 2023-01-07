@@ -6,18 +6,18 @@ package(
 
 jeff_vm_binary(
     name = "chat",
-    main = "chat.jv",
+    main = "chat.jp",
     deps = [],
 )
 
 jeff_vm_binary(
     name = "http_hello",
-    main = "http_hello.jv",
+    main = "http_hello.jp",
     deps = [],
 )
 
 jeff_vm_binary(
     name = "webserver",
-    main = "webserver.jv",
+    main = "webserver.jp",
     deps = [],
 )

@@ -31,11 +31,11 @@ cc_binary(
 
 jeff_vm_library(
     name = "custom",
-    srcs = ["custom.jv"],
+    srcs = ["custom.jp"],
 )
 
 jeff_vm_binary(
     name = "test",
-    main = "test.jv",
+    main = "test.jp",
     deps = [":custom"],
 )

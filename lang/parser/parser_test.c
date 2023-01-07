@@ -13,7 +13,7 @@ int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
 
-  FileInfo *fi = file_info("C:/Users/jeffr/git/jeff-vm/lib/builtin.jv");
+  FileInfo *fi = file_info("C:/Users/jeffr/git/jasper/lib/builtin.jp");
 
   // while (true) {
   Q tokens;

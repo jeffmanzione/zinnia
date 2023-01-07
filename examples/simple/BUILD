@@ -6,28 +6,28 @@ package(
 
 jeff_vm_binary(
     name = "arguments",
-    main = "arguments.jv",
+    main = "arguments.jp",
     deps = [],
 )
 
 jeff_vm_binary(
     name = "exceptions",
-    main = "exceptions.jv",
+    main = "exceptions.jp",
     deps = [],
 )
 
 jeff_vm_binary(
     name = "fibonacci",
-    main = "fibonacci.jv",
+    main = "fibonacci.jp",
     deps = [],
 )
 
 jeff_vm_binary(
     name = "hello",
-    main = "hello.jv",
+    main = "hello.jp",
 )
 
 jeff_vm_binary(
     name = "range",
-    main = "range.jv",
+    main = "range.jp",
 )

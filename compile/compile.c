@@ -92,7 +92,7 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
-  if (out_ja && ends_with(fn, ".jv")) {
+  if (out_ja && ends_with(fn, ".jp")) {
     make_dir_if_does_not_exist(machine_dir);
     char *file_path = combine_path_file(machine_dir, file_name, ".ja");
     FILE *file = FILE_FN(file_path, "wb");
@@ -136,7 +136,7 @@ Map *compile(const Set *source_files, const ArgStore *store) {
   return src_map;
 }
 
-int jvc(int argc, const char *argv[]) {
+int jasperc(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 

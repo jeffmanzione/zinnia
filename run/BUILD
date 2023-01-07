@@ -31,8 +31,8 @@ cc_library(
 )
 
 cc_binary(
-    name = "jvr",
-    srcs = ["jvr.c"],
+    name = "jasper",
+    srcs = ["jasper.c"],
     deps = [
         ":run",
     ],

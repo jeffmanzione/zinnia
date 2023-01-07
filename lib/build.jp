@@ -1,0 +1,25 @@
+import classes
+
+class WithBuilder {
+  new(field _builder_class_name=None) {}
+  method annotate(cls) {
+    if ~_builder_class_name {
+      _builder_class_name = cat(cls.name(), 'Builder')
+    }
+    builder_class = classes.factory.create_class(_builder_class_name, cls.module())
+    build_method = builder_class.add_method('build')
+        .with_statement(cat('o = ', cls.name(), '()'))
+    cls.fields().each((f) {
+      builder_class.add_method(cat('set_', f))
+          .with_parameter(f)
+          .with_statement(cat('self._', f, ' = ', f))
+          .with_statement('return self')
+      build_method.with_statement(cat('o.', f, ' = self._', f))
+    })
+    build_method.with_statement('return o')
+    ;io.println(builder_class.to_s())
+    builder_class = builder_class.build()
+    cls.module().$set(cat('builder_of_', cls.name()), () -> builder_class())
+
+  }
+}

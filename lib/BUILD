@@ -1,4 +1,4 @@
-load("//:jeff_lang.bzl", "jeff_vm_library")
+load("//:jasper_lang.bzl", "jasper_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -6,10 +6,10 @@ package(
 
 filegroup(
     name = "lib_srcs",
-    srcs = glob(["*.jv"]),
+    srcs = glob(["*.jp"]),
 )
 
-jeff_vm_library(
+jasper_library(
     name = "lib_ja_srcs",
     srcs = ["lib_srcs"],
     bin = False,
