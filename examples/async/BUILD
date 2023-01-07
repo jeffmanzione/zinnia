@@ -6,10 +6,10 @@ package(
 
 jeff_vm_binary(
     name = "completers",
-    main = "completers.jv",
+    main = "completers.jp",
 )
 
 jeff_vm_binary(
     name = "futures",
-    main = "futures.jv",
+    main = "futures.jp",
 )

@@ -1,4 +1,4 @@
-# jeff-vm
+# jasper
 
 A process virtual machine that I've created in my spare time.
 
@@ -21,22 +21,22 @@ Download the latest binaries released on GitHub.
 | :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install). I promise it is very easy to install! |
 |-|
 
-To build jeff-vm:
+To build jasper:
 
 ```shell
 # Clones this git repository.
-git clone https://github.com/jeffreymanzione/jeff-vm.git
+git clone https://github.com/jeffreymanzione/jasper.git
 
 # Bazel requires building within the workspace.
-cd jeff-vm
+cd jasper
 
 # Builds the compiler and runner.
-bazel build -c opt //compile:jvc //run:jvr
+bazel build -c opt //compile:jasperc //run:jasper
 ```
 
 ## Compiling your program to assembly and bytecode
 
-Use `jvc` to compile your program.
+Use `jasperc` to compile your program.
 
 * `-a`: Output assembly (default=`false`).
 * `-b`: Output binary (default=`false`).
@@ -45,21 +45,21 @@ Use `jvc` to compile your program.
 * `-assembly_out_dir`: Output location for JA files (default=`"./"`).
 
 ```shell
-jvc -a -b my_program.jv
+jasperc -a -b my_program.jp
 ```
 
 ## Running your program
 
-Use `jvr` to run your program either from source, assembly, or bytecode.
+Use `jasper` to run your program either from source, assembly, or bytecode.
 
 ```shell
-jvr my_program.jv
+jasper my_program.jp
 # or
-jvr my_program.ja
+jasper my_program.ja
 # or
-jvr my_program.jb
+jasper my_program.jb
 ```
 
 ## Examples
 
-Check out the [examples](https://github.com/jeffreymanzione/jeff-vm/tree/master/examples).
+Check out the [examples](https://github.com/jeffreymanzione/jasper/tree/master/examples).

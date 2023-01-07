@@ -6,10 +6,10 @@ package(
 
 jeff_vm_binary(
     name = "builder",
-    main = "builder.jv",
+    main = "builder.jp",
 )
 
 jeff_vm_binary(
     name = "mvc",
-    main = "mvc.jv",
+    main = "mvc.jp",
 )

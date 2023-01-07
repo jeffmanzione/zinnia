@@ -1,3 +1,0 @@
-import io
-
-io.println('\n'.join(1:1000))

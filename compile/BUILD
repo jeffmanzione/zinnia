@@ -34,7 +34,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "jvc",
-    srcs = ["jvc.c"],
+    name = "jasperc",
+    srcs = ["jasperc.c"],
     deps = [":compile"],
 )

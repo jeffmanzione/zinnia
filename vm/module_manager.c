@@ -209,7 +209,7 @@ FileInfo *_module_info_get_file(ModuleInfo *module_info) {
   return file_info(module_info->file_name);
 }
 
-Module *_read_jv(ModuleManager *mm, ModuleInfo *module_info) {
+Module *_read_jp(ModuleManager *mm, ModuleInfo *module_info) {
   FileInfo *fi = _module_info_get_file(module_info);
 
   Q tokens;
@@ -351,8 +351,8 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
         module = _read_jb(mm, module_info);
       } else if (ends_with(module_info->file_name, ".ja")) {
         module = _read_ja(mm, module_info);
-      } else if (ends_with(module_info->file_name, ".jv")) {
-        module = _read_jv(mm, module_info);
+      } else if (ends_with(module_info->file_name, ".jp")) {
+        module = _read_jp(mm, module_info);
       } else {
         FATALF("Unknown file type.");
       }
