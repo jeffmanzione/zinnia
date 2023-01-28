@@ -239,13 +239,10 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
       object_get_maybe_wrap(remote_object, fn_name, remote_process->heap, NULL);
 
   const Function *f;
-  Object *self;
   if (IS_CLASS(&fn, Class_Function)) {
     f = fn.obj->_function_obj;
-    self = f->_module->_reflection;
   } else if (IS_CLASS(&fn, Class_FunctionRef)) {
     f = function_ref_get_func(fn.obj);
-    self = function_ref_get_object(fn.obj);
   } else {
     return raise_error(current_task, current_ctx,
                        "Could not find method '%s' on remote object.", fn_name);

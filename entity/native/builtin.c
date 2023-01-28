@@ -307,7 +307,7 @@ Entity _color(Task *task, Context *ctx, Object *obj, Entity *args) {
     ret = string_new(task->parent_process->heap, buf, strlen(buf));
   } else {
     char buf[16];
-    sprintf(buf, "\x1b[%lldm", pint(&args->pri));
+    sprintf(buf, "\x1b[%" PRId64 "m", pint(&args->pri));
     ret = string_new(task->parent_process->heap, buf, strlen(buf));
   }
   return entity_object(ret);
@@ -1037,7 +1037,7 @@ void _builtin_add_range(Module *builtin) {
   native_method(Class_Range, intern("start"), _range_start);
   native_method(Class_Range, intern("inc"), _range_inc);
   native_method(Class_Range, intern("end"), _range_end);
-  Class_Range->_copy_fn = _range_copy;
+  Class_Range->_copy_fn = (ObjCopyFn)_range_copy;
 }
 
 void _builtin_add_process(Module *builtin) {

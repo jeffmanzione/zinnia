@@ -21,6 +21,7 @@
 #include "entity/tuple/tuple.h"
 #include "heap/heap.h"
 #include "struct/alist.h"
+#include "struct/struct_defaults.h"
 #include "util/sync/mutex.h"
 #include "util/sync/thread.h"
 #include "vm/builtin_modules.h"

@@ -201,7 +201,7 @@ void error_add_native(ModuleManager *mm, Module *error) {
   native_method(Class_Error, CONSTRUCTOR_KEY, _error_constructor);
   Class_StackLine =
       native_class(error, STACKLINE_NAME, _stackline_init, _stackline_delete);
-  Class_StackLine->_copy_fn = _stackline_copy;
+  Class_StackLine->_copy_fn = (ObjCopyFn)_stackline_copy;
   native_method(Class_StackLine, MODULE_KEY, _stackline_module);
   native_method(Class_StackLine, intern("function"), _stackline_function);
   native_method(Class_StackLine, intern("__token"), _stackline_token);
