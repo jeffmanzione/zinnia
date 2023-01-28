@@ -1,4 +1,4 @@
-; Run command: jlr examples/simple/arguments.jp -- --alpha --nobeta --gamma=yoyoyo
+; Run command: jasper examples/simple/arguments.jp -- --alpha --nobeta --gamma=yoyoyo
 
 import io
 
