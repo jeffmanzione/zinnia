@@ -1,4 +1,4 @@
 import io
 
 io.print('Enter your name: ')
-io.println(cat('Hi, ', io.IN.getline().rtrim(), '! Say hello to the world!'))
+io.println('Hi, ' + io.IN.getline().rtrim() + '! Say hello to the world!')

@@ -154,6 +154,10 @@ class LoadingCache {
   method get(k) {
     cache.get(k, factory) 
   }
+
+  method clear() {
+    cache.clear()
+  }
 }
 
 ; A collection that contains no duplicate elements.

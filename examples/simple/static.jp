@@ -1,8 +1,11 @@
 import io
 
 class Message {
-  static HELLO = 'Hello, world!'
-  static BYE = 'Goodbye!'
+  static HELLO = Message('Hello, world!')
+  static BYE = Message('Goodbye!')
+
+  new(field message) {}
+  method to_s() message
 }
 
 io.println(Message.HELLO)
