@@ -11,7 +11,7 @@ filegroup(
 
 jasper_library(
     name = "lib_ja_srcs",
-    srcs = ["lib_srcs"],
+    srcs = [":lib_srcs"],
     bin = False,
 )
 
