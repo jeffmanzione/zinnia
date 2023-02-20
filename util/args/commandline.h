@@ -24,6 +24,7 @@ typedef enum {
   ArgKey__LIB_LOCATION,
   ArgKey__MAX_PROCESS_OBJECT_COUNT,
   ArgKey__ASYNC,
+  ArgKey__INTERPRETER,
   ArgKey__END,
 } ArgKey;
 

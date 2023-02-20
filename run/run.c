@@ -17,7 +17,11 @@
 #include "entity/module/modules.h"
 #include "entity/object.h"
 #include "entity/string/string_helper.h"
+#include "lang/lexer/lang_lexer.h"
+#include "lang/lexer/token.h"
+#include "lang/parser/lang_parser.h"
 #include "lang/parser/parser.h"
+#include "lang/semantic_analyzer/definitions.h"
 #include "lang/semantic_analyzer/expression_tree.h"
 #include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/optimization/optimize.h"
@@ -51,23 +55,79 @@ void _set_args(Heap *heap, ArgStore *store) {
                         args);
 }
 
+void _interpret_and_execute_line(Module *m) {
+  char buf[4096];
+  getline();
+
+  SFILE *file = sfile_open(c_str_text);
+  Tape *tape = (Tape *)m->_tape; // bless
+  FileInfo *fi = file_info_sfile(file);
+  FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
+      vm_module_manager(task->parent_process->vm), m);
+  file_info_append(module_fi, fi);
+  fi = module_fi;
+
+  Q tokens;
+  Q_init(&tokens);
+  lexer_tokenize(fi, &tokens);
+
+  Parser parser;
+  parser_init(&parser, rule_file_level_statement,
+              /*ignore_newline=*/false);
+  SyntaxTree *stree = parser_parse(&parser, &tokens);
+  stree = parser_prune_newlines(&parser, stree);
+
+  SemanticAnalyzer sa;
+  semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
+  ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
+
+  semantic_analyzer_produce(&sa, etree, tape);
+
+  semantic_analyzer_delete(&sa, etree);
+  semantic_analyzer_finalize(&sa);
+
+  parser_delete_st(&parser, stree);
+  parser_finalize(&parser);
+
+  Q_finalize(&tokens);
+
+  Map new_classes;
+  map_init_default(&new_classes);
+  modulemanager_update_module(vm_module_manager(task->parent_process->vm), m,
+                              &new_classes);
+}
+
 void run(const Set *source_files, ArgStore *store) {
   optimize_init();
 
   const char *lib_location =
       argstore_lookup_string(store, ArgKey__LIB_LOCATION);
-  uint32_t max_process_object_count =
+  const uint32_t max_process_object_count =
       argstore_lookup_int(store, ArgKey__MAX_PROCESS_OBJECT_COUNT);
-  bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
+  const bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
   VM *vm = vm_create(lib_location, max_process_object_count, async_enabled);
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = NULL;
 
   M_iter srcs = set_iter((Set *)source_files);
+  const bool has_sources = set_size(source_files) > 0;
+  const bool interpreter_mode =
+      argstore_lookup_bool(store, ArgKey__INTERPRETER) || !has_sources;
+
+  if (!has_sources && !interpreter_mode) {
+    fprintf(
+        stderr,
+        "Error: No sources provided. If interepter mode was desired, add -i.");
+    return;
+  }
+  if (interpreter_mode) {
+    fprintf(stdout, "Interpreter mode detected.\n");
+  }
+
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
     ModuleInfo *module_info = mm_register_module(mm, src, NULL);
-    if (NULL == main_module) {
+    if (!interpreter_mode && NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
       main_module->_is_initialized = true;
       Entity true_e = entity_int(1);
