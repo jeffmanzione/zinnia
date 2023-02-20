@@ -313,8 +313,8 @@ void postfix_period(const SyntaxTree *suffix, AList *suffixes) {
 
 void postfix_surround_helper(SemanticAnalyzer *analyzer,
                              const SyntaxTree *suffix, AList *suffixes,
-                             PostfixType postfix_type, TokenType opener,
-                             TokenType closer) {
+                             PostfixType postfix_type, LexType opener,
+                             LexType closer) {
   Postfix postfix = {.type = postfix_type,
                      .token = CHILD_SYNTAX_AT(suffix, 0)->token,
                      .id = NULL,
@@ -1498,8 +1498,8 @@ bool is_assignment_single(const SyntaxTree *stree) {
 }
 
 MultiAssignment populate_list(SemanticAnalyzer *analyzer,
-                              const SyntaxTree *stree, TokenType open,
-                              TokenType close) {
+                              const SyntaxTree *stree, LexType open,
+                              LexType close) {
   MultiAssignment assignment = {.subargs =
                                     alist_create(Assignment, DEFAULT_ARRAY_SZ)};
   ASSERT(CHILD_IS_TOKEN(stree, 0, open), CHILD_IS_TOKEN(stree, 2, close));

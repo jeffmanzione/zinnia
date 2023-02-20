@@ -9,21 +9,21 @@ git_repository(
 
 git_repository(
     name = "file_utils",
-    commit = "7c24cd96fa81849dec3d0c8e2984bf15b32c6a0d",
+    commit = "f9496013f2f206e9d8e348c3fbd8fafe832e6ff3",
     remote = "https://github.com/jeffreymanzione/file-utils.git",
-    shallow_since = "1668915628 +0000",
+    shallow_since = "1676919925 -0800",
 )
 
 git_repository(
     name = "memory_wrapper",
-    commit = "6ca6fa2d5324d1573db272a52aff8984e72e7fab",
+    commit = "7756cb14ca16eaca50bc51b49ba77aaf33fc71ea",
     remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
-    shallow_since = "1667167060 -0700",
+    shallow_since = "1676919816 -0800",
 )
 
 git_repository(
     name = "language_tools",
-    commit = "f899d5382d5502322e7ba9a097313cef48db3005",
+    commit = "b8e27e05adca566f820bc05994ae51ed3249af8c",
     remote = "https://github.com/jeffreymanzione/language-tools.git",
-    shallow_since = "1650800095 -0700",
+    shallow_since = "1676920269 -0800",
 )
