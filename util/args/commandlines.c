@@ -29,4 +29,6 @@ void argconfig_run(ArgConfig *const config) {
   argconfig_add(config, ArgKey__MAX_PROCESS_OBJECT_COUNT, "heap_object_limit",
                 '\0', arg_int(4096 * 8));
   argconfig_add(config, ArgKey__ASYNC, "async", '\0', arg_bool(true));
+  argconfig_add(config, ArgKey__INTERPRETER, "interpreter", 'i',
+                arg_bool(false));
 }
