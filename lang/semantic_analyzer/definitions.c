@@ -57,9 +57,10 @@ DELETE_IMPL(identifier, SemanticAnalyzer *analyzer) {}
 
 PRODUCE_IMPL(identifier, SemanticAnalyzer *analyzer, Tape *target) {
   return (identifier->id->text == TRUE_KEYWORD)
-             ? tape_ins_int(target, RES, 1, identifier->id)
-         : (identifier->id->text == FALSE_KEYWORD ||
-            identifier->id->text == NIL_KEYWORD)
+             ? tape_ins_no_arg(target, RTRU, identifier->id)
+         : (identifier->id->text == FALSE_KEYWORD)
+             ? tape_ins_no_arg(target, RFLS, identifier->id)
+         : (identifier->id->text == NIL_KEYWORD)
              ? tape_ins_no_arg(target, RNIL, identifier->id)
              : tape_ins(target, RES, identifier->id);
 }

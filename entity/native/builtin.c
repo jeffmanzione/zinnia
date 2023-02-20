@@ -183,11 +183,11 @@ bool _str_to_bool(String *str, bool *result) {
 Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
   bool result;
   if (NULL == args) {
-    return NONE_ENTITY;
+    return FALSE_ENTITY;
   }
   switch (args->type) {
   case NONE:
-    return NONE_ENTITY;
+    return FALSE_ENTITY;
   case OBJECT:
     if (!IS_CLASS(args, Class_String)) {
       return raise_error(task, ctx, "Cannot convert input to bool Int.");
@@ -197,20 +197,13 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
                          String_size((String *)args->obj->_internal_obj),
                          args->obj->_internal_obj);
     }
-    return result ? entity_int(1) : NONE_ENTITY;
+    return result ? TRUE_ENTITY : FALSE_ENTITY;
   case PRIMITIVE:
-    switch (ptype(&args->pri)) {
-    case PRIMITIVE_CHAR:
-    case PRIMITIVE_INT:
-    case PRIMITIVE_FLOAT:
-      return entity_int(1);
-    default:
-      return raise_error(task, ctx, "Unknown primitive type.");
-    }
+    return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
   default:
     return raise_error(task, ctx, "Unknown type.");
   }
-  return NONE_ENTITY;
+  return FALSE_ENTITY;
 }
 
 Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
@@ -277,6 +270,10 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
+  case PRIMITIVE_BOOL:
+    num_written =
+        snprintf(buffer, BUFFER_SIZE, "%s", pbool(&val) ? "True" : "False");
+    break;
   case PRIMITIVE_INT:
     num_written = snprintf(buffer, BUFFER_SIZE, "%" PRId64, pint(&val));
     break;

@@ -14,8 +14,11 @@
 #define IS_CLASS(e, class)                                                     \
   (NULL != (e) && OBJECT == (e)->type && ((class) == (e)->obj->_class))
 #define IS_NONE(e) ((NULL == (e)) || (NONE == (e)->type))
+#define IS_FALSE(e) (IS_NONE(e) || (IS_BOOL(e) && false == pbool(&(e)->pri)))
+#define IS_TRUE(e) (!IS_FALSE(e))
 #define IS_OBJECT(e) ((NULL != (e)) && (OBJECT == (e)->type))
 #define IS_PRIMITIVE(e) ((NULL != (e)) && (PRIMITIVE == (e)->type))
+#define IS_BOOL(e) (IS_PRIMITIVE(e) && (PRIMITIVE_BOOL == ptype(&(e)->pri)))
 #define IS_CHAR(e) (IS_PRIMITIVE(e) && (PRIMITIVE_CHAR == ptype(&(e)->pri)))
 #define IS_INT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_INT == ptype(&(e)->pri)))
 #define IS_FLOAT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_FLOAT == ptype(&(e)->pri)))
@@ -36,6 +39,8 @@ struct _Entity {
 };
 
 extern Entity NONE_ENTITY;
+extern Entity TRUE_ENTITY;
+extern Entity FALSE_ENTITY;
 
 // Gets the entity type from an entity.
 EntityType etype(const Entity *e);

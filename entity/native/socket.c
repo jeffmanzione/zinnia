@@ -60,7 +60,7 @@ Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
 
   obj->_internal_obj = socket;
   // Auto bind.
-  if (NONE != tuple_get(tuple, 6)->type) {
+  if (IS_TRUE(tuple_get(tuple, 6))) {
     if (!socket_is_valid(socket)) {
       return raise_error(task, ctx, "Invalid socket.");
     }
