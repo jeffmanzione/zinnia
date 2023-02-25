@@ -81,6 +81,11 @@ typedef enum {
   SGET,
   // Async
   WAIT,
+  // True/False
+  RTRU,
+  RFLS,
+  PTRU,
+  PFLS,
   // NOT A REAL OP
   OP_BOUND,
 } Op;

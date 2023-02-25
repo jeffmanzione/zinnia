@@ -130,7 +130,7 @@ bool _str_to_float(String *str, double *result) {
 Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
   double result;
   if (NULL == args) {
-    return entity_int(0);
+    return entity_float(0);
   }
   switch (args->type) {
   case NONE:
@@ -183,11 +183,11 @@ bool _str_to_bool(String *str, bool *result) {
 Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
   bool result;
   if (NULL == args) {
-    return NONE_ENTITY;
+    return FALSE_ENTITY;
   }
   switch (args->type) {
   case NONE:
-    return NONE_ENTITY;
+    return FALSE_ENTITY;
   case OBJECT:
     if (!IS_CLASS(args, Class_String)) {
       return raise_error(task, ctx, "Cannot convert input to bool Int.");
@@ -197,20 +197,13 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
                          String_size((String *)args->obj->_internal_obj),
                          args->obj->_internal_obj);
     }
-    return result ? entity_int(1) : NONE_ENTITY;
+    return result ? TRUE_ENTITY : FALSE_ENTITY;
   case PRIMITIVE:
-    switch (ptype(&args->pri)) {
-    case PRIMITIVE_CHAR:
-    case PRIMITIVE_INT:
-    case PRIMITIVE_FLOAT:
-      return entity_int(1);
-    default:
-      return raise_error(task, ctx, "Unknown primitive type.");
-    }
+    return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
   default:
     return raise_error(task, ctx, "Unknown type.");
   }
-  return NONE_ENTITY;
+  return FALSE_ENTITY;
 }
 
 Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
@@ -277,6 +270,10 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = 0;
   switch (ptype(&val)) {
+  case PRIMITIVE_BOOL:
+    num_written =
+        snprintf(buffer, BUFFER_SIZE, "%s", pbool(&val) ? "True" : "False");
+    break;
   case PRIMITIVE_INT:
     num_written = snprintf(buffer, BUFFER_SIZE, "%" PRId64, pint(&val));
     break;
@@ -340,12 +337,12 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_eq(Task *task, Context *ctx, Object *obj, Entity *args) {
   Primitive p = _string_cmp(task, ctx, obj, args).pri;
-  return pint(&p) == 0 ? entity_int(1) : NONE_ENTITY;
+  return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 Entity _string_neq(Task *task, Context *ctx, Object *obj, Entity *args) {
   Primitive p = _string_cmp(task, ctx, obj, args).pri;
-  return pint(&p) != 0 ? entity_int(1) : NONE_ENTITY;
+  return pint(&p) != 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 Entity _string_index(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -648,8 +645,8 @@ Entity _string_starts_with(Task *task, Context *ctx, Object *obj,
   if (lenprefix > lenstr) {
     return NONE_ENTITY;
   }
-  return 0 == strncmp(str->table, prefix->table, lenprefix) ? entity_int(1)
-                                                            : NONE_ENTITY;
+  return 0 == strncmp(str->table, prefix->table, lenprefix) ? TRUE_ENTITY
+                                                            : FALSE_ENTITY;
 }
 
 Entity _string_ends_with(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -661,8 +658,8 @@ Entity _string_ends_with(Task *task, Context *ctx, Object *obj, Entity *args) {
     return NONE_ENTITY;
   }
   return 0 == strncmp(str->table + lenstr - lensuffix, suffix->table, lensuffix)
-             ? entity_int(1)
-             : NONE_ENTITY;
+             ? TRUE_ENTITY
+             : FALSE_ENTITY;
 }
 
 Entity _array_len(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -722,8 +719,8 @@ Entity _function_module(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _function_is_method(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
-  return (NULL == obj->_function_obj->_parent_class) ? NONE_ENTITY
-                                                     : entity_int(1);
+  return (NULL == obj->_function_obj->_parent_class) ? FALSE_ENTITY
+                                                     : TRUE_ENTITY;
 }
 Entity _function_parent_class(Task *task, Context *ctx, Object *obj,
                               Entity *args) {

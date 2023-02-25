@@ -7,6 +7,10 @@
 #include "entity/primitive.h"
 
 Entity NONE_ENTITY = {.type = NONE};
+Entity TRUE_ENTITY = {.type = PRIMITIVE,
+                      .pri = {._type = PRIMITIVE_BOOL, ._bool_val = true}};
+Entity FALSE_ENTITY = {.type = PRIMITIVE,
+                       .pri = {._type = PRIMITIVE_BOOL, ._bool_val = false}};
 
 EntityType etype(const Entity *e) {
   ASSERT(NOT_NULL(e));

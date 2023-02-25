@@ -16,6 +16,7 @@
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
+#include "entity/entity.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
@@ -83,6 +84,9 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP(op, symbol)                                                    \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {          \
+      FATALF("Op not valid for bool types.");                                  \
+    }                                                                          \
     if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
       return primitive_float(float_of(p1) symbol float_of(p2));                \
     }                                                                          \
@@ -95,8 +99,11 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
 #define MATH_OP_INT(op, symbol)                                                \
   Primitive _execute_primitive_##op(const Primitive *p1,                       \
                                     const Primitive *p2) {                     \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {          \
+      FATALF("Op not valid for bool types.");                                  \
+    }                                                                          \
     if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {        \
-      FATALF("Op not valid for FP types.");                                    \
+      FATALF("Op not valid for float types.");                                 \
     }                                                                          \
     if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {            \
       return primitive_int(int_of(p1) symbol int_of(p2));                      \
@@ -174,7 +181,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
       }                                                                        \
       result = _execute_primitive_##op(&first.pri, &second.pri);               \
       *task_mutable_resval(task) =                                             \
-          int_of(&result) == 0 ? NONE_ENTITY : entity_primitive(result);       \
+          int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;                   \
       break;                                                                   \
     case INSTRUCTION_ID:                                                       \
       resval = task_get_resval(task);                                          \
@@ -189,7 +196,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &lookup->pri);            \
       *task_mutable_resval(task) =                                             \
-          int_of(&result) == 0 ? NONE_ENTITY : entity_primitive(result);       \
+          int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;                   \
       break;                                                                   \
     case INSTRUCTION_PRIMITIVE:                                                \
       resval = task_get_resval(task);                                          \
@@ -199,7 +206,7 @@ bool _execute_CTCH(VM *vm, Task *task, Context *context,
       }                                                                        \
       result = _execute_primitive_##op(&resval->pri, &ins->val);               \
       *task_mutable_resval(task) =                                             \
-          int_of(&result) == 0 ? NONE_ENTITY : entity_primitive(result);       \
+          int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;                   \
       break;                                                                   \
     default:                                                                   \
       FATALF("Invalid arg type=%d for " #op ".", ins->type);                   \
@@ -448,8 +455,8 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     result = primitive_equals(&first.pri, &second.pri);
     *task_mutable_resval(task) =
         ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-            ? entity_int(1)
-            : NONE_ENTITY;
+            ? TRUE_ENTITY
+            : FALSE_ENTITY;
     break;
   case INSTRUCTION_ID:
     resval = task_get_resval(task);
@@ -465,8 +472,8 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     result = primitive_equals(&resval->pri, &lookup->pri);
     *task_mutable_resval(task) =
         ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-            ? entity_int(1)
-            : NONE_ENTITY;
+            ? TRUE_ENTITY
+            : FALSE_ENTITY;
     break;
   case INSTRUCTION_PRIMITIVE:
     resval = task_get_resval(task);
@@ -477,8 +484,8 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     result = primitive_equals(&resval->pri, &ins->val);
     *task_mutable_resval(task) =
         ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-            ? entity_int(1)
-            : NONE_ENTITY;
+            ? TRUE_ENTITY
+            : FALSE_ENTITY;
     break;
   default:
     FATALF("Invalid arg type=%d for EQ.", ins->type);
@@ -580,6 +587,38 @@ void _execute_RNIL(VM *vm, Task *task, Context *context,
     FATALF("Invalid arg type=%d for RNIL.", ins->type);
   }
   *task_mutable_resval(task) = NONE_ENTITY;
+}
+
+void _execute_PTRU(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    FATALF("Invalid arg type=%d for PTRU.", ins->type);
+  }
+  *task_pushstack(task) = TRUE_ENTITY;
+}
+
+void _execute_RTRU(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    FATALF("Invalid arg type=%d for RTRU.", ins->type);
+  }
+  *task_mutable_resval(task) = TRUE_ENTITY;
+}
+
+void _execute_PFLS(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    FATALF("Invalid arg type=%d for PFLS.", ins->type);
+  }
+  *task_pushstack(task) = FALSE_ENTITY;
+}
+
+void _execute_RFLS(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  if (INSTRUCTION_NO_ARG != ins->type) {
+    FATALF("Invalid arg type=%d for RFLS.", ins->type);
+  }
+  *task_mutable_resval(task) = FALSE_ENTITY;
 }
 
 void _execute_FLD(VM *vm, Task *task, Context *context,
@@ -939,7 +978,7 @@ void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins) {
     FATALF("Invalid arg type=%d for IF.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
-  bool is_false = (NULL == resval) || (NONE == resval->type);
+  bool is_false = IS_FALSE(resval);
   if ((is_false && (IFN == ins->op)) || (!is_false && (IF == ins->op))) {
     context->ins += ins->val._int_val;
   }
@@ -961,7 +1000,7 @@ void _execute_NOT(VM *vm, Task *task, Context *context,
   }
   const Entity *resval = task_get_resval(task);
   *task_mutable_resval(task) =
-      (NULL == resval) || (NONE == resval->type) ? entity_int(1) : NONE_ENTITY;
+      IS_FALSE(resval) ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 void _execute_ANEW(VM *vm, Task *task, Context *context,
@@ -1149,16 +1188,16 @@ void _execute_TGTE(VM *vm, Task *task, Context *context,
   int test_len = pint(&ins->val);
   if (1 == test_len) {
     *task_mutable_resval(task) =
-        (NULL != e && NONE != e->type) ? entity_int(1) : NONE_ENTITY;
+        (NULL != e && NONE != e->type) ? TRUE_ENTITY : FALSE_ENTITY;
     return;
   }
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
-    *task_mutable_resval(task) = NONE_ENTITY;
+    *task_mutable_resval(task) = FALSE_ENTITY;
     return;
   }
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   uint32_t tlen = tuple_size(t);
-  *task_mutable_resval(task) = tlen >= test_len ? entity_int(1) : NONE_ENTITY;
+  *task_mutable_resval(task) = tlen >= test_len ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 void _execute_TGET(VM *vm, Task *task, Context *context,
@@ -1199,13 +1238,13 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
     return;
   }
   if (lhs.type != OBJECT) {
-    *task_mutable_resval(task) = NONE_ENTITY;
+    *task_mutable_resval(task) = FALSE_ENTITY;
     return;
   }
   if (inherits_from(lhs.obj->_class, rhs.obj->_class_obj)) {
-    *task_mutable_resval(task) = entity_int(1);
+    *task_mutable_resval(task) = TRUE_ENTITY;
   } else {
-    *task_mutable_resval(task) = NONE_ENTITY;
+    *task_mutable_resval(task) = FALSE_ENTITY;
   }
 }
 
@@ -1467,6 +1506,18 @@ TaskState vm_execute_task(VM *vm, Task *task) {
         context->ins++;
         goto end_of_loop;
       }
+      break;
+    case RTRU:
+      _execute_RTRU(vm, task, context, ins);
+      break;
+    case PTRU:
+      _execute_PTRU(vm, task, context, ins);
+      break;
+    case RFLS:
+      _execute_RFLS(vm, task, context, ins);
+      break;
+    case PFLS:
+      _execute_PFLS(vm, task, context, ins);
       break;
     default:
       FATALF("Unknown instruction: %s", op_to_str(ins->op));
