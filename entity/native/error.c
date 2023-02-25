@@ -133,7 +133,7 @@ Entity _stackline_source_token(Task *task, Context *ctx, Object *obj,
 Entity _stackline_has_source_map(Task *task, Context *ctx, Object *obj,
                                  Entity *args) {
   _StackLine *sl = (_StackLine *)obj->_internal_obj;
-  return NULL == sl->source_error_token ? NONE_ENTITY : entity_int(1);
+  return NULL == sl->source_error_token ? FALSE_ENTITY : TRUE_ENTITY;
 }
 
 Entity _stackline_source_linetext(Task *task, Context *ctx, Object *obj,
