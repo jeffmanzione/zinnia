@@ -424,8 +424,8 @@ SyntaxTree *populate_signature(SemanticAnalyzer *analyzer,
   SyntaxTree *func_sig;
   int start_index = 0;
 
-  if (CHILD_IS_SYNTAX(stree, 0, rule_annotation)) {
-    printf("HAS_ANNOTATION\n");
+  if (CHILD_IS_SYNTAX(stree, 0, rule_method_signature)) {
+    stree = CHILD_SYNTAX_AT(stree, 0);
     start_index = 1;
     func->has_annot = true;
     func->annot = populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));

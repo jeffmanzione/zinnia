@@ -57,6 +57,9 @@ Entity entity_primitive(Primitive p) {
 
 void _primitive_print(const Primitive *p, FILE *file) {
   switch (p->_type) {
+  case PRIMITIVE_BOOL:
+    fprintf(file, "%s", p->_bool_val ? "True" : "False");
+    break;
   case PRIMITIVE_CHAR:
     fprintf(file, "%c", (char)p->_char_val);
     break;
