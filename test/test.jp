@@ -1,0 +1,19 @@
+import io
+import time
+
+class Test {}
+
+
+
+class TimeTest {
+  @Test
+  method test_Timetamp_to_date() {
+
+  }
+  @Test
+  method test_Date_to_timestamp() {
+    x
+  }
+}
+
+io.println(TimeTest.methods())

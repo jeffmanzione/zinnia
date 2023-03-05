@@ -258,12 +258,6 @@ ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
   return class;
 }
 
-void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot) {
-  if (annot->has_args && NULL != annot->args_tuple) {
-    semantic_analyzer_delete(analyzer, annot->args_tuple);
-  }
-}
-
 void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
   if (class->has_constructor) {
     delete_function(analyzer, &class->constructor);
@@ -423,6 +417,32 @@ void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->fn_name = CHILD_SYNTAX_AT(fn_identifier, 1)->token;
 }
 
+SyntaxTree *populate_signature(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree, FunctionDef *func,
+                               RuleFn signature_with_qualifier,
+                               RuleFn signature_no_qualifier) {
+  SyntaxTree *func_sig;
+  int start_index = 0;
+
+  if (CHILD_IS_SYNTAX(stree, 0, rule_annotation)) {
+    printf("HAS_ANNOTATION\n");
+    start_index = 1;
+    func->has_annot = true;
+    func->annot = populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));
+  }
+  if (CHILD_IS_SYNTAX(stree, start_index, signature_with_qualifier)) {
+    func_sig = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, start_index), 0);
+    populate_function_qualifiers(
+        CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, start_index), 1),
+        &func->is_const, &func->const_token, &func->is_async,
+        &func->async_token);
+  } else {
+    ASSERT(CHILD_IS_SYNTAX(stree, start_index, signature_no_qualifier));
+    func_sig = CHILD_SYNTAX_AT(stree, start_index);
+  }
+  return func_sig;
+}
+
 FunctionDef populate_function_variant(
     SemanticAnalyzer *analyzer, const SyntaxTree *stree, RuleFn def,
     RuleFn signature_with_qualifier, RuleFn signature_no_qualifier,
@@ -436,20 +456,13 @@ FunctionDef populate_function_variant(
                       .is_const = false,
                       .const_token = NULL,
                       .is_async = false,
+                      .has_annot = false,
                       .async_token = NULL,
                       .body = NULL};
   ASSERT(IS_SYNTAX(stree, def));
 
-  const SyntaxTree *func_sig;
-  if (CHILD_IS_SYNTAX(stree, 0, signature_with_qualifier)) {
-    func_sig = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 0), 0);
-    populate_function_qualifiers(CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 0), 1),
-                                 &func.is_const, &func.const_token,
-                                 &func.is_async, &func.async_token);
-  } else {
-    ASSERT(CHILD_IS_SYNTAX(stree, 0, signature_no_qualifier));
-    func_sig = CHILD_SYNTAX_AT(stree, 0);
-  }
+  const SyntaxTree *func_sig = populate_signature(
+      analyzer, stree, &func, signature_with_qualifier, signature_no_qualifier);
 
   ASSERT(CHILD_IS_SYNTAX(func_sig, 0, fn_identifier));
   def_populator(CHILD_SYNTAX_AT(func_sig, 0), &func);

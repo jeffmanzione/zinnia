@@ -545,9 +545,12 @@ method_signature_with_qualifier ->
   AND(rule:method_signature_no_qualifier, rule:function_qualifier_list);
 
 method_signature ->
-  OR(
-    rule:method_signature_with_qualifier,
-    rule:method_signature_no_qualifier
+  AND(
+    OPTIONAL(rule:annotation),
+    OR(
+      rule:method_signature_with_qualifier,
+      rule:method_signature_no_qualifier
+    )
   );
 
 method_definition -> AND(rule:method_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);

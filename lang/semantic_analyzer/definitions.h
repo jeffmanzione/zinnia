@@ -209,11 +209,19 @@ typedef enum {
 } SpecialMethod;
 
 typedef struct {
+  const Token *prefix;
+  const Token *class_name;
+  bool is_called, has_args;
+  ExpressionTree *args_tuple;
+} Annotation;
+
+typedef struct {
   const Token *def_token;
   const Token *fn_name;
   SpecialMethod special_method;
+  Annotation annot;
   const Token *const_token, *async_token;
-  bool has_args, is_const, is_async;
+  bool has_args, is_const, is_async, has_annot;
   Arguments args;
   ExpressionTree *body;
 } FunctionDef;
@@ -352,12 +360,7 @@ typedef struct {
   ExpressionTree *value;
 } StaticDef;
 
-typedef struct {
-  const Token *prefix;
-  const Token *class_name;
-  bool is_called, has_args;
-  ExpressionTree *args_tuple;
-} Annotation;
+void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot);
 
 typedef struct {
   ClassSignature def;
