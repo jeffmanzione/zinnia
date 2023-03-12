@@ -240,7 +240,6 @@ void populate_class_statements(SemanticAnalyzer *analyzer, ClassDef *class,
 }
 
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
-  // TODO HANDLE ANNOTATIONS.
   ClassDef class;
   class.has_constructor = false;
   class.has_annot = false;

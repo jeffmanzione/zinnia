@@ -79,8 +79,21 @@ void _tape_populate_mappings(const Tape *tape, Map *i_to_refs,
   KL_iter class_iter = tape_classes(tape);
   for (; kl_has(&class_iter); kl_inc(&class_iter)) {
     const ClassRef *cref = (const ClassRef *)kl_value(&class_iter);
-    map_insert(i_to_class_starts, as_ptr(cref->start_index), cref->name);
-    map_insert(i_to_class_ends, as_ptr(cref->end_index), cref->name);
+
+    Q *starts = map_lookup(i_to_class_starts, as_ptr(cref->start_index));
+    if (!starts) {
+      starts = Q_create();
+      map_insert(i_to_class_starts, as_ptr(cref->start_index), starts);
+    }
+    *Q_add_last(starts) = (char *)cref->name;
+
+    Q *ends = map_lookup(i_to_class_ends, as_ptr(cref->end_index));
+    if (!ends) {
+      ends = Q_create();
+      map_insert(i_to_class_ends, as_ptr(cref->end_index), ends);
+    }
+    *Q_add_last(ends) = (char *)cref->name;
+
     KL_iter methods_iter = keyedlist_iter((KeyedList *)&cref->func_refs);
     for (; kl_has(&methods_iter); kl_inc(&methods_iter)) {
       const FunctionRef *fref = (const FunctionRef *)kl_value(&methods_iter);
@@ -92,7 +105,17 @@ void _tape_populate_mappings(const Tape *tape, Map *i_to_refs,
 void _tape_clear_mappings(Map *i_to_refs, Map *i_to_class_starts,
                           Map *i_to_class_ends) {
   map_finalize(i_to_refs);
+
+  M_iter starts = map_iter(i_to_class_starts);
+  for (; has(&starts); inc(&starts)) {
+    Q_delete((Q *)value(&starts));
+  }
   map_finalize(i_to_class_starts);
+
+  M_iter ends = map_iter(i_to_class_ends);
+  for (; has(&ends); inc(&ends)) {
+    Q_delete((Q *)value(&ends));
+  }
   map_finalize(i_to_class_ends);
 }
 
@@ -126,34 +149,58 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       tape_endclass(new_tape, &tok);
     }
-    if (!in_class &&
-        NULL != (text = map_lookup(&oh->i_to_class_starts, as_ptr(i)))) {
-      in_class = true;
-      Token tok;
-      token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
-      const ClassRef *cref = tape_get_class(t, text);
-      if (0 == alist_len(&cref->supers)) {
-        tape_class(new_tape, &tok);
-      } else {
-        Q q_parents;
-        Q_init(&q_parents);
-        AL_iter parent_classes = alist_iter(&cref->supers);
-        for (; al_has(&parent_classes); al_inc(&parent_classes)) {
-          Q_enqueue(&q_parents, *((char **)al_value(&parent_classes)));
+    printf("HERE1\n");
+    Q *starts = map_lookup(&oh->i_to_class_starts, as_ptr(i));
+    printf("HERE1.1\n");
+    if (!in_class && NULL != starts) {
+      Q_iter iter = Q_iterator(starts);
+      for (; Q_has(&iter); Q_inc(&iter)) {
+        printf("HERE1.2\n");
+        in_class = true;
+        printf("HERE2\n");
+        text = *(char **)Q_value(&iter);
+        printf("HERE2.0 %s\n", text);
+        Token tok;
+        token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
+        const ClassRef *cref = tape_get_class(t, text);
+        printf("HERE2.1\n");
+        if (0 == alist_len(&cref->supers)) {
+          printf("HERE2.2\n");
+          tape_class(new_tape, &tok);
+        } else {
+          printf("HERE2.3\n");
+          Q q_parents;
+          Q_init(&q_parents);
+          AL_iter parent_classes = alist_iter(&cref->supers);
+          for (; al_has(&parent_classes); al_inc(&parent_classes)) {
+            Q_enqueue(&q_parents, *((char **)al_value(&parent_classes)));
+          }
+          tape_class_with_parents(new_tape, &tok, &q_parents);
+          Q_finalize(&q_parents);
+          printf("HERE2.4\n");
         }
-        tape_class_with_parents(new_tape, &tok, &q_parents);
-        Q_finalize(&q_parents);
-      }
-      KL_iter fields = keyedlist_iter((KeyedList *)&cref->field_refs);
-      for (; kl_has(&fields); kl_inc(&fields)) {
-        FieldRef *fref = (FieldRef *)kl_value(&fields);
-        tape_field(new_tape, fref->name);
-      }
-      // Handles case where class has no body.
-      if (NULL != map_lookup(&oh->i_to_class_ends, as_ptr(i)) &&
-          0 == strcmp(text, map_lookup(&oh->i_to_class_ends, as_ptr(i)))) {
-        in_class = false;
-        tape_endclass(new_tape, &tok);
+        printf("HERE2.5\n");
+        KL_iter fields = keyedlist_iter((KeyedList *)&cref->field_refs);
+        for (; kl_has(&fields); kl_inc(&fields)) {
+          FieldRef *fref = (FieldRef *)kl_value(&fields);
+          tape_field(new_tape, fref->name);
+        }
+        printf("HERE3\n");
+        // Handles case where class has no body.
+        Q *ends = map_lookup(&oh->i_to_class_ends, as_ptr(i));
+        if (NULL != ends) {
+          Q_iter end_iter = Q_iterator(ends);
+          for (; Q_has(&end_iter); Q_inc(&end_iter)) {
+            printf("HERE4\n");
+            if (0 == strcmp(text, *(char **)Q_value(&end_iter))) {
+              in_class = false;
+              tape_endclass(new_tape, &tok);
+              break;
+            }
+            printf("HERE5\n");
+          }
+        }
+        printf("HERE6\n");
       }
     }
     FunctionRef *fref;
