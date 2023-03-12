@@ -1,0 +1,8 @@
+import io
+
+class A {}
+
+@A
+class B {}
+
+io.println('Here')

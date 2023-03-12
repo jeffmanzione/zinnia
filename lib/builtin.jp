@@ -254,15 +254,22 @@ class Array {
 
 class Function {
   method to_s() {
+    res = None
     if self.is_method() {
-      return cat(
+      res = cat(
           'Method(',
           self.module().name(),
           '.', self.parent_class().name(),
-          '.', self.name(), ')')
+          '.', self.name())
     } else {
-      return cat('Function(', self.module().name(), '.', self.name(), ')')
+      res = cat('Function(', self.module().name(), '.', self.name())
     }
+    if annotation {
+      res.extend(', annotation=')
+      res.extend(str(annotation))
+    }
+    res.extend(')')
+    res
   }
 }
 
