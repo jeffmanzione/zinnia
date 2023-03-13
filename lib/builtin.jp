@@ -67,6 +67,9 @@ class Class {
   method to_s() {
     return cat('class ', name())
   }
+  method add_annotation(annot) {
+    self.annotations.append(annot)
+  }
 }
 
 class String {
@@ -264,12 +267,15 @@ class Function {
     } else {
       res = cat('Function(', self.module().name(), '.', self.name())
     }
-    if annotation {
-      res.extend(', annotation=')
-      res.extend(str(annotation))
+    if annotations.len() > 0 {
+      res.extend(', annotations=')
+      res.extend(str(annotations))
     }
     res.extend(')')
     res
+  }
+  method add_annotation(annot) {
+    self.annotations.append(annot)
   }
 }
 

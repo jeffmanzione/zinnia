@@ -8,6 +8,8 @@
 
 extern char *ADDRESS_INT_KEY;
 extern char *ADDRESS_HEX_KEY;
+extern char *ANNOTATE_KEY;
+extern char *ANNOTATIONS_KEY;
 extern char *ARRAYLIKE_INDEX_KEY;
 extern char *ARRAYLIKE_SET_KEY;
 extern char *ARRAY_NAME;

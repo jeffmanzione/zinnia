@@ -10,13 +10,13 @@
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
+#include "entity/entity.h"
 #include "entity/module/modules.h"
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
-#include "entity/entity.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
@@ -999,8 +999,7 @@ void _execute_NOT(VM *vm, Task *task, Context *context,
     FATALF("Invalid arg type=%d for NOT.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
-  *task_mutable_resval(task) =
-      IS_FALSE(resval) ? TRUE_ENTITY : FALSE_ENTITY;
+  *task_mutable_resval(task) = IS_FALSE(resval) ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 void _execute_ANEW(VM *vm, Task *task, Context *context,

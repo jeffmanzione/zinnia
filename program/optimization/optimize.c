@@ -149,26 +149,18 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
       token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
       tape_endclass(new_tape, &tok);
     }
-    printf("HERE1\n");
     Q *starts = map_lookup(&oh->i_to_class_starts, as_ptr(i));
-    printf("HERE1.1\n");
     if (!in_class && NULL != starts) {
       Q_iter iter = Q_iterator(starts);
       for (; Q_has(&iter); Q_inc(&iter)) {
-        printf("HERE1.2\n");
         in_class = true;
-        printf("HERE2\n");
         text = *(char **)Q_value(&iter);
-        printf("HERE2.0 %s\n", text);
         Token tok;
         token_fill(&tok, TOKEN_WORD, 0, 0, text, strlen(text));
         const ClassRef *cref = tape_get_class(t, text);
-        printf("HERE2.1\n");
         if (0 == alist_len(&cref->supers)) {
-          printf("HERE2.2\n");
           tape_class(new_tape, &tok);
         } else {
-          printf("HERE2.3\n");
           Q q_parents;
           Q_init(&q_parents);
           AL_iter parent_classes = alist_iter(&cref->supers);
@@ -177,30 +169,24 @@ void _oh_resolve(OptimizeHelper *oh, Tape *new_tape) {
           }
           tape_class_with_parents(new_tape, &tok, &q_parents);
           Q_finalize(&q_parents);
-          printf("HERE2.4\n");
         }
-        printf("HERE2.5\n");
         KL_iter fields = keyedlist_iter((KeyedList *)&cref->field_refs);
         for (; kl_has(&fields); kl_inc(&fields)) {
           FieldRef *fref = (FieldRef *)kl_value(&fields);
           tape_field(new_tape, fref->name);
         }
-        printf("HERE3\n");
         // Handles case where class has no body.
         Q *ends = map_lookup(&oh->i_to_class_ends, as_ptr(i));
         if (NULL != ends) {
           Q_iter end_iter = Q_iterator(ends);
           for (; Q_has(&end_iter); Q_inc(&end_iter)) {
-            printf("HERE4\n");
             if (0 == strcmp(text, *(char **)Q_value(&end_iter))) {
               in_class = false;
               tape_endclass(new_tape, &tok);
               break;
             }
-            printf("HERE5\n");
           }
         }
-        printf("HERE6\n");
       }
     }
     FunctionRef *fref;

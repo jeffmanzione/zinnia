@@ -1,8 +1,12 @@
 import io
 
-class A {}
+class A {
+  method annotate(cls) {
+    io.println('HERE')
+  }
+}
 
 @A
 class B {}
 
-io.println('Here')
+io.println(B.annotations)

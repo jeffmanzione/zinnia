@@ -602,13 +602,23 @@ int produce_class_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
   } else {
     num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
   }
+  // For call to annotate.
   num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
-  num_ins += tape_ins_text(tape, GET, intern("annotate"), annot->class_name);
+  // For call to add_annotation.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+
+  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
   num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
   num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
   num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
   num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins_text(tape, CALL, intern("annotate"), annot->class_name);
+  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += tape_ins(tape, PUSH, class->def.name.token);
+  num_ins +=
+      tape_ins_text(tape, CALL, intern("add_annotation"), annot->class_name);
+
   return num_ins;
 }
 
