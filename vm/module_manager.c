@@ -154,6 +154,9 @@ void add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
   }
   func->_reflection->_function_obj = func;
   object_set_member_obj(heap, parent, func->_name, func->_reflection);
+
+  object_set_member_obj(heap, func->_reflection, ANNOTATIONS_KEY,
+                        heap_new(heap, Class_Array));
 }
 
 void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {

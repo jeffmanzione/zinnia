@@ -1,14 +1,19 @@
 import io
 import time
 
-class Test {}
+class TestClass {
+  method annotate(cls) {}
+}
 
+class Test {
+  method annotate(cls) {}
+}
 
-
+@TestClass
 class TimeTest {
   @Test
   method test_Timetamp_to_date() {
-
+    x
   }
   @Test
   method test_Date_to_timestamp() {

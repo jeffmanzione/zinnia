@@ -13,7 +13,7 @@ int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
 
-  FileInfo *fi = file_info("C:/Users/jeffr/git/jasper/temp.jp");
+  FileInfo *fi = file_info("C:/Users/jeffr/git/jasper/test/test.jp");
 
   // while (true) {
   Q tokens;

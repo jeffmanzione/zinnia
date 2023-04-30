@@ -267,9 +267,9 @@ class Function {
     } else {
       res = cat('Function(', self.module().name(), '.', self.name())
     }
-    if annotations and annotations.len() > 0 {
+    if self.annotations and self.annotations.len() > 0 {
       res.extend(', annotations=')
-      res.extend(str(annotations))
+      res.extend(str(self.annotations))
     }
     res.extend(')')
     res

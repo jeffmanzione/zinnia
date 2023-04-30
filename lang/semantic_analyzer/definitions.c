@@ -1068,9 +1068,10 @@ void delete_arguments(SemanticAnalyzer *analyzer, Arguments *args) {
 }
 
 void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot) {
-  if (annot->has_args && NULL != annot->args_tuple) {
-    semantic_analyzer_delete(analyzer, annot->args_tuple);
+  if (!annot->has_args || NULL == annot->args_tuple) {
+    return;
   }
+  semantic_analyzer_delete(analyzer, annot->args_tuple);
 }
 
 void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
