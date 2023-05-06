@@ -9,6 +9,51 @@ class Test {
   method annotate(cls) {}
 }
 
+class Tester {
+  method test(module) {
+    for (_, cls) in module.classes() {
+      test_class_annot = _extract_test_class(cls)
+      if ~test_class_annot {
+        continue
+      }
+      c = cls()
+      for (_, meth) in cls.methods() {
+        test_annot = _extract_test(meth)
+        if ~test_annot {
+          continue
+        }
+        method_instance = c.$get(meth.name())
+        success = True
+        try {
+          method_instance()
+        } catch e {
+          ;io.errorln(e)
+          success = False          
+        }
+        io.println(meth.name() + '=' + (if success then 'SUCCESS' else 'FAILURE'))
+      }
+    }
+  }
+
+  method _extract_test_class(cls) {
+    for (_, annot) in cls.annotations() {
+      if annot is TestClass {
+        return annot
+      }
+    }
+    return None
+  }
+
+  method _extract_test(func) {
+    for (_, annot) in func.annotations {
+      if annot is Test {
+        return annot
+      }
+    }
+    return None
+  }
+}
+
 @TestClass
 class TimeTest {
   @Test
@@ -17,8 +62,10 @@ class TimeTest {
   }
   @Test
   method test_Date_to_timestamp() {
-    x
+    a.b
   }
 }
 
-io.println(TimeTest.methods())
+Tester().test(self)
+
+

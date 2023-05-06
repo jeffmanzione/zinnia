@@ -65,10 +65,21 @@ class Module {
 
 class Class {
   method to_s() {
-    return cat('class ', name())
+    if annotations.len() > 0 {
+      cls_name =  'class ' + name()
+      for (_, a) in annotations {
+        cls_name = cls_name + ' @' + str(a.class().name())
+      }
+      return cls_name
+    } else {
+      return cat('class ', name())
+    }
   }
   method add_annotation(annot) {
-    self.annotations.append(annot)
+    annotations.append(annot)
+  }
+  method annotations() {
+    return annotations
   }
 }
 
