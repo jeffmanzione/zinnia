@@ -9,6 +9,17 @@ class Test {
   method annotate(cls) {}
 }
 
+class SetUp {
+  method annotate(cls) {}
+}
+
+class TearDown {
+  method annotate(cls) {}
+}
+
+self.SUCCESS = color('32;1').extend('SUCCESS').extend(color(0))
+self.FAILURE = color('31;1').extend('FAILURE').extend(color(0))
+
 class Tester {
   method test(module) {
     for (_, cls) in module.classes() {
@@ -16,8 +27,10 @@ class Tester {
       if ~test_class_annot {
         continue
       }
-      c = cls()
+      setups = _extract_methods(cls, SetUp)
+      teardowns =  _extract_methods(cls, TearDown)
       for (_, meth) in cls.methods() {
+        c = cls()
         test_annot = _extract_test(meth)
         if ~test_annot {
           continue
@@ -25,12 +38,24 @@ class Tester {
         method_instance = c.$get(meth.name())
         success = True
         try {
+          setups.each(s -> c.$get(s.name())())
+        } catch e {
+          ;io.errorln(e)
+          success = False          
+        }
+        try {
           method_instance()
         } catch e {
           ;io.errorln(e)
           success = False          
         }
-        io.println(meth.name() + '=' + (if success then 'SUCCESS' else 'FAILURE'))
+        try {
+          teardowns.each(t -> c.$get(t.name())())
+        } catch e {
+          ;io.errorln(e)
+          success = False
+        }
+        io.println(meth.name() + '=' + (if success then SUCCESS else FAILURE))
       }
     }
   }
@@ -52,10 +77,30 @@ class Tester {
     }
     return None
   }
+
+  method _extract_methods(test_cls, cls) {
+    methods = []
+    for (_, meth) in test_cls.methods() {
+      for (_, annot) in meth.annotations {
+        if annot is cls {
+          methods.append(meth)
+        }
+      }
+    }
+    return methods
+  }
 }
 
 @TestClass
 class TimeTest {
+  @SetUp
+  method set_up() {
+    io.println('set_up')
+  }
+  @TearDown
+  method tear_down() {
+    io.println('tear_down')
+  }
   @Test
   method test_Timetamp_to_date() {
     x
@@ -67,5 +112,3 @@ class TimeTest {
 }
 
 Tester().test(self)
-
-
