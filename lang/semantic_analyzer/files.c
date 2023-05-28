@@ -29,7 +29,13 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
     ASSERT(CHILD_IS_SYNTAX(class_inheritance, 1, rule_parent_classes));
     const SyntaxTree *parent_classes = CHILD_SYNTAX_AT(class_inheritance, 1);
     if (CHILD_IS_SYNTAX(parent_classes, 1, rule_identifier)) {
-      ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token};
+      ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token,
+                        .module = NULL};
+      alist_append(def->parent_classes, &name);
+    } else if (CHILD_IS_SYNTAX(parent_classes, 1, rule_parent_class)) {
+      const SyntaxTree *parent_class = CHILD_SYNTAX_AT(parent_classes, 1);
+      ClassName name = {.token = CHILD_SYNTAX_AT(parent_class, 2)->token,
+                        .module = CHILD_SYNTAX_AT(parent_class, 0)->token};
       alist_append(def->parent_classes, &name);
     } else {
       FATALF("Multiple inheritance no longer supported.");
@@ -753,7 +759,14 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     }
     ClassName *super = (ClassName *)alist_get(class->def.parent_classes, 0);
     num_ins += tape_ins(tape, PUSH, class->def.name.token);
-    num_ins += tape_ins(tape, RES, super->token);
+
+    if (NULL != super->module) {
+      num_ins += tape_ins(tape, RES, super->module);
+      num_ins += tape_ins(tape, GET, super->token);
+    } else {
+      num_ins += tape_ins(tape, RES, super->token);
+    }
+
     num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
   }
   // Statements

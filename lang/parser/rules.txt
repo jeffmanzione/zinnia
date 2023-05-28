@@ -672,10 +672,16 @@ class_statement_list ->
     )
   );
 
+parent_class ->
+  OR(
+    AND(rule:identifier, token:SYMBOL_PERIOD, rule:identifier),
+    rule:identifier
+  );
+
 parent_class_list ->
   LIST(
     token:SYMBOL_COMMA,
-    rule:identifier
+    rule:parent_class
   );
 
 parent_classes -> AND(token:SYMBOL_COLON, rule:parent_class_list);

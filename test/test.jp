@@ -1,3 +1,4 @@
+import error
 import io
 import time
 
@@ -15,6 +16,21 @@ class SetUp {
 
 class TearDown {
   method annotate(cls) {}
+}
+
+class ExpectError : error.Error {
+  new(str) {
+    super(error.Error)(str)
+  }
+}
+
+def expect(actual, expected) {
+  try {
+    if actual == expected {
+      return
+    }
+  } catch e {}
+  raise ExpectError('Not true')
 }
 
 self.SUCCESS = color('32;1').extend('SUCCESS').extend(color(0))
@@ -107,7 +123,7 @@ class TimeTest {
   }
   @Test
   method test_Date_to_timestamp() {
-    a.b
+    expect(True, False)
   }
 }
 

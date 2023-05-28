@@ -341,6 +341,7 @@ DEFINE_EXPRESSION_WITH_PRODUCER(while_statement, Tape) {
 };
 
 typedef struct {
+  const Token *module;
   const Token *token;
 } ClassName;
 
