@@ -36,10 +36,10 @@ class Timestamp {
   new(field year,
       field month,
       field day_of_month,
-      field hour,
-      field minute,
-      field second,
-      field millisecond) {}
+      field hour = 0,
+      field minute = 0,
+      field second = 0,
+      field millisecond = 0) {}
 
   method to_s() {
     cat(year, '-',
@@ -62,6 +62,27 @@ class Timestamp {
 
   method to_date() {
     Date(year, month, day_of_month)
+  }
+  
+  method ==(other) {
+    if ~(other is Timestamp) {
+      return False
+    }
+    to_micros() == other.to_micros()
+  }
+
+  method !=(other) {
+    if ~(other is Timestamp) {
+      return True
+    }
+    to_micros() != other.to_micros()
+  }
+
+  method __cmp__(other) {
+    if ~(other is Timestamp) {
+      return 1
+    }
+    return cmp(to_micros(), other.to_micros())
   }
 }
 
@@ -107,6 +128,27 @@ class Date {
         0,  ; minute
         0,  ; second
         0)  ; millisecond
+  }
+
+  method ==(other) {
+    if ~(other is Date) {
+      return False
+    }
+    (year == other.year) and (month == other.month) and (day_of_month == other.day_of_month)
+  }
+
+  method !=(other) {
+    if ~(other is Date) {
+      return True
+    }
+    (year != other.year) or (month != other.month) or (day_of_month != other.day_of_month)
+  }
+
+  method __cmp__(other) {
+    if ~(other is Date) {
+      return 1
+    }
+    return cmp(get_days_since_epoch(), other.get_days_since_epoch())
   }
 }
 

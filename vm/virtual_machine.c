@@ -436,7 +436,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_NO_ARG:
     second = task_popstack(task);
     first = task_popstack(task);
-    if (OBJECT == first.type) {
+    if (IS_OBJECT(&first)) {
       const Function *f = class_get_function(
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
@@ -445,11 +445,11 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
       }
     }
     if (PRIMITIVE != second.type) {
-      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive (1).");
       return false;
     }
     if (PRIMITIVE != first.type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (1).");
       return false;
     }
     result = primitive_equals(&first.pri, &second.pri);
@@ -460,13 +460,21 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     break;
   case INSTRUCTION_ID:
     resval = task_get_resval(task);
+    lookup = context_lookup(context, ins->id, &tmp);
+    if (IS_OBJECT(resval)) {
+      const Function *f = class_get_function(
+          resval->obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
+      if (NULL != f) {
+        *task_mutable_resval(task) = (lookup == NULL) ? NONE_ENTITY : *lookup;
+        return _call_function_base(task, context, f, resval->obj, context);
+      }
+    }
     if (NULL != resval && PRIMITIVE != resval->type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (2).");
       return false;
     }
-    lookup = context_lookup(context, ins->id, &tmp);
     if (NULL != lookup && PRIMITIVE != lookup->type) {
-      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive (2).");
       return false;
     }
     result = primitive_equals(&resval->pri, &lookup->pri);
@@ -478,7 +486,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_PRIMITIVE:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (3).");
       return false;
     }
     result = primitive_equals(&resval->pri, &ins->val);
