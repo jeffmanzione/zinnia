@@ -1,6 +1,5 @@
 import error
 import io
-import time
 
 class TestClass {
   method annotate(cls) {}
@@ -48,7 +47,7 @@ def expect_raises(exp, error_class=None) {
   raise ExpectError('Does not raise')
 }
 
-self.SUCCESS = color('32;1').extend('SUCCESS').extend(color(0))
+self.PASS = color('32;1').extend('PASS').extend(color(0))
 self.FAILURE = color('31;1').extend('FAILURE').extend(color(0))
 
 class Tester {
@@ -67,26 +66,26 @@ class Tester {
           continue
         }
         method_instance = c.$get(meth.name())
-        success = True
+        pass = True
         try {
           setups.each(s -> c.$get(s.name())())
         } catch e {
           io.errorln(e)
-          success = False          
+          pass = False          
         }
         try {
           method_instance()
         } catch e {
           io.errorln(e)
-          success = False          
+          pass = False          
         }
         try {
           teardowns.each(t -> c.$get(t.name())())
         } catch e {
           io.errorln(e)
-          success = False
+          pass = False
         }
-        io.println(meth.name() + '=' + (if success then SUCCESS else FAILURE))
+        io.println(cls.name() + '.' + meth.name() + '=' + (if pass then PASS else FAILURE))
       }
     }
   }
@@ -121,40 +120,3 @@ class Tester {
     return methods
   }
 }
-
-@TestClass
-class TimeTest {
-  @Test
-  method test_Timetamp_to_date() {
-    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    expect(ts.to_date(), time.Date(2023, 5, 28))
-  }
-
-  @Test
-  method test_Timestamp_to_micros() {
-    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    expect(ts.to_micros(), 1685306722666000)
-  }
-
-  @Test
-  method test_Timestamp_equals() {
-    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    expect(ts == ts, True)
-    expect(ts != ts, False)
-  }
-
-  @Test
-  method test_Timestamp_compare() {
-    ts1 = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    ts2 = time.Timestamp(2024, 6, 29, 13, 45, 22, 666)
-    expect(cmp(ts1, ts2), -1)
-  }
-
-  @Test
-  method test_Date_to_timestamp() {
-    d = time.Date(2023, 5, 28)
-    expect(d.to_timestamp(), time.Timestamp(2023, 5, 28))
-  }
-}
-
-Tester().test(self)

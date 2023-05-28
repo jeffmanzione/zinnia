@@ -1,0 +1,44 @@
+import io
+import test
+import time
+
+self.expect = test.expect
+test.Tester().test(self)
+
+@test.TestClass
+class TimeTest {
+  @test.Test
+  method test_Timetamp_to_date() {
+    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
+    expect(ts.to_date(), time.Date(2023, 5, 28))
+  }
+
+  @test.Test
+  method test_Timestamp_to_micros() {
+    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
+    expect(ts.to_micros(), 1685306722666000)
+  }
+
+  @test.Test
+  method test_Timestamp_equals() {
+    ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
+    expect(ts == ts, True)
+    expect(ts != ts, False)
+  }
+
+  @test.Test
+  method test_Timestamp_compare() {
+    ts1 = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
+    ts2 = time.Timestamp(2024, 6, 29, 13, 45, 22, 666)
+    expect(cmp(ts1, ts2), -1)
+  }
+}
+
+@test.TestClass
+class DateTest {
+  @test.Test
+  method test_Date_to_timestamp() {
+    d = time.Date(2023, 5, 28)
+    expect(d.to_timestamp(), time.Timestamp(2023, 5, 28))
+  }
+}
