@@ -462,11 +462,12 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     resval = task_get_resval(task);
     lookup = context_lookup(context, ins->id, &tmp);
     if (IS_OBJECT(resval)) {
+      first = *resval;
       const Function *f = class_get_function(
-          resval->obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
+          first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
         *task_mutable_resval(task) = (lookup == NULL) ? NONE_ENTITY : *lookup;
-        return _call_function_base(task, context, f, resval->obj, context);
+        return _call_function_base(task, context, f, first.obj, context);
       }
     }
     if (NULL != resval && PRIMITIVE != resval->type) {

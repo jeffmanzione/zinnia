@@ -324,7 +324,7 @@ Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_String != args->obj->_class) {
-    return NONE_ENTITY;
+    return entity_int(1);
   }
   String *self = (String *)obj->_internal_obj;
   String *other = (String *)args->obj->_internal_obj;
@@ -336,6 +336,7 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _string_eq(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Entity e = entity_object(obj);
   Primitive p = _string_cmp(task, ctx, obj, args).pri;
   return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }

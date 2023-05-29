@@ -1,10 +1,18 @@
-import io
-
 self.MILLIS_PER_SECOND = 1000
 self.NANOS_PER_MILLI = 1000
 
+
+class Clock {
+  new(field now = () -> Timestamp(__now_timestamp())) {}
+  method to_s() {
+    str(now())
+  }
+}
+
+self.clock = Clock()
+
 def current_timestamp() {
-  Timestamp(__now_timestamp())
+  clock.now()
 }
 
 def timestamp_from_micros(micros) {

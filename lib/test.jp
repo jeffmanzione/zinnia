@@ -28,9 +28,7 @@ def expect(actual, expected) {
     if actual == expected {
       return
     }
-  } catch e {
-    io.println(e)
-  }
+  } catch e {}
   raise ExpectError('Expected \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
@@ -40,9 +38,8 @@ def expect_raises(exp, error_class=None) {
   } catch e {
     if ~e or ~error_class or (e is error_class) {
       return
-    } else {
-      raise ExpectError('Raises wrong error')
     }
+    raise ExpectError('Raises wrong error')
   }
   raise ExpectError('Does not raise')
 }
@@ -60,29 +57,19 @@ class Tester {
       setups = _extract_methods(cls, SetUp)
       teardowns =  _extract_methods(cls, TearDown)
       for (_, meth) in cls.methods() {
-        c = cls()
         test_annot = _extract_test(meth)
         if ~test_annot {
           continue
         }
+        c = cls()
         method_instance = c.$get(meth.name())
         pass = True
         try {
           setups.each(s -> c.$get(s.name())())
-        } catch e {
-          io.errorln(e)
-          pass = False          
-        }
-        try {
-          method_instance()
-        } catch e {
-          io.errorln(e)
-          pass = False          
-        }
-        try {
+          method_instance()      
           teardowns.each(t -> c.$get(t.name())())
         } catch e {
-          io.errorln(e)
+          ;io.errorln(e)
           pass = False
         }
         io.println(cls.name() + '.' + meth.name() + '=' + (if pass then PASS else FAILURE))
