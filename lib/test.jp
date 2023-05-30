@@ -45,7 +45,7 @@ def expect_raises(exp, error_class=None) {
 }
 
 self.PASS = color('32;1').extend('PASS').extend(color(0))
-self.FAILURE = color('31;1').extend('FAILURE').extend(color(0))
+self.FAIL = color('31;1').extend('FAIL').extend(color(0))
 
 class Tester {
   method test(module) {
@@ -71,7 +71,7 @@ class Tester {
           ;io.errorln(e)
           pass = False
         }
-        io.println(cls.name() + '.' + meth.name() + '=' + (if pass then PASS else FAILURE))
+        io.println(cls.name() + '.' + meth.name() + '=' + (if pass then PASS else FAIL))
       }
     }
   }
