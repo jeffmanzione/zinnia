@@ -118,9 +118,6 @@ PRODUCE_IMPL(try_statement, SemanticAnalyzer *analyzer, Tape *target) {
   num_ins += num_assign + catch_ins;
   tape_append(target, error_assign_tape);
   tape_append(target, catch_body_tape);
-  num_ins += tape_ins_no_arg(target, RNIL, try_statement->catch_token);
-  num_ins +=
-      tape_ins_text(target, SET, "$try_goto", try_statement->catch_token);
   num_ins += tape_ins_no_arg(target, BBLK, try_statement->try_token);
   return num_ins;
 }

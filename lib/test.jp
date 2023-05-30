@@ -61,12 +61,11 @@ class Tester {
         if ~test_annot {
           continue
         }
-        c = cls()
-        method_instance = c.$get(meth.name())
         pass = True
         try {
+          c = cls()
           setups.each(s -> c.$get(s.name())())
-          method_instance()      
+          c.$get(meth.name())()      
           teardowns.each(t -> c.$get(t.name())())
         } catch e {
           ;io.errorln(e)

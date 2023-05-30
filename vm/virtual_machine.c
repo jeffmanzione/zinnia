@@ -1318,12 +1318,15 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     const Entity *error_e = task_get_resval(task);
     ASSERT(NOT_NULL(error_e));
     ASSERT(OBJECT == error_e->type);
-    ASSERT(Class_Error == error_e->obj->_class);
+    ASSERT(inherits_from(error_e->obj->_class, Class_Error));
     context->error = error_e->obj;
     task->child_task_has_error = false;
   }
   for (;;) {
     if (NULL != context->error) {
+      // char *tmp = ALLOC_ARRAY(char, 100);
+      // size_t sz;
+      // getline(&tmp, &sz, stdin);
       if (!_attemp_catch_error(task, context)) {
         goto end_of_loop;
       }
@@ -1659,6 +1662,11 @@ void _process_handle_error(Process *process, Task *task) {
   _mark_task_complete(task->parent_process, task,
                       /*should_push=*/true);
   *task_mutable_resval(task->parent_task) = *task_get_resval(task);
+
+  // Only remove parent from waiting set if it was only waiting on this task.
+  if (set_size(&task->parent_task->dependent_tasks) > 0) {
+    return;
+  }
   process_remove_waiting_task(task->parent_task->parent_process,
                               task->parent_task);
   process_push_task(task->parent_task->parent_process, task->parent_task);

@@ -3,16 +3,19 @@ self.NANOS_PER_MILLI = 1000
 
 
 class Clock {
-  new(field now = () -> Timestamp(__now_timestamp())) {}
+  new(
+    field now_timestamp = () -> Timestamp(__now_timestamp()),
+    field now_usec = now_usec
+  ) {}
   method to_s() {
-    str(now())
+    str(now_timestamp())
   }
 }
 
 self.clock = Clock()
 
 def current_timestamp() {
-  clock.now()
+  clock.now_timestamp()
 }
 
 def timestamp_from_micros(micros) {
@@ -168,10 +171,10 @@ class Timer {
   }
   method start() {
     reset()
-    start_usec = now_usec()
+    start_usec = clock.now_usec()
   }
   method mark(mark_name) {
-    elapsed = now_usec() - start_usec
+    elapsed = clock.now_usec() - start_usec
     timestamps.append((mark_name, elapsed))
     return elapsed
   }

@@ -13,7 +13,9 @@ class TimeTest {
   @test.SetUp
   method set_up() {
     tmp_clock = time.clock
-    time.clock = time.Clock(() -> time.Timestamp(2023, 5, 28, 13, 45, 22, 666))
+    time.clock = time.Clock(
+      () -> time.Timestamp(2023, 5, 28, 13, 45, 22, 666),
+      () -> 1685306722666000)
   }
 
   @test.TearDown
@@ -40,13 +42,20 @@ class TimeTest {
   method test_date_from_timestamp() {
     expect(
       time.date_from_timestamp(time.Timestamp(2023, 5, 28, 13, 45, 22, 666)),
-      time.Date(2023, 5, 29))
+      time.Date(2023, 5, 28))
   }
 
   @test.Test
   method test_current_date() {
     expect(
       time.current_date(),
+      time.Date(2023, 5, 28))
+  }
+
+  @test.Test
+  method test_date_from_days_since_epoch() {
+    expect(
+      time.date_from_days_since_epoch(19505),
       time.Date(2023, 5, 28))
   }
 }
@@ -128,5 +137,49 @@ class DateTest {
   method test_Date_add_years() {
     d = time.Date(2023, 5, 28)
     expect(d.add_years(3), time.Date(2026, 5, 28))
+  }
+}
+
+@test.TestClass
+class TimerTest {
+  field tmp_clock
+
+  method _advance_clock_micros(micros) {
+    now = time.clock.now_usec()
+    time.clock.now_usec = () -> now + micros
+  }
+
+  @test.SetUp
+  method set_up() {
+    tmp_clock = time.clock
+    time.clock = time.Clock(
+      () -> time.Timestamp(2023, 5, 28, 13, 45, 22, 666),
+      () -> 1685306722666000)
+  }
+
+  @test.TearDown
+  method tear_down() {
+    time.clock = tmp_clock
+    tmp_clock = None
+  }
+
+  @test.Test
+  method test_current_timestamp() {
+    t = time.Timer()
+    t.start()
+    _advance_clock_micros(5 * time.MILLIS_PER_SECOND * time.NANOS_PER_MILLI)
+    t.mark('test')
+
+    expect(
+      t.elapsed_usec(),
+      [('test', 5 * time.MILLIS_PER_SECOND * time.NANOS_PER_MILLI)]
+    )
+
+    t.reset()
+
+    expect(
+      t.elapsed_usec(),
+      []
+    )
   }
 }
