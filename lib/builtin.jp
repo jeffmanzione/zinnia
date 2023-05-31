@@ -236,6 +236,15 @@ class Array {
     } 
     return result
   }
+  method where(filter_fn) {
+    result = []
+    for i=0, i<len(), i=i+1 {
+      if filter_fn(self[i]) {
+        result.append(self[i])
+      }
+    } 
+    return result
+  }
   method collect(f, s=None) {
     if len() == 0 {
       if s is Function {

@@ -39,7 +39,7 @@ void optimize_init() {
   register_optimizer("SetEmpty", optimizer_SetEmpty);
   register_optimizer("PeekPeek", optimizer_PeekPeek);
   register_optimizer("PushResEmpty", optimizer_PushResEmpty);
-  register_optimizer("PeekRes-SecondPass", optimizer_PeekRes);
+  // register_optimizer("PeekRes-SecondPass", optimizer_PeekRes);
   register_optimizer("PushRes2", optimizer_PushRes2);
   register_optimizer("SimpleMath", optimizer_SimpleMath);
   register_optimizer("GetPush", optimizer_GetPush);

@@ -1615,7 +1615,7 @@ int produce_assignment_multi(SemanticAnalyzer *analyzer, MultiAssignment *multi,
   num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
   for (i = 0; i < len; ++i) {
     Assignment *assign = (Assignment *)alist_get(multi->subargs, i);
-    num_ins += tape_ins_no_arg(tape, (i < len - i) ? PEEK : RES, eq_token);
+    num_ins += tape_ins_no_arg(tape, (i < len - 1) ? PEEK : RES, eq_token);
     num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
     num_ins += tape_ins_int(tape, RES, i, eq_token);
     num_ins += tape_ins_no_arg(tape, AIDX, eq_token);

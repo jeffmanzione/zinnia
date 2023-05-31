@@ -176,10 +176,6 @@ class TimerTest {
     )
 
     t.reset()
-
-    expect(
-      t.elapsed_usec(),
-      []
-    )
+    expect(t.elapsed_usec(), [])
   }
 }
