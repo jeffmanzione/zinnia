@@ -79,7 +79,7 @@ class Tester {
     failures = stats.where((_, _, pass, _) -> ~pass)
     passes = stats.map((_, _, pass, _) -> pass).where(v -> v).len()
     col = if passes == stats.len() then '32;1' else '31;1'
-    for (_, (cls, meth, pass, err)) in failures {
+    for (_, (cls, meth, _, err)) in failures {
       io.println('Test ' + cls.name() + '.' + meth.name() + '=' +  FAIL + '\n')
       io.println(err)
     }
