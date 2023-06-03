@@ -47,7 +47,7 @@ Entity *class_get_field(const Class *cls, const char name[]) {
 
 Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
                              Context *ctx) {
-  Entity member;
+  Entity member = NONE_ENTITY;
   const Entity *member_ptr =
       (Class_Class == obj->_class) ? NULL : object_get(obj, field);
 
