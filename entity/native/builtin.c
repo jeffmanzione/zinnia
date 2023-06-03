@@ -324,7 +324,7 @@ Entity _string_extend(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || OBJECT != args->type ||
       Class_String != args->obj->_class) {
-    return NONE_ENTITY;
+    return entity_int(1);
   }
   String *self = (String *)obj->_internal_obj;
   String *other = (String *)args->obj->_internal_obj;
@@ -336,6 +336,7 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _string_eq(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Entity e = entity_object(obj);
   Primitive p = _string_cmp(task, ctx, obj, args).pri;
   return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
@@ -741,6 +742,32 @@ Entity _module_name(Task *task, Context *ctx, Object *obj, Entity *args) {
                                   strlen(obj->_module_obj->_name)));
 }
 
+Entity _module_functions(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Module);
+  Object *array_obj = array_create(task->parent_process->heap);
+  Module *m = obj->_module_obj;
+  KL_iter funcs = module_functions(m);
+  for (; kl_has(&funcs); kl_inc(&funcs)) {
+    const Function *f = (const Function *)kl_value(&funcs);
+    Entity func = entity_object(f->_reflection);
+    array_add(task->parent_process->heap, array_obj, &func);
+  }
+  return entity_object(array_obj);
+}
+
+Entity _module_classes(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Module);
+  Object *array_obj = array_create(task->parent_process->heap);
+  Module *m = obj->_module_obj;
+  KL_iter classes = module_classes(m);
+  for (; kl_has(&classes); kl_inc(&classes)) {
+    const Class *c = (const Class *)kl_value(&classes);
+    Entity class = entity_object(c->_reflection);
+    array_add(task->parent_process->heap, array_obj, &class);
+  }
+  return entity_object(array_obj);
+}
+
 Entity _function_ref_name(Task *task, Context *ctx, Object *obj, Entity *args) {
   const char *name = function_ref_get_func(obj)->_name;
   return entity_object(
@@ -1090,4 +1117,6 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Tuple, intern("len"), _tuple_len);
 
   native_method(Class_Module, NAME_KEY, _module_name);
+  native_method(Class_Module, intern("functions"), _module_functions);
+  native_method(Class_Module, intern("classes"), _module_classes);
 }

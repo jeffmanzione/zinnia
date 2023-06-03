@@ -154,6 +154,9 @@ void add_reflection_to_function(Heap *heap, Object *parent, Function *func) {
   }
   func->_reflection->_function_obj = func;
   object_set_member_obj(heap, parent, func->_name, func->_reflection);
+
+  object_set_member_obj(heap, func->_reflection, ANNOTATIONS_KEY,
+                        heap_new(heap, Class_Array));
 }
 
 void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
@@ -184,6 +187,9 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
         entity_object(string_new(heap, field->name, strlen(field->name)));
     array_add(heap, field_arr, &str);
   }
+
+  object_set_member_obj(heap, class->_reflection, ANNOTATIONS_KEY,
+                        heap_new(heap, Class_Array));
 }
 
 void add_reflection_to_module(ModuleManager *mm, Module *module) {

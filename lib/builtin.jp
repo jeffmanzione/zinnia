@@ -42,9 +42,9 @@ def cmp(o1, o2) {
      return 0
   }
   if o2 > o1 {
-    return 1
+    return -1
   }
-  return -1
+  return 1
 }
 
 class Object {
@@ -65,7 +65,21 @@ class Module {
 
 class Class {
   method to_s() {
-    return cat('class ', name())
+    if annotations.len() > 0 {
+      cls_name =  'class ' + name()
+      for (_, a) in annotations {
+        cls_name = cls_name + ' @' + str(a.class().name())
+      }
+      return cls_name
+    } else {
+      return cat('class ', name())
+    }
+  }
+  method add_annotation(annot) {
+    annotations.append(annot)
+  }
+  method annotations() {
+    return annotations
   }
 }
 
@@ -222,6 +236,15 @@ class Array {
     } 
     return result
   }
+  method where(filter_fn) {
+    result = []
+    for i=0, i<len(), i=i+1 {
+      if filter_fn(self[i]) {
+        result.append(self[i])
+      }
+    } 
+    return result
+  }
   method collect(f, s=None) {
     if len() == 0 {
       if s is Function {
@@ -254,15 +277,25 @@ class Array {
 
 class Function {
   method to_s() {
+    res = None
     if self.is_method() {
-      return cat(
+      res = cat(
           'Method(',
           self.module().name(),
           '.', self.parent_class().name(),
-          '.', self.name(), ')')
+          '.', self.name())
     } else {
-      return cat('Function(', self.module().name(), '.', self.name(), ')')
+      res = cat('Function(', self.module().name(), '.', self.name())
     }
+    if self.annotations and self.annotations.len() > 0 {
+      res.extend(', annotations=')
+      res.extend(str(self.annotations))
+    }
+    res.extend(')')
+    res
+  }
+  method add_annotation(annot) {
+    self.annotations.append(annot)
   }
 }
 

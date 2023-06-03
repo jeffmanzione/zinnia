@@ -47,9 +47,10 @@ Entity *class_get_field(const Class *cls, const char name[]) {
 
 Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
                              Context *ctx) {
-  Entity member;
+  Entity member = NONE_ENTITY;
   const Entity *member_ptr =
       (Class_Class == obj->_class) ? NULL : object_get(obj, field);
+
   if (NULL == member_ptr) {
     const Function *f = class_get_function(obj->_class, field);
     if (NULL != f) {
@@ -59,11 +60,13 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
       if (NULL != field_value) {
         return *field_value;
       }
-      field_value = class_get_field(obj->_class_obj, field);
-      if (NULL == field_value) {
-        return NONE_ENTITY;
+      if (obj->_class == Class_Class) {
+        field_value = class_get_field(obj->_class_obj, field);
+        if (NULL == field_value) {
+          return NONE_ENTITY;
+        }
+        return *field_value;
       }
-      return *field_value;
     }
   } else {
     member = *member_ptr;

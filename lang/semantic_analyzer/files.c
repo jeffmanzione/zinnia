@@ -29,7 +29,13 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
     ASSERT(CHILD_IS_SYNTAX(class_inheritance, 1, rule_parent_classes));
     const SyntaxTree *parent_classes = CHILD_SYNTAX_AT(class_inheritance, 1);
     if (CHILD_IS_SYNTAX(parent_classes, 1, rule_identifier)) {
-      ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token};
+      ClassName name = {.token = CHILD_SYNTAX_AT(parent_classes, 1)->token,
+                        .module = NULL};
+      alist_append(def->parent_classes, &name);
+    } else if (CHILD_IS_SYNTAX(parent_classes, 1, rule_parent_class)) {
+      const SyntaxTree *parent_class = CHILD_SYNTAX_AT(parent_classes, 1);
+      ClassName name = {.token = CHILD_SYNTAX_AT(parent_class, 2)->token,
+                        .module = CHILD_SYNTAX_AT(parent_class, 0)->token};
       alist_append(def->parent_classes, &name);
     } else {
       FATALF("Multiple inheritance no longer supported.");
@@ -240,7 +246,6 @@ void populate_class_statements(SemanticAnalyzer *analyzer, ClassDef *class,
 }
 
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
-  // TODO HANDLE ANNOTATIONS.
   ClassDef class;
   class.has_constructor = false;
   class.has_annot = false;
@@ -256,12 +261,6 @@ ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
     populate_class_statement(analyzer, &class, body);
   }
   return class;
-}
-
-void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot) {
-  if (annot->has_args && NULL != annot->args_tuple) {
-    semantic_analyzer_delete(analyzer, annot->args_tuple);
-  }
 }
 
 void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
@@ -423,6 +422,33 @@ void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->fn_name = CHILD_SYNTAX_AT(fn_identifier, 1)->token;
 }
 
+SyntaxTree *populate_signature(SemanticAnalyzer *analyzer,
+                               const SyntaxTree *stree, FunctionDef *func,
+                               RuleFn signature_with_qualifier,
+                               RuleFn signature_no_qualifier) {
+  SyntaxTree *func_sig;
+  int start_index = 0;
+
+  if (CHILD_IS_SYNTAX(stree, 0, rule_method_signature) ||
+      CHILD_IS_SYNTAX(stree, 0, rule_function_signature)) {
+    stree = CHILD_SYNTAX_AT(stree, 0);
+    start_index = 1;
+    func->has_annot = true;
+    func->annot = populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));
+  }
+  if (CHILD_IS_SYNTAX(stree, start_index, signature_with_qualifier)) {
+    func_sig = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, start_index), 0);
+    populate_function_qualifiers(
+        CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, start_index), 1),
+        &func->is_const, &func->const_token, &func->is_async,
+        &func->async_token);
+  } else {
+    ASSERT(CHILD_IS_SYNTAX(stree, start_index, signature_no_qualifier));
+    func_sig = CHILD_SYNTAX_AT(stree, start_index);
+  }
+  return func_sig;
+}
+
 FunctionDef populate_function_variant(
     SemanticAnalyzer *analyzer, const SyntaxTree *stree, RuleFn def,
     RuleFn signature_with_qualifier, RuleFn signature_no_qualifier,
@@ -436,20 +462,13 @@ FunctionDef populate_function_variant(
                       .is_const = false,
                       .const_token = NULL,
                       .is_async = false,
+                      .has_annot = false,
                       .async_token = NULL,
                       .body = NULL};
   ASSERT(IS_SYNTAX(stree, def));
 
-  const SyntaxTree *func_sig;
-  if (CHILD_IS_SYNTAX(stree, 0, signature_with_qualifier)) {
-    func_sig = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 0), 0);
-    populate_function_qualifiers(CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, 0), 1),
-                                 &func.is_const, &func.const_token,
-                                 &func.is_async, &func.async_token);
-  } else {
-    ASSERT(CHILD_IS_SYNTAX(stree, 0, signature_no_qualifier));
-    func_sig = CHILD_SYNTAX_AT(stree, 0);
-  }
+  const SyntaxTree *func_sig = populate_signature(
+      analyzer, stree, &func, signature_with_qualifier, signature_no_qualifier);
 
   ASSERT(CHILD_IS_SYNTAX(func_sig, 0, fn_identifier));
   def_populator(CHILD_SYNTAX_AT(func_sig, 0), &func);
@@ -573,8 +592,90 @@ DELETE_IMPL(file_level_statement_list, SemanticAnalyzer *analyzer) {
   delete_module_def(analyzer, &file_level_statement_list->def);
 }
 
-int produce_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
-                       Tape *tape) {
+int produce_function_annotation(SemanticAnalyzer *analyzer,
+                                const FunctionDef *func, Tape *tape) {
+  int num_ins = 0;
+  const Annotation *annot = &func->annot;
+
+  if (NULL != annot->prefix) {
+    num_ins += tape_ins(tape, RES, annot->prefix);
+    num_ins += tape_ins(tape, GTSH, annot->class_name);
+  } else {
+    num_ins += tape_ins(tape, PUSH, annot->class_name);
+  }
+  if (annot->has_args) {
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
+    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
+  } else {
+    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+  }
+  // For call to annotate.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  // For call to add_annotation.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+
+  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
+  num_ins += tape_ins(tape, RES, func->fn_name);
+  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += tape_ins(tape, RES, func->fn_name);
+  num_ins += tape_ins_no_arg(tape, PUSH, func->fn_name);
+  num_ins += tape_ins_int(tape, PEEK, 2, func->fn_name);
+  num_ins +=
+      tape_ins_text(tape, CALL, intern("add_annotation"), annot->class_name);
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+
+  return num_ins;
+}
+
+int produce_method_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
+                              const FunctionDef *func, Tape *tape) {
+  int num_ins = 0;
+  const Annotation *annot = &func->annot;
+
+  if (NULL != annot->prefix) {
+    num_ins += tape_ins(tape, RES, annot->prefix);
+    num_ins += tape_ins(tape, GTSH, annot->class_name);
+  } else {
+    num_ins += tape_ins(tape, PUSH, annot->class_name);
+  }
+  if (annot->has_args) {
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
+    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
+  } else {
+    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+  }
+  // For call to annotate.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  // For call to add_annotation.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+
+  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
+  num_ins += tape_ins(tape, RES, class->def.name.token);
+  num_ins += tape_ins(tape, GET, func->fn_name);
+  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += tape_ins(tape, RES, class->def.name.token);
+  num_ins += tape_ins(tape, GET, func->fn_name);
+  num_ins += tape_ins_no_arg(tape, PUSH, func->fn_name);
+  num_ins += tape_ins_int(tape, PEEK, 2, func->fn_name);
+  num_ins +=
+      tape_ins_text(tape, CALL, intern("add_annotation"), annot->class_name);
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+
+  return num_ins;
+}
+
+int produce_class_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
+                             Tape *tape) {
   int num_ins = 0;
   const Annotation *annot = &class->annot;
 
@@ -587,13 +688,26 @@ int produce_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
   if (annot->has_args) {
     num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
     num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
-
   } else {
     num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
   }
+  // For call to annotate.
   num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  // For call to add_annotation.
+  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+
+  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
   num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins_text(tape, CALL, intern("annotate"), annot->class_name);
+  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+
+  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += tape_ins(tape, PUSH, class->def.name.token);
+  num_ins +=
+      tape_ins_text(tape, CALL, intern("add_annotation"), annot->class_name);
+
   return num_ins;
 }
 
@@ -614,13 +728,28 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
     num_ins += produce_statics(analyzer, class, tape);
   }
-  // Annotations
+  // Function annotations
+  for (i = 0; i < alist_len(module->functions); ++i) {
+    FunctionDef *func = (FunctionDef *)alist_get(module->functions, i);
+    if (!func->has_annot) {
+      continue;
+    }
+    num_ins += produce_function_annotation(analyzer, func, tape);
+  }
+  // Class annotations
   for (i = 0; i < alist_len(module->classes); ++i) {
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
+    for (int j = 0; j < alist_len(class->methods); ++j) {
+      FunctionDef *func = (FunctionDef *)alist_get(class->methods, j);
+      if (!func->has_annot) {
+        continue;
+      }
+      num_ins += produce_method_annotation(analyzer, class, func, tape);
+    }
     if (!class->has_annot) {
       continue;
     }
-    num_ins += produce_annotation(analyzer, class, tape);
+    num_ins += produce_class_annotation(analyzer, class, tape);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {
@@ -630,7 +759,14 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     }
     ClassName *super = (ClassName *)alist_get(class->def.parent_classes, 0);
     num_ins += tape_ins(tape, PUSH, class->def.name.token);
-    num_ins += tape_ins(tape, RES, super->token);
+
+    if (NULL != super->module) {
+      num_ins += tape_ins(tape, RES, super->module);
+      num_ins += tape_ins(tape, GET, super->token);
+    } else {
+      num_ins += tape_ins(tape, RES, super->token);
+    }
+
     num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
   }
   // Statements

@@ -519,9 +519,12 @@ function_signature_with_qualifier ->
   AND(rule:function_signature_no_qualifier, rule:function_qualifier_list);
 
 function_signature ->
-  OR(
-    rule:function_signature_with_qualifier,
-    rule:function_signature_no_qualifier
+  AND(
+    OPTIONAL(rule:annotation),
+    OR(
+      rule:function_signature_with_qualifier,
+      rule:function_signature_no_qualifier
+    )
   );
 
 function_definition -> AND(rule:function_signature, rule:statement);
@@ -545,9 +548,12 @@ method_signature_with_qualifier ->
   AND(rule:method_signature_no_qualifier, rule:function_qualifier_list);
 
 method_signature ->
-  OR(
-    rule:method_signature_with_qualifier,
-    rule:method_signature_no_qualifier
+  AND(
+    OPTIONAL(rule:annotation),
+    OR(
+      rule:method_signature_with_qualifier,
+      rule:method_signature_no_qualifier
+    )
   );
 
 method_definition -> AND(rule:method_signature, OPTIONAL(token:TOKEN_NEWLINE), rule:statement);
@@ -666,10 +672,16 @@ class_statement_list ->
     )
   );
 
+parent_class ->
+  OR(
+    AND(rule:identifier, token:SYMBOL_PERIOD, rule:identifier),
+    rule:identifier
+  );
+
 parent_class_list ->
   LIST(
     token:SYMBOL_COMMA,
-    rule:identifier
+    rule:parent_class
   );
 
 parent_classes -> AND(token:SYMBOL_COLON, rule:parent_class_list);

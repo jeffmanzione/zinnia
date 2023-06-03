@@ -1,3 +1,5 @@
+import error
+
 _ = None
 
 class Iterator {
@@ -17,7 +19,7 @@ class IndexIterator : Iterator {
     } else if args is Tuple {
       (indexable, start, end) = args
     } else {
-      raise Error(concat('Strange input: ', args))
+      raise error.Error(concat('Strange input: ', args))
     }
     i = -1
     index = start - 1

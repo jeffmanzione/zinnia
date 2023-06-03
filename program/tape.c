@@ -301,6 +301,11 @@ void tape_write(const Tape *tape, FILE *file) {
         in_class = false;
         fprintf(file, "endclass  ; %s\n", class_ref->name);
         al_inc(&cls_iter);
+        // Handles classes with no body.
+        if (al_has(&cls_iter) &&
+            ((ClassRef *)al_value(&cls_iter))->start_index == i) {
+          i--;
+        }
       }
     }
   }

@@ -10,13 +10,13 @@
 #include "alloc/arena/intern.h"
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
+#include "entity/entity.h"
 #include "entity/module/modules.h"
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
-#include "entity/entity.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
@@ -436,7 +436,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_NO_ARG:
     second = task_popstack(task);
     first = task_popstack(task);
-    if (OBJECT == first.type) {
+    if (IS_OBJECT(&first)) {
       const Function *f = class_get_function(
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
@@ -445,11 +445,11 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
       }
     }
     if (PRIMITIVE != second.type) {
-      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive (1).");
       return false;
     }
     if (PRIMITIVE != first.type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (1).");
       return false;
     }
     result = primitive_equals(&first.pri, &second.pri);
@@ -460,13 +460,22 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     break;
   case INSTRUCTION_ID:
     resval = task_get_resval(task);
+    lookup = context_lookup(context, ins->id, &tmp);
+    if (IS_OBJECT(resval)) {
+      first = *resval;
+      const Function *f = class_get_function(
+          first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
+      if (NULL != f) {
+        *task_mutable_resval(task) = (lookup == NULL) ? NONE_ENTITY : *lookup;
+        return _call_function_base(task, context, f, first.obj, context);
+      }
+    }
     if (NULL != resval && PRIMITIVE != resval->type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (2).");
       return false;
     }
-    lookup = context_lookup(context, ins->id, &tmp);
     if (NULL != lookup && PRIMITIVE != lookup->type) {
-      raise_error(task, context, "RHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "RHS for op 'EQ' must be primitive (2).");
       return false;
     }
     result = primitive_equals(&resval->pri, &lookup->pri);
@@ -478,7 +487,7 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
   case INSTRUCTION_PRIMITIVE:
     resval = task_get_resval(task);
     if (NULL != resval && PRIMITIVE != resval->type) {
-      raise_error(task, context, "LHS for op 'EQ' must be primitive.");
+      raise_error(task, context, "LHS for op 'EQ' must be primitive (3).");
       return false;
     }
     result = primitive_equals(&resval->pri, &ins->val);
@@ -999,8 +1008,7 @@ void _execute_NOT(VM *vm, Task *task, Context *context,
     FATALF("Invalid arg type=%d for NOT.", ins->type);
   }
   const Entity *resval = task_get_resval(task);
-  *task_mutable_resval(task) =
-      IS_FALSE(resval) ? TRUE_ENTITY : FALSE_ENTITY;
+  *task_mutable_resval(task) = IS_FALSE(resval) ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
 void _execute_ANEW(VM *vm, Task *task, Context *context,
@@ -1310,12 +1318,15 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     const Entity *error_e = task_get_resval(task);
     ASSERT(NOT_NULL(error_e));
     ASSERT(OBJECT == error_e->type);
-    ASSERT(Class_Error == error_e->obj->_class);
+    ASSERT(inherits_from(error_e->obj->_class, Class_Error));
     context->error = error_e->obj;
     task->child_task_has_error = false;
   }
   for (;;) {
     if (NULL != context->error) {
+      // char *tmp = ALLOC_ARRAY(char, 100);
+      // size_t sz;
+      // getline(&tmp, &sz, stdin);
       if (!_attemp_catch_error(task, context)) {
         goto end_of_loop;
       }
@@ -1651,6 +1662,11 @@ void _process_handle_error(Process *process, Task *task) {
   _mark_task_complete(task->parent_process, task,
                       /*should_push=*/true);
   *task_mutable_resval(task->parent_task) = *task_get_resval(task);
+
+  // Only remove parent from waiting set if it was only waiting on this task.
+  if (set_size(&task->parent_task->dependent_tasks) > 0) {
+    return;
+  }
   process_remove_waiting_task(task->parent_task->parent_process,
                               task->parent_task);
   process_push_task(task->parent_task->parent_process, task->parent_task);

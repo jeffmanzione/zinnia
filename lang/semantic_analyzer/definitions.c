@@ -1048,9 +1048,10 @@ void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
 }
 
 void delete_argument(SemanticAnalyzer *analyzer, Argument *arg) {
-  if (arg->has_default) {
-    semantic_analyzer_delete(analyzer, arg->default_value);
+  if (!arg->has_default) {
+    return;
   }
+  semantic_analyzer_delete(analyzer, arg->default_value);
 }
 
 void _delete_argument_elt(SemanticAnalyzer *analyzer, void *ptr) {
@@ -1066,9 +1067,19 @@ void delete_arguments(SemanticAnalyzer *analyzer, Arguments *args) {
   alist_delete(args->args);
 }
 
+void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot) {
+  if (!annot->has_args || NULL == annot->args_tuple) {
+    return;
+  }
+  semantic_analyzer_delete(analyzer, annot->args_tuple);
+}
+
 void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
   if (func->has_args) {
     delete_arguments(analyzer, &func->args);
+  }
+  if (func->has_annot) {
+    delete_annotation(analyzer, &func->annot);
   }
   semantic_analyzer_delete(analyzer, func->body);
 }
@@ -1239,7 +1250,7 @@ int produce_function(SemanticAnalyzer *analyzer, FunctionDef *func,
 
 FunctionDef populate_anon_function(SemanticAnalyzer *analyzer,
                                    const SyntaxTree *stree) {
-  FunctionDef func;
+  FunctionDef func = {.has_annot = false};
   ASSERT(IS_SYNTAX(stree, rule_anon_function_definition));
 
   const SyntaxTree *func_arg_tuple;
@@ -1604,7 +1615,7 @@ int produce_assignment_multi(SemanticAnalyzer *analyzer, MultiAssignment *multi,
   num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
   for (i = 0; i < len; ++i) {
     Assignment *assign = (Assignment *)alist_get(multi->subargs, i);
-    num_ins += tape_ins_no_arg(tape, (i < len - i) ? PEEK : RES, eq_token);
+    num_ins += tape_ins_no_arg(tape, (i < len - 1) ? PEEK : RES, eq_token);
     num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
     num_ins += tape_ins_int(tape, RES, i, eq_token);
     num_ins += tape_ins_no_arg(tape, AIDX, eq_token);
