@@ -116,7 +116,7 @@ class RemoteClass {
 }
 
 def _get_remote_class(cls) {
-  remote = cls.module().$get(cat('Remote' + cls.name()))
+  remote = cls.module().$get('Remote' + cls.name())
   if ~remote {
     raise error.Error('Could not find remote class for ' + cls.name() + '.')
   }
