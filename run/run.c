@@ -55,20 +55,22 @@ void _set_args(Heap *heap, ArgStore *store) {
                         args);
 }
 
-void _interpret_and_execute_line(Module *m) {
-  char buf[4096];
-  getline();
+void _interpret_and_execute_line(VM *vm, Module *m) {
+  char *buf = NULL;
+  size_t sz;
+  getline(&buf, &sz, stdin);
 
-  SFILE *file = sfile_open(c_str_text);
+  SFILE *file = sfile_open(buf);
   Tape *tape = (Tape *)m->_tape; // bless
   FileInfo *fi = file_info_sfile(file);
-  FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
-      vm_module_manager(task->parent_process->vm), m);
+  FileInfo *module_fi =
+      (FileInfo *)modulemanager_get_fileinfo(vm_module_manager(vm), m);
   file_info_append(module_fi, fi);
   fi = module_fi;
 
   Q tokens;
   Q_init(&tokens);
+
   lexer_tokenize(fi, &tokens);
 
   Parser parser;
@@ -93,8 +95,8 @@ void _interpret_and_execute_line(Module *m) {
 
   Map new_classes;
   map_init_default(&new_classes);
-  modulemanager_update_module(vm_module_manager(task->parent_process->vm), m,
-                              &new_classes);
+  modulemanager_update_module(vm_module_manager(vm), m, &new_classes);
+  DEALLOC(buf);
 }
 
 void run(const Set *source_files, ArgStore *store) {
@@ -122,6 +124,12 @@ void run(const Set *source_files, ArgStore *store) {
   }
   if (interpreter_mode) {
     fprintf(stdout, "Interpreter mode detected.\n");
+    ModuleInfo *main_info =
+        mm_register_module(mm, intern("$main.jp"), "\n_ = None\n");
+    main_module = modulemanager_lookup(mm, intern("$main"));
+    while (true) {
+      _interpret_and_execute_line(vm, main_module);
+    }
   }
 
   for (; has(&srcs); inc(&srcs)) {
