@@ -213,7 +213,7 @@ Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
   return fn_ref;
 }
 
-volatile int tmp = 0;
+// volatile int tmp = 0;
 
 Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
   Process *process = task->parent_process;
