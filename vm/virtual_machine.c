@@ -438,7 +438,8 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     first = task_popstack(task);
     if (IS_OBJECT(&first)) {
       if (IS_OBJECT(&second) && first.obj == second.obj) {
-        *task_mutable_resval(task) = TRUE_ENTITY;
+        *task_mutable_resval(task) =
+            (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
         return false;
       }
       const Function *f = class_get_function(
@@ -448,13 +449,14 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
         return _call_function_base(task, context, f, first.obj, context);
       }
       if (!IS_OBJECT(&second)) {
-        *task_mutable_resval(task) = FALSE_ENTITY;
+        *task_mutable_resval(task) =
+            (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
         return false;
       }
     }
     if (IS_NONE(&first)) {
       *task_mutable_resval(task) =
-          IS_NONE(&second) ? TRUE_ENTITY : FALSE_ENTITY;
+          IS_NONE(&second) && (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
       return false;
     }
     if (PRIMITIVE != second.type) {
