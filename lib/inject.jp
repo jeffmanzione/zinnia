@@ -8,23 +8,34 @@ class Injector {
     key_map = {}
   }
   method get(key) {
+    constructed_map = {}
+    return _get(constructed_map, key)
+  }
+  method _get(constructed_map, key) {
     if key is Key {
+      result = constructed_map[key]
+      if result {
+        return result
+      }
       provider = key_map[key]
       if (provider is Function) or (provider is FunctionRef) {
-        return _provide_function(key, provider)
+        result = _provide_function(constructed_map, key, provider)
       } else if provider is Class {
-        return _provide_class(key, provider)
+        result = _provide_class(constructed_map, key, provider)
       } else if ~provider {
-        return _provide_class(key)
+        result = _provide_class(constructed_map, key)
+      } else {
+        raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
       }
-      raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
+      constructed_map[key] = result
+      return result
     }
     if key is Class {
-      return get(Key(key))
+      return _get(constructed_map, Key(key))
     }
     raise error.Error('Expected key or class but was ' + str(cls))
   }
-  method _provide_function(key, provider) {
+  method _provide_function(constructed_map, key, provider) {
     provides_annots = None
     if provider is FunctionRef {
       provides_annots = provider.func().annotations.where(a -> a is Provides)
@@ -38,20 +49,20 @@ class Injector {
       args = []
       provider_keys = _get_keys(provides_annot.keys)
       for (_, arg_key) in provider_keys {
-        args.append(get(arg_key))
+        args.append(_get(constructed_map, arg_key))
       }
       return provider(_create_args(args))
     }
     return provider()
   }
-  method _provide_class(key, provider=None) {
+  method _provide_class(constructed_map, key, provider=None) {
     if ~provider {
       provider = key.cls
     }
-    args = _get_args(provider)
+    args = _get_args(constructed_map, provider)
     return if args then provider(args) else provider()
   }
-  method _get_args(cls) {
+  method _get_args(constructed_map, cls) {
     inject_annots = cls.annotations().where(a -> a is Inject)
     if inject_annots.len() > 1 {
       raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
@@ -60,7 +71,7 @@ class Injector {
       args = []
       inject_keys = _get_keys(inject_annot.keys)
       for (_, arg_key) in inject_keys {
-        args.append(get(arg_key))
+        args.append(_get(constructed_map, arg_key))
       }
       return _create_args(args)
     }
