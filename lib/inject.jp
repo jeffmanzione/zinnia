@@ -131,15 +131,12 @@ class Injector {
 
 class Key {
   new(field cls, field annot=None) {}
-
   method ==(other) {
     cls == other.cls and annot == other.annot
   }
-
   method hash() {
     builtin.hash(cls) + builtin.hash(annot)
   }
-
   method to_s() {
     cat('Key(cls=', cls, ',annot=', annot, ')')
   }
@@ -148,6 +145,9 @@ class Key {
 class Inject {
   new(field keys) {}
   method annotate() {}
+  method to_s() {
+    cat('Inject(keys=', keys, ')')
+  }
 }
 
 class Provides {
