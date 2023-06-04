@@ -17,9 +17,7 @@ class Test1 {
 }
 
 
-class Marker1 {
-  method annotate() {}
-}
+class Marker1 {}
 
 class TestProviders : inject.ProviderSet {
   @inject.Provides(Test2)
