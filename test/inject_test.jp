@@ -1,0 +1,44 @@
+import inject
+import test
+
+self.expect = test.expect
+test.Tester().test(self)
+
+class Test2 {
+  new() {}
+}
+
+@inject.Inject(Test2, Marker1)
+class Test1 {
+  new(field test2, field marker1) {}
+  method to_s() {
+    cat('Test1(test2=', test2, ',marker1=', marker1, ')')
+  }
+}
+
+
+class Marker1 {
+  method annotate() {}
+}
+
+class TestProviders : inject.ProviderSet {
+  @inject.Provides(Test2)
+  method provide_test2() {
+    return Test2()
+  }
+  @inject.Provides(Marker1)
+  method provide_marker1() {
+    return 55
+  }
+}
+
+@test.TestClass
+class InjectTest {
+  @test.Test
+  method test_inject() {
+    injector = inject.Injector().install(TestProviders()).install(Test1)
+    test1 = injector.get(Test1)
+    expect(test1.test2 is Test2, True)
+    expect(test1.marker1, 55)
+  }
+}

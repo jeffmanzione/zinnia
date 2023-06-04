@@ -47,6 +47,16 @@ def cmp(o1, o2) {
   return 1
 }
 
+def tuple(args) {
+  if args is Tuple {
+    return args
+  } else if ~(args is Array) {
+    raise error.Error('Cannot tuple something not an Array.')
+  }
+  t = __tuple(args)
+  return t
+}
+
 class Object {
   method to_s() {
     return cat(

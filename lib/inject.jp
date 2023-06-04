@@ -1,0 +1,134 @@
+import builtin
+import error
+import io
+
+class Injector {
+  field key_map
+  new() {
+    key_map = {}
+  }
+  method get(key) {
+    if key is Key {
+      provider = key_map[key]
+      if (provider is Function) or (provider is FunctionRef) {
+        provides_annots = None
+        if provider is FunctionRef {
+          provides_annots = provider.func().annotations.where(a -> a is Provides)
+        } else {
+          provides_annots = provider.annotations.where(a -> a is Provides)
+        }
+        if provides_annots.len() > 1 {
+          raise error.Error('Expected at most 1 @Provides, but there were ' + str(provides_annots.len()))
+        } else if provides_annots.len() == 1 {
+          provides_annot = provides_annots[0]
+          args = []
+          provider_keys = _get_keys(provides_annot.keys)
+          for (_, arg_key) in provider_keys {
+            args.append(get(arg_key))
+          }
+          return provider(_create_args(args))
+        } else {
+          return provider()
+        }
+      }
+      if provider is Class {
+        inject_annots = provider.annotations().where(a -> a is Inject)
+        if inject_annots.len() > 1 {
+          raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
+        } else if inject_annots.len() == 1 {
+          inject_annot = inject_annots[0]
+          args = []
+          inject_keys = _get_keys(inject_annot.keys)
+          for (_, arg_key) in inject_keys {
+            args.append(get(arg_key))
+          }
+          return provider(_create_args(args))
+        } else {
+          raise error.Error('Cannot inject a class without the @Inject annotation')
+        }
+      }
+      raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
+    }
+    if key is Class {
+      return get(Key(key))
+    }
+    raise error.Error('Expected key or class but was ' + str(cls))
+  }
+  method _create_args(args) {
+    if ~args or args.len() == 0 {
+      return None
+    }
+    if args.len() == 1 {
+      return args[0]
+    }
+    return tuple(args)
+  }
+  method install(key, provider=None) {
+    if key is ProviderSet {
+      _install_provider_set(key)
+    } else {
+      _install_by_key(key, provider)
+    }
+    return self
+  }
+
+  method _install_by_key(key, provider) {
+    if ~provider {
+      provider = key
+    }
+    if ~(key is Key) {
+      key = Key(key)
+    }
+    key_map[key] = provider
+  }
+
+  method _install_provider_set(ps) {
+    for (_, meth) in ps.class().methods() {
+      provides_annots = meth.annotations.where(a -> a is Provides)
+      if provides_annots.len() == 0 {
+        continue
+      }
+      install(provides_annots[0].key, ps.$get(meth.name()))
+    }
+  }
+
+  method _get_keys(keys) {
+    if (keys is Array) or (keys is Tuple) {
+      return keys
+    }
+    return [keys]
+  }
+}
+
+class Key {
+  new(field cls, field annot=None) {}
+
+  method ==(other) {
+    cls == other.cls and annot == other.annot
+  }
+
+  method hash() {
+    builtin.hash(cls) + builtin.hash(annot)
+  }
+
+  method to_s() {
+    cat('Key(cls=', cls, ',annot=', annot, ')')
+  }
+}
+
+class Inject {
+  new(field keys) {}
+  method annotate() {}
+}
+
+class Provides {
+  new(field key, field keys=[]) {}
+  method annotate() { _ = None}
+  method to_s() {
+    cat('Provides(key=', key, ',keys=', keys, ')')
+  }
+}
+
+class ProviderSet {
+  new() {}
+}

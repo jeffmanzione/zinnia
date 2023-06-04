@@ -437,12 +437,25 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     second = task_popstack(task);
     first = task_popstack(task);
     if (IS_OBJECT(&first)) {
+      if (IS_OBJECT(&second) && first.obj == second.obj) {
+        *task_mutable_resval(task) = TRUE_ENTITY;
+        return false;
+      }
       const Function *f = class_get_function(
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
         *task_mutable_resval(task) = second;
         return _call_function_base(task, context, f, first.obj, context);
       }
+      if (!IS_OBJECT(&second)) {
+        *task_mutable_resval(task) = FALSE_ENTITY;
+        return false;
+      }
+    }
+    if (IS_NONE(&first)) {
+      *task_mutable_resval(task) =
+          IS_NONE(&second) ? TRUE_ENTITY : FALSE_ENTITY;
+      return false;
     }
     if (PRIMITIVE != second.type) {
       raise_error(task, context, "RHS for op 'EQ' must be primitive (1).");
