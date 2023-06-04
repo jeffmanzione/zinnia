@@ -4,11 +4,6 @@ import test
 self.expect = test.expect
 test.Tester().test(self)
 
-class Test2 {
-  new() {}
-}
-
-@inject.Inject(Test2, Marker1)
 class Test1 {
   new(field test2, field marker1) {}
   method to_s() {
@@ -16,27 +11,48 @@ class Test1 {
   }
 }
 
+class Test2 {}
+
+class Test3 : Test2 {}
 
 class Marker1 {}
 
-class TestProviders : inject.ProviderSet {
-  @inject.Provides(Test2)
-  method provide_test2() {
-    return Test2()
+class Test4 {}
+
+@inject.Inject(Test4)
+class Test5 {
+  new(field test4) {}
+}
+
+class TestProviders1 : inject.ProviderSet {
+  method init() {
+    bind(Test2, Test3)
   }
   @inject.Provides(Marker1)
   method provide_marker1() {
     return 55
+  }
+  @inject.Provides(Test1, [Test2, Marker1])
+  method provide_test1(test2, marker1) {
+    return Test1(test2, marker1)
   }
 }
 
 @test.TestClass
 class InjectTest {
   @test.Test
-  method test_inject() {
-    injector = inject.Injector().install(TestProviders()).install(Test1)
+  method test_inject1() {
+    injector = inject.Injector().install(TestProviders1())
     test1 = injector.get(Test1)
     expect(test1.test2 is Test2, True)
+    expect(test1.test2 is Test3, True)
     expect(test1.marker1, 55)
+  }
+
+  @test.Test
+  method test_inject2() {
+    injector = inject.Injector()
+    test1 = injector.get(Test5)
+    expect(test1.test4 is Test4, True)
   }
 }

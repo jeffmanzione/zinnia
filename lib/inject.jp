@@ -11,41 +11,11 @@ class Injector {
     if key is Key {
       provider = key_map[key]
       if (provider is Function) or (provider is FunctionRef) {
-        provides_annots = None
-        if provider is FunctionRef {
-          provides_annots = provider.func().annotations.where(a -> a is Provides)
-        } else {
-          provides_annots = provider.annotations.where(a -> a is Provides)
-        }
-        if provides_annots.len() > 1 {
-          raise error.Error('Expected at most 1 @Provides, but there were ' + str(provides_annots.len()))
-        } else if provides_annots.len() == 1 {
-          provides_annot = provides_annots[0]
-          args = []
-          provider_keys = _get_keys(provides_annot.keys)
-          for (_, arg_key) in provider_keys {
-            args.append(get(arg_key))
-          }
-          return provider(_create_args(args))
-        } else {
-          return provider()
-        }
-      }
-      if provider is Class {
-        inject_annots = provider.annotations().where(a -> a is Inject)
-        if inject_annots.len() > 1 {
-          raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
-        } else if inject_annots.len() == 1 {
-          inject_annot = inject_annots[0]
-          args = []
-          inject_keys = _get_keys(inject_annot.keys)
-          for (_, arg_key) in inject_keys {
-            args.append(get(arg_key))
-          }
-          return provider(_create_args(args))
-        } else {
-          raise error.Error('Cannot inject a class without the @Inject annotation')
-        }
+        return _provide_function(key, provider)
+      } else if provider is Class {
+        return _provide_class(key, provider)
+      } else if ~provider {
+        return _provide_class(key)
       }
       raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
     }
@@ -53,6 +23,47 @@ class Injector {
       return get(Key(key))
     }
     raise error.Error('Expected key or class but was ' + str(cls))
+  }
+  method _provide_function(key, provider) {
+    provides_annots = None
+    if provider is FunctionRef {
+      provides_annots = provider.func().annotations.where(a -> a is Provides)
+    } else {
+      provides_annots = provider.annotations.where(a -> a is Provides)
+    }
+    if provides_annots.len() > 1 {
+      raise error.Error('Expected at most 1 @Provides, but there were ' + str(provides_annots.len()))
+    } else if provides_annots.len() == 1 {
+      provides_annot = provides_annots[0]
+      args = []
+      provider_keys = _get_keys(provides_annot.keys)
+      for (_, arg_key) in provider_keys {
+        args.append(get(arg_key))
+      }
+      return provider(_create_args(args))
+    }
+    return provider()
+  }
+  method _provide_class(key, provider=None) {
+    if ~provider {
+      provider = key.cls
+    }
+    args = _get_args(provider)
+    return if args then provider(args) else provider()
+  }
+  method _get_args(cls) {
+    inject_annots = cls.annotations().where(a -> a is Inject)
+    if inject_annots.len() > 1 {
+      raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
+    } else if inject_annots.len() == 1 {
+      inject_annot = inject_annots[0]
+      args = []
+      inject_keys = _get_keys(inject_annot.keys)
+      for (_, arg_key) in inject_keys {
+        args.append(get(arg_key))
+      }
+      return _create_args(args)
+    }
   }
   method _create_args(args) {
     if ~args or args.len() == 0 {
@@ -83,12 +94,19 @@ class Injector {
   }
 
   method _install_provider_set(ps) {
+    ps.init()
     for (_, meth) in ps.class().methods() {
       provides_annots = meth.annotations.where(a -> a is Provides)
       if provides_annots.len() == 0 {
         continue
       }
       install(provides_annots[0].key, ps.$get(meth.name()))
+    }
+    for (key, value) in ps._bind_map {
+      install(key, value)
+    }
+    for (_, child_ps) in ps._subsets {
+      _install_provider_set(child_ps)
     }
   }
 
@@ -130,5 +148,16 @@ class Provides {
 }
 
 class ProviderSet {
-  new() {}
+  field _bind_map, _subsets
+  new() {
+    _bind_map = {}
+    _subsets = []
+  }
+  method init() {}
+  method bind(from, to=from) {
+    _bind_map[from] = to
+  }
+  method install(ps) {
+    _subsets.append(ps)
+  }
 }
