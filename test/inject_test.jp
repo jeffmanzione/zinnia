@@ -12,11 +12,8 @@ class Test1 {
 }
 
 class Test2 {}
-
 class Test3 : Test2 {}
-
 class Marker1 {}
-
 class Test4 {}
 
 @inject.Inject(Test4)
