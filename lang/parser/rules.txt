@@ -726,7 +726,10 @@ annotation_with_arguments ->
   AND(
     rule:annotation_not_called,
     token:SYMBOL_LPAREN,
-    rule:tuple_expression,
+    OR(
+      rule:named_argument_list,
+      rule:tuple_expression
+    ),
     token:SYMBOL_RPAREN
 
   );

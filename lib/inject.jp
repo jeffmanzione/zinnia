@@ -3,13 +3,19 @@ import error
 import io
 
 class Injector {
-  field key_map
+  field keys_to_providers, keys_to_singletons
   new() {
-    key_map = {}
+    keys_to_providers = {}
+    keys_to_singletons = {}
   }
   method get(key) {
     constructed_map = {}
-    return _get(constructed_map, key)
+    ; Preload singletons.
+    for (k, v) in keys_to_singletons {
+      constructed_map[k] = v
+    }
+    result = _get(constructed_map, key)
+    return result
   }
   method _get(constructed_map, key) {
     if key is Key {
@@ -17,7 +23,7 @@ class Injector {
       if result {
         return result
       }
-      provider = key_map[key]
+      provider = keys_to_providers[key]
       if (provider is Function) or (provider is FunctionRef) {
         result = _provide_function(constructed_map, key, provider)
       } else if provider is Class {
@@ -27,6 +33,9 @@ class Injector {
       } else {
         raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
       }
+      if _is_singleton(key) {
+        keys_to_singletons[key] = result
+      }
       constructed_map[key] = result
       return result
     }
@@ -34,6 +43,20 @@ class Injector {
       return _get(constructed_map, Key(key))
     }
     raise error.Error('Expected key or class but was ' + str(cls))
+  }
+  method _is_singleton(key) {
+    if key.cls.annotations().where(a -> a is Singleton).len() > 0 {
+      return True
+    }
+    provider = keys_to_providers[key]
+    if (provider is FunctionRef) and provider.func().annotations.where(a -> a is Singleton).len() > 0 {
+      return True
+    } else if (provider is Function) and provider.annotations.where(a -> a is Singleton).len() > 0 {
+      return True
+    } else if (provider is Class) and provider.annotations().where(a -> a is Singleton).len() > 0 {
+      return True
+    }
+    return False
   }
   method _provide_function(constructed_map, key, provider) {
     provides_annots = None
@@ -47,7 +70,7 @@ class Injector {
     } else if provides_annots.len() == 1 {
       provides_annot = provides_annots[0]
       args = []
-      provider_keys = _get_keys(provides_annot.keys)
+      provider_keys = _get_keys(provides_annot.params)
       for (_, arg_key) in provider_keys {
         args.append(_get(constructed_map, arg_key))
       }
@@ -101,7 +124,7 @@ class Injector {
     if ~(key is Key) {
       key = Key(key)
     }
-    key_map[key] = provider
+    keys_to_providers[key] = provider
   }
 
   method _install_provider_set(ps) {
@@ -129,6 +152,8 @@ class Injector {
   }
 }
 
+class Singleton {}
+
 class Key {
   new(field cls, field annot=None) {}
   method ==(other) {
@@ -138,23 +163,34 @@ class Key {
     builtin.hash(cls) + builtin.hash(annot)
   }
   method to_s() {
-    cat('Key(cls=', cls, ',annot=', annot, ')')
+    if annot {
+      return cat('Key(cls=', cls, ',annot=', annot, ')')
+    }
+    return cat('Key(cls=', cls, ')')
   }
 }
 
 class Inject {
-  new(field keys) {}
-  method annotate() {}
+  new({field keys, field singleton=False}) {}
+  method annotate(cls) {
+    if singleton {
+      cls.annotations().append(Singleton())
+    }
+  }
   method to_s() {
     cat('Inject(keys=', keys, ')')
   }
 }
 
 class Provides {
-  new(field key, field keys=[]) {}
-  method annotate() { _ = None}
+  new({field key, field params=[], field singleton=False}) {}
+  method annotate(func) {
+    if singleton {
+      func.annotations.append(Singleton())
+    }
+  }
   method to_s() {
-    cat('Provides(key=', key, ',keys=', keys, ')')
+    cat('Provides(key=', key, ',params=', params, ')')
   }
 }
 
