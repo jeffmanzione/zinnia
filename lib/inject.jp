@@ -2,12 +2,43 @@ import builtin
 import error
 import io
 
+; Dependency injector that will inject all dependencies into the classes it
+; creates using the given installed modules and properly-annotated classes.
+;
+; Example:
+; ```
+; class Class1 {}
+; class Class2 {
+;   new(field class1) {}
+; }
+;
+; @inject.Inject(keys=[Class1, Class2])
+; class Class3 {
+;   new(field class1, field class2) {}
+; }
+;
+; class ProviderSet1 : inject.ProviderSet {
+;   @inject.Provides(key=Class2, params=[Class1])
+;   method provide_class2(class1) {
+;     return Class2(class1)
+;   }
+; }
+;
+; injector = inject.Injector().install(Class1).install(ProviderSet1())
+; test3 = injector.get(Test3)
+; ```
 class Injector {
   field keys_to_providers, keys_to_singletons
   new() {
     keys_to_providers = {}
     keys_to_singletons = {}
   }
+  ; Returns the provided value for the given [key].
+  ;
+  ; [key] may be either a Key or Class (which will be converted into a Key).
+  ; All dependencies will be traversed to construct the type represented by
+  ; [key] and each key in the dependency graph will construct exactly 1
+  ; result for that Key.
   method get(key) {
     constructed_map = {}
     ; Preload singletons.
@@ -108,7 +139,8 @@ class Injector {
     }
     return tuple(args)
   }
-  method install(key, provider=None) {
+  ; Installs the given [key] and [provider] pair into the injector.
+  method install(key, provider=key) {
     if key is ProviderSet {
       _install_provider_set(key)
     } else {
@@ -118,9 +150,6 @@ class Injector {
   }
 
   method _install_by_key(key, provider) {
-    if ~provider {
-      provider = key
-    }
     if ~(key is Key) {
       key = Key(key)
     }
@@ -152,8 +181,11 @@ class Injector {
   }
 }
 
+; Annotation that marks a class as a singleton: there will only ever be one
+; instance per Injector.
 class Singleton {}
 
+; Reprensents an injectable type.
 class Key {
   new(field cls, field annot=None) {}
   method ==(other) {
@@ -170,6 +202,8 @@ class Key {
   }
 }
 
+; Annotation that marks a class as Injectable and defines how it finds its
+; dependencies.
 class Inject {
   new({field keys, field singleton=False}) {}
   method annotate(cls) {
@@ -182,6 +216,8 @@ class Inject {
   }
 }
 
+; Annotation that marks a method as a provider and defines how to find the
+; dependencies.
 class Provides {
   new({field key, field params=[], field singleton=False}) {}
   method annotate(func) {
@@ -194,16 +230,20 @@ class Provides {
   }
 }
 
+; Class that houses providers and bindings.
 class ProviderSet {
   field _bind_map, _subsets
   new() {
     _bind_map = {}
     _subsets = []
   }
+  ; Called when ProviderSet is installed by an Injector.
   method init() {}
+  ; Binds the implementation of [from] to [to].
   method bind(from, to=from) {
     _bind_map[from] = to
   }
+  ; Installs another module inside this module.
   method install(ps) {
     _subsets.append(ps)
   }
