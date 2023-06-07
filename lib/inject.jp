@@ -1,6 +1,5 @@
 import builtin
 import error
-import io
 
 ; Dependency injector that will inject all dependencies into the classes it
 ; creates using the given installed modules and properly-annotated classes.
