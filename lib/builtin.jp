@@ -255,6 +255,14 @@ class Array {
     } 
     return result
   }
+  method has(has_fn) {
+    for i=0, i<len(), i=i+1 {
+      if has_fn(self[i]) {
+        return True
+      }
+    }
+    return False
+  }
   method collect(f, s=None) {
     if len() == 0 {
       if s is Function {

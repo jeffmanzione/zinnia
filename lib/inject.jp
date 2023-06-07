@@ -75,15 +75,15 @@ class Injector {
     raise error.Error('Expected key or class but was ' + str(cls))
   }
   method _is_singleton(key) {
-    if key.cls.annotations().where(a -> a is Singleton).len() > 0 {
+    if key.cls.annotations().has(a -> a is Singleton) {
       return True
     }
     provider = keys_to_providers[key]
-    if (provider is FunctionRef) and provider.func().annotations.where(a -> a is Singleton).len() > 0 {
+    if (provider is FunctionRef) and provider.func().annotations.has(a -> a is Singleton) {
       return True
-    } else if (provider is Function) and provider.annotations.where(a -> a is Singleton).len() > 0 {
+    } else if (provider is Function) and provider.annotations.has(a -> a is Singleton) {
       return True
-    } else if (provider is Class) and provider.annotations().where(a -> a is Singleton).len() > 0 {
+    } else if (provider is Class) and provider.annotations().has(a -> a is Singleton) {
       return True
     }
     return False
