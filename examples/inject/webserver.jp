@@ -1,0 +1,114 @@
+; A toy example of a webserver using dependency injection.
+import io
+import inject
+import net
+import socket
+
+
+self.HOST = args.host | '0.0.0.0'
+self.PORT = Int(args.port | 80)
+
+injector = inject.Injector().install(ServerProviders())
+
+injector.get(Server).run()
+
+class Host {}
+class Port {}
+class Favicon {}
+class Index {}
+class NotFound {}
+
+class ServerProviders : inject.ProviderSet {
+  method init() {
+    bind(Host, () -> HOST)
+    bind(Port, () -> PORT)
+  }
+
+  @inject.Provides(key: Favicon, singleton: True)
+  method provide_favicon() {
+    io.FileReader('./examples/sockets/web/favicon.ico', True).getall()
+  }
+
+  @inject.Provides(key: Index, singleton: True)
+  method provide_index() {
+    io.FileReader('./examples/sockets/web/index.html').getall()
+  }
+
+  @inject.Provides(key: NotFound, singleton: True)
+  method provide_not_found() {
+    io.FileReader('./examples/sockets/web/not_found.html').getall()
+  }
+
+  @inject.Provides(key: net.HttpSocket, params: [Host, Port], singleton: True)
+  method provide_http_socket(host, port) {
+    return net.HttpSocket(socket.create_server_socket(host, port))
+  }
+}
+
+class RequestHandler {
+  method handle(request) {}
+}
+
+@inject.Inject(keys: Favicon)
+class FaviconHandler : RequestHandler {
+  new(field favicon) {
+  }
+  method handle(_) {
+    return net.HttpResponse()
+        .set_content_type('image/x-icon')
+        .add_content(favicon)
+  }
+}
+
+@inject.Inject(keys: Index)
+class IndexHandler : RequestHandler {
+  new(field index) {
+  }
+  method handle(_) {
+    return net.HttpResponse().add_content(index)
+  }
+}
+
+@inject.Inject(keys: NotFound)
+class NotFoundHandler : RequestHandler {
+  new(field not_found) {
+  }
+  method handle(_) {
+    return net.HttpResponse().set_status_code(404)
+        .set_status('NOT FOUND')
+        .add_content(not_found)
+  }
+}
+
+@inject.Inject(keys: [net.HttpSocket, inject.Injector])
+class Server {
+  new(field sock, field injector) {}
+  method run() {
+    try {
+      while True { 
+        handle = sock.accept()
+        try {
+          request = handle.receive()
+          io.println(cat('Received request: ', request.type, ' ', request.path))
+          response = None
+          if request.path == '/index.html' {
+            response = net.HttpResponse()
+            net.redirect(request, response, '/')
+          } else if request.path == '/' {
+            response = injector.get(IndexHandler).handle(request)
+          } else if request.path == '/favicon.ico' {
+            response = injector.get(FaviconHandler).handle(request)
+          } else {
+            response = injector.get(NotFoundHandler).handle(request)
+          }
+          handle.send(response)
+        } catch e {
+          io.fprintln(io.ERROR, e)
+        }
+        handle.close()
+      }
+    } catch e {
+      io.fprintln(io.ERROR, e)
+    }
+  }
+}

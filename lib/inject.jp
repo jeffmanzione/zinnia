@@ -11,13 +11,13 @@ import error
 ;   new(field class1) {}
 ; }
 ;
-; @inject.Inject(keys=[Class1, Class2])
+; @inject.Inject(keys: [Class1, Class2])
 ; class Class3 {
 ;   new(field class1, field class2) {}
 ; }
 ;
 ; class ProviderSet1 : inject.ProviderSet {
-;   @inject.Provides(key=Class2, params=[Class1])
+;   @inject.Provides(key: Class2, params: [Class1])
 ;   method provide_class2(class1) {
 ;     return Class2(class1)
 ;   }
@@ -70,6 +70,9 @@ class Injector {
       return result
     }
     if key is Class {
+      if key == Injector {
+        return self
+      }
       return _get(constructed_map, Key(key))
     }
     raise error.Error('Expected key or class but was ' + str(cls))
