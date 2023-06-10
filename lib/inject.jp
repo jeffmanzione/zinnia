@@ -75,6 +75,9 @@ class Injector {
       }
       return _get(constructed_map, Key(key))
     }
+    if key is Provider {
+      return () { get(key.key) }
+    }
     raise error.Error('Expected key or class but was ' + str(cls))
   }
   method _is_singleton(key) {
@@ -181,6 +184,14 @@ class Injector {
     }
     return [keys]
   }
+}
+
+; Class to indicate that a function that provides the given value should be
+; returned instead of the actual value.
+;
+; This is useful in cases where an object is only needed conditionally.
+class Provider {
+  new(field key) {}
 }
 
 ; Annotation that marks a class as a singleton: there will only ever be one

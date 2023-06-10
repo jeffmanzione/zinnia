@@ -1,4 +1,5 @@
 ; A toy example of a webserver using dependency injection.
+import error
 import io
 import inject
 import net
@@ -41,12 +42,12 @@ class ServerProviders : inject.ProviderSet {
 
   @inject.Provides(key: net.HttpSocket, params: [Host, Port], singleton: True)
   method provide_http_socket(host, port) {
-    return net.HttpSocket(socket.create_server_socket(host, port))
+    net.HttpSocket(socket.create_server_socket(host, port))
   }
 }
 
 class RequestHandler {
-  method handle(request) {}
+  method handle(request) { raise error.Error('Not implemented') }
 }
 
 @inject.Inject(keys: Favicon)
@@ -80,20 +81,23 @@ class NotFoundHandler : RequestHandler {
   }
 }
 
-@inject.Inject(keys: [net.HttpSocket, inject.Injector])
+@inject.Inject(keys: [net.HttpSocket, inject.Injector, Host, Port])
 class Server {
-  new(field sock, field injector) {}
+  new(field sock, field injector, field host, field port) {}
   method run() {
+    io.println('Starting server at ' + host + ':' + str(port) + '.')
     try {
       while True { 
         handle = sock.accept()
         try {
           request = handle.receive()
+          if ~request {
+            continue
+          }
           io.println(cat('Received request: ', request.type, ' ', request.path))
           response = None
           if request.path == '/index.html' {
-            response = net.HttpResponse()
-            net.redirect(request, response, '/')
+            response = net.redirect(request,  net.HttpResponse(), '/')
           } else if request.path == '/' {
             response = injector.get(IndexHandler).handle(request)
           } else if request.path == '/favicon.ico' {
