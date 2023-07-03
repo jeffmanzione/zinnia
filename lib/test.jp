@@ -32,6 +32,15 @@ def expect(actual, expected) {
   raise ExpectError('Expected \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
+def expect_not(actual, not_expected) {
+  try {
+    if actual != expected {
+      return
+    }
+  } catch e {}
+  raise ExpectError('Expected not \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
+}
+
 def expect_raises(exp, error_class=None) {
   try {
     exp()
