@@ -25,22 +25,26 @@ class ServerProviders : inject.ProviderSet {
     bind(Port, () -> PORT)
   }
 
-  @inject.Provides(key: Favicon, singleton: True)
+  @inject.Singleton
+  @inject.Provides(key: Favicon)
   method provide_favicon() {
     io.FileReader('./examples/sockets/web/favicon.ico', True).getall()
   }
 
-  @inject.Provides(key: Index, singleton: True)
+  @inject.Singleton
+  @inject.Provides(key: Index)
   method provide_index() {
     io.FileReader('./examples/sockets/web/index.html').getall()
   }
 
-  @inject.Provides(key: NotFound, singleton: True)
+  @inject.Singleton
+  @inject.Provides(key: NotFound)
   method provide_not_found() {
     io.FileReader('./examples/sockets/web/not_found.html').getall()
   }
 
-  @inject.Provides(key: net.HttpSocket, params: [Host, Port], singleton: True)
+  @inject.Singleton
+  @inject.Provides(key: net.HttpSocket, params: [Host, Port])
   method provide_http_socket(host, port) {
     net.HttpSocket(socket.create_server_socket(host, port))
   }

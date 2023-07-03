@@ -196,7 +196,7 @@ class Provider {
 
 ; Annotation that marks a class as a singleton: there will only ever be one
 ; instance per Injector.
-class Singleton {}
+class Singleton { method annotate(_) {} }
 
 ; Reprensents an injectable type.
 class Key {

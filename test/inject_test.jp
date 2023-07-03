@@ -16,7 +16,8 @@ class Test3 : Test2 {}
 class Marker1 {}
 class Test4 {}
 
-@inject.Inject(keys: [Test4], singleton: True)
+@inject.Singleton
+@inject.Inject(keys: [Test4])
 class Test5 {
   new(field test4) {}
 }
