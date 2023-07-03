@@ -53,6 +53,15 @@ def expect_raises(exp, error_class=None) {
   raise ExpectError('Does not raise')
 }
 
+def expect_is(actual, expected_class) {
+  try {
+    if actual is expected_class {
+      return
+    }
+  } catch e {}
+  raise ExpectError('Expected of type \'' + str(expected_class) + '\' but was \'' + str(actual.class()) + '\'.')
+}
+
 self.PASS = color('32;1').extend('PASS').extend(color(0))
 self.FAIL = color('31;1').extend('FAIL').extend(color(0))
 

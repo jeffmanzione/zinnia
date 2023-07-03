@@ -3,6 +3,8 @@ import test
 
 self.expect = test.expect
 self.expect_not = test.expect_not
+self.expect_is = test.expect_is
+
 test.Tester().test(self)
 
 @test.TestClass
@@ -29,8 +31,8 @@ class InjectTest {
   method test_inject_with_providerset() {
     injector = inject.Injector().install(TestProviders1())
     test1 = injector.get(Test1)
-    expect(test1.test2 is Test2, True)
-    expect(test1.test2 is Test3, True)
+    expect_is(test1.test2, Test2)
+    expect_is(test1.test2, Test3)
     expect(test1.marker1, 55)
   }
 
@@ -38,7 +40,7 @@ class InjectTest {
   method test_inject_with_only_annotations() {
     injector = inject.Injector()
     test1 = injector.get(Test5)
-    expect(test1.test4 is Test4, True)
+    expect_is(test1.test4, Test4)
     test2 = injector.get(Test5)
     expect(test1.$adr(), test2.$adr())
   }
