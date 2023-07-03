@@ -248,7 +248,7 @@ void populate_class_statements(SemanticAnalyzer *analyzer, ClassDef *class,
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
   ClassDef class;
   class.has_constructor = false;
-  class.has_annot = false;
+  class.annots = alist_create(Annotation, 3);
   class.fields = alist_create(FieldDef, 4);
   class.statics = alist_create(StaticDef, 4);
   class.methods = alist_create(FunctionDef, 6);
@@ -284,8 +284,9 @@ void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
   }
   alist_delete(class->methods);
 
-  if (class->has_annot) {
-    delete_annotation(analyzer, &class->annot);
+  AL_iter annots = alist_iter(class->annots);
+  for (; al_has(&annots); al_inc(&annots)) {
+    delete_annotation(analyzer, (Annotation *)al_value(&annots));
   }
 }
 
@@ -417,6 +418,21 @@ Annotation populate_annotation(SemanticAnalyzer *analyzer,
   return annot;
 }
 
+void populate_annotation_list(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree, AList *annots) {
+  if (IS_SYNTAX(stree, rule_annotation)) {
+    *((Annotation *)alist_add(annots)) = populate_annotation(analyzer, stree);
+    return;
+  }
+  *((Annotation *)alist_add(annots)) =
+      populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));
+  if (!CHILD_IS_SYNTAX(stree, 1, rule_annotation) &&
+      !CHILD_IS_SYNTAX(stree, 1, rule_annotation_list1)) {
+    FATALF("Unknown annotation.");
+  }
+  populate_annotation_list(analyzer, CHILD_SYNTAX_AT(stree, 1), annots);
+}
+
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func) {
   func->def_token = CHILD_SYNTAX_AT(fn_identifier, 0)->token;
   func->fn_name = CHILD_SYNTAX_AT(fn_identifier, 1)->token;
@@ -433,8 +449,8 @@ SyntaxTree *populate_signature(SemanticAnalyzer *analyzer,
       CHILD_IS_SYNTAX(stree, 0, rule_function_signature)) {
     stree = CHILD_SYNTAX_AT(stree, 0);
     start_index = 1;
-    func->has_annot = true;
-    func->annot = populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));
+    populate_annotation_list(analyzer, CHILD_SYNTAX_AT(stree, 0),
+                             &func->annots);
   }
   if (CHILD_IS_SYNTAX(stree, start_index, signature_with_qualifier)) {
     func_sig = CHILD_SYNTAX_AT(CHILD_SYNTAX_AT(stree, start_index), 0);
@@ -462,9 +478,9 @@ FunctionDef populate_function_variant(
                       .is_const = false,
                       .const_token = NULL,
                       .is_async = false,
-                      .has_annot = false,
                       .async_token = NULL,
                       .body = NULL};
+  alist_init(&func.annots, Annotation, 3);
   ASSERT(IS_SYNTAX(stree, def));
 
   const SyntaxTree *func_sig = populate_signature(
@@ -520,8 +536,7 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
     alist_append(module->classes, &class);
   } else if (IS_SYNTAX(stree, rule_class_definition_with_annotation)) {
     ClassDef class = populate_class(analyzer, CHILD_SYNTAX_AT(stree, 1));
-    class.has_annot = true;
-    class.annot = populate_annotation(analyzer, CHILD_SYNTAX_AT(stree, 0));
+    populate_annotation_list(analyzer, CHILD_SYNTAX_AT(stree, 0), class.annots);
     alist_append(module->classes, &class);
   } else if (IS_SYNTAX(stree, rule_function_definition)) {
     FunctionDef func = populate_function(analyzer, stree);
@@ -593,9 +608,9 @@ DELETE_IMPL(file_level_statement_list, SemanticAnalyzer *analyzer) {
 }
 
 int produce_function_annotation(SemanticAnalyzer *analyzer,
-                                const FunctionDef *func, Tape *tape) {
+                                const FunctionDef *func,
+                                const Annotation *annot, Tape *tape) {
   int num_ins = 0;
-  const Annotation *annot = &func->annot;
 
   if (NULL != annot->prefix) {
     num_ins += tape_ins(tape, RES, annot->prefix);
@@ -633,9 +648,9 @@ int produce_function_annotation(SemanticAnalyzer *analyzer,
 }
 
 int produce_method_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
-                              const FunctionDef *func, Tape *tape) {
+                              const FunctionDef *func, const Annotation *annot,
+                              Tape *tape) {
   int num_ins = 0;
-  const Annotation *annot = &func->annot;
 
   if (NULL != annot->prefix) {
     num_ins += tape_ins(tape, RES, annot->prefix);
@@ -675,9 +690,8 @@ int produce_method_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
 }
 
 int produce_class_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
-                             Tape *tape) {
+                             const Annotation *annot, Tape *tape) {
   int num_ins = 0;
-  const Annotation *annot = &class->annot;
 
   if (NULL != annot->prefix) {
     num_ins += tape_ins(tape, RES, annot->prefix);
@@ -731,25 +745,29 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   // Function annotations
   for (i = 0; i < alist_len(module->functions); ++i) {
     FunctionDef *func = (FunctionDef *)alist_get(module->functions, i);
-    if (!func->has_annot) {
-      continue;
+    AL_iter annots = alist_iter(&func->annots);
+    for (; al_has(&annots); al_inc(&annots)) {
+      num_ins += produce_function_annotation(
+          analyzer, func, (Annotation *)al_value(&annots), tape);
     }
-    num_ins += produce_function_annotation(analyzer, func, tape);
   }
   // Class annotations
   for (i = 0; i < alist_len(module->classes); ++i) {
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
     for (int j = 0; j < alist_len(class->methods); ++j) {
       FunctionDef *func = (FunctionDef *)alist_get(class->methods, j);
-      if (!func->has_annot) {
-        continue;
+      AL_iter annots = alist_iter(&func->annots);
+      for (; al_has(&annots); al_inc(&annots)) {
+        num_ins += produce_method_annotation(
+            analyzer, class, func, (Annotation *)al_value(&annots), tape);
       }
-      num_ins += produce_method_annotation(analyzer, class, func, tape);
     }
-    if (!class->has_annot) {
-      continue;
+
+    AL_iter annots = alist_iter(class->annots);
+    for (; al_has(&annots); al_inc(&annots)) {
+      num_ins += produce_class_annotation(
+          analyzer, class, (Annotation *)al_value(&annots), tape);
     }
-    num_ins += produce_class_annotation(analyzer, class, tape);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

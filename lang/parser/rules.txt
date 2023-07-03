@@ -520,7 +520,7 @@ function_signature_with_qualifier ->
 
 function_signature ->
   AND(
-    OPTIONAL(rule:annotation),
+    OPTIONAL(rule:annotation_list),
     OR(
       rule:function_signature_with_qualifier,
       rule:function_signature_no_qualifier
@@ -549,7 +549,7 @@ method_signature_with_qualifier ->
 
 method_signature ->
   AND(
-    OPTIONAL(rule:annotation),
+    OPTIONAL(rule:annotation_list),
     OR(
       rule:method_signature_with_qualifier,
       rule:method_signature_no_qualifier
@@ -726,7 +726,10 @@ annotation_with_arguments ->
   AND(
     rule:annotation_not_called,
     token:SYMBOL_LPAREN,
-    rule:tuple_expression,
+    OR(
+      rule:named_argument_list,
+      rule:tuple_expression
+    ),
     token:SYMBOL_RPAREN
 
   );
@@ -742,9 +745,11 @@ annotation ->
     OPTIONAL(token:TOKEN_NEWLINE)
   );
 
+annotation_list -> LIST(E, rule:annotation);
+
 class_definition_with_annotation ->
   AND(
-    rule:annotation,
+    rule:annotation_list,
     rule:class_definition_no_annotation
   );
 

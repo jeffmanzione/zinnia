@@ -1078,8 +1078,9 @@ void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
   if (func->has_args) {
     delete_arguments(analyzer, &func->args);
   }
-  if (func->has_annot) {
-    delete_annotation(analyzer, &func->annot);
+  AL_iter annots = alist_iter(&func->annots);
+  for (; al_has(&annots); al_inc(&annots)) {
+    delete_annotation(analyzer, (Annotation *)al_value(&annots));
   }
   semantic_analyzer_delete(analyzer, func->body);
 }
@@ -1250,7 +1251,8 @@ int produce_function(SemanticAnalyzer *analyzer, FunctionDef *func,
 
 FunctionDef populate_anon_function(SemanticAnalyzer *analyzer,
                                    const SyntaxTree *stree) {
-  FunctionDef func = {.has_annot = false};
+  FunctionDef func;
+  alist_init(&func.annots, Annotation, 3);
   ASSERT(IS_SYNTAX(stree, rule_anon_function_definition));
 
   const SyntaxTree *func_arg_tuple;

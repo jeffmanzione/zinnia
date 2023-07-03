@@ -32,6 +32,15 @@ def expect(actual, expected) {
   raise ExpectError('Expected \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
+def expect_not(actual, not_expected) {
+  try {
+    if actual != expected {
+      return
+    }
+  } catch e {}
+  raise ExpectError('Expected not \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
+}
+
 def expect_raises(exp, error_class=None) {
   try {
     exp()
@@ -42,6 +51,15 @@ def expect_raises(exp, error_class=None) {
     raise ExpectError('Raises wrong error')
   }
   raise ExpectError('Does not raise')
+}
+
+def expect_is(actual, expected_class) {
+  try {
+    if actual is expected_class {
+      return
+    }
+  } catch e {}
+  raise ExpectError('Expected of type \'' + str(expected_class) + '\' but was \'' + str(actual.class()) + '\'.')
 }
 
 self.PASS = color('32;1').extend('PASS').extend(color(0))

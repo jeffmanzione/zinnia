@@ -289,6 +289,18 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
       string_new(task->parent_process->heap, buffer, num_written));
 }
 
+Entity _tuple(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(NOT_NULL(args));
+  Array *arr = (Array *)args->obj->_internal_obj;
+  Object *tup = heap_new(task->parent_process->heap, Class_Tuple);
+  tup->_internal_obj = tuple_create(Array_size(arr));
+  for (int i = 0; i < Array_size(arr); ++i) {
+    Entity *e = Array_get_ref(arr, i);
+    tuple_set(task->parent_process->heap, tup, i, e);
+  }
+  return entity_object(tup);
+}
+
 Entity _color(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_NONE(args) && !IS_CLASS(args, Class_String) && !IS_INT(args)) {
     return raise_error(
@@ -1086,6 +1098,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_function(builtin, intern("Float"), _Float);
   native_function(builtin, intern("Bool"), __Bool);
   native_function(builtin, intern("__stringify"), _stringify);
+  native_function(builtin, intern("__tuple"), _tuple);
   native_function(builtin, intern("color"), _color);
 
   _builtin_add_string(builtin);

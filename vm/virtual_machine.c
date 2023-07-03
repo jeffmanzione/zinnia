@@ -437,12 +437,24 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     second = task_popstack(task);
     first = task_popstack(task);
     if (IS_OBJECT(&first)) {
+      if (IS_OBJECT(&second) && first.obj == second.obj) {
+        *task_mutable_resval(task) =
+            (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+        return false;
+      }
       const Function *f = class_get_function(
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
         *task_mutable_resval(task) = second;
         return _call_function_base(task, context, f, first.obj, context);
       }
+      *task_mutable_resval(task) = (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+      return false;
+    }
+    if (IS_NONE(&first)) {
+      *task_mutable_resval(task) =
+          IS_NONE(&second) && (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+      return false;
     }
     if (PRIMITIVE != second.type) {
       raise_error(task, context, "RHS for op 'EQ' must be primitive (1).");
@@ -463,12 +475,20 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
     lookup = context_lookup(context, ins->id, &tmp);
     if (IS_OBJECT(resval)) {
       first = *resval;
+      if (IS_OBJECT(lookup) && first.obj == lookup->obj) {
+        *task_mutable_resval(task) =
+            (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+        return false;
+      }
       const Function *f = class_get_function(
           first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
       if (NULL != f) {
         *task_mutable_resval(task) = (lookup == NULL) ? NONE_ENTITY : *lookup;
         return _call_function_base(task, context, f, first.obj, context);
       }
+
+      *task_mutable_resval(task) = (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+      return false;
     }
     if (NULL != resval && PRIMITIVE != resval->type) {
       raise_error(task, context, "LHS for op 'EQ' must be primitive (2).");

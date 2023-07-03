@@ -219,9 +219,9 @@ typedef struct {
   const Token *def_token;
   const Token *fn_name;
   SpecialMethod special_method;
-  Annotation annot;
+  AList annots;
   const Token *const_token, *async_token;
-  bool has_args, is_const, is_async, has_annot;
+  bool has_args, is_const, is_async;
   Arguments args;
   ExpressionTree *body;
 } FunctionDef;
@@ -365,10 +365,10 @@ void delete_annotation(SemanticAnalyzer *analyzer, Annotation *annot);
 
 typedef struct {
   ClassSignature def;
-  Annotation annot;
+  AList *annots;
   AList *fields;
   AList *statics;
-  bool has_constructor, has_annot;
+  bool has_constructor;
   FunctionDef constructor;
   AList *methods; // Function.
 } ClassDef;

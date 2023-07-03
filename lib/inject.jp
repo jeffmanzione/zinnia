@@ -1,0 +1,263 @@
+import builtin
+import error
+
+; Dependency injector that will inject all dependencies into the classes it
+; creates using the given installed modules and properly-annotated classes.
+;
+; Example:
+; ```
+; class Class1 {}
+; class Class2 {
+;   new(field class1) {}
+; }
+;
+; @inject.Inject(keys: [Class1, Class2])
+; class Class3 {
+;   new(field class1, field class2) {}
+; }
+;
+; class ProviderSet1 : inject.ProviderSet {
+;   @inject.Provides(key: Class2, params: [Class1])
+;   method provide_class2(class1) {
+;     return Class2(class1)
+;   }
+; }
+;
+; injector = inject.Injector().install(Class1).install(ProviderSet1())
+; test3 = injector.get(Test3)
+; ```
+class Injector {
+  field keys_to_providers, keys_to_singletons
+  new() {
+    keys_to_providers = {}
+    keys_to_singletons = {}
+  }
+  ; Returns the provided value for the given [key].
+  ;
+  ; [key] may be either a Key or Class (which will be converted into a Key).
+  ; All dependencies will be traversed to construct the type represented by
+  ; [key] and each key in the dependency graph will construct exactly 1
+  ; result for that Key.
+  method get(key) {
+    constructed_map = {}
+    ; Preload singletons.
+    for (k, v) in keys_to_singletons {
+      constructed_map[k] = v
+    }
+    result = _get(constructed_map, key)
+    return result
+  }
+  method _get(constructed_map, key) {
+    if key is Key {
+      result = constructed_map[key]
+      if result {
+        return result
+      }
+      provider = keys_to_providers[key]
+      if (provider is Function) or (provider is FunctionRef) {
+        result = _provide_function(constructed_map, key, provider)
+      } else if provider is Class {
+        result = _provide_class(constructed_map, key, provider)
+      } else if ~provider {
+        result = _provide_class(constructed_map, key)
+      } else {
+        raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
+      }
+      if _is_singleton(key) {
+        keys_to_singletons[key] = result
+      }
+      constructed_map[key] = result
+      return result
+    }
+    if key is Class {
+      if key == Injector {
+        return self
+      }
+      return _get(constructed_map, Key(key))
+    }
+    if key is Provider {
+      return () { get(key.key) }
+    }
+    raise error.Error('Expected key or class but was ' + str(cls))
+  }
+  method _is_singleton(key) {
+    if key.cls.annotations().has(a -> a is Singleton) {
+      return True
+    }
+    provider = keys_to_providers[key]
+    if (provider is FunctionRef) and provider.func().annotations.has(a -> a is Singleton) {
+      return True
+    } else if (provider is Function) and provider.annotations.has(a -> a is Singleton) {
+      return True
+    } else if (provider is Class) and provider.annotations().has(a -> a is Singleton) {
+      return True
+    }
+    return False
+  }
+  method _provide_function(constructed_map, key, provider) {
+    provides_annots = None
+    if provider is FunctionRef {
+      provides_annots = provider.func().annotations.where(a -> a is Provides)
+    } else {
+      provides_annots = provider.annotations.where(a -> a is Provides)
+    }
+    if provides_annots.len() > 1 {
+      raise error.Error('Expected at most 1 @Provides, but there were ' + str(provides_annots.len()))
+    } else if provides_annots.len() == 1 {
+      provides_annot = provides_annots[0]
+      args = []
+      provider_keys = _get_keys(provides_annot.params)
+      for (_, arg_key) in provider_keys {
+        args.append(_get(constructed_map, arg_key))
+      }
+      return provider(_create_args(args))
+    }
+    return provider()
+  }
+  method _provide_class(constructed_map, key, provider=None) {
+    if ~provider {
+      provider = key.cls
+    }
+    args = _get_args(constructed_map, provider)
+    return if args then provider(args) else provider()
+  }
+  method _get_args(constructed_map, cls) {
+    inject_annots = cls.annotations().where(a -> a is Inject)
+    if inject_annots.len() > 1 {
+      raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
+    } else if inject_annots.len() == 1 {
+      inject_annot = inject_annots[0]
+      args = []
+      inject_keys = _get_keys(inject_annot.keys)
+      for (_, arg_key) in inject_keys {
+        args.append(_get(constructed_map, arg_key))
+      }
+      return _create_args(args)
+    }
+  }
+  method _create_args(args) {
+    if ~args or args.len() == 0 {
+      return None
+    }
+    if args.len() == 1 {
+      return args[0]
+    }
+    return tuple(args)
+  }
+  ; Installs the given [key] and [provider] pair into the injector.
+  method install(key, provider=key) {
+    if key is ProviderSet {
+      _install_provider_set(key)
+    } else {
+      _install_by_key(key, provider)
+    }
+    return self
+  }
+
+  method _install_by_key(key, provider) {
+    if ~(key is Key) {
+      key = Key(key)
+    }
+    keys_to_providers[key] = provider
+  }
+
+  method _install_provider_set(ps) {
+    ps.init()
+    for (_, meth) in ps.class().methods() {
+      provides_annots = meth.annotations.where(a -> a is Provides)
+      if provides_annots.len() == 0 {
+        continue
+      }
+      install(provides_annots[0].key, ps.$get(meth.name()))
+    }
+    for (key, value) in ps._bind_map {
+      install(key, value)
+    }
+    for (_, child_ps) in ps._subsets {
+      _install_provider_set(child_ps)
+    }
+  }
+
+  method _get_keys(keys) {
+    if (keys is Array) or (keys is Tuple) {
+      return keys
+    }
+    return [keys]
+  }
+}
+
+; Class to indicate that a function that provides the given value should be
+; returned instead of the actual value.
+;
+; This is useful in cases where an object is only needed conditionally.
+class Provider {
+  new(field key) {}
+}
+
+; Annotation that marks a class as a singleton: there will only ever be one
+; instance per Injector.
+class Singleton { method annotate(_) {} }
+
+; Reprensents an injectable type.
+class Key {
+  new(field cls, field annot=None) {}
+  method ==(other) {
+    cls == other.cls and annot == other.annot
+  }
+  method hash() {
+    builtin.hash(cls) + builtin.hash(annot)
+  }
+  method to_s() {
+    if annot {
+      return cat('Key(cls=', cls, ',annot=', annot, ')')
+    }
+    return cat('Key(cls=', cls, ')')
+  }
+}
+
+; Annotation that marks a class as Injectable and defines how it finds its
+; dependencies.
+class Inject {
+  new({field keys, field singleton=False}) {}
+  method annotate(cls) {
+    if singleton {
+      cls.annotations().append(Singleton())
+    }
+  }
+  method to_s() {
+    cat('Inject(keys=', keys, ')')
+  }
+}
+
+; Annotation that marks a method as a provider and defines how to find the
+; dependencies.
+class Provides {
+  new({field key, field params=[], field singleton=False}) {}
+  method annotate(func) {
+    if singleton {
+      func.annotations.append(Singleton())
+    }
+  }
+  method to_s() {
+    cat('Provides(key=', key, ',params=', params, ')')
+  }
+}
+
+; Class that houses providers and bindings.
+class ProviderSet {
+  field _bind_map, _subsets
+  new() {
+    _bind_map = {}
+    _subsets = []
+  }
+  ; Called when ProviderSet is installed by an Injector.
+  method init() {}
+  ; Binds the implementation of [from] to [to].
+  method bind(from, to=from) {
+    _bind_map[from] = to
+  }
+  ; Installs another module inside this module.
+  method install(ps) {
+    _subsets.append(ps)
+  }
+}

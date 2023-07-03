@@ -72,4 +72,6 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE(mm, io_ext, lib_location);
   REGISTER_MODULE(mm, memory, lib_location);
   REGISTER_MODULE(mm, test, lib_location);
+  REGISTER_MODULE(mm, inject, lib_location);
+  REGISTER_MODULE(mm, build, lib_location);
 }
