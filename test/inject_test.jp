@@ -5,43 +5,6 @@ self.expect = test.expect
 self.expect_not = test.expect_not
 test.Tester().test(self)
 
-class BasicTest {}
-
-@inject.Singleton
-class TestSingleton {}
-
-class Test1 {
-  new(field test2, field marker1) {}
-  method to_s() {
-    cat('Test1(test2=', test2, ',marker1=', marker1, ')')
-  }
-}
-
-class Test2 {}
-class Test3 : Test2 {}
-class Marker1 {}
-class Test4 {}
-
-@inject.Singleton
-@inject.Inject(keys: [Test4])
-class Test5 {
-  new(field test4) {}
-}
-
-class TestProviders1 : inject.ProviderSet {
-  method init() {
-    bind(Test2, Test3)
-  }
-  @inject.Provides(key: Marker1)
-  method provide_marker1() {
-    return 55
-  }
-  @inject.Provides(key: Test1, params: [Test2, Marker1])
-  method provide_test1(test2, marker1) {
-    return Test1(test2, marker1)
-  }
-}
-
 @test.TestClass
 class InjectTest {
   @test.Test
@@ -79,5 +42,41 @@ class InjectTest {
     test2 = injector.get(Test5)
     expect(test1.$adr(), test2.$adr())
   }
+}
 
+class BasicTest {}
+
+@inject.Singleton
+class TestSingleton {}
+
+class Test1 {
+  new(field test2, field marker1) {}
+  method to_s() {
+    cat('Test1(test2=', test2, ',marker1=', marker1, ')')
+  }
+}
+
+class Test2 {}
+class Test3 : Test2 {}
+class Marker1 {}
+class Test4 {}
+
+@inject.Singleton
+@inject.Inject(keys: [Test4])
+class Test5 {
+  new(field test4) {}
+}
+
+class TestProviders1 : inject.ProviderSet {
+  method init() {
+    bind(Test2, Test3)
+  }
+  @inject.Provides(key: Marker1)
+  method provide_marker1() {
+    return 55
+  }
+  @inject.Provides(key: Test1, params: [Test2, Marker1])
+  method provide_test1(test2, marker1) {
+    return Test1(test2, marker1)
+  }
 }
