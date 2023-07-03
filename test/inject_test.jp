@@ -42,7 +42,7 @@ class InjectTest {
     test1 = injector.get(Test5)
     expect_is(test1.test4, Test4)
     test2 = injector.get(Test5)
-    expect(test1.$adr(), test2.$adr())
+    expect(test1, test2)
   }
 }
 
