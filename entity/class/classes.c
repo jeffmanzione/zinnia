@@ -26,6 +26,7 @@ Class *Class_Module;
 Class *Class_Array;
 Class *Class_String;
 Class *Class_Tuple;
+Class *Class_Range;
 Class *Class_Error;
 Class *Class_Process;
 Class *Class_Task;

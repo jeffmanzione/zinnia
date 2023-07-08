@@ -58,14 +58,6 @@ bool _is_any_space(const char c) {
   }
 }
 
-static Class *Class_Range;
-
-typedef struct {
-  int32_t start;
-  int32_t end;
-  int32_t inc;
-} _Range;
-
 bool _str_to_int64(String *str, int64_t *result) {
   char *cstr = ALLOC_STRNDUP(str->table, String_size(str));
   char *endptr;

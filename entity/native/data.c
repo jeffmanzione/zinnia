@@ -12,6 +12,7 @@
 #include "entity/array/array.h"
 #include "entity/class/classes_def.h"
 #include "entity/entity.h"
+#include "entity/native/builtin.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/object.h"
@@ -88,12 +89,24 @@ Entity _Int64Array_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(Int64Array_size((Int64Array *)obj->_internal_obj));
 }
 
+Entity _Int64Array_index_range(Int64Array *self, _Range *range) {
+  // TODO: Fill this out. Probably do memmove if inc is 1.
+  return NONE_ENTITY;
+}
+
 Entity _Int64Array_index(Task *task, Context *ctx, Object *obj, Entity *args) {
   ASSERT(NOT_NULL(args));
+  Int64Array *self = (Int64Array *)obj->_internal_obj;
+
+  if (IS_CLASS(args, Class_Range)) {
+    _Range *range = (_Range *)args->obj->_internal_obj;
+    return _Int64Array_index_range(self, range);
+  }
+
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(task, ctx, "Bad Int64Array index");
   }
-  Int64Array *self = (Int64Array *)obj->_internal_obj;
+
   int32_t index = pint(&args->pri);
 
   if (index < 0 || index >= Int64Array_size(self)) {
@@ -154,4 +167,3 @@ void data_add_native(ModuleManager *mm, Module *data) {
   native_method(Class_Int64Array, ARRAYLIKE_INDEX_KEY, _Int64Array_index);
   native_method(Class_Int64Array, ARRAYLIKE_SET_KEY, _Int64Array_set);
   native_method(Class_Int64Array, intern("to_arr"), _Int64Array_to_arr);
-}
