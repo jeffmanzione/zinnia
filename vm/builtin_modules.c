@@ -14,6 +14,7 @@
 #include "entity/native/async.h"
 #include "entity/native/builtin.h"
 #include "entity/native/classes.h"
+#include "entity/native/data.h"
 #include "entity/native/dynamic.h"
 #include "entity/native/error.h"
 #include "entity/native/io.h"
@@ -74,4 +75,5 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE(mm, test, lib_location);
   REGISTER_MODULE(mm, inject, lib_location);
   REGISTER_MODULE(mm, build, lib_location);
+  REGISTER_MODULE_WITH_CALLBACK(mm, data, lib_location);
 }

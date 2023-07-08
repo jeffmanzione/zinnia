@@ -85,6 +85,28 @@ cc_library(
 )
 
 cc_library(
+    name = "data",
+    srcs = ["data.c"],
+    hdrs = ["data.h"],
+    deps = [
+        "//entity",
+        "//entity:object",
+        "//entity:primitive",
+        "//entity/array",
+        "//entity/native",
+        "//entity/native:error",
+        "//entity/tuple",
+        "//heap",
+        "//vm:intern",
+        "//vm:module_manager",
+        "//vm/process:processes",
+        "@c_data_structures//struct:arraylike",
+        "@memory_wrapper//alloc/arena:intern",
+        "@memory_wrapper//debug",
+    ],
+)
+
+cc_library(
     name = "io",
     srcs = ["io.c"],
     hdrs = ["io.h"],

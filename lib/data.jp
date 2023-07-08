@@ -1,0 +1,24 @@
+import io
+import math
+
+class Int64Array {
+  method to_s() {
+    res = 'Int64Array(['
+    l = len()
+    if l == 0 {
+      return res + '])'
+    }
+    if l < 8 {
+      for i = 0, i < l-1, i=i+1 {
+        res.extend(str(self[i]) + ', ')
+      }
+      res.extend(str(self[l-1]))
+    } else {
+      for i = 0, i < 5, i=i+1 {
+        res.extend(str(self[i]) + ', ')
+      }
+      res.extend('...' + str(self[l-1]))
+    }
+    return res + '])'
+  }
+}
