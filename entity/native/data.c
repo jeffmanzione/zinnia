@@ -23,6 +23,8 @@
 #include "vm/process/processes.h"
 #include "vm/process/task.h"
 
+static Class *Class_Int64Array = NULL;
+
 #define INT64ARRAY_INITIAL_SIZE 16
 
 DEFINE_ARRAYLIKE(Int64Array, int64_t);
@@ -89,9 +91,22 @@ Entity _Int64Array_len(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(Int64Array_size((Int64Array *)obj->_internal_obj));
 }
 
-Entity _Int64Array_index_range(Int64Array *self, _Range *range) {
-  // TODO: Fill this out. Probably do memmove if inc is 1.
-  return NONE_ENTITY;
+Entity _Int64Array_index_range(Task *task, Context *ctx, Int64Array *self,
+                               _Range *range) {
+  Object *obj = heap_new(task->parent_process->heap, Class_Int64Array);
+  if (range->inc == 1) {
+    size_t new_len = range->end - range->start;
+    obj->_internal_obj =
+        Int64Array_create_copy(self->table + range->start, new_len);
+  } else {
+    size_t new_len = (range->end - range->start) / range->inc;
+    Int64Array *arr = Int64Array_create_sz(new_len);
+    for (int i = range->start, j = 0; i < range->end; i += range->inc, ++j) {
+      Int64Array_set(arr, j, Int64Array_get(self, i));
+    }
+    obj->_internal_obj = arr;
+  }
+  return entity_object(obj);
 }
 
 Entity _Int64Array_index(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -100,7 +115,7 @@ Entity _Int64Array_index(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   if (IS_CLASS(args, Class_Range)) {
     _Range *range = (_Range *)args->obj->_internal_obj;
-    return _Int64Array_index_range(self, range);
+    return _Int64Array_index_range(task, ctx, self, range);
   }
 
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
@@ -160,10 +175,11 @@ Entity _Int64Array_to_arr(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 void data_add_native(ModuleManager *mm, Module *data) {
-  Class *Class_Int64Array = native_class(data, intern("Int64Array"),
-                                         _Int64Array_init, _Int64Array_delete);
+  Class_Int64Array = native_class(data, intern("Int64Array"), _Int64Array_init,
+                                  _Int64Array_delete);
   native_method(Class_Int64Array, CONSTRUCTOR_KEY, _Int64Array_constructor);
   native_method(Class_Int64Array, intern("len"), _Int64Array_len);
   native_method(Class_Int64Array, ARRAYLIKE_INDEX_KEY, _Int64Array_index);
   native_method(Class_Int64Array, ARRAYLIKE_SET_KEY, _Int64Array_set);
   native_method(Class_Int64Array, intern("to_arr"), _Int64Array_to_arr);
+}

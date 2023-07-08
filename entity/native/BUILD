@@ -89,6 +89,7 @@ cc_library(
     srcs = ["data.c"],
     hdrs = ["data.h"],
     deps = [
+        ":builtin",
         "//entity",
         "//entity:object",
         "//entity:primitive",
