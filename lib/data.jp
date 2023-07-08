@@ -1,6 +1,10 @@
 import io
 import math
 
+def zeros(count) {
+  return Int64Array(count)
+}
+
 class Int64Array {
   method to_s() {
     res = 'Int64Array(['
