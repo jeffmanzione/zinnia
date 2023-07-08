@@ -174,9 +174,16 @@ Entity _Int64Array_to_arr(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(arre);
 }
 
+void _Int64Array_copy_fn(Heap *heap, Map *cpy_map, Object *target_obj,
+                         Object *src_obj) {
+  Int64Array *src = (Int64Array *)src_obj->_internal_obj;
+  target_obj->_internal_obj = Int64Array_copy(src);
+}
+
 void data_add_native(ModuleManager *mm, Module *data) {
   Class_Int64Array = native_class(data, intern("Int64Array"), _Int64Array_init,
                                   _Int64Array_delete);
+  Class_Int64Array->_copy_fn = _Int64Array_copy_fn;
   native_method(Class_Int64Array, CONSTRUCTOR_KEY, _Int64Array_constructor);
   native_method(Class_Int64Array, intern("len"), _Int64Array_len);
   native_method(Class_Int64Array, ARRAYLIKE_INDEX_KEY, _Int64Array_index);
