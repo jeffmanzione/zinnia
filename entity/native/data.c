@@ -48,10 +48,10 @@ int64_t _to_int64(const Entity *e) {
     case PRIMITIVE_FLOAT:
       return (int64_t)pfloat(&e->pri);
     default:
-      FATALF("Unknown primitive type.");
+      FATALF("Unknown primitive type");
     }
   }
-  FATALF("Unknown type.");
+  FATALF("Unknown type");
   return 0;
 }
 
@@ -68,7 +68,7 @@ Entity _Int64Array_constructor(Task *task, Context *ctx, Object *obj,
     initial_size = Array_size(arr);
   } else {
     return raise_error(
-        task, ctx, "Error argument must either not be present or be an Int.");
+        task, ctx, "Error argument must either not be present or be an Int");
   }
   obj->_internal_obj = int64arr = Int64Array_create_sz(initial_size);
 
@@ -134,7 +134,7 @@ Entity _Int64Array_index(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _Int64Array_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   Int64Array *arr = (Int64Array *)obj->_internal_obj;
   if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected tuple input.");
+    return raise_error(task, ctx, "Expected tuple input");
   }
   Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
   if (2 != tuple_size(tupl_args)) {
@@ -148,7 +148,7 @@ Entity _Int64Array_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == index || PRIMITIVE != index->type ||
       PRIMITIVE_INT != ptype(&index->pri)) {
     return raise_error(task, ctx,
-                       "Cannot index a string with something not an int.");
+                       "Cannot index an Int64Array with something not an int");
   }
   int64_t indexi = pint(&index->pri);
   if (indexi < 0 || indexi >= Int64Array_size(arr)) {
