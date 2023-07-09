@@ -139,7 +139,7 @@ Entity _Int64Array_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
   if (2 != tuple_size(tupl_args)) {
     return raise_error(task, ctx,
-                       "Ïnvalid number of arguments, expected 2, got %d",
+                       "Invalid number of arguments, expected 2, got %d",
                        tuple_size(tupl_args));
   }
   const Entity *index = tuple_get(tupl_args, 0);
