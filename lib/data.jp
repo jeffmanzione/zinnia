@@ -1,6 +1,3 @@
-import io
-import math
-
 def zeros(count) {
   return Int64Array(count)
 }
