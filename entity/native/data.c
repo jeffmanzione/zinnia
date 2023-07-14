@@ -101,7 +101,9 @@ Entity _Int64Array_index_range(Task *task, Context *ctx, Int64Array *self,
   } else {
     size_t new_len = (range->end - range->start) / range->inc;
     Int64Array *arr = Int64Array_create_sz(new_len);
-    for (int i = range->start, j = 0; i < range->end; i += range->inc, ++j) {
+    for (int i = range->start, j = 0;
+         range->inc > 0 ? i < range->end : i > range->end;
+         i += range->inc, ++j) {
       Int64Array_set(arr, j, Int64Array_get(self, i));
     }
     obj->_internal_obj = arr;
