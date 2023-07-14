@@ -176,6 +176,21 @@ Entity _Int64Array_to_arr(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(arre);
 }
 
+Entity _Int64Array_reversed(Task *task, Context *ctx, Object *obj,
+                            Entity *args) {
+  ASSERT(NOT_NULL(args));
+  Int64Array *self = (Int64Array *)obj->_internal_obj;
+
+  Object *new_obj = heap_new(task->parent_process->heap, Class_Int64Array);
+  int size = Int64Array_size(self);
+  Int64Array *arr = Int64Array_create_sz(size);
+  for (int i = 0; i < size; ++i) {
+    Int64Array_set(arr, size - i - 1, Int64Array_get(self, i));
+  }
+  new_obj->_internal_obj = arr;
+  return entity_object(new_obj);
+}
+
 void _Int64Array_copy_fn(Heap *heap, Map *cpy_map, Object *target_obj,
                          Object *src_obj) {
   Int64Array *src = (Int64Array *)src_obj->_internal_obj;
@@ -191,4 +206,5 @@ void data_add_native(ModuleManager *mm, Module *data) {
   native_method(Class_Int64Array, ARRAYLIKE_INDEX_KEY, _Int64Array_index);
   native_method(Class_Int64Array, ARRAYLIKE_SET_KEY, _Int64Array_set);
   native_method(Class_Int64Array, intern("to_arr"), _Int64Array_to_arr);
+  native_method(Class_Int64Array, intern("reversed"), _Int64Array_reversed);
 }

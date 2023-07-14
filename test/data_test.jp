@@ -23,47 +23,55 @@ class Int64ArrTest {
 
   @test.Test
   method test_passed_few_values() {
-    arr = data.Int64Array([0, 1, 3, 4, 5])
-    expect(arr.to_arr(), [0, 1, 3, 4, 5])
-    expect(str(arr), 'Int64Array([0, 1, 3, 4, 5])')
+    arr = data.Int64Array([0, 1, 2, 3, 4])
+    expect(arr.to_arr(), [0, 1, 2, 3, 4])
+    expect(str(arr), 'Int64Array([0, 1, 2, 3, 4])')
   }
 
   @test.Test
   method test_passed_many_values() {
-    arr = data.Int64Array([0, 1, 3, 4, 5, 6, 7, 8, 9])
-    expect(arr.to_arr(), [0, 1, 3, 4, 5, 6, 7, 8, 9])
-    expect(str(arr), 'Int64Array([0, 1, 3, 4, 5, ...9])')
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(arr.to_arr(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(str(arr), 'Int64Array([0, 1, 2, 3, 4, ...9])')
   }
 
   @test.Test
   method test_index_range_no_skips() {
-    arr = data.Int64Array([0, 1, 3, 4, 5, 6, 7, 8, 9])
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     subarr = arr[2:5]
-    expect(str(subarr), 'Int64Array([3, 4, 5])')
-    expect(subarr.to_arr(), [3, 4, 5])
+    expect(str(subarr), 'Int64Array([2, 3, 4])')
+    expect(subarr.to_arr(), [2, 3, 4])
   }
 
   @test.Test
   method test_index_range_with_skips() {
-    arr = data.Int64Array([0, 1, 3, 4, 5, 6, 7, 8, 9])
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     subarr = arr[2:7:2]
-    expect(str(subarr), 'Int64Array([3, 5, 7])')
-    expect(subarr.to_arr(), [3, 5, 7])
+    expect(str(subarr), 'Int64Array([2, 4, 6])')
+    expect(subarr.to_arr(), [2, 4, 6])
   }
 
   @test.Test
   method test_index_reverse() {
-    arr = data.Int64Array([0, 1, 3, 4, 5, 6, 7, 8, 9])
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     subarr = arr[7:2:(-1)]
-    expect(str(subarr), 'Int64Array([8, 7, 6, 5, 4])')
-    expect(subarr.to_arr(), [8, 7, 6, 5, 4])
+    expect(str(subarr), 'Int64Array([7, 6, 5, 4, 3])')
+    expect(subarr.to_arr(), [7, 6, 5, 4, 3])
   }
   
   @test.Test
   method test_copy() {
-    arr = data.Int64Array([0, 1, 3, 4, 5, 6, 7, 8, 9])
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     cpy = arr.copy()
-    expect(str(cpy), 'Int64Array([0, 1, 3, 4, 5, ...9])')
-    expect(cpy.to_arr(), [0, 1, 3, 4, 5, 6, 7, 8, 9])
+    expect(str(cpy), 'Int64Array([0, 1, 2, 3, 4, ...9])')
+    expect(cpy.to_arr(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+  }
+
+  @test.Test
+  method test_reversed() {
+    arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    rcpy = arr.reversed()
+    expect(str(rcpy), 'Int64Array([9, 8, 7, 6, 5, ...0])')
+    expect(rcpy.to_arr(), [9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
   }
 }
