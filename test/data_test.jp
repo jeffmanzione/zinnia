@@ -6,7 +6,7 @@ self.expect = test.expect
 test.Tester().test(self)
 
 @test.TestClass
-class Int64ArrTest {
+class Int64ArrayTest {
   @test.Test
   method test_default() {
     arr = data.Int64Array()
@@ -72,6 +72,78 @@ class Int64ArrTest {
     arr = data.Int64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     rcpy = arr.reversed()
     expect(str(rcpy), 'Int64Array([9, 8, 7, 6, 5, ...0])')
+    expect(rcpy.to_arr(), [9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
+  }
+}
+
+
+@test.TestClass
+class Float64ArrayTest {
+  @test.Test
+  method test_default() {
+    arr = data.Float64Array()
+    expect(arr.to_arr(), [])
+    expect(str(arr), 'Float64Array([])')
+  }
+
+  @test.Test
+  method test_passed_size() {
+    arr = data.Float64Array(5)
+    expect(arr.to_arr(), [0, 0, 0, 0, 0])
+    expect(str(arr), 'Float64Array([0, 0, 0, 0, 0])')
+  }
+
+  @test.Test
+  method test_passed_few_values() {
+    arr = data.Float64Array([0, 1, 2, 3, 4.5])
+    expect(arr.to_arr(), [0, 1, 2, 3, 4.5])
+    expect(str(arr), 'Float64Array([0, 1, 2, 3, 4.5])')
+  }
+
+  @test.Test
+  method test_passed_many_values() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(arr.to_arr(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(str(arr), 'Float64Array([0, 1, 2, 3, 4, ...9])')
+  }
+
+  @test.Test
+  method test_index_range_no_skips() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    subarr = arr[2:5]
+    expect(str(subarr), 'Float64Array([2, 3, 4])')
+    expect(subarr.to_arr(), [2, 3, 4])
+  }
+
+  @test.Test
+  method test_index_range_with_skips() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    subarr = arr[2:7:2]
+    expect(str(subarr), 'Float64Array([2, 4, 6])')
+    expect(subarr.to_arr(), [2, 4, 6])
+  }
+
+  @test.Test
+  method test_index_reverse() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    subarr = arr[7:2:(-1)]
+    expect(str(subarr), 'Float64Array([7, 6, 5, 4, 3])')
+    expect(subarr.to_arr(), [7, 6, 5, 4, 3])
+  }
+  
+  @test.Test
+  method test_copy() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    cpy = arr.copy()
+    expect(str(cpy), 'Float64Array([0, 1, 2, 3, 4, ...9])')
+    expect(cpy.to_arr(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+  }
+
+  @test.Test
+  method test_reversed() {
+    arr = data.Float64Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    rcpy = arr.reversed()
+    expect(str(rcpy), 'Float64Array([9, 8, 7, 6, 5, ...0])')
     expect(rcpy.to_arr(), [9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
   }
 }
