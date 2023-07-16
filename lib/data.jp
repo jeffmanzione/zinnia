@@ -1,5 +1,13 @@
-def zeros(count) {
-  return Int64Array(count)
+def zeros(type, count) {
+  if type == Int {
+    return Int64Array(count)
+  } else if type == Float {
+    return Float64Array(count)
+  } else if type == Char {
+    return Int8Array(count)
+  } else {
+    return type(count)
+  }
 }
 
 class DataArray {
@@ -24,5 +32,8 @@ class DataArray {
   }
 }
 
-class Int64Array  : DataArray {}
-class Float64Array  : DataArray {}
+class Int8Array : DataArray {}
+class Int32Array : DataArray {}
+class Int64Array : DataArray {}
+class Float32Array : DataArray {}
+class Float64Array : DataArray {}
