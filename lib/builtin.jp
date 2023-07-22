@@ -91,6 +91,15 @@ class Class {
   method annotations() {
     return annotations
   }
+  method all_methods() {
+    meths = methods()
+    sup = super()
+    while sup {
+      sup.methods().each(m -> meths.append(m))
+      sup = sup.super()
+    }
+    return meths
+  }
 }
 
 class String {
