@@ -5,6 +5,33 @@ self.expect = test.expect
 
 test.Tester().test(self)
 
+@test.TestClass
+class Int8ArrayTest : ArrayTest {
+  new() {
+    super(ArrayTest)(data.Int8Array)
+  }
+}
+
+@test.TestClass
+class Int32ArrayTest : ArrayTest {
+  new() {
+    super(ArrayTest)(data.Int32Array)
+  }
+}
+
+@test.TestClass
+class Int64ArrayTest : ArrayTest {
+  new() {
+    super(ArrayTest)(data.Int64Array)
+  }
+}
+
+@test.TestClass
+class Float64ArrayTest : ArrayTest {
+  new() {
+    super(ArrayTest)(data.Float64Array)
+  }
+}
 
 class ArrayTest {
   new(field class) {}
@@ -75,33 +102,5 @@ class ArrayTest {
     rcpy = arr.reversed()
     expect(str(rcpy), class.name() + '([9, 8, 7, 6, 5, ...0])')
     expect(rcpy.to_arr(), [9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
-  }
-}
-
-@test.TestClass
-class Int8ArrayTest : ArrayTest {
-  new() {
-    super(ArrayTest)(data.Int8Array)
-  }
-}
-
-@test.TestClass
-class Int32ArrayTest : ArrayTest {
-  new() {
-    super(ArrayTest)(data.Int32Array)
-  }
-}
-
-@test.TestClass
-class Int64ArrayTest : ArrayTest {
-  new() {
-    super(ArrayTest)(data.Int64Array)
-  }
-}
-
-@test.TestClass
-class Float64ArrayTest : ArrayTest {
-  new() {
-    super(ArrayTest)(data.Float64Array)
   }
 }
