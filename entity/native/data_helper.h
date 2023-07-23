@@ -182,10 +182,10 @@
   Entity _##class_name##_reversed(Task *task, Context *ctx, Object *obj,       \
                                   Entity *args) {                              \
     ASSERT(NOT_NULL(args));                                                    \
-    class_name *self = (class_name##*)obj->_internal_obj;                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
     Object *new_obj =                                                          \
-        heap_new(task->parent_process->heap, Class_##class_name##);            \
+        heap_new(task->parent_process->heap, Class_##class_name);              \
     int size = class_name##_size(self);                                        \
     class_name *arr = class_name##_create_sz(size);                            \
     for (int i = 0; i < size; ++i) {                                           \
@@ -195,9 +195,61 @@
     return entity_object(new_obj);                                             \
   }                                                                            \
                                                                                \
+  inline void _##type_name##_swap(type_name *arr, int i, int j) {              \
+    type_name tmp = arr[i];                                                    \
+    arr[i] = arr[j];                                                           \
+    arr[j] = tmp;                                                              \
+  }                                                                            \
+                                                                               \
+  inline int _##type_name##_partition(type_name *arr, int low, int high) {     \
+    const int pivot = arr[low];                                                \
+    int i = low - 1, j = high + 1;                                             \
+    while (true) {                                                             \
+      do {                                                                     \
+        ++i;                                                                   \
+      } while (arr[i] < pivot);                                                \
+      do {                                                                     \
+        --j;                                                                   \
+      } while (arr[j] > pivot);                                                \
+      if (i >= j) {                                                            \
+        return j;                                                              \
+      }                                                                        \
+      _##type_name##_swap(arr, i, j);                                          \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  inline int _##type_name##_partition_r(type_name *arr, int low, int high) {   \
+    const int random = low + rand() % (high - low);                            \
+    _##type_name##_swap(arr, random, low);                                     \
+    return _##type_name##_partition(arr, low, high);                           \
+  }                                                                            \
+                                                                               \
+  void _##type_name##_sort(type_name *arr, int low, int high) {                \
+    if (low >= high) {                                                         \
+      return;                                                                  \
+    }                                                                          \
+    const int pi = _##type_name##_partition_r(arr, low, high);                 \
+    _##type_name##_sort(arr, low, pi);                                         \
+    _##type_name##_sort(arr, pi + 1, high);                                    \
+  }                                                                            \
+                                                                               \
+  Entity _##class_name##_sorted(Task *task, Context *ctx, Object *obj,         \
+                                Entity *args) {                                \
+    ASSERT(NOT_NULL(args));                                                    \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
+                                                                               \
+    Object *new_obj =                                                          \
+        heap_new(task->parent_process->heap, Class_##class_name);              \
+    int size = class_name##_size(self);                                        \
+    class_name *arr = class_name##_copy(self);                                 \
+    _##type_name##_sort(arr->table, 0, size - 1);                              \
+    new_obj->_internal_obj = arr;                                              \
+    return entity_object(new_obj);                                             \
+  }                                                                            \
+                                                                               \
   void _##class_name##_copy_fn(Heap *heap, Map *cpy_map, Object *target_obj,   \
                                Object *src_obj) {                              \
-    class_name *src = (class_name##*)src_obj->_internal_obj;                   \
+    class_name *src = (class_name *)src_obj->_internal_obj;                    \
     target_obj->_internal_obj = class_name##_copy(src);                        \
   }
 
@@ -214,6 +266,7 @@
   native_method(Class_##class_name, ARRAYLIKE_SET_KEY, _##class_name##_set);   \
   native_method(Class_##class_name, intern("to_arr"), _##class_name##_to_arr); \
   native_method(Class_##class_name, intern("reversed"),                        \
-                _##class_name##_reversed);
+                _##class_name##_reversed);                                     \
+  native_method(Class_##class_name, intern("sorted"), _##class_name##_sorted);
 
 #endif /* ENTITY_NATIVE_DATA_HELPER_H_ */
