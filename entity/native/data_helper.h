@@ -254,19 +254,23 @@
   }
 
 #define INSTALL_DATA_ARRAY(class_name)                                         \
-  Class_##class_name =                                                         \
-      native_class(data, intern(#class_name), _##class_name##_init,            \
-                   _##class_name##_delete);                                    \
-  Class_##class_name->_copy_fn = _##class_name##_copy_fn;                      \
-  native_method(Class_##class_name, CONSTRUCTOR_KEY,                           \
-                _##class_name##_constructor);                                  \
-  native_method(Class_##class_name, intern("len"), _##class_name##_len);       \
-  native_method(Class_##class_name, ARRAYLIKE_INDEX_KEY,                       \
-                _##class_name##_index);                                        \
-  native_method(Class_##class_name, ARRAYLIKE_SET_KEY, _##class_name##_set);   \
-  native_method(Class_##class_name, intern("to_arr"), _##class_name##_to_arr); \
-  native_method(Class_##class_name, intern("reversed"),                        \
-                _##class_name##_reversed);                                     \
-  native_method(Class_##class_name, intern("sorted"), _##class_name##_sorted);
+  {                                                                            \
+    Class_##class_name =                                                       \
+        native_class(data, intern(#class_name), _##class_name##_init,          \
+                     _##class_name##_delete);                                  \
+    Class_##class_name->_copy_fn = _##class_name##_copy_fn;                    \
+    native_method(Class_##class_name, CONSTRUCTOR_KEY,                         \
+                  _##class_name##_constructor);                                \
+    native_method(Class_##class_name, intern("len"), _##class_name##_len);     \
+    native_method(Class_##class_name, ARRAYLIKE_INDEX_KEY,                     \
+                  _##class_name##_index);                                      \
+    native_method(Class_##class_name, ARRAYLIKE_SET_KEY, _##class_name##_set); \
+    native_method(Class_##class_name, intern("to_arr"),                        \
+                  _##class_name##_to_arr);                                     \
+    native_method(Class_##class_name, intern("reversed"),                      \
+                  _##class_name##_reversed);                                   \
+    native_method(Class_##class_name, intern("sorted"),                        \
+                  _##class_name##_sorted);                                     \
+  }
 
 #endif /* ENTITY_NATIVE_DATA_HELPER_H_ */
