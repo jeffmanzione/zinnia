@@ -27,6 +27,13 @@ class Int64ArrayTest : ArrayTest {
 }
 
 @test.TestClass
+class Float32ArrayTest : ArrayTest {
+  new() {
+    super(ArrayTest)(data.Float32Array)
+  }
+}
+
+@test.TestClass
 class Float64ArrayTest : ArrayTest {
   new() {
     super(ArrayTest)(data.Float64Array)
