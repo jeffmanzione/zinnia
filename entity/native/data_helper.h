@@ -55,7 +55,7 @@
   Entity _##class_name##_constructor(Task *task, Context *ctx, Object *obj,    \
                                      Entity *args) {                           \
     int initial_size;                                                          \
-    class_name *int64arr;                                                      \
+    class_name *arr;                                                           \
     if (NULL == args || IS_NONE(args)) {                                       \
       initial_size = ARRAY_INITIAL_SIZE;                                       \
     } else if (IS_INT(args)) {                                                 \
@@ -68,19 +68,19 @@
           task, ctx,                                                           \
           "Error argument must either not be present or be an Int");           \
     }                                                                          \
-    obj->_internal_obj = int64arr = class_name##_create_sz(initial_size);      \
+    obj->_internal_obj = arr = class_name##_create_sz(initial_size);           \
                                                                                \
     if (IS_INT(args)) {                                                        \
-      class_name##_set(int64arr, initial_size - 1, 0);                         \
+      class_name##_set(arr, initial_size - 1, 0);                              \
     } else if (IS_CLASS(args, Class_Array)) {                                  \
-      Array *arr = (Array *)args->obj->_internal_obj;                          \
-      for (int i = 0; i < Array_size(arr); ++i) {                              \
-        Entity *e = Array_get_ref(arr, i);                                     \
+      Array *arr2 = (Array *)args->obj->_internal_obj;                         \
+      for (int i = 0; i < Array_size(arr2); ++i) {                             \
+        Entity *e = Array_get_ref(arr2, i);                                    \
         type_name ie = _to_##type_name(e);                                     \
-        class_name##_set(int64arr, i, ie);                                     \
+        class_name##_set(arr, i, ie);                                          \
       }                                                                        \
     } else {                                                                   \
-      memset(int64arr->table, 0x0, sizeof(type_name) * initial_size);          \
+      memset(arr->table, 0x0, sizeof(type_name) * initial_size);               \
     }                                                                          \
     return entity_object(obj);                                                 \
   }                                                                            \
@@ -133,6 +133,15 @@
     return to_entity_fn(class_name##_get(self, index));                        \
   }                                                                            \
                                                                                \
+  void _##class_name##_set_range(Task *task, Context *ctx, class_name *arr,    \
+                                 _Range *range, class_name *val) {             \
+    for (int i = range->start, j = 0;                                          \
+         range->inc > 0 ? i < range->end : i > range->end;                     \
+         i += range->inc, ++j) {                                               \
+      class_name##_set(arr, i, class_name##_get(val, j));                      \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
   Entity _##class_name##_set(Task *task, Context *ctx, Object *obj,            \
                              Entity *args) {                                   \
     class_name *arr = (class_name##*)obj->_internal_obj;                       \
@@ -148,21 +157,24 @@
     const Entity *index = tuple_get(tupl_args, 0);                             \
     const Entity *val = tuple_get(tupl_args, 1);                               \
                                                                                \
-    if (NULL == index || PRIMITIVE != index->type ||                           \
-        PRIMITIVE_INT != ptype(&index->pri)) {                                 \
-      return raise_error(                                                      \
-          task, ctx,                                                           \
-          "Cannot index an class_name## with something not an int");           \
+    if (IS_CLASS(index, Class_Range)) {                                        \
+      _Range *range = (_Range *)index->obj->_internal_obj;                     \
+      if (!IS_CLASS(val, Class_##class_name)) {                                \
+        return raise_error(task, ctx, "Value must be an " #class_name);        \
+      }                                                                        \
+      _##class_name##_set_range(task, ctx, arr, range,                         \
+                                (class_name *)val->obj->_internal_obj);        \
+    } else if (IS_INT(index)) {                                                \
+      int indexi = pint(&index->pri);                                          \
+      if (indexi < 0 || indexi >= class_name##_size(arr)) {                    \
+        return raise_error(task, ctx, "Index out of bounds");                  \
+      }                                                                        \
+      type_name ival = _to_##type_name(val);                                   \
+      class_name##_set(arr, pint(&index->pri), ival);                          \
+    } else {                                                                   \
+      return raise_error(task, ctx, "Index must be int or Range.");            \
     }                                                                          \
-    type_name indexi = pint(&index->pri);                                      \
-    if (indexi < 0 || indexi >= class_name##_size(arr)) {                      \
-      return raise_error(task, ctx, "Index out of bounds");                    \
-    }                                                                          \
-                                                                               \
-    type_name ival = _to_##type_name(val);                                     \
-    class_name##_set(arr, pint(&index->pri), ival);                            \
-                                                                               \
-    return NONE_ENTITY;                                                        \
+    return *val;                                                               \
   }                                                                            \
                                                                                \
   Entity _##class_name##_to_arr(Task *task, Context *ctx, Object *obj,         \
@@ -253,7 +265,7 @@
     target_obj->_internal_obj = class_name##_copy(src);                        \
   }
 
-#define INSTALL_DATA_ARRAY(class_name)                                         \
+#define INSTALL_DATA_ARRAY(class_name, data)                                   \
   {                                                                            \
     Class_##class_name =                                                       \
         native_class(data, intern(#class_name), _##class_name##_init,          \
