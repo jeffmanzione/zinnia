@@ -1,7 +1,13 @@
 import data
+import io
 import test
 
 self.expect = test.expect
+
+mat = data.Int64Matrix(20, 5)
+io.println(mat)
+io.println(mat[2])
+
 
 test.Tester().test(self)
 

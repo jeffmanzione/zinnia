@@ -1,3 +1,5 @@
+import io
+
 def zeros(type, count) {
   if type == Int {
     return Int64Array(count)
@@ -9,6 +11,16 @@ def zeros(type, count) {
     return type(count)
   }
 }
+
+; Arrays
+class Int8Array : DataArray {}
+class Int32Array : DataArray {}
+class Int64Array : DataArray {}
+class Float32Array : DataArray {}
+class Float64Array : DataArray {}
+
+;Matrices
+class Int64Matrix : DataMatrix {}
 
 class DataArray {
   method to_s() {
@@ -32,8 +44,25 @@ class DataArray {
   }
 }
 
-class Int8Array : DataArray {}
-class Int32Array : DataArray {}
-class Int64Array : DataArray {}
-class Float32Array : DataArray {}
-class Float64Array : DataArray {}
+class DataMatrix {
+  method to_s() {
+    res = class().name() + '(['
+    l = shape()[0]
+    if l == 0 {
+      return res + '])'
+    }
+    res.extend('\n  ')
+    if l < 8 {
+      for i = 0, i < l-1, i=i+1 {
+        res.extend(str(self[i].to_arr()) + ',\n  ')
+      }
+      res.extend(str(self[l-1].to_arr()))
+    } else {
+      for i = 0, i < 5, i=i+1 {
+        res.extend(str(self[i].to_arr()) + ',\n  ')
+      }
+      res.extend('...\n  ' + str(self[l-1].to_arr()))
+    }
+    return res + ']\n  shape=' + str(shape()) + ')'
+  }
+}
