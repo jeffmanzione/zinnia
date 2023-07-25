@@ -100,14 +100,14 @@
     } else {                                                                   \
       size_t new_len = (range->end - range->start + 1) / range->inc;           \
       class_name *arr = class_name##_create_sz(new_len);                       \
+      if (class_name##_size(self) <= range->end || range->start < 0) {         \
+        return raise_error(                                                    \
+            task, ctx, "Range out of bounds: (%d,%d,%d) vs size=%d",           \
+            range->start, range->end, range->inc, class_name##_size(self));    \
+      }                                                                        \
       for (int i = range->start, j = 0;                                        \
            range->inc > 0 ? i < range->end : i > range->end;                   \
            i += range->inc, ++j) {                                             \
-        if (class_name##_size(self) <= i) {                                    \
-          return raise_error(task, ctx,                                        \
-                             "Index out of bounds: index=%d, size=%d", i,      \
-                             class_name##_size(self));                         \
-        }                                                                      \
         class_name##_set(arr, j, class_name##_get(self, i));                   \
       }                                                                        \
       obj->_internal_obj = arr;                                                \
