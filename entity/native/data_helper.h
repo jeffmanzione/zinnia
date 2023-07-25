@@ -98,11 +98,16 @@
       obj->_internal_obj =                                                     \
           class_name##_create_copy(self->table + range->start, new_len);       \
     } else {                                                                   \
-      size_t new_len = (range->end - range->start) / range->inc;               \
+      size_t new_len = (range->end - range->start + 1) / range->inc;           \
       class_name *arr = class_name##_create_sz(new_len);                       \
       for (int i = range->start, j = 0;                                        \
            range->inc > 0 ? i < range->end : i > range->end;                   \
            i += range->inc, ++j) {                                             \
+        if (class_name##_size(self) <= i) {                                    \
+          return raise_error(task, ctx,                                        \
+                             "Index out of bounds: index=%d, size=%d", i,      \
+                             class_name##_size(self));                         \
+        }                                                                      \
         class_name##_set(arr, j, class_name##_get(self, i));                   \
       }                                                                        \
       obj->_internal_obj = arr;                                                \
@@ -121,25 +126,40 @@
     }                                                                          \
                                                                                \
     if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {       \
-      return raise_error(task, ctx, "Bad class_name## index");                 \
+      return raise_error(task, ctx, "Bad " #class_name " index");              \
     }                                                                          \
                                                                                \
     int32_t index = pint(&args->pri);                                          \
                                                                                \
     if (index < 0 || index >= class_name##_size(self)) {                       \
-      return raise_error(task, ctx, "Index out of bounds");                    \
+      return raise_error(task, ctx, "Index out of bounds: index=%d, size=%d",  \
+                         index, class_name##_size(self));                      \
     }                                                                          \
                                                                                \
     return to_entity_fn(class_name##_get(self, index));                        \
   }                                                                            \
                                                                                \
-  void _##class_name##_set_range(Task *task, Context *ctx, class_name *arr,    \
-                                 _Range *range, class_name *val) {             \
+  Entity _##class_name##_set_range(Task *task, Context *ctx, class_name *arr,  \
+                                   _Range *range, const Entity *val) {         \
+    class_name *value = (class_name *)val->obj->_internal_obj;                 \
+    size_t expected_len = (range->end - range->start + 1) / range->inc;        \
+    if (range->end > class_name##_size(arr) || range->start < 0) {             \
+      return raise_error(task, ctx, "Invalid range: (%d:%d:%d) vs size=%d",    \
+                         range->start, range->end, range->inc,                 \
+                         class_name##_size(arr));                              \
+    }                                                                          \
+    if (expected_len != class_name##_size(value)) {                            \
+      return raise_error(                                                      \
+          task, ctx,                                                           \
+          "Mismatch between left-hand and right-hand sizes: LH=%d, RH=%d",     \
+          expected_len, class_name##_size(value));                             \
+    }                                                                          \
     for (int i = range->start, j = 0;                                          \
          range->inc > 0 ? i < range->end : i > range->end;                     \
          i += range->inc, ++j) {                                               \
-      class_name##_set(arr, i, class_name##_get(val, j));                      \
+      class_name##_set(arr, i, class_name##_get(value, j));                    \
     }                                                                          \
+    return *val;                                                               \
   }                                                                            \
                                                                                \
   Entity _##class_name##_set(Task *task, Context *ctx, Object *obj,            \
@@ -162,8 +182,7 @@
       if (!IS_CLASS(val, Class_##class_name)) {                                \
         return raise_error(task, ctx, "Value must be an " #class_name);        \
       }                                                                        \
-      _##class_name##_set_range(task, ctx, arr, range,                         \
-                                (class_name *)val->obj->_internal_obj);        \
+      return _##class_name##_set_range(task, ctx, arr, range, val);            \
     } else if (IS_INT(index)) {                                                \
       int indexi = pint(&index->pri);                                          \
       if (indexi < 0 || indexi >= class_name##_size(arr)) {                    \
