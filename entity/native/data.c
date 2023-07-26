@@ -28,39 +28,72 @@ void _Int64Matrix_delete(Object *obj) {
   DEALLOC(obj->_internal_obj);
 }
 
-Entity _Int64Matrix_constructor(Task *task, Context *ctx, Object *obj,
-                                Entity *args) {
-  int initial_size;
-  Int64Array *arr;
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx,
-                       "Int64Matrix"
-                       "requires a tuple argument.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(tupl_args)) {
-    return raise_error(task, ctx,
-                       "Invalid number of arguments, expected 2, got %d",
-                       tuple_size(tupl_args));
-  }
-  const Entity *e_dim1 = tuple_get(tupl_args, 0);
-  const Entity *e_dim2 = tuple_get(tupl_args, 1);
-
-  if (!IS_INT(e_dim1) || !IS_INT(e_dim2)) {
-    return raise_error(task, ctx, "Invalid input: expected (Int, Int).");
-  }
-
-  const size_t dim1 = pint(&e_dim1->pri);
-  const size_t dim2 = pint(&e_dim2->pri);
-
-  Int64Matrix *mat = NULL;
-  obj->_internal_obj = mat = ALLOC2(Int64Matrix);
+Int64Matrix *_Int64Matrix_create(int dim1, int dim2, bool clear) {
+  Int64Matrix *mat = ALLOC2(Int64Matrix);
   mat->dim1 = dim1;
   mat->dim2 = dim2;
-
   mat->arr = Int64Array_create_sz(dim1 * dim2);
-  memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
+  if (clear) {
+    memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
+  }
+  return mat;
+}
 
+Entity _Int64Matrix_constructor(Task *task, Context *ctx, Object *obj,
+                                Entity *args) {
+  if (IS_TUPLE(args)) {
+    Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
+    if (2 != tuple_size(tupl_args)) {
+      return raise_error(task, ctx,
+                         "Invalid number of arguments, expected 2, got %d",
+                         tuple_size(tupl_args));
+    }
+    const Entity *e_dim1 = tuple_get(tupl_args, 0);
+    const Entity *e_dim2 = tuple_get(tupl_args, 1);
+
+    if (!IS_INT(e_dim1) || !IS_INT(e_dim2)) {
+      return raise_error(task, ctx, "Invalid input: expected (Int, Int).");
+    }
+
+    const size_t dim1 = pint(&e_dim1->pri);
+    const size_t dim2 = pint(&e_dim2->pri);
+
+    obj->_internal_obj = _Int64Matrix_create(dim1, dim2, /*clear=*/true);
+  } else if (IS_ARRAY(args)) {
+    Array *arr = (Array *)args->obj->_internal_obj;
+    const size_t dim1 = Array_size(arr);
+    int max_dim2 = 0;
+    for (int i = 0; i < Array_size(arr); ++i) {
+      Entity *e = Array_get_ref(arr, i);
+      if (IS_ARRAY(e)) {
+        max_dim2 = max(max_dim2, Array_size((Array *)e->obj->_internal_obj));
+      } else if (IS_CLASS(e, Class_Int64Array)) {
+        max_dim2 =
+            max(max_dim2, Int64Array_size((Int64Array *)e->obj->_internal_obj));
+      } else {
+        return raise_error(task, ctx,
+                           "Invalid member of input array at index %d", i);
+      }
+    }
+    Int64Matrix *mat;
+    obj->_internal_obj = mat =
+        _Int64Matrix_create(dim1, max_dim2, /*clear=*/true);
+
+    for (int i = 0; i < Array_size(arr); ++i) {
+      Entity *e = Array_get_ref(arr, i);
+      if (IS_ARRAY(e)) {
+        Array *arri = (Array *)e->obj->_internal_obj;
+        for (int j = 0; j < Array_size(arri); ++j) {
+          int64_t val = pint(&Array_get_ref(arri, j)->pri);
+          mat->arr->table[i * mat->dim2 + j] = val;
+        }
+      } else /*if (IS_CLASS(e, Class_Int64Array))*/ {
+        const Int64Array *arri = (Int64Array *)e->obj->_internal_obj;
+        memmove(mat->arr->table + i * mat->dim2, arri->table,
+                sizeof(int64_t) * mat->dim2);
+      }
+    }
+  }
   return entity_object(obj);
 }
 
@@ -131,6 +164,27 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
         mat->arr->table + dim1_index * mat->dim2, mat->dim2);
     return entity_object(subarr);
   } else if (IS_CLASS(args, Class_Range)) {
+    const _Range *range = (_Range *)args->obj->_internal_obj;
+    if (range->end > mat->dim1 || range->start < 0) {
+      return raise_error(task, ctx,
+                         "Range out of bounds: (%d:%d:%d) vs size=%d",
+                         range->start, range->end, range->inc, mat->dim1);
+    }
+    const size_t new_dim1 =
+        ceil(1.0 * (range->end - range->start) / range->inc);
+
+    Object *submat_o = heap_new(task->parent_process->heap, Class_Int64Matrix);
+    Int64Matrix *submat;
+    submat_o->_internal_obj = submat =
+        _Int64Matrix_create(new_dim1, mat->dim2, /*clear=*/false);
+    for (int i = range->start, j = 0;
+         range->inc > 0 ? i < range->end : i > range->end;
+         i += range->inc, ++j) {
+      memmove(submat->arr->table + j * mat->dim2,
+              mat->arr->table + i * mat->dim2, sizeof(int64_t) * mat->dim2);
+    }
+    return entity_object(submat_o);
+
   } else {
     return raise_error(task, ctx, "Expected tuple arg.");
   }

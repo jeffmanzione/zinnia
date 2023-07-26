@@ -92,27 +92,31 @@
                                                                                \
   Entity _##class_name##_index_range(Task *task, Context *ctx,                 \
                                      class_name *self, _Range *range) {        \
-    Object *obj = heap_new(task->parent_process->heap, Class_##class_name##);  \
     if (range->inc == 1) {                                                     \
+      Object *obj =                                                            \
+          heap_new(task->parent_process->heap, Class_##class_name##);          \
       size_t new_len = range->end - range->start;                              \
       obj->_internal_obj =                                                     \
           class_name##_create_copy(self->table + range->start, new_len);       \
+      return entity_object(obj);                                               \
     } else {                                                                   \
-      size_t new_len = (range->end - range->start + 1) / range->inc;           \
-      class_name *arr = class_name##_create_sz(new_len);                       \
-      if (class_name##_size(self) <= range->end || range->start < 0) {         \
+      if (class_name##_size(self) < range->end || range->start < 0) {          \
         return raise_error(                                                    \
-            task, ctx, "Range out of bounds: (%d,%d,%d) vs size=%d",           \
+            task, ctx, "Range out of bounds: (%d:%d:%d) vs size=%d",           \
             range->start, range->end, range->inc, class_name##_size(self));    \
       }                                                                        \
+      Object *obj =                                                            \
+          heap_new(task->parent_process->heap, Class_##class_name##);          \
+      size_t new_len = (range->end - range->start + 1) / range->inc;           \
+      class_name *arr = class_name##_create_sz(new_len);                       \
       for (int i = range->start, j = 0;                                        \
            range->inc > 0 ? i < range->end : i > range->end;                   \
            i += range->inc, ++j) {                                             \
         class_name##_set(arr, j, class_name##_get(self, i));                   \
       }                                                                        \
       obj->_internal_obj = arr;                                                \
+      return entity_object(obj);                                               \
     }                                                                          \
-    return entity_object(obj);                                                 \
   }                                                                            \
                                                                                \
   Entity _##class_name##_index(Task *task, Context *ctx, Object *obj,          \

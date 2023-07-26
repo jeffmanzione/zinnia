@@ -24,6 +24,8 @@
 #define IS_FLOAT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_FLOAT == ptype(&(e)->pri)))
 #define IS_TUPLE(e)                                                            \
   ((NULL != e) && (OBJECT == e->type) && (Class_Tuple == e->obj->_class))
+#define IS_ARRAY(e)                                                            \
+  ((NULL != e) && (OBJECT == e->type) && (Class_Array == e->obj->_class))
 
 // Contains a primitive, Object, or represents nullptr.
 typedef struct _Entity Entity;
