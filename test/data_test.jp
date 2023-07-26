@@ -4,17 +4,17 @@ import test
 
 self.expect = test.expect
 
-;mat = data.Int64Matrix(
-;  [
-;    [0, 1, 2, 3, 4],
-;    [5, 6, 7, 8, 9],
-;    [10, 11, 12, 13, 14],
-;    [15, 16, 17, 18, 19]
-;  ]
-;)
-;io.println(mat)
-;io.println(mat[2])
-;io.println(mat[1:4:2])
+mat = data.Int64Matrix(
+  [
+    [0, 1, 2, 3, 4],
+    [5, 6, 7, 8, 9],
+    [10, 11, 12, 13, 14],
+    [15, 16, 17, 18, 19]
+  ]
+)
+io.println(mat)
+io.println(mat[2])
+io.println(mat[1:4:2])
 
 
 test.Tester().test(self)

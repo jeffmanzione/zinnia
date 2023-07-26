@@ -34,7 +34,7 @@ Int64Matrix *_Int64Matrix_create(int dim1, int dim2, bool clear) {
   mat->dim2 = dim2;
   mat->arr = Int64Array_create_sz(dim1 * dim2);
   if (clear) {
-    // memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
+    memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
   }
   return mat;
 }
@@ -200,7 +200,7 @@ void data_add_native(ModuleManager *mm, Module *data) {
   INSTALL_DATA_ARRAY(Float64Array, data);
 
   Class_Int64Matrix = native_class(data, intern("Int64Matrix"),
-                                   _Int64Matrix_init, _Int64Array_delete);
+                                   _Int64Matrix_init, _Int64Matrix_delete);
   native_method(Class_Int64Matrix, CONSTRUCTOR_KEY, _Int64Matrix_constructor);
   native_method(Class_Int64Matrix, ARRAYLIKE_INDEX_KEY, _Int64Matrix_index);
   native_method(Class_Int64Matrix, intern("shape"), _Int64Matrix_shape);
