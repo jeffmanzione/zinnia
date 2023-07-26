@@ -34,7 +34,7 @@ Int64Matrix *_Int64Matrix_create(int dim1, int dim2, bool clear) {
   mat->dim2 = dim2;
   mat->arr = Int64Array_create_sz(dim1 * dim2);
   if (clear) {
-    memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
+    // memset(mat->arr->table, 0x0, sizeof(int64_t) * dim1 * dim2);
   }
   return mat;
 }
