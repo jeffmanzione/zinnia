@@ -15,7 +15,9 @@ mat = data.Int64Matrix(
 io.println(mat)
 io.println(mat[2])
 io.println(mat[1:4:2])
-
+io.println(mat[2,2])
+io.println(mat[2,(1, 3)])
+io.println(mat[2,(1:4)])
 
 test.Tester().test(self)
 

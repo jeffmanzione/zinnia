@@ -105,6 +105,72 @@ Entity _Int64Matrix_shape(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(shape);
 }
 
+inline size_t _get_dim(const Int64Matrix *mat, int dim) {
+  return dim == 1 ? mat->dim1 : mat->dim2;
+}
+
+inline int _first_bad_index(const Int64Matrix *mat, int dim,
+                            const Tuple *dim_indices) {
+  for (int i = 0; i < tuple_size(dim_indices); ++i) {
+    const Entity *e = tuple_get(dim_indices, i);
+    if (!IS_INT(e) || pint(&e->pri) < 0 ||
+        pint(&e->pri) >= _get_dim(mat, dim)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+inline bool _range_is_valid(const Int64Matrix *mat, int dim,
+                            const _Range *range) {
+  return range->start >= 0 && range->end <= _get_dim(mat, dim);
+}
+
+inline bool _index_is_valid(const Int64Matrix *mat, int dim, int index) {
+  return index >= 0 && index < _get_dim(mat, dim);
+}
+
+inline Entity _compute_indices(Task *task, Context *ctx, const Entity *arg,
+                               const Int64Matrix *mat, int dim, int *dim_index,
+                               Tuple **dim_indices, _Range **dim_range) {
+  if (IS_INT(arg)) {
+    *dim_index = pint(&arg->pri);
+    if (!_index_is_valid(mat, dim, *dim_index)) {
+      return raise_error(task, ctx,
+                         "Dim%d out of bounds: %d, must be in [0, %d)", dim,
+                         *dim_index, _get_dim(mat, dim));
+    }
+  } else if (IS_TUPLE(arg)) {
+    *dim_indices = (Tuple *)arg->obj->_internal_obj;
+    int bad_index = -1;
+    if (bad_index = _first_bad_index(mat, dim, *dim_indices) >= 0) {
+      return raise_error(task, ctx, "Invalid dim%d index at %d", dim,
+                         bad_index);
+    }
+  } else if (IS_CLASS(arg, Class_Range)) {
+    *dim_range = (_Range *)arg->obj->_internal_obj;
+    if (!_range_is_valid(mat, dim, *dim_range)) {
+      return raise_error(task, ctx,
+                         "Dim%d out of bounds: (%d:%d:%d), must be in [0, %d)",
+                         dim, (*dim_range)->start, (*dim_range)->end,
+                         (*dim_range)->inc, _get_dim(mat, dim));
+    }
+  } else {
+    return raise_error(task, ctx,
+                       "Expected dim%d arg to be an Int, Range, or tuple", dim);
+  }
+  return NONE_ENTITY;
+}
+
+inline int64_t _get_value(const Int64Matrix *mat, int dim1_index,
+                          int dim2_index) {
+  return Int64Array_get(mat->arr, mat->dim2 * dim1_index + dim2_index);
+}
+
+inline size_t _range_size(const _Range *range) {
+  return ceil(1.0 * (range->end - range->start) / range->inc);
+}
+
 Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
   const Int64Matrix *mat = (Int64Matrix *)obj->_internal_obj;
   if (IS_TUPLE(args)) {
@@ -115,46 +181,67 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
     const Entity *first = tuple_get(targs, 0);
     const Entity *second = tuple_get(targs, 1);
 
-    Tuple *dim1_indices = NULL, *dim2_indices = NULL;
     int dim1_index = -1, dim2_index = -1;
+    Tuple *dim1_indices = NULL, *dim2_indices = NULL;
     _Range *dim1_range = NULL, *dim2_range = NULL;
 
-    if (IS_TUPLE(first)) {
-      dim1_indices = (Tuple *)first->obj->_internal_obj;
-    } else if (IS_INT(first)) {
-      dim1_index = pint(&first->pri);
-      if (dim1_index < 0 || dim1_index >= mat->dim1) {
-        return raise_error(task, ctx,
-                           "Dim1 out of bounds: %d, must be in [0, %d)",
-                           dim1_index, mat->dim1);
-      }
-    } else if (IS_CLASS(first, Class_Range)) {
-      dim1_range = (_Range *)second->obj->_internal_obj;
-
-    } else {
-      return raise_error(task, ctx,
-                         "Expected first arg to be an Int, Range, or tuple.");
+    const Entity dim1_e = _compute_indices(
+        task, ctx, first, mat, 1, &dim1_index, &dim1_indices, &dim1_range);
+    if (!IS_NONE(&dim1_e)) {
+      return dim1_e;
     }
 
-    if (IS_TUPLE(second)) {
-      dim2_indices = (Tuple *)second->obj->_internal_obj;
-    } else if (IS_INT(second)) {
-      dim2_index = pint(&second->pri);
-      if (dim2_index < 0 || dim2_index >= mat->dim2) {
-        return raise_error(task, ctx,
-                           "Dim2 out of bounds: %d, must be in [0, %d)",
-                           dim2_index, mat->dim2);
-      }
-    } else if (IS_CLASS(second, Class_Range)) {
-      dim2_range = (_Range *)second->obj->_internal_obj;
-    } else {
-      return raise_error(task, ctx,
-                         "Expected second arg to be an Int, Range, or tuple.");
+    const Entity dim2_e = _compute_indices(
+        task, ctx, second, mat, 2, &dim2_index, &dim2_indices, &dim2_range);
+    if (!IS_NONE(&dim2_e)) {
+      return dim2_e;
     }
 
+    if (dim1_index >= 0) {
+      if (dim2_index >= 0) {
+        return entity_int(_get_value(mat, dim1_index, dim2_index));
+      } else if (NULL != dim2_indices) {
+        Int64Array *new_arr;
+        Object *new_obj =
+            heap_new(task->parent_process->heap, Class_Int64Array);
+        new_obj->_internal_obj = new_arr =
+            Int64Array_create_sz(tuple_size(dim2_indices));
+        for (int i = 0; i < tuple_size(dim2_indices); ++i) {
+          Int64Array_set(new_arr, i,
+                         _get_value(mat, dim1_index,
+                                    pint(&tuple_get(dim2_indices, i)->pri)));
+        }
+        return entity_object(new_obj);
+      } else /* (NULL != dim2_range) */ {
+        Int64Array *new_arr;
+        Object *new_obj =
+            heap_new(task->parent_process->heap, Class_Int64Array);
+        new_obj->_internal_obj = new_arr =
+            Int64Array_create_sz(_range_size(dim2_range));
+        for (int i = dim2_range->start, j = 0;
+             dim2_range->inc > 0 ? i < dim2_range->end : i > dim2_range->end;
+             i += dim2_range->inc, ++j) {
+          Int64Array_set(new_arr, j, _get_value(mat, dim1_index, i));
+        }
+        return entity_object(new_obj);
+      }
+    } else if (NULL != dim1_indices) {
+      if (dim2_index >= 0) {
+      } else if (NULL != dim2_indices) {
+
+      } else /* (NULL != dim2_range) */ {
+      }
+    } else /* if (NULL != dim1_range) */ {
+      if (dim2_index >= 0) {
+
+      } else if (NULL != dim2_indices) {
+
+      } else /* (NULL != dim2_range) */ {
+      }
+    }
   } else if (IS_INT(args)) {
-    const int dim1_index = pint(&args->pri);
-    if (dim1_index < 0 || dim1_index >= mat->dim1) {
+    const int dim1_index = (int)pint(&args->pri);
+    if (!_index_is_valid(mat, 1, dim1_index)) {
       return raise_error(task, ctx,
                          "Index out of bounds: was %d, must be in [0,%d)",
                          dim1_index, mat->dim1);
@@ -165,13 +252,12 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_object(subarr);
   } else if (IS_CLASS(args, Class_Range)) {
     const _Range *range = (_Range *)args->obj->_internal_obj;
-    if (range->end > mat->dim1 || range->start < 0) {
+    if (!_range_is_valid(mat, 1, range)) {
       return raise_error(task, ctx,
                          "Range out of bounds: (%d:%d:%d) vs size=%d",
                          range->start, range->end, range->inc, mat->dim1);
     }
-    const size_t new_dim1 =
-        ceil(1.0 * (range->end - range->start) / range->inc);
+    const size_t new_dim1 = _range_size(range);
 
     Object *submat_o = heap_new(task->parent_process->heap, Class_Int64Matrix);
     Int64Matrix *submat;
@@ -184,11 +270,9 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
               mat->arr->table + i * mat->dim2, sizeof(int64_t) * mat->dim2);
     }
     return entity_object(submat_o);
-
   } else {
     return raise_error(task, ctx, "Expected tuple arg.");
   }
-
   return NONE_ENTITY;
 }
 
