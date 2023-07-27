@@ -227,9 +227,50 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
       }
     } else if (NULL != dim1_indices) {
       if (dim2_index >= 0) {
+        Int64Array *new_arr;
+        Object *new_obj =
+            heap_new(task->parent_process->heap, Class_Int64Array);
+        new_obj->_internal_obj = new_arr =
+            Int64Array_create_sz(tuple_size(dim1_indices));
+        for (int i = 0; i < tuple_size(dim1_indices); ++i) {
+          Int64Array_set(new_arr, i,
+                         _get_value(mat, pint(&tuple_get(dim1_indices, i)->pri),
+                                    dim2_index));
+        }
+        return entity_object(new_obj);
       } else if (NULL != dim2_indices) {
-
+        Int64Matrix *new_mat;
+        Object *new_obj =
+            heap_new(task->parent_process->heap, Class_Int64Matrix);
+        new_obj->_internal_obj = new_mat =
+            _Int64Matrix_create(tuple_size(dim1_indices),
+                                tuple_size(dim2_indices), /*clear=*/false);
+        for (int i = 0; i < tuple_size(dim1_indices); ++i) {
+          for (int j = 0; j < tuple_size(dim2_indices); ++j) {
+            Int64Array_set(new_mat->arr, i * new_mat->dim2 + j,
+                           _get_value(mat,
+                                      pint(&tuple_get(dim1_indices, i)->pri),
+                                      pint(&tuple_get(dim2_indices, j)->pri)));
+          }
+        }
+        return entity_object(new_obj);
       } else /* (NULL != dim2_range) */ {
+        Int64Matrix *new_mat;
+        Object *new_obj =
+            heap_new(task->parent_process->heap, Class_Int64Matrix);
+        new_obj->_internal_obj = new_mat = _Int64Matrix_create(
+            tuple_size(dim1_indices), _range_size(dim2_range), /*clear=*/false);
+        for (int i = 0; i < tuple_size(dim1_indices); ++i) {
+          for (int i2 = dim2_range->start, j = 0;
+               dim2_range->inc > 0 ? i2 < dim2_range->end
+                                   : i2 > dim2_range->end;
+               i2 += dim2_range->inc, ++j) {
+            Int64Array_set(
+                new_mat->arr, i * new_mat->dim2 + j,
+                _get_value(mat, pint(&tuple_get(dim1_indices, i)->pri), i2));
+          }
+        }
+        return entity_object(new_obj);
       }
     } else /* if (NULL != dim1_range) */ {
       if (dim2_index >= 0) {
