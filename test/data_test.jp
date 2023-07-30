@@ -32,12 +32,26 @@ class Float32ArrayTest : ArrayTest {
   new() {
     super(ArrayTest)(data.Float32Array)
   }
+  
+  @test.Test
+  method test_float() {
+    arr = class([0.5, 1.5, 2.5, 3.5, 4.5])
+    expect(arr.to_arr(), [0.5, 1.5, 2.5, 3.5, 4.5])
+    expect(str(arr), class.name() + '([0.5, 1.5, 2.5, 3.5, 4.5])')
+  }
 }
 
 @test.TestClass
 class Float64ArrayTest : ArrayTest {
   new() {
     super(ArrayTest)(data.Float64Array)
+  }
+  
+  @test.Test
+  method test_float() {
+    arr = class([0.5, 1.5, 2.5, 3.5, 4.5])
+    expect(arr.to_arr(), [0.5, 1.5, 2.5, 3.5, 4.5])
+    expect(str(arr), class.name() + '([0.5, 1.5, 2.5, 3.5, 4.5])')
   }
 }
 
