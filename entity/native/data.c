@@ -358,6 +358,88 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+// inline int _compute_length(Task *task, Context *ctx, const Entity *dim,
+//                            Entity *error) {
+//   if (IS_INT(dim)) {
+//     return pint(&dim->pri);
+//   } else if (IS_TUPLE(dim)) {
+//     return tuple_size((Tuple *)dim->obj->_internal_obj);
+//   } else if (IS_CLASS(dim, Class_Range)) {
+//     return _range_size((_Range *)dim->obj->_internal_obj);
+//   } else {
+//     *error = raise_error(task, ctx, "Invalid dimension type");
+//   }
+//   return -1;
+// }
+
+// inline void _compute_shape(Task *task, Context *ctx, const Entity *dim1,
+//                            const Entity *dim2, int *dim1_len, int *dim2_len)
+//                            {
+//   Entity error = NONE_ENTITY;
+//   *dim1_len = _compute_length(task, ctx, dim1, &error);
+//   if (!IS_NONE(&error)) {
+//     return;
+//   }
+//   *dim2_len = _compute_length(task, ctx, dim2, &error);
+// }
+
+inline void _add_indices(Task *task, Context *ctx, const Entity *arg,
+                         Int64Matrix *mat, int dim, AList *indices,
+                         Entity *error) {
+  int index = -1;
+  Tuple *tuple = NULL;
+  _Range *range = NULL;
+  Entity error = _compute_indices(task, ctx, arg, mat, dim, &tuple, &range);
+
+  if (index >= 0) {
+    *(int *)alist_add(indices) = index;
+  } else if (NULL != tuple) {
+    for (int i = 0; i < tuple_size(tuple); ++i) {
+      *(int *)alist_add(indices) = (int)pint(&tuple_get(tuple, i)->pri);
+    }
+  } else if (NULL != range) {
+    for (int i = range->start, j = 0;
+         range->inc > 0 ? i < range->end : i > range->end;
+         i += range->inc, ++j) {
+      *(int *)alist_add(indices) = i;
+    }
+  } else {
+    *error = raise_error(task, ctx, "Invalid dimension type");
+  }
+}
+
+Entity _Int64Matrix_set(Task *task, Context *ctx, Object *obj, Entity *args) {
+  const Int64Matrix *mat = (Int64Matrix *)obj->_internal_obj;
+
+  if (!IS_TUPLE(args)) {
+    return raise_error(task, ctx, "Expected tuple input");
+  }
+  Tuple *targs = (Tuple *)args->obj->_internal_obj;
+  if (tuple_size(targs) != 2) {
+    return raise_error(task, ctx, "Expected exactly 2 args");
+  }
+  const Entity *lhs = tuple_get(targs, 0);
+  const Entity *rhs = tuple_get(targs, 1);
+
+  AList dim1_indices, dim2_indices;
+  alist_init(&dim1_indices, int, 8);
+  alist_init(&dim2_indices, int, 8);
+
+  Entity error = NONE_ENTITY;
+  _add_indices(task, ctx, first, mat, 1, &dim1_indices, &error);
+  _add_indices(task, ctx, second, mat, 2, &dim2_indices, &error);
+
+  for (int i = 0; i < alist_len(&dim1_indices); ++i) {
+    for (int j = 0; j < alist_len(&dim2_indices); ++j) {
+    }
+  }
+
+  alist_finalize(&dim1_indices);
+  alist_finalize(&dim2_indices);
+
+  return NONE_ENTITY;
+}
+
 void data_add_native(ModuleManager *mm, Module *data) {
   INSTALL_DATA_ARRAY(Int8Array, data);
   INSTALL_DATA_ARRAY(Int32Array, data);
@@ -369,5 +451,6 @@ void data_add_native(ModuleManager *mm, Module *data) {
                                    _Int64Matrix_init, _Int64Matrix_delete);
   native_method(Class_Int64Matrix, CONSTRUCTOR_KEY, _Int64Matrix_constructor);
   native_method(Class_Int64Matrix, ARRAYLIKE_INDEX_KEY, _Int64Matrix_index);
+  native_method(Class_Int64Matrix, ARRAYLIKE_SET_KEY, _Int64Matrix_set);
   native_method(Class_Int64Matrix, intern("shape"), _Int64Matrix_shape);
 }
