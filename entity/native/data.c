@@ -84,6 +84,7 @@ Entity _Int64Matrix_constructor(Task *task, Context *ctx, Object *obj,
       if (IS_ARRAY(e)) {
         Array *arri = (Array *)e->obj->_internal_obj;
         for (int j = 0; j < Array_size(arri); ++j) {
+          // TODO: this needs a type check.
           int64_t val = pint(&Array_get_ref(arri, j)->pri);
           mat->arr->table[i * mat->dim2 + j] = val;
         }
@@ -165,6 +166,11 @@ inline Entity _compute_indices(Task *task, Context *ctx, const Entity *arg,
 inline int64_t _get_value(const Int64Matrix *mat, int dim1_index,
                           int dim2_index) {
   return Int64Array_get(mat->arr, mat->dim2 * dim1_index + dim2_index);
+}
+
+inline void _set_value(const Int64Matrix *mat, int dim1_index, int dim2_index,
+                       int64_t val) {
+  Int64Array_set(mat->arr, mat->dim2 * dim1_index + dim2_index, val);
 }
 
 inline size_t _range_size(const _Range *range) {
@@ -384,12 +390,16 @@ Entity _Int64Matrix_index(Task *task, Context *ctx, Object *obj, Entity *args) {
 // }
 
 inline void _add_indices(Task *task, Context *ctx, const Entity *arg,
-                         Int64Matrix *mat, int dim, AList *indices,
+                         const Int64Matrix *mat, int dim, AList *indices,
                          Entity *error) {
   int index = -1;
   Tuple *tuple = NULL;
   _Range *range = NULL;
-  Entity error = _compute_indices(task, ctx, arg, mat, dim, &tuple, &range);
+  Entity e = _compute_indices(task, ctx, arg, mat, dim, &index, &tuple, &range);
+  if (!IS_NONE(&e)) {
+    *error = e;
+    return;
+  }
 
   if (index >= 0) {
     *(int *)alist_add(indices) = index;
@@ -421,16 +431,50 @@ Entity _Int64Matrix_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   const Entity *lhs = tuple_get(targs, 0);
   const Entity *rhs = tuple_get(targs, 1);
 
+  if (!IS_TUPLE(lhs)) {
+    return raise_error(task, ctx, "Expected tuple lhs");
+  }
+  Tuple *dims = (Tuple *)lhs->obj->_internal_obj;
+  if (tuple_size(dims) != 2) {
+    return raise_error(task, ctx, "Expected lhs to be Tuple(2)");
+  }
+
+  if (!IS_CLASS(rhs, Class_Int64Matrix)) {
+    return raise_error(task, ctx, "Expected rhs to be Int64Matrix");
+  }
+  const Int64Matrix *rhs_mat = (Int64Matrix *)rhs->obj->_internal_obj;
+
   AList dim1_indices, dim2_indices;
   alist_init(&dim1_indices, int, 8);
   alist_init(&dim2_indices, int, 8);
 
   Entity error = NONE_ENTITY;
-  _add_indices(task, ctx, first, mat, 1, &dim1_indices, &error);
-  _add_indices(task, ctx, second, mat, 2, &dim2_indices, &error);
+
+  _add_indices(task, ctx, tuple_get(dims, 0), mat, 1, &dim1_indices, &error);
+  if (!IS_NONE(&error)) {
+    return error;
+  }
+  if (rhs_mat->dim1 != alist_len(&dim1_indices)) {
+    return raise_error(task, ctx,
+                       "Dimension mismatch. lhs dim1=%d, rhs dim1=%d",
+                       alist_len(&dim1_indices), rhs_mat->dim1);
+  }
+
+  _add_indices(task, ctx, tuple_get(dims, 1), mat, 2, &dim2_indices, &error);
+  if (!IS_NONE(&error)) {
+    return error;
+  }
+  if (rhs_mat->dim2 != alist_len(&dim2_indices)) {
+    return raise_error(task, ctx,
+                       "Dimension mismatch. lhs dim2=%d, rhs dim2=%d",
+                       alist_len(&dim2_indices), rhs_mat->dim2);
+  }
 
   for (int i = 0; i < alist_len(&dim1_indices); ++i) {
     for (int j = 0; j < alist_len(&dim2_indices); ++j) {
+      const int dim1_index = *(int *)alist_get(&dim1_indices, i);
+      const int dim2_index = *(int *)alist_get(&dim2_indices, j);
+      _set_value(mat, dim1_index, dim2_index, _get_value(rhs_mat, i, j));
     }
   }
 
