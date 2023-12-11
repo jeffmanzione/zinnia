@@ -213,7 +213,7 @@ class MatrixTest {
   }
 
   @test.Test
-  method test_index() {
+  method test_index_dim1() {
     expect(str(mat[2]), str(array_class([10, 11, 12, 13, 14])))
     expect(
       str(mat[1:4:2]),
@@ -222,11 +222,17 @@ class MatrixTest {
         [15, 16, 17, 18, 19]
       ]))
     )
+  }
 
+  @test.Test
+  method test_index_single() {
     expect(mat[2, 2], 12)
     expect(str(mat[2, (1, 3)]), str(array_class([11, 13])))
     expect(str(mat[2, (1:4)]), str(array_class([11, 12, 13])))
+  }
 
+  @test.Test
+  method test_index_tuple() {
     expect(str(mat[(1, 3), 2]), str(array_class([7, 17])))
     expect(
       str(mat[(1, 3), (1, 3)]),
@@ -242,7 +248,10 @@ class MatrixTest {
         [16, 18]
       ]))
     )
+  }
 
+  @test.Test
+  method test_index_range() {
     expect(str(mat[(1:4:2), 2]), str(array_class([7, 17])))
     expect(
       str(mat[(1:4:2), (1, 3)]),
