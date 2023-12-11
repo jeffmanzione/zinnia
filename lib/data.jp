@@ -32,7 +32,11 @@ class Float32Array : DataArray {}
 class Float64Array : DataArray {}
 
 ;Matrices
+class Int8Matrix : DataMatrix {}
+class Int32Matrix : DataMatrix {}
 class Int64Matrix : DataMatrix {}
+class Float32Matrix : DataMatrix {}
+class Float64Matrix : DataMatrix {}
 
 class DataArray {
   method to_s() {
