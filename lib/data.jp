@@ -12,6 +12,18 @@ def zeros(type, count) {
   }
 }
 
+def zeros2(type, dim1, dim2) {
+  if type == Int {
+    return Int64Matrix(dim1, dim2)
+  } else if type == Float {
+    return Float64Matrix(dim1, dim2)
+  } else if type == Char {
+    return Int8Matrix(dim1, dim2)
+  } else {
+    return type(dim1, dim2)
+  }
+}
+
 ; Arrays
 class Int8Array : DataArray {}
 class Int32Array : DataArray {}
