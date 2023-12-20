@@ -1,5 +1,6 @@
 import io
 
+; Returns a data array of 0 values with the given length.
 def zeros(type, count) {
   if type == Int {
     return Int64Array(count)
@@ -12,6 +13,7 @@ def zeros(type, count) {
   }
 }
 
+; Returns a data matrix of 0 values with the given dimensions.
 def zeros2(type, dim1, dim2) {
   if type == Int {
     return Int64Matrix(dim1, dim2)
@@ -31,13 +33,14 @@ class Int64Array : DataArray {}
 class Float32Array : DataArray {}
 class Float64Array : DataArray {}
 
-;Matrices
+; Matrices
 class Int8Matrix : DataMatrix {}
 class Int32Matrix : DataMatrix {}
 class Int64Matrix : DataMatrix {}
 class Float32Matrix : DataMatrix {}
 class Float64Matrix : DataMatrix {}
 
+; Base class for data arrays.
 class DataArray {
   method to_s() {
     res = class().name() + '(['
@@ -60,6 +63,7 @@ class DataArray {
   }
 }
 
+; Base class for data matrices.
 class DataMatrix {
   method to_s() {
     res = class().name() + '(['
