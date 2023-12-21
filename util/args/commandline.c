@@ -15,7 +15,7 @@
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 
-#define _COST_CHAR_POINTER(ptr) ((const char *)(ptr))
+#define _CONST_CHAR_POINTER(ptr) ((const char *)(ptr))
 
 #define ARGSTORE_LOOKUP_RETVAL(typet, retval)                                  \
   retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {          \
@@ -303,8 +303,8 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
   _parse_compiler_args(index_of_sources - 1, argv + 1, &args);
   M_iter args_iter = map_iter(&args);
   for (; has(&args_iter); inc(&args_iter)) {
-    const char *k = _COST_CHAR_POINTER(key(&args_iter));
-    const char *v = _COST_CHAR_POINTER(value(&args_iter));
+    const char *k = _CONST_CHAR_POINTER(key(&args_iter));
+    const char *v = _CONST_CHAR_POINTER(value(&args_iter));
     ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, k);
     if (ArgKey__NONE == arg_key) {
       FATALF("Unknown Arg name: %s", k);

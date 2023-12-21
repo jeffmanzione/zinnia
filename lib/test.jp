@@ -75,7 +75,7 @@ class Tester {
       }
       setups = _extract_methods(cls, SetUp)
       teardowns =  _extract_methods(cls, TearDown)
-      for (_, meth) in cls.methods() {
+      for (_, meth) in cls.all_methods() {
         test_annot = _extract_test(meth)
         if ~test_annot {
           continue
@@ -125,7 +125,7 @@ class Tester {
 
   method _extract_methods(test_cls, cls) {
     methods = []
-    for (_, meth) in test_cls.methods() {
+    for (_, meth) in test_cls.all_methods() {
       for (_, annot) in meth.annotations {
         if annot is cls {
           methods.append(meth)
