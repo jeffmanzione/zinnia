@@ -69,10 +69,18 @@ def log10(x) {
 ; Returns the square root of [x].
 def sqrt(x) pow(x, 0.5)
 
-; Returns the remainder of [x] divided by [y].
-; def mod(x, y)
+; Returns the remainder of [n] divided by [d].
+; def mod(n, d)
 
-; Returns (x / y, mod(x, y)).
-def div(x, y) {
-  return (x / y, mod(x, y))
+; Returns (n / d, mod(n, d)).
+def div(n, d) {
+  return (n / d, mod(n, d))
+}
+
+; Like [n] / [d], except when [d] is 0, then returns None.
+def safe_divide(n, d) {
+  if d == 0 {
+    return None
+  }
+  return n / d
 }

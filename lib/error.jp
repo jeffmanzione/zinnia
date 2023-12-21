@@ -1,5 +1,4 @@
-import async
-import io
+import async ; keep
 
 class Token {
   new(field text, field line, field col) {}

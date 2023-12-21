@@ -4,7 +4,8 @@ identifier ->
     token:KEYWORD_CLASS,
     token:KEYWORD_MODULE,
     token:KEYWORD_ASYNC,
-    token:KEYWORD_THEN
+    token:KEYWORD_THEN,
+    token:KEYWORD_FUNCTION
   );
 
 new_expression -> token:KEYWORD_NEW;
