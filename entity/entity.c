@@ -107,7 +107,7 @@ Entity entity_none() {
 
 Entity *object_get(Object *obj, const char field[]) {
   ASSERT(NOT_NULL(obj), NOT_NULL(field));
-  return (Entity *)keyedlist_lookup(&obj->_members, field);
+  return &((Member *)keyedlist_lookup(&obj->_members, field))->entity;
 }
 
 Entity entity_object(Object *obj) {

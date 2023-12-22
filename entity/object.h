@@ -33,7 +33,7 @@ typedef void (*ObjCopyFn)(void *heap, Map *cpy_map, Object *target,
 struct _Object {
   const Node *_node_ref;
   const Class *_class;
-  KeyedList _members;
+  KeyedList _members; // Member
 
   // If the object is reflected.
   union {
@@ -87,7 +87,7 @@ struct _Function {
   bool _is_background;
   union {
     uint32_t _ins_pos;
-    void *_native_fn;  // NativeFn
+    void *_native_fn; // NativeFn
   };
 };
 

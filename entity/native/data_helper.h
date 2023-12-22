@@ -1,6 +1,8 @@
 #ifndef ENTITY_NATIVE_DATA_HELPER_H_
 #define ENTITY_NATIVE_DATA_HELPER_H_
 
+#include <math.h>
+
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
 #include "entity/array/array.h"
@@ -87,14 +89,13 @@
                                                                                \
   Entity _##class_name##_len(Task *task, Context *ctx, Object *obj,            \
                              Entity *args) {                                   \
-    return entity_int(class_name##_size((class_name##*)obj->_internal_obj));   \
+    return entity_int(class_name##_size((class_name *)obj->_internal_obj));    \
   }                                                                            \
                                                                                \
   Entity _##class_name##_index_range(Task *task, Context *ctx,                 \
                                      class_name *self, _Range *range) {        \
     if (range->inc == 1) {                                                     \
-      Object *obj =                                                            \
-          heap_new(task->parent_process->heap, Class_##class_name##);          \
+      Object *obj = heap_new(task->parent_process->heap, Class_##class_name);  \
       size_t new_len = range->end - range->start;                              \
       obj->_internal_obj =                                                     \
           class_name##_create_copy(self->table + range->start, new_len);       \
@@ -105,8 +106,7 @@
             task, ctx, "Range out of bounds: (%d:%d:%d) vs size=%d",           \
             range->start, range->end, range->inc, class_name##_size(self));    \
       }                                                                        \
-      Object *obj =                                                            \
-          heap_new(task->parent_process->heap, Class_##class_name##);          \
+      Object *obj = heap_new(task->parent_process->heap, Class_##class_name);  \
       size_t new_len = (range->end - range->start + 1) / range->inc;           \
       class_name *arr = class_name##_create_sz(new_len);                       \
       for (int i = range->start, j = 0;                                        \
@@ -122,7 +122,7 @@
   Entity _##class_name##_index(Task *task, Context *ctx, Object *obj,          \
                                Entity *args) {                                 \
     ASSERT(NOT_NULL(args));                                                    \
-    class_name *self = (class_name##*)obj->_internal_obj;                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
     if (IS_CLASS(args, Class_Range)) {                                         \
       _Range *range = (_Range *)args->obj->_internal_obj;                      \
@@ -168,7 +168,7 @@
                                                                                \
   Entity _##class_name##_set(Task *task, Context *ctx, Object *obj,            \
                              Entity *args) {                                   \
-    class_name *arr = (class_name##*)obj->_internal_obj;                       \
+    class_name *arr = (class_name *)obj->_internal_obj;                        \
     if (!IS_TUPLE(args)) {                                                     \
       return raise_error(task, ctx, "Expected tuple input");                   \
     }                                                                          \
@@ -203,7 +203,7 @@
   Entity _##class_name##_to_arr(Task *task, Context *ctx, Object *obj,         \
                                 Entity *args) {                                \
     ASSERT(NOT_NULL(args));                                                    \
-    class_name *self = (class_name##*)obj->_internal_obj;                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
     Object *arre = array_create(task->parent_process->heap);                   \
     Array *arr = (Array *)arre->_internal_obj;                                 \
@@ -230,13 +230,13 @@
     return entity_object(new_obj);                                             \
   }                                                                            \
                                                                                \
-  inline void _##type_name##_swap(type_name *arr, int i, int j) {              \
+  void _##type_name##_swap(type_name *arr, int i, int j) {                     \
     type_name tmp = arr[i];                                                    \
     arr[i] = arr[j];                                                           \
     arr[j] = tmp;                                                              \
   }                                                                            \
                                                                                \
-  inline int _##type_name##_partition(type_name *arr, int low, int high) {     \
+  int _##type_name##_partition(type_name *arr, int low, int high) {            \
     const int pivot = arr[low];                                                \
     int i = low - 1, j = high + 1;                                             \
     while (true) {                                                             \
@@ -253,7 +253,7 @@
     }                                                                          \
   }                                                                            \
                                                                                \
-  inline int _##type_name##_partition_r(type_name *arr, int low, int high) {   \
+  int _##type_name##_partition_r(type_name *arr, int low, int high) {          \
     const int random = low + rand() % (high - low);                            \
     _##type_name##_swap(arr, random, low);                                     \
     return _##type_name##_partition(arr, low, high);                           \
@@ -384,12 +384,12 @@
     return entity_object(shape);                                               \
   }                                                                            \
                                                                                \
-  inline size_t _##class_name##_get_dim(const class_name *mat, int dim) {      \
+  size_t _##class_name##_get_dim(const class_name *mat, int dim) {             \
     return dim == 1 ? mat->dim1 : mat->dim2;                                   \
   }                                                                            \
                                                                                \
-  inline int _##class_name##_first_bad_index(const class_name *mat, int dim,   \
-                                             const Tuple *dim_indices) {       \
+  int _##class_name##_first_bad_index(const class_name *mat, int dim,          \
+                                      const Tuple *dim_indices) {              \
     for (int i = 0; i < tuple_size(dim_indices); ++i) {                        \
       const Entity *e = tuple_get(dim_indices, i);                             \
       if (!IS_INT(e) || pint(&e->pri) < 0 ||                                   \
@@ -400,18 +400,18 @@
     return -1;                                                                 \
   }                                                                            \
                                                                                \
-  inline bool _##class_name##_range_is_valid(const class_name *mat, int dim,   \
-                                             const _Range *range) {            \
+  bool _##class_name##_range_is_valid(const class_name *mat, int dim,          \
+                                      const _Range *range) {                   \
     return range->start >= 0 &&                                                \
            range->end <= _##class_name##_get_dim(mat, dim);                    \
   }                                                                            \
                                                                                \
-  inline bool _##class_name##_index_is_valid(const class_name *mat, int dim,   \
-                                             int index) {                      \
+  bool _##class_name##_index_is_valid(const class_name *mat, int dim,          \
+                                      int index) {                             \
     return index >= 0 && index < _##class_name##_get_dim(mat, dim);            \
   }                                                                            \
                                                                                \
-  inline Entity _##class_name##_compute_indices(                               \
+  Entity _##class_name##_compute_indices(                                      \
       Task *task, Context *ctx, const Entity *arg, const class_name *mat,      \
       int dim, int *dim_index, Tuple **dim_indices, _Range **dim_range) {      \
     if (IS_INT(arg)) {                                                         \
@@ -424,8 +424,8 @@
     } else if (IS_TUPLE(arg)) {                                                \
       *dim_indices = (Tuple *)arg->obj->_internal_obj;                         \
       int bad_index = -1;                                                      \
-      if (bad_index =                                                          \
-              _##class_name##_first_bad_index(mat, dim, *dim_indices) >= 0) {  \
+      if ((bad_index = _##class_name##_first_bad_index(mat, dim,               \
+                                                       *dim_indices)) >= 0) {  \
         return raise_error(task, ctx, "Invalid dim%d index at %d", dim,        \
                            bad_index);                                         \
       }                                                                        \
@@ -444,18 +444,18 @@
     return NONE_ENTITY;                                                        \
   }                                                                            \
                                                                                \
-  inline type_name _##class_name##_get_value(const class_name *mat,            \
-                                             int dim1_index, int dim2_index) { \
+  type_name _##class_name##_get_value(const class_name *mat, int dim1_index,   \
+                                      int dim2_index) {                        \
     return array_class_name##_get(mat->arr,                                    \
                                   mat->dim2 * dim1_index + dim2_index);        \
   }                                                                            \
                                                                                \
-  inline void _##class_name##_set_value(const class_name *mat, int dim1_index, \
-                                        int dim2_index, type_name val) {       \
+  void _##class_name##_set_value(const class_name *mat, int dim1_index,        \
+                                 int dim2_index, type_name val) {              \
     array_class_name##_set(mat->arr, mat->dim2 *dim1_index + dim2_index, val); \
   }                                                                            \
                                                                                \
-  inline size_t _##class_name##_range_size(const _Range *range) {              \
+  size_t _##class_name##_range_size(const _Range *range) {                     \
     return ceil(1.0 * (range->end - range->start) / range->inc);               \
   }                                                                            \
                                                                                \
@@ -665,9 +665,9 @@
     return NONE_ENTITY;                                                        \
   }                                                                            \
                                                                                \
-  inline void _##class_name##_add_indices(                                     \
-      Task *task, Context *ctx, const Entity *arg, const class_name *mat,      \
-      int dim, AList *indices, Entity *error) {                                \
+  void _##class_name##_add_indices(Task *task, Context *ctx,                   \
+                                   const Entity *arg, const class_name *mat,   \
+                                   int dim, AList *indices, Entity *error) {   \
     int index = -1;                                                            \
     Tuple *tuple = NULL;                                                       \
     _Range *range = NULL;                                                      \
@@ -770,7 +770,7 @@
     Class_##class_name =                                                       \
         native_class(data, intern(#class_name), _##class_name##_init,          \
                      _##class_name##_delete);                                  \
-    Class_##class_name->_copy_fn = _##class_name##_copy_fn;                    \
+    Class_##class_name->_copy_fn = (ObjCopyFn)_##class_name##_copy_fn;         \
     native_method(Class_##class_name, CONSTRUCTOR_KEY,                         \
                   _##class_name##_constructor);                                \
     native_method(Class_##class_name, intern("len"), _##class_name##_len);     \

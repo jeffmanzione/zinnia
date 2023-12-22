@@ -340,7 +340,6 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _string_eq(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Entity e = entity_object(obj);
   Primitive p = _string_cmp(task, ctx, obj, args).pri;
   return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }

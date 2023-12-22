@@ -95,7 +95,8 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
-      (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
+      &((Member *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos))
+           ->entity;
   ASSERT(NOT_NULL(entry_pos));
   const bool old_member_is_obj =
       NULL != old_member && OBJECT == etype(old_member);
@@ -116,7 +117,8 @@ Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
-      (Entity *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos);
+      &((Member *)keyedlist_insert(&parent->_members, key, (void **)&entry_pos))
+           ->entity;
   ASSERT(NOT_NULL(entry_pos));
   const bool old_member_is_obj =
       NULL != old_member && OBJECT == etype(old_member);
@@ -136,7 +138,7 @@ Object *_object_create(Heap *heap, const Class *class) {
   ASSERT(NOT_NULL(heap));
   Object *object = (Object *)__arena_alloc(&heap->object_arena);
   object->_class = class;
-  keyedlist_init(&object->_members, Entity, DEFAULT_ARRAY_SZ);
+  keyedlist_init(&object->_members, Member, DEFAULT_ARRAY_SZ);
   if (NULL != class->_init_fn) {
     class->_init_fn(object);
   }
@@ -162,9 +164,9 @@ void _print_object_summary(Object *object) {
 
   KL_iter members = keyedlist_iter(&object->_members);
   for (; kl_has(&members); kl_inc(&members)) {
-    const Entity *member = (Entity *)kl_value(&members);
-    if (NULL != member && OBJECT == member->type) {
-      printf("\t\t(%p)\n", member->obj);
+    const Member *member = (Member *)kl_value(&members);
+    if (NULL != member && OBJECT == member->entity.type) {
+      printf("\t\t(%p)\n", member->entity.obj);
     }
   }
   fflush(stdout);
@@ -341,7 +343,8 @@ Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
 
   KL_iter members = keyedlist_iter(&obj->_members);
   for (; kl_has(&members); kl_inc(&members)) {
-    Entity member_cpy = entity_copy(heap, copy_map, kl_value(&members));
+    Entity member_cpy =
+        entity_copy(heap, copy_map, &((Member *)kl_value(&members))->entity);
     object_set_member(heap, cpy, kl_key(&members), &member_cpy);
   }
   return entity_object(cpy);

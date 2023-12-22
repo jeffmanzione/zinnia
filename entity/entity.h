@@ -29,6 +29,7 @@
 
 // Contains a primitive, Object, or represents nullptr.
 typedef struct _Entity Entity;
+typedef struct _Member Member;
 
 typedef enum { NONE, PRIMITIVE, OBJECT } EntityType;
 
@@ -43,6 +44,11 @@ struct _Entity {
 extern Entity NONE_ENTITY;
 extern Entity TRUE_ENTITY;
 extern Entity FALSE_ENTITY;
+
+struct _Member {
+  Entity entity;
+  bool final;
+};
 
 // Gets the entity type from an entity.
 EntityType etype(const Entity *e);
