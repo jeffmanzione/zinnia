@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -27,13 +27,5 @@ cc_library(
         "@language_tools//lang/semantic_analyzer",
         "@memory_wrapper//alloc",
         "@memory_wrapper//debug",
-    ],
-)
-
-cc_binary(
-    name = "jasper",
-    srcs = ["jasper.c"],
-    deps = [
-        ":run",
     ],
 )

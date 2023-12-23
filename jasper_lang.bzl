@@ -46,7 +46,7 @@ _jasper_library = rule(
         ),
         "deps": attr.label_list(),
         "compiler": attr.label(
-            default = Label("//compile:jasperc"),
+            default = Label("//:jasperc"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -100,7 +100,7 @@ _jasper_binary = rule(
         ),
         "deps": attr.label_list(),
         "runner": attr.label(
-            default = Label("//run:jasper"),
+            default = Label("//:jasper"),
             executable = True,
             allow_single_file = True,
             cfg = "target",

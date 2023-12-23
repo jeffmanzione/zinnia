@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,10 +31,4 @@ cc_library(
         "@memory_wrapper//struct:set",
         "@memory_wrapper//struct:struct_defaults",
     ],
-)
-
-cc_binary(
-    name = "jasperc",
-    srcs = ["jasperc.c"],
-    deps = [":compile"],
 )

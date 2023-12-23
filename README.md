@@ -7,10 +7,10 @@ The VM is written from scratch by me in C and meets the C90 standard. It compile
 ## Dependencies
 
 * [bazel](https://bazel.build/) - Compile and building the entire application.
-* [language-tools](https://github.com/jeffreymanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
-* [memory-wrapper](https://github.com/jeffreymanzione/memory-wrapper) - Heap, intern, arena, and memory debugging.
-* [file-utils](https://github.com/jeffreymanzione/file-utils) - Basic C file wrapper for reading files.
-* [c-data-structures](https://github.com/jeffreymanzione/c-data-structures) - Some useful data structures.
+* [language-tools](https://github.com/jeffmanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
+* [memory-wrapper](https://github.com/jeffmanzione/memory-wrapper) - Heap, intern, arena, and memory debugging.
+* [file-utils](https://github.com/jeffmanzione/file-utils) - Basic C file wrapper for reading files.
+* [c-data-structures](https://github.com/jeffmanzione/c-data-structures) - Some useful data structures.
 
 ## Downloading this project
 
@@ -25,13 +25,13 @@ To build jasper:
 
 ```shell
 # Clones this git repository.
-git clone https://github.com/jeffreymanzione/jasper.git
+git clone https://github.com/jeffmanzione/jasper.git
 
 # Bazel requires building within the workspace.
 cd jasper
 
 # Builds the compiler and runner.
-bazel build -c opt //compile:jasperc //run:jasper
+bazel build -c opt //:all
 ```
 
 ## Compiling your program to assembly and bytecode
@@ -62,4 +62,4 @@ jasper my_program.jb
 
 ## Examples
 
-Check out the [examples](https://github.com/jeffreymanzione/jasper/tree/master/examples).
+Check out the [examples](https://github.com/jeffmanzione/jasper/tree/master/examples).
