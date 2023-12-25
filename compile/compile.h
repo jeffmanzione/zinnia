@@ -6,11 +6,16 @@
 #ifndef COMPILE_COMPILE_H_
 #define COMPILE_COMPILE_H_
 
-#include "program/tape.h"
-#include "struct/set.h"
-#include "util/args/commandline.h"
+#include <stdio.h>
 
-Map *compile(const Set *source_files, const ArgStore *store);
+#include "program/tape.h"
+#include "struct/map.h"
+#include "struct/set.h"
+
+Map *compile(const Set *source_files, bool out_ja, const char machine_dir[],
+             bool out_jb, const char bytecode_dir[], bool opt);
+void compile_to_assembly(const char file_name[], FILE *out);
+
 void write_tape(const char fn[], const Tape *tape, bool out_ja,
                 const char machine_dir[], bool out_jb,
                 const char bytecode_dir[]);

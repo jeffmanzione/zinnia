@@ -22,6 +22,7 @@
 #include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/optimization/optimize.h"
 #include "program/tape.h"
+#include "struct/alist.h"
 #include "struct/map.h"
 #include "struct/set.h"
 #include "util/args/commandline.h"
@@ -49,6 +50,42 @@ void _set_args(Heap *heap, ArgStore *store) {
   }
   object_set_member_obj(heap, Module_builtin->_reflection, intern("args"),
                         args);
+}
+
+void run_files(const AList *source_file_names, const AList *source_contents,
+               ArgStore *store) {
+  optimize_init();
+
+  const char *lib_location =
+      argstore_lookup_string(store, ArgKey__LIB_LOCATION);
+  uint32_t max_process_object_count =
+      argstore_lookup_int(store, ArgKey__MAX_PROCESS_OBJECT_COUNT);
+  bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
+  VM *vm = vm_create(lib_location, max_process_object_count, async_enabled);
+  ModuleManager *mm = vm_module_manager(vm);
+  Module *main_module = NULL;
+
+  for (int i = 0; i < alist_len(source_file_names); ++i) {
+    const char *src = *(char **)alist_get(source_file_names, i);
+    const char *src_content = *(char **)alist_get(source_contents, i);
+    ModuleInfo *module_info = mm_register_module(mm, src, src_content);
+    if (NULL == main_module) {
+      main_module = modulemanager_load(mm, module_info);
+      main_module->_is_initialized = true;
+      object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
+                        MAIN_KEY, &TRUE_ENTITY);
+    }
+  }
+
+  _set_args(vm_main_process(vm)->heap, store);
+  Task *task = process_create_task(vm_main_process(vm));
+  task_create_context(task, main_module->_reflection, main_module, 0);
+  process_run(vm_main_process(vm));
+
+#ifdef DEBUG
+  vm_delete(vm);
+  optimize_finalize();
+#endif
 }
 
 void run(const Set *source_files, ArgStore *store) {

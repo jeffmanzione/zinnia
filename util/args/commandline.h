@@ -35,6 +35,7 @@ void argconfig_delete(ArgConfig *config);
 
 void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
                    char short_name, Arg arg_default);
+void argconfig_set_mandatory_sources(ArgConfig *config, bool enabled);
 
 ArgStore *commandline_parse_args(ArgConfig *config, int argc,
                                  const char *argv[]);

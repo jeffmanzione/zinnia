@@ -15,3 +15,9 @@ cc_binary(
     srcs = ["jasperc.c"],
     deps = ["//compile"],
 )
+
+cc_binary(
+    name = "jasperp",
+    srcs = ["jasperp.c"],
+    deps = ["//package"],
+)

@@ -113,15 +113,15 @@ void write_tape(const char fn[], const Tape *tape, bool out_ja,
   DEALLOC(ext);
 }
 
-Map *compile(const Set *source_files, const ArgStore *store) {
-  optimize_init();
+void compile_to_assembly(const char file_name[], FILE *out) {
+  Tape *tape = _read_file(file_name, /* opt= */ true);
+  tape_write(tape, out);
+  tape_delete(tape);
+}
 
-  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
-  const char *machine_dir =
-      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
-  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
-  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
-  const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
+Map *compile(const Set *source_files, bool out_ja, const char machine_dir[],
+             bool out_jb, const char bytecode_dir[], bool opt) {
+  optimize_init();
 
   M_iter srcs = set_iter((Set *)source_files);
   Map *src_map = map_create_default();
@@ -144,7 +144,15 @@ int jasperc(int argc, const char *argv[]) {
   argconfig_compile(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
-  Map *src_map = compile(argstore_sources(store), store);
+  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
+  const char *machine_dir =
+      argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
+  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
+  const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
+  const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
+
+  Map *src_map = compile(argstore_sources(store), out_ja, machine_dir, out_jb,
+                         bytecode_dir, opt);
 
 #ifdef DEBUG
   M_iter tapes = map_iter(src_map);

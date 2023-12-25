@@ -28,7 +28,7 @@ def _jasper_library_impl(ctx):
             inputs = [src],
             executable = compiler_executable,
             arguments = jasperc_args,
-            mnemonic = "CompileJL",
+            mnemonic = "jasperc",
             progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(jasperc_args)),
         )
     return [
@@ -72,23 +72,25 @@ def jasper_library(name, srcs, bin = True, assembly = True):
     return _jasper_library(name = name, srcs = srcs, bin = bin, assembly = True)
 
 def _jasper_binary_impl(ctx):
-    runner_executable = ctx.attr.runner.files_to_run.executable
+    compiler_executable = ctx.attr.compiler.files_to_run.executable
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
-    input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
-    input_files = [main_file] + input_files
-    jasper_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
+    dep_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".ja")]
+    input_files = [main_file] + dep_files
+    out_file = ctx.actions.declare_file(ctx.label.name + ".c")
+    jasperp_args = [out_file.path] + [file.path for file in input_files]
 
-    run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
-    ctx.actions.write(
-        output = run_sh,
-        is_executable = True,
-        content = jasper_command,
+    ctx.actions.run(
+        outputs = [out_file],
+        inputs = input_files,
+        executable = compiler_executable,
+        arguments = jasperp_args,
+        mnemonic = "jasperp",
+        progress_message = "Running command: %s %s" %
+                           (compiler_executable.path, " ".join(jasperp_args)),
     )
     return [
         DefaultInfo(
-            files = depset(input_files + [runner_executable, run_sh]),
-            executable = run_sh,
-            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh]),
+            files = depset([out_file]),
         ),
     ]
 
@@ -97,10 +99,12 @@ _jasper_binary = rule(
     attrs = {
         "main": attr.label(
             doc = "Main file",
+            allow_single_file = True,
+            mandatory = True,
         ),
         "deps": attr.label_list(),
-        "runner": attr.label(
-            default = Label("//:jasper"),
+        "compiler": attr.label(
+            default = Label("//:jasperp"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -108,25 +112,31 @@ _jasper_binary = rule(
         "builtins": attr.label_list(),
         "executable_ext": attr.string(default = ".sh"),
     },
-    executable = True,
 )
 
 def jasper_binary(name, main, srcs = [], deps = []):
     if main in srcs:
         srcs.remove(main)
-
-    jasper_library(
-        "%s_main" % name,
-        srcs = [main],
-    )
     if len(srcs) > 0:
         jasper_library(
             "%s_srcs" % name,
             srcs = srcs,
         )
         deps = [":%s_srcs" % name] + deps
-    return _jasper_binary(
-        name = name,
-        main = ":%s_main" % name,
+    _jasper_binary(
+        name = "%s_bin" % name,
+        main = main,
         deps = deps,
+    )
+    native.cc_binary(
+        name = name,
+        srcs = [":%s_bin" % name],
+        deps = [
+            "//run",
+            "//util/args:commandline",
+            "//util/args:commandlines",
+            "@c_data_structures//struct:alist",
+            "@memory_wrapper//alloc",
+            "@memory_wrapper//alloc/arena:intern",
+        ],
     )
