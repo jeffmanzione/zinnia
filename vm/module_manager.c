@@ -279,7 +279,7 @@ Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
 }
 
 Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
-  FILE *file = fopen(module_info->file_name, "rb");
+  FILE *file = FILE_FN(module_info->file_name, "rb");
   if (NULL == file) {
     FATALF("Cannot open file '%s'. Exiting...", module_info->file_name);
   }

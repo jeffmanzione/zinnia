@@ -243,7 +243,7 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   // char buffer[32];
   // sprintf(buffer, "%d.csv", tmp++);
-  // FILE *file = fopen(buffer, "w");
+  // FILE *file = FILE_FN(buffer, "w");
   // alloc_to_csv(file);
   // fclose(file);
 

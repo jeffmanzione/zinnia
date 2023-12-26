@@ -63,7 +63,7 @@ char *_compile_to_file(const char file_name[]) {
     fclose(assembly_file);
     return escaped_assembly;
   } else if (ends_with(file_name, ".ja")) {
-    FILE *file = fopen(file_name, "rb");
+    FILE *file = FILE_FN(file_name, "rb");
     if (NULL == file) {
       FATALF("File does not exist: %s", file_name);
     }
