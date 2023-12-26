@@ -1,15 +1,25 @@
-load("//:jeff_lang.bzl", "jeff_vm_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "completers",
     main = "completers.jp",
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "futures",
     main = "futures.jp",
+)
+
+jasper_binary(
+    name = "process",
+    main = "process.jp",
+)
+
+jasper_binary(
+    name = "remotes",
+    main = "remotes.jp",
 )

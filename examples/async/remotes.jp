@@ -42,5 +42,3 @@ try {
 }
 
 io.println(await remote_test.to_s())
-
-

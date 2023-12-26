@@ -99,7 +99,6 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
 
   ModuleManager *mm = vm_module_manager(task->parent_process->vm);
-  DEBUGF("%p", intern);
   mm_register_dynamic_module(mm, module_name, init_fn);
   // Forces module to be loaded eagerly.
   Module *module = modulemanager_lookup(mm, module_name);
