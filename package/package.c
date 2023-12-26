@@ -134,9 +134,9 @@ int jasperp(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext, *file_content;
     split_path_file(file_name, &dir_path, &file_base, &ext);
     char *escaped_dir_path = escape(dir_path);
-    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s/%s.ja\";",
+    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s/%s.ja\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;",
+    fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
             file_base);
 
     DEALLOC(escaped_dir_path);
