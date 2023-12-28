@@ -36,5 +36,4 @@ jasper_binary(
     modules = [
         ":pid",
     ],
-    deps = [],
 )
