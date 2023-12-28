@@ -7,13 +7,11 @@ package(
 jasper_binary(
     name = "arguments",
     main = "arguments.jp",
-    deps = [],
 )
 
 jasper_binary(
     name = "exceptions",
     main = "exceptions.jp",
-    deps = [],
 )
 
 jasper_binary(

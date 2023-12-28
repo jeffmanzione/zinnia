@@ -12,7 +12,7 @@
 
 void run(const Set *source_files, ArgStore *store);
 void run_files(const AList *source_file_names, const AList *source_contents,
-               ArgStore *store);
+               const AList *init_fns, ArgStore *store);
 
 int jasper(int argc, const char *argv[]);
 

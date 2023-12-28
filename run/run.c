@@ -53,7 +53,7 @@ void _set_args(Heap *heap, ArgStore *store) {
 }
 
 void run_files(const AList *source_file_names, const AList *source_contents,
-               ArgStore *store) {
+               const AList *init_fns, ArgStore *store) {
   optimize_init();
 
   const char *lib_location =
@@ -68,7 +68,9 @@ void run_files(const AList *source_file_names, const AList *source_contents,
   for (int i = 0; i < alist_len(source_file_names); ++i) {
     const char *src = *(char **)alist_get(source_file_names, i);
     const char *src_content = *(char **)alist_get(source_contents, i);
-    ModuleInfo *module_info = mm_register_module(mm, src, src_content);
+    NativeCallback init_fn = *(NativeCallback *)alist_get(init_fns, i);
+    ModuleInfo *module_info =
+        mm_register_module_with_callback(mm, src, src_content, init_fn);
     if (NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
       main_module->_is_initialized = true;

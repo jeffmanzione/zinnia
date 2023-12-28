@@ -179,7 +179,9 @@ void tape_field(Tape *tape, const char *field) {
 }
 
 const Instruction *tape_get(const Tape *tape, uint32_t index) {
-  ASSERT(NOT_NULL(tape), index >= 0, index < tape_size(tape));
+  ASSERT(NOT_NULL(tape));
+  ASSERT(index >= 0);
+  ASSERT(index < tape_size(tape));
   return (Instruction *)alist_get(&tape->ins, index);
 }
 
