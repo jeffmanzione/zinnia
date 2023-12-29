@@ -4,8 +4,7 @@ import io
 import struct
 
 def str(input) {
-  if ~input return 'None'
-  if input is Object return input.to_s()
+  if (input is Object) return input.to_s()
   __stringify(input)  ; Native C function
 }
 
