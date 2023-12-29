@@ -27,13 +27,24 @@ jasper_cc_library(
     src_module = "pid.jp",
 )
 
+jasper_cc_library(
+    name = "custom_math",
+    cc_deps = [
+        "//examples/dynamic:_custom",
+    ],
+    cc_init_fn = "_init_custom",
+    src_module = "custom_math.jp",
+)
+
 jasper_binary(
     name = "pid_test",
     cc_deps = [
         ":pid_cc_lib",
+        "//examples/dynamic:_custom",
     ],
     main = "pid_test.jp",
     modules = [
         ":pid",
+        ":custom_math",
     ],
 )
