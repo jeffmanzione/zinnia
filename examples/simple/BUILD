@@ -20,6 +20,11 @@ jasper_binary(
 )
 
 jasper_binary(
+    name = "garbage_collection",
+    main = "garbage_collection.jp",
+)
+
+jasper_binary(
     name = "hello",
     main = "hello.jp",
 )
@@ -27,4 +32,9 @@ jasper_binary(
 jasper_binary(
     name = "range",
     main = "range.jp",
+)
+
+jasper_binary(
+    name = "static",
+    main = "static.jp",
 )

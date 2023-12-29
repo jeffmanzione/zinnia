@@ -241,7 +241,7 @@ void _parse_compiler_args(int argc, const char *const argv[], Map *args) {
   for (i = 0; i < argc; ++i) {
     const char *arg = argv[i];
     if (!_parse_compiler_argument(arg, args)) {
-      FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+      FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
              "--arg1 --noarg2 --arg3=5]");
     }
   }
@@ -256,7 +256,7 @@ void _parse_sources(int argc, const char *const argv[], Set *sources) {
           stderr,
           "ERROR: Source '%s' is malformed. Sources must not start with '-'\n",
           arg);
-      FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+      FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
              "--arg1 --noarg2 --arg3=5]");
     }
     set_insert(sources, intern(arg));
@@ -300,7 +300,7 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
 
   if (config->mandatory_sources && index_of_sources < 0) {
     fprintf(stderr, "ERROR: No sources.\n");
-    FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+    FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
            "--arg1 --noarg2 --arg3=5]");
   }
 

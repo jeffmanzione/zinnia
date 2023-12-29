@@ -1,15 +1,15 @@
-load("//:jeff_lang.bzl", "jeff_vm_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "builder",
     main = "builder.jp",
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "mvc",
     main = "mvc.jp",
 )

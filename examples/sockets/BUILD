@@ -7,17 +7,24 @@ package(
 jasper_binary(
     name = "chat",
     main = "chat.jp",
-    deps = [],
 )
 
 jasper_binary(
     name = "http_hello",
     main = "http_hello.jp",
-    deps = [],
+)
+
+jasper_binary(
+    name = "message",
+    main = "message.jp",
+)
+
+jasper_binary(
+    name = "simple_http",
+    main = "simple_http.jp",
 )
 
 jasper_binary(
     name = "webserver",
     main = "webserver.jp",
-    deps = [],
 )

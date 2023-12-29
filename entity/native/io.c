@@ -92,7 +92,7 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (Class_String == args->obj->_class) {
     fn = _String_nullterm((String *)args->obj->_internal_obj);
     mode = intern("r");
-    f->fp = FILE_FN(fn, mode);
+    f->fp = fopen(fn, mode);
     DEALLOC(fn);
   } else if (Class_Tuple == args->obj->_class) {
     Tuple *tup = (Tuple *)args->obj->_internal_obj;
@@ -122,7 +122,7 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       }
       fn = _String_nullterm((String *)e_fn->obj->_internal_obj);
       mode = _String_nullterm((String *)e_mode->obj->_internal_obj);
-      f->fp = FILE_FN(fn, mode);
+      f->fp = fopen(fn, mode);
       DEALLOC(fn);
       DEALLOC(mode);
       if (NULL == f->fp) {
