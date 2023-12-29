@@ -89,8 +89,8 @@ class ChatClient {
     _login()
     _start_send_loop()
     while True {
-    str_message = (await connection.receive()).split(':')
-      _handle_message(str_message[0], str_message[1])
+      str_message = (await connection.receive()).split(':')
+          _handle_message(str_message[0], str_message[1])
     }
   }
   method _start_send_loop() async {
