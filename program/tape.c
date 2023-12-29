@@ -277,13 +277,21 @@ void tape_write(const Tape *tape, FILE *file) {
     if (in_class && al_has(&cls_func_iter)) {
       FunctionRef *func_ref = (FunctionRef *)al_value(&cls_func_iter);
       if (func_ref->index == i) {
-        fprintf(file, "@%s\n", func_ref->name);
+        if (func_ref->is_async) {
+          fprintf(file, "@%s:async\n", func_ref->name);
+        } else {
+          fprintf(file, "@%s\n", func_ref->name);
+        }
         al_inc(&cls_func_iter);
       }
     } else if (al_has(&func_iter)) {
       FunctionRef *func_ref = (FunctionRef *)al_value(&func_iter);
       if (func_ref->index == i) {
-        fprintf(file, "@%s\n", func_ref->name);
+        if (func_ref->is_async) {
+          fprintf(file, "@%s:async\n", func_ref->name);
+        } else {
+          fprintf(file, "@%s\n", func_ref->name);
+        }
         al_inc(&func_iter);
       }
     }
@@ -443,11 +451,12 @@ bool tape_read_ins(Tape *const tape, Q *tokens) {
                fn_name->text);
       }
       tape_label_async(tape, fn_name);
+    } else {
+      tape_label(tape, fn_name);
     }
     if (TOKEN_NEWLINE != _q_peek(tokens)->type) {
       FATALF("Invalid token after @def.");
     }
-    tape_label(tape, fn_name);
     return true;
   }
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
