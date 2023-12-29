@@ -53,7 +53,6 @@ void modulemanager_finalize(ModuleManager *mm) {
   KL_iter iter = keyedlist_iter(&mm->_modules);
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
-    DEBUGF("%s", module_info_file_name(module_info));
     if (!module_info->is_loaded) {
       continue;
     }

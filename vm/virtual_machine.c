@@ -809,20 +809,16 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   Task *module_main_task =
       _maybe_load_module(fn_ctx->parent_task, (Module *)self->_class->_module);
   if (NULL != module_main_task && !func->_is_async) {
-    DEBUGF("HERE1");
     fn_ctx->parent_task->state = TASK_WAITING;
     process_insert_waiting_task(fn_ctx->parent_task->parent_process,
                                 fn_ctx->parent_task);
   } else {
-    DEBUGF("HERE2");
     process_enqueue_task(fn_ctx->parent_task->parent_process,
                          fn_ctx->parent_task);
   }
   if (func->_is_anon) {
     fn_ctx->previous_context = parent_context;
   }
-  DEBUGF("HERE3 %d %d %d", func->_is_anon, func->_is_async,
-         task->parent_process->vm->async_enabled);
   if (func->_is_async && task->parent_process->vm->async_enabled) {
     *task_mutable_resval(task) =
         entity_object(future_create(fn_ctx->parent_task));
