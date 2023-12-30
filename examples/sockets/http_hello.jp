@@ -12,12 +12,12 @@ PORT = 80
 sock = net.HttpSocket(socket.create_server_socket(ADDRESS, PORT))
 
 io.println(cat('Listening on ', ADDRESS, ':', PORT, '.'))
-io.println('End the program by pressing Enter.')
 
 is_done = False
 
 ; It must be async; otherwise, it will block the rest of the program.
 () async {
+  io.println('End the program by pressing Enter.')
   io.IN.getline()
   is_done = True
   io.println('Detected user input. Will stop after next request.')

@@ -1,7 +1,6 @@
 ; Example program which efficiently computes fibonacci numbers using memoize().
 
 import io
-import struct
 
 ; fib(i) = fib(i-1) + fib(i-2)
 fib = memoize((i) {

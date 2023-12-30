@@ -5,29 +5,28 @@ import struct
 
 ; A very simple HTTP server that can be used to serve static content.
 ;
-; Either directly invoke SimpleHTTPServer(dir, port).start() or from the command line:
+; Either directly invoke SimpleHttpServer(dir, port).start() or from the command line:
 ; 
 ; ```
 ;   jasper examples/sockets/simple_http.jp -- --dir=. --port=80
 ; ```
-class SimpleHTTPServer {
-  field cache, stop_called, sock, fw
+class SimpleHttpServer {
+  field cache, stop_called, sock ;, fw
   new(field dir='.', field port=80) {
     cache = struct.Cache(255)
-    fw = io.FileWatcher()
-    fw.watch(dir)
-    fw.listen(
-        e -> cache.clear(cat('/', e.file_name)),
-        io.IN_CLOSE_WRITE | io.IN_MODIFY | io.IN_MOVE)
+    ;fw = io.FileWatcher()
+    ;fw.watch(dir)
+    ;fw.listen(
+    ;    e -> cache.clear(cat('/', e.file_name)),
+    ;    io.IN_CLOSE_WRITE | io.IN_MODIFY | io.IN_MOVE)
     stop_called = False
   }
 
   method start() async {
-    sock = net.HttpSocket(
-      socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, '0.0.0.0', port, 4))
+    sock = net.HttpSocket(socket.create_server_socket('0.0.0.0', port))
     while ~stop_called {
-      handle = sock.accept()
-      request = handle.receive()
+      handle = await sock.accept()
+      request = await handle.receive()
       io.println(cat('Received request: ', request.type, ' ', request.path))
       response = net.HttpResponse()
       if _is_icon(request) {
@@ -46,7 +45,7 @@ class SimpleHTTPServer {
             .add_content(response_content)
             .add_content('</pre>')
       }
-      handle.send(response)
+      await handle.send(response)
       handle.close()
     }
     sock.close()
@@ -73,5 +72,5 @@ class SimpleHTTPServer {
 if __main {
   dir = args.dir | '.'
   port = Int(args.port | 80)
-  await SimpleHTTPServer(dir, port).start()
+  await SimpleHttpServer(dir, port).start()
 }

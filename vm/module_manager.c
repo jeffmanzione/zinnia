@@ -53,7 +53,6 @@ void modulemanager_finalize(ModuleManager *mm) {
   KL_iter iter = keyedlist_iter(&mm->_modules);
   for (; kl_has(&iter); kl_inc(&iter)) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
-    DEBUGF("%s", module_info_file_name(module_info));
     if (!module_info->is_loaded) {
       continue;
     }
@@ -279,7 +278,7 @@ Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
 }
 
 Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
-  FILE *file = fopen(module_info->file_name, "rb");
+  FILE *file = FILE_FN(module_info->file_name, "rb");
   if (NULL == file) {
     FATALF("Cannot open file '%s'. Exiting...", module_info->file_name);
   }

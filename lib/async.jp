@@ -75,7 +75,7 @@ class Completer {
   ; Returns a future to the completed value.
   method as_future() {
     if completed {
-      return async.value(_value)
+      return value(_value)
     }
     return () async {
       while ~(() -> completed)() {}

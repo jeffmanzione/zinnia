@@ -92,9 +92,9 @@ class Server {
     io.println('Starting server at ' + host + ':' + str(port) + '.')
     try {
       while True { 
-        handle = sock.accept()
+        handle = await sock.accept()
         try {
-          request = handle.receive()
+          request = await handle.receive()
           if ~request {
             continue
           }
@@ -109,7 +109,7 @@ class Server {
           } else {
             response = injector.get(NotFoundHandler).handle(request)
           }
-          handle.send(response)
+          await handle.send(response)
         } catch e {
           io.fprintln(io.ERROR, e)
         }

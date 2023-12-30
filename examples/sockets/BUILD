@@ -1,23 +1,30 @@
-load("//:jeff_lang.bzl", "jeff_vm_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "chat",
     main = "chat.jp",
-    deps = [],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "http_hello",
     main = "http_hello.jp",
-    deps = [],
 )
 
-jeff_vm_binary(
+jasper_binary(
+    name = "message",
+    main = "message.jp",
+)
+
+jasper_binary(
+    name = "simple_http",
+    main = "simple_http.jp",
+)
+
+jasper_binary(
     name = "webserver",
     main = "webserver.jp",
-    deps = [],
 )

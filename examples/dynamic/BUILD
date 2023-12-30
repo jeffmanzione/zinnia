@@ -35,7 +35,7 @@ jasper_library(
 )
 
 jasper_binary(
-    name = "test",
-    main = "test.jp",
+    name = "dynamic_test",
+    main = "dynamic_test.jp",
     deps = [":custom"],
 )

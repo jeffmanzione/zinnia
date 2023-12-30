@@ -30,3 +30,9 @@ void argconfig_run(ArgConfig *const config) {
                 '\0', arg_int(4096 * 8));
   argconfig_add(config, ArgKey__ASYNC, "async", '\0', arg_bool(true));
 }
+
+void argconfig_packaged(ArgConfig *const config) {
+  ASSERT(NOT_NULL(config));
+  argconfig_run(config);
+  argconfig_set_mandatory_sources(config, false);
+}

@@ -1,33 +1,40 @@
-load("//:jeff_lang.bzl", "jeff_vm_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "arguments",
     main = "arguments.jp",
-    deps = [],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "exceptions",
     main = "exceptions.jp",
-    deps = [],
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "fibonacci",
     main = "fibonacci.jp",
-    deps = [],
 )
 
-jeff_vm_binary(
+jasper_binary(
+    name = "garbage_collection",
+    main = "garbage_collection.jp",
+)
+
+jasper_binary(
     name = "hello",
     main = "hello.jp",
 )
 
-jeff_vm_binary(
+jasper_binary(
     name = "range",
     main = "range.jp",
+)
+
+jasper_binary(
+    name = "static",
+    main = "static.jp",
 )

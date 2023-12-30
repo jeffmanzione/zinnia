@@ -41,11 +41,13 @@ struct __Argstore {
 struct __ArgConfig {
   Map arg_names;
   Arg *args;
+  bool mandatory_sources;
 };
 
 ArgConfig *argconfig_create() {
   ArgConfig *config = ALLOC2(ArgConfig);
   config->args = ALLOC_ARRAY(Arg, ArgKey__END);
+  config->mandatory_sources = true;
   map_init_default(&config->arg_names);
   return config;
 }
@@ -130,6 +132,10 @@ void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
   config->args[key] = arg_default;
 }
 
+void argconfig_set_mandatory_sources(ArgConfig *config, bool enabled) {
+  config->mandatory_sources = enabled;
+}
+
 bool _parse_argument(const char *arg, Pair *pair) {
   if (strlen(arg) <= 2) {
     fprintf(stderr,
@@ -184,7 +190,7 @@ void _parse_arguments(int argc, const char *const argv[], Map *args) {
     const char *arg = argv[i];
     Pair pair;
     if (!_parse_argument(arg, &pair)) {
-      FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+      FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
              "--arg1 --noarg2 --arg3=5]");
     }
     map_insert(args, pair.key, pair.value);
@@ -235,7 +241,7 @@ void _parse_compiler_args(int argc, const char *const argv[], Map *args) {
   for (i = 0; i < argc; ++i) {
     const char *arg = argv[i];
     if (!_parse_compiler_argument(arg, args)) {
-      FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+      FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
              "--arg1 --noarg2 --arg3=5]");
     }
   }
@@ -250,7 +256,7 @@ void _parse_sources(int argc, const char *const argv[], Set *sources) {
           stderr,
           "ERROR: Source '%s' is malformed. Sources must not start with '-'\n",
           arg);
-      FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+      FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
              "--arg1 --noarg2 --arg3=5]");
     }
     set_insert(sources, intern(arg));
@@ -292,9 +298,9 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
 
   int index_of_sources = _index_of_sources(argc, argv);
 
-  if (index_of_sources < 0) {
+  if (config->mandatory_sources && index_of_sources < 0) {
     fprintf(stderr, "ERROR: No sources.\n");
-    FATALF("Could not parse arguments. Format: jlr [-abc] d.jp e.jp [-- "
+    FATALF("Could not parse arguments. Format: jasper [-abc] d.jp e.jp [-- "
            "--arg1 --noarg2 --arg3=5]");
   }
 
@@ -329,8 +335,10 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     index_of_dd = argc;
   }
 
-  _parse_sources(index_of_dd - index_of_sources, argv + index_of_sources,
-                 &store->src_files);
+  if (index_of_sources >= 0) {
+    _parse_sources(index_of_dd - index_of_sources, argv + index_of_sources,
+                   &store->src_files);
+  }
 
   return store;
 }

@@ -22,6 +22,7 @@ cc_library(
         "//vm/process",
         "//vm/process:processes",
         "//vm/process:task",
+        "@c_data_structures//struct:alist",
         "@file_utils//util:string",
         "@language_tools//lang/parser",
         "@language_tools//lang/semantic_analyzer",

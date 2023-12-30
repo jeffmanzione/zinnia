@@ -1,12 +1,12 @@
+import async
 import io
 import memory
-import process
 
 ITER_COUNT = 20
 
 for i = 0, i < ITER_COUNT, i=i+1 {
   io.println(await memory.collect_garbage())
-  await process.sleep(1.0)
+  await async.sleep(1.0)
 }
 
 io.println(await memory.collect_garbage())

@@ -243,7 +243,7 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   // char buffer[32];
   // sprintf(buffer, "%d.csv", tmp++);
-  // FILE *file = fopen(buffer, "w");
+  // FILE *file = FILE_FN(buffer, "w");
   // alloc_to_csv(file);
   // fclose(file);
 
@@ -257,10 +257,16 @@ Entity _collect_garbage(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
-  ASSERT(NOT_NULL(args), PRIMITIVE == args->type);
-  Primitive val = args->pri;
+  ASSERT(NOT_NULL(args), (PRIMITIVE == args->type || NONE == args->type));
+  if (IS_NONE(args)) {
+    return entity_object(
+        string_new(task->parent_process->heap, "None", strlen("None")));
+  }
+
   char buffer[BUFFER_SIZE];
   int num_written = 0;
+  Primitive val = args->pri;
+
   switch (ptype(&val)) {
   case PRIMITIVE_BOOL:
     num_written =
