@@ -214,6 +214,18 @@ void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
   } else if (IS_SYNTAX(stree, rule_new_definition)) {
     class->constructor = populate_constructor(analyzer, stree);
     class->has_constructor = true;
+    if (class->constructor.has_args) {
+      AL_iter args = alist_iter(class->constructor.args.args);
+      for (; al_has(&args); al_inc(&args)) {
+        const Argument *arg = (Argument *)al_value(&args);
+        if (!arg->is_field) {
+          continue;
+        }
+        FieldDef field = {.name = arg->arg_name,
+                          .field_token = arg->field_token};
+        alist_append(class->fields, &field);
+      }
+    }
   } else if (IS_SYNTAX(stree, rule_static_field_statement)) {
     populate_static_field_statement(analyzer, stree, class);
   } else {
