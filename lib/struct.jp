@@ -306,7 +306,7 @@ class TreeSet {
     if ~node {
       return False
     }
-    c = cmp(v, node.value)
+    c = builtin.cmp(v, node.value)
     if c == 0 {
       return True
     }
