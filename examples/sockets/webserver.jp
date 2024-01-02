@@ -11,9 +11,9 @@ not_found_html = io.FileReader('./examples/sockets/web/not_found.html').getall()
 
 try {
   while True { 
-    handle = sock.accept()
+    handle = await sock.accept()
     try {
-      request = handle.receive()
+      request = await handle.receive()
       io.println(cat('Received request: ', request.type, ' ', request.path))
       response = net.HttpResponse()
       if request.path == '/index.html' {
@@ -27,7 +27,7 @@ try {
             .set_status('NOT FOUND')
             .add_content(not_found_html)
       }
-      handle.send(response)
+      await handle.send(response)
     } catch e {
       io.fprintln(io.ERROR, e)
     }

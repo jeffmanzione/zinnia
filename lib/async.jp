@@ -47,6 +47,9 @@ class Future {
   method then(fn) async {
     return fn(await self)
   }
+  method then_async(fn) async {
+    return await fn(await self)
+  }
 }
 
 ; Allows for the manual completion of a future.

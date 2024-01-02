@@ -69,6 +69,20 @@ class Map {
     }
     return None
   }
+  method get_or_default(k, d) {
+    v = self[k]
+    if ~v {
+      return d
+    }
+    return v
+  }
+  method get_or_else(k, fn) {
+    v = self[k]
+    if ~v {
+      return fn(k)
+    }
+    return v
+  }
   method put_if_absent(k, v) {
     if ~(k in self) {
       self[k] = v

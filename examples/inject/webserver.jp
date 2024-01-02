@@ -82,38 +82,48 @@ class NotFoundHandler : RequestHandler {
   }
 }
 
+class RedirectHandler : RequestHandler {
+  new() {}
+  method handle(request) {
+    return net.redirect(request,  net.HttpResponse(), '/')
+  }
+}
+
 @inject.Inject(keys: [net.HttpSocket, inject.Injector, Host, Port])
 class Server {
-  new(field sock, field injector, field host, field port) {}
+  field _request_handlers
+  new(field sock, field injector, field host, field port) {
+    _request_handlers = {
+      '/': IndexHandler,
+      '/index.html': RedirectHandler,
+      '/favicon.ico': FaviconHandler
+    }
+  }
   method run() {
     io.println('Starting server at ' + host + ':' + str(port) + '.')
     try {
       while True { 
-        handle = await sock.accept()
-        try {
-          request = await handle.receive()
-          if ~request {
-            continue
-          }
-          io.println(cat('Received request: ', request.type, ' ', request.path))
-          response = None
-          if request.path == '/index.html' {
-            response = net.redirect(request,  net.HttpResponse(), '/')
-          } else if request.path == '/' {
-            response = injector.get(IndexHandler).handle(request)
-          } else if request.path == '/favicon.ico' {
-            response = injector.get(FaviconHandler).handle(request)
-          } else {
-            response = injector.get(NotFoundHandler).handle(request)
-          }
-          await handle.send(response)
-        } catch e {
-          io.fprintln(io.ERROR, e)
-        }
-        handle.close()
+        _handle_connection(await sock.accept())
       }
     } catch e {
       io.fprintln(io.ERROR, e)
     }
+  }
+
+  method _handle_connection(handle) {
+    try {
+      request = await handle.receive()
+      if request {
+        io.println('Received request: ' + request.type + ' ' + request.path)
+        await handle.send(_get_handler(request.path).handle(request))
+      }
+    } catch e {
+      io.fprintln(io.ERROR, e)
+    }
+    handle.close()
+  }
+
+  method _get_handler(path) {
+    injector.get(_request_handlers.get_or_default(path, NotFoundHandler))
   }
 }
