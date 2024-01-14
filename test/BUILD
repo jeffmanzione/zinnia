@@ -5,6 +5,11 @@ package(
 )
 
 jasper_binary(
+    name = "annotations_test",
+    main = "annotations_test.jp",
+)
+
+jasper_binary(
     name = "data_test",
     main = "data_test.jp",
 )
