@@ -73,6 +73,7 @@ class Module {
 }
 
 class Class {
+  field annotations
   method to_s() {
     if annotations.len() > 0 {
       cls_name =  'class ' + name()
@@ -87,7 +88,7 @@ class Class {
   method add_annotation(annot) {
     annotations.append(annot)
   }
-  method annotations() {
+  method all_annotations() {
     return annotations
   }
   method all_methods() {

@@ -106,7 +106,7 @@ class Tester {
   }
 
   method _extract_test_class(cls) {
-    for (_, annot) in cls.annotations() {
+    for (_, annot) in cls.all_annotations() {
       if annot is TestClass {
         return annot
       }

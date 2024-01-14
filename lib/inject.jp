@@ -81,7 +81,7 @@ class Injector {
     raise error.Error('Expected key or class but was ' + str(cls))
   }
   method _is_singleton(key) {
-    if key.cls.annotations().has(a -> a is Singleton) {
+    if key.cls.all_annotations().has(a -> a is Singleton) {
       return True
     }
     provider = keys_to_providers[key]
@@ -89,7 +89,7 @@ class Injector {
       return True
     } else if (provider is Function) and provider.annotations.has(a -> a is Singleton) {
       return True
-    } else if (provider is Class) and provider.annotations().has(a -> a is Singleton) {
+    } else if (provider is Class) and provider.all_annotations().has(a -> a is Singleton) {
       return True
     }
     return False
@@ -122,7 +122,7 @@ class Injector {
     return if args then provider(args) else provider()
   }
   method _get_args(constructed_map, cls) {
-    inject_annots = cls.annotations().where(a -> a is Inject)
+    inject_annots = cls.all_annotations().where(a -> a is Inject)
     if inject_annots.len() > 1 {
       raise error.Error('Expected at most 1 @Inject, but there were ' + str(inject_annots.len()))
     } else if inject_annots.len() == 1 {
@@ -221,7 +221,7 @@ class Inject {
   new({field keys, field singleton=False}) {}
   method annotate(cls) {
     if singleton {
-      cls.annotations().append(Singleton())
+      cls.all_annotations().append(Singleton())
     }
   }
   method to_s() {
