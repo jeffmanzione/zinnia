@@ -76,4 +76,5 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE(mm, inject, lib_location);
   REGISTER_MODULE(mm, build, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, data, lib_location);
+  REGISTER_MODULE(mm, json, lib_location);
 }
