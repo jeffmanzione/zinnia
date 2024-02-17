@@ -19,9 +19,8 @@ def _jsonify_object(obj) {
   } else if obj is struct.Map {
     return _jsonify_map(obj)
   }
-  fields = obj.class().fields()
   entries = []
-  for (_, f) in fields {
+  for (_, f) in obj.class().fields() {
     entries.append('"' + str(f) + '":' + jsonify(obj.$get(f)))
   }
   return '{' + ','.join(entries) + '}'
