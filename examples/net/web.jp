@@ -21,12 +21,18 @@ class Patch { method annotate(_) {} }
 
 class RequestController {
   new(field matcher_fn) {}
+  method marshall(req) { req }
+  method unmarshall(resp) { resp }
+  method get_label(req) { Rpc }
 }
 
 class HttpRequestController : RequestController {
   new(http_matcher_fn) {
     super(RequestController)(http_matcher_fn)
   }
+  method marshall(req) { net.parse_request(req) }
+  method unmarshall(resp) { resp.to_s() }
+  method get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
 }
 
 class Application {
@@ -70,33 +76,38 @@ class ApplicationRunner {
   }
 
   method process(request) {
-    injector.install(Request, () -> request)
     for (_, ctrlr_cls) in controller_classes {
-      req_ctrlr = ctrlr_cls.all_annotations().where(a -> a is RequestController)[0]
-      if req_ctrlr.matcher_fn(request) {
-        ctrlr = injector.get(ctrlr_cls)
-        if req_ctrlr is HttpRequestController {
-          http_request = net.parse_request(request)
-          method_annot = _REQUEST_METHOD_TO_ANNOTATION[http_request.type]
-          http_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is method_annot).len() > 0) 
-          if http_methods.len() == 0 {
-            raise error.Error(str(ctrlr_cls) + ' has no ' + str(method_annot) + ' annotated methods.')
-          } else if http_methods.len() > 1 {
-            raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(method_annot) + ' annotated methods.')
-          }
-          return ctrlr.$get(http_methods[0].name())(http_request).to_s()
-        } else {
-          rpc_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is Rpc).len() > 0)
-          if rpc_methods.len() == 0 {
-            raise error.Error(str(ctrlr_cls) + ' has no @Rpc annotated methods.')
-          } else if rpc_methods.len() > 1 {
-            raise error.Error(str(ctrlr_cls) + ' has multiple @Rpc annotated methods.')
-          }
-          return ctrlr.$get(rpc_methods[0].name())(request)
-        }
+      req_ctrlr = _get_request_controller(ctrlr_cls)
+      if ~req_ctrlr.matcher_fn(request) {
+        continue
       }
+      ctrlr = injector.get(ctrlr_cls)
+      request = req_ctrlr.marshall(request)
+      injector.install(Request, () -> request)
+      method_annot = req_ctrlr.get_label(request)
+      return req_ctrlr.unmarshall(_process_internal(ctrlr_cls, ctrlr, method_annot, request))
     }
-    raise error.Error('No found controller for request: ' + str(request))
+    raise error.Error('No controller found for request: ' + str(request))
+  }
+
+  method _get_request_controller(ctrlr_cls) {
+    req_ctrlrs = ctrlr_cls.all_annotations().where(a -> a is RequestController)
+    if req_ctrlrs.len() == 0 {
+      raise error.Error(str(ctrlr_cls) + ' has no RequestController annotation.')
+    } else if req_ctrlrs.len() > 1 {
+      raise error.Error(str(ctrlr_cls) + ' has multiple RequestController annotations.')
+    }
+    return req_ctrlrs[0]
+  }
+
+  method _process_internal(ctrlr_cls, ctrlr, annot, request) {
+    rpc_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
+    if rpc_methods.len() == 0 {
+      raise error.Error(str(ctrlr_cls) + ' has no ' + str(annot) + ' annotated methods.')
+    } else if rpc_methods.len() > 1 {
+      raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(annot) + ' annotated methods.')
+    }
+    return ctrlr.$get(rpc_methods[0].name())(request)
   }
 
   method run() {
@@ -147,7 +158,7 @@ class RpcController {
 
   @Rpc
   method process(request) {
-    return True
+    return 'true'
   }
 }
 
