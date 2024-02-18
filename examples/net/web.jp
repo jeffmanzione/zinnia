@@ -42,7 +42,7 @@ class Application {
   }
 
   method start() {
-    io.println(host, port, controller_classes)
+    io.println('Starting app at ' + str(host) + ':' +  str(port))
     async.create_remote(ApplicationRunner, (host, port, controller_classes))
   }
 }
@@ -63,7 +63,6 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
 class ApplicationRunner {
   field injector
   new(field host, field port, field controller_classes) {
-    io.println(host, port)
     injector = inject.Injector()
     for (_, ctrlr_cls) in controller_classes {
       injector.install(ctrlr_cls)
@@ -74,21 +73,20 @@ class ApplicationRunner {
     injector.install(Request, () -> request)
     for (_, ctrlr_cls) in controller_classes {
       req_ctrlr = ctrlr_cls.all_annotations().where(a -> a is RequestController)[0]
-      io.println(req_ctrlr.matcher_fn)
       if req_ctrlr.matcher_fn(request) {
         ctrlr = injector.get(ctrlr_cls)
         if req_ctrlr is HttpRequestController {
           http_request = net.parse_request(request)
           method_annot = _REQUEST_METHOD_TO_ANNOTATION[http_request.type]
-          http_methods = ctrlr_cls.all_methods().where(m -> m.all_annotations().where(a -> a is method_annot) > 0) 
+          http_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is method_annot).len() > 0) 
           if http_methods.len() == 0 {
             raise error.Error(str(ctrlr_cls) + ' has no ' + str(method_annot) + ' annotated methods.')
           } else if http_methods.len() > 1 {
             raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(method_annot) + ' annotated methods.')
           }
-          return ctrlr.$get(http_methods[0].name())(http_request)
+          return ctrlr.$get(http_methods[0].name())(http_request).to_s()
         } else {
-          rpc_methods = ctrlr_cls.all_methods().where(m -> m.all_annotations().where(a -> a is Rpc) > 0)
+          rpc_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is Rpc).len() > 0)
           if rpc_methods.len() == 0 {
             raise error.Error(str(ctrlr_cls) + ' has no @Rpc annotated methods.')
           } else if rpc_methods.len() > 1 {
@@ -107,6 +105,7 @@ class ApplicationRunner {
       handle = await sock.accept()
       try {
         await handle.send(process(await handle.receive()))
+        handle.close()
       } catch e {
         io.fprintln(io.ERROR, e)
       }
@@ -138,7 +137,7 @@ class IndexController {
 
   @Get
   method get(http_request) {
-
+    net.HttpResponse().add_content('Hello, world!')
   }
 }
 
