@@ -1,0 +1,70 @@
+import inject
+import io
+import net
+
+class Request {}
+
+class Get {}
+class Head {}
+class Post {}
+class Put {}
+class Delete {}
+class Connect {}
+class Options {}
+class Trace {}
+class Patch {}
+
+class RequestController {
+  new(field matcher_fn) {}
+}
+
+class HttpRequestController : RequestController {
+  new(field matcher_fn) {
+    super(RequestController)(matcher_fn)
+  }
+}
+
+class Application {
+  field controller_classes
+
+  new() {
+    controller_classes = []
+  }
+
+  method add_controller(ctrlr_cls) {
+    controller_classes.append(ctrlr_cls)
+    return self
+  }
+}
+
+class Server {
+  field apps
+
+  new() {
+    apps = []
+  }
+
+  method add_application(app) {
+    apps.append(app)
+    return self
+  }
+
+  method run() {
+
+  }
+}
+
+
+@HttpRequestController(path -> True)
+class TestController {
+  new() {}
+
+  @Get
+  method get(http_request) {
+
+  }
+}
+
+Server()
+    .add_application(Application().add_controller(TestController))
+    .run()
