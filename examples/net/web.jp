@@ -114,13 +114,13 @@ class ApplicationRunner {
   }
 
   method _process_internal(ctrlr_cls, ctrlr, annot, request) {
-    rpc_methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
-    if rpc_methods.len() == 0 {
+    methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
+    if methods.len() == 0 {
       raise error.Error(str(ctrlr_cls) + ' has no ' + str(annot) + ' annotated methods.')
-    } else if rpc_methods.len() > 1 {
+    } else if methods.len() > 1 {
       raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(annot) + ' annotated methods.')
     }
-    return ctrlr.$get(rpc_methods[0].name())(request)
+    return ctrlr.$get(methods[0].name())(request)
   }
 
   method run() {
@@ -154,8 +154,11 @@ class Server {
   }
 }
 
+def is_index(req) {
+  net.parse_request(req).path == '/'
+}
 
-@HttpRequestController(req -> net.parse_request(req).path == '/')
+@HttpRequestController(is_index)
 @inject.Inject(keys: IndexHtml)
 class IndexController {
   new(field index_html) {}
