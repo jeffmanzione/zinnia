@@ -20,14 +20,14 @@ class Trace { method annotate(_) {} }
 class Patch { method annotate(_) {} }
 
 class RequestController {
-  new(field matcher_fn) {}
+  new(field matcher_fn=()->True) {}
   method marshall(req) { req }
   method unmarshall(resp) { resp }
   method get_label(req) { Rpc }
 }
 
 class HttpRequestController : RequestController {
-  new(http_matcher_fn) {
+  new(http_matcher_fn=()->True) {
     super(RequestController)(http_matcher_fn)
   }
   method marshall(req) { net.parse_request(req) }
@@ -36,10 +36,11 @@ class HttpRequestController : RequestController {
 }
 
 class Application {
-  field controller_classes
+  field controller_classes, provider_sets
 
   new(field host, field port) {
     controller_classes = []
+    provider_sets = []
   }
 
   method add_controller(ctrlr_cls) {
@@ -47,9 +48,16 @@ class Application {
     return self
   }
 
+  method add_provider_set(ps) {
+    provider_sets.append(ps)
+    return self
+  }
+
   method start() {
     io.println('Starting app at ' + str(host) + ':' +  str(port))
-    async.create_remote(ApplicationRunner, (host, port, controller_classes))
+    async.create_remote(
+        ApplicationRunner,
+        (host, port, controller_classes, provider_sets))
   }
 }
 
@@ -68,8 +76,9 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
 @async.RemoteClass
 class ApplicationRunner {
   field injector
-  new(field host, field port, field controller_classes) {
+  new(field host, field port, field controller_classes, field provider_sets=[]) {
     injector = inject.Injector()
+    provider_sets.each(ps -> injector.install(ps()))
     for (_, ctrlr_cls) in controller_classes {
       injector.install(ctrlr_cls)
     }
@@ -142,17 +151,29 @@ class Server {
 }
 
 
-@HttpRequestController(path -> True)
+@HttpRequestController(req -> net.parse_request(req).path == '/')
+@inject.Inject(keys: IndexHtml)
 class IndexController {
-  new() {}
+  new(field index_html) {}
 
   @Get
   method get(http_request) {
-    net.HttpResponse().add_content('Hello, world!')
+    net.HttpResponse().add_content(index_html)
   }
 }
 
-@RequestController(path -> True)
+@HttpRequestController
+@inject.Inject(keys: NotFoundHtml)
+class NotFoundController {
+  new(field not_found) {}
+
+  @Get
+  method get(http_request) {
+    net.HttpResponse().add_content(not_found)
+  }
+}
+
+@RequestController
 class RpcController {
   new() {}
 
@@ -162,7 +183,27 @@ class RpcController {
   }
 }
 
+class IndexHtml {}
+class NotFoundHtml {}
+
+class WebProviders : inject.ProviderSet {
+  @inject.Singleton
+  @inject.Provides(key: IndexHtml)
+  method provide_index() {
+    io.FileReader('./examples/sockets/web/index.html').getall()
+  }
+  @inject.Singleton
+  @inject.Provides(key: NotFoundHtml)
+  method provide_not_found() {
+    io.FileReader('./examples/sockets/web/not_found.html').getall()
+  }
+}
+
 Server()
-    .add_application(Application('0.0.0.0', 80).add_controller(IndexController))
+    .add_application(
+        Application('0.0.0.0', 80)
+            .add_controller(IndexController)
+            .add_controller(NotFoundController)
+            .add_provider_set(() -> WebProviders()))
     .add_application(Application('0.0.0.0', 1453).add_controller(RpcController))
     .run()
