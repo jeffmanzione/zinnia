@@ -19,15 +19,19 @@ class Options { method annotate(_) {} }
 class Trace { method annotate(_) {} }
 class Patch { method annotate(_) {} }
 
+def always_true() {
+  True
+}
+
 class RequestController {
-  new(field matcher_fn=()->True) {}
+  new(field matcher_fn=always_true) {}
   method marshall(req) { req }
   method unmarshall(resp) { resp }
   method get_label(req) { Rpc }
 }
 
 class HttpRequestController : RequestController {
-  new(http_matcher_fn=()->True) {
+  new(http_matcher_fn=always_true) {
     super(RequestController)(http_matcher_fn)
   }
   method marshall(req) { net.parse_request(req) }
