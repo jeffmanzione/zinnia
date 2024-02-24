@@ -1,197 +1,47 @@
-import async
-import error
 import inject
 import io
 import net
-import socket
-import struct
+import web
 
-class Request {}
-class Rpc { method annotate(_) {} }
+class IndexHtml {}
+class NotFoundHtml {}
 
-class Get { method annotate(_) {} }
-class Head { method annotate(_) {} }
-class Post { method annotate(_) {} }
-class Put { method annotate(_) {} }
-class Delete { method annotate(_) {} }
-class Connect { method annotate(_) {} }
-class Options { method annotate(_) {} }
-class Trace { method annotate(_) {} }
-class Patch { method annotate(_) {} }
-
-def always_true() {
-  True
-}
-
-class RequestController {
-  new(field matcher_fn=always_true) {}
-  method marshall(req) { req }
-  method unmarshall(resp) { resp }
-  method get_label(req) { Rpc }
-}
-
-class HttpRequestController : RequestController {
-  new(http_matcher_fn=always_true) {
-    super(RequestController)(http_matcher_fn)
-  }
-  method marshall(req) { net.parse_request(req) }
-  method unmarshall(resp) { resp.to_s() }
-  method get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
-}
-
-class Application {
-  field controller_classes, provider_sets
-
-  new(field host, field port) {
-    controller_classes = []
-    provider_sets = []
-  }
-
-  method add_controller(ctrlr_cls) {
-    controller_classes.append(ctrlr_cls)
-    return self
-  }
-
-  method add_provider_set(ps) {
-    provider_sets.append(ps)
-    return self
-  }
-
-  method start() {
-    io.println('Starting app at ' + str(host) + ':' +  str(port))
-    async.create_remote(
-        ApplicationRunner,
-        (host, port, controller_classes, provider_sets))
-  }
-}
-
-self._REQUEST_METHOD_TO_ANNOTATION = {
-  'GET': Get,
-  'HEAD': Head,
-  'POST': Post,
-  'PUT': Put,
-  'DELETE': Delete,
-  'CONNECT': Connect,
-  'OPTIONS': Options,
-  'TRACE': Trace,
-  'PATCH': Patch
-}
-
-@async.RemoteClass
-class ApplicationRunner {
-  field injector
-  new(field host, field port, field controller_classes, field provider_sets=[]) {
-    injector = inject.Injector()
-    provider_sets.each(ps -> injector.install(ps()))
-    for (_, ctrlr_cls) in controller_classes {
-      injector.install(ctrlr_cls)
-    }
-  }
-
-  method process(request) {
-    for (_, ctrlr_cls) in controller_classes {
-      req_ctrlr = _get_request_controller(ctrlr_cls)
-      if ~req_ctrlr.matcher_fn(request) {
-        continue
-      }
-      ctrlr = injector.get(ctrlr_cls)
-      request = req_ctrlr.marshall(request)
-      injector.install(Request, () -> request)
-      method_annot = req_ctrlr.get_label(request)
-      return req_ctrlr.unmarshall(_process_internal(ctrlr_cls, ctrlr, method_annot, request))
-    }
-    raise error.Error('No controller found for request: ' + str(request))
-  }
-
-  method _get_request_controller(ctrlr_cls) {
-    req_ctrlrs = ctrlr_cls.all_annotations().where(a -> a is RequestController)
-    if req_ctrlrs.len() == 0 {
-      raise error.Error(str(ctrlr_cls) + ' has no RequestController annotation.')
-    } else if req_ctrlrs.len() > 1 {
-      raise error.Error(str(ctrlr_cls) + ' has multiple RequestController annotations.')
-    }
-    return req_ctrlrs[0]
-  }
-
-  method _process_internal(ctrlr_cls, ctrlr, annot, request) {
-    methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
-    if methods.len() == 0 {
-      raise error.Error(str(ctrlr_cls) + ' has no ' + str(annot) + ' annotated methods.')
-    } else if methods.len() > 1 {
-      raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(annot) + ' annotated methods.')
-    }
-    return ctrlr.$get(methods[0].name())(request)
-  }
-
-  method run() {
-    sock = socket.create_server_socket(host, port)
-    while True {
-      handle = await sock.accept()
-      try {
-        await handle.send(process(await handle.receive()))
-        handle.close()
-      } catch e {
-        io.fprintln(io.ERROR, e)
-      }
-    }
-  }
-}
-
-class Server {
-  field apps
-
-  new() {
-    apps = []
-  }
-
-  method add_application(app) {
-    apps.append(app)
-    return self
-  }
-
-  method run() {
-    await async.all(apps.map(app -> app.start().run()))
-  }
-}
 
 def is_index(req) {
   net.parse_request(req).path == '/'
 }
 
-@HttpRequestController(is_index)
+@net.HttpRequestController(is_index)
 @inject.Inject(keys: IndexHtml)
 class IndexController {
   new(field index_html) {}
 
-  @Get
+  @net.Get
   method get(http_request) {
     net.HttpResponse().add_content(index_html)
   }
 }
 
-@HttpRequestController
+@net.HttpRequestController
 @inject.Inject(keys: NotFoundHtml)
 class NotFoundController {
   new(field not_found) {}
 
-  @Get
+  @net.Get
   method get(http_request) {
     net.HttpResponse().add_content(not_found)
   }
 }
 
-@RequestController
+@net.RequestController
 class RpcController {
   new() {}
 
-  @Rpc
+  @net.Rpc
   method process(request) {
     return 'true'
   }
 }
-
-class IndexHtml {}
-class NotFoundHtml {}
 
 class WebProviders : inject.ProviderSet {
   @inject.Singleton
@@ -206,11 +56,12 @@ class WebProviders : inject.ProviderSet {
   }
 }
 
-Server()
+net.Server()
     .add_application(
-        Application('0.0.0.0', 80)
+        net.Application('0.0.0.0', 80)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
             .add_provider_set(() -> WebProviders()))
-    .add_application(Application('0.0.0.0', 1453).add_controller(RpcController))
+    ;.add_application(
+    ;    net.Application('0.0.0.0', 1453).add_controller(RpcController))
     .run()

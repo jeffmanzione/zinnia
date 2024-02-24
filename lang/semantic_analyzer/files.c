@@ -767,11 +767,6 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
 
     num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
   }
-  // Statics
-  for (i = 0; i < alist_len(module->classes); ++i) {
-    ClassDef *class = (ClassDef *)alist_get(module->classes, i);
-    num_ins += produce_statics(analyzer, class, tape);
-  }
   // Function annotations
   for (i = 0; i < alist_len(module->functions); ++i) {
     FunctionDef *func = (FunctionDef *)alist_get(module->functions, i);
@@ -798,6 +793,11 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
       num_ins += produce_class_annotation(
           analyzer, class, (Annotation *)al_value(&annots), tape);
     }
+  }
+  // Statics
+  for (i = 0; i < alist_len(module->classes); ++i) {
+    ClassDef *class = (ClassDef *)alist_get(module->classes, i);
+    num_ins += produce_statics(analyzer, class, tape);
   }
   // Statements
   for (i = 0; i < alist_len(module->statements); ++i) {
