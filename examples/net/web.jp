@@ -61,7 +61,7 @@ net.Server()
         net.Application('0.0.0.0', 80)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
-            .add_provider_set(() -> WebProviders()))
-    ;.add_application(
-    ;    net.Application('0.0.0.0', 1453).add_controller(RpcController))
+            .add_provider_set(WebProviders))
+    .add_application(
+        net.Application('0.0.0.0', 1453).add_controller(RpcController))
     .run()
