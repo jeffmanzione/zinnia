@@ -55,7 +55,7 @@ dkms.conf
 bazel*
 
 # JL
-*.ja
-*.jb
+*.zna
+*.znb
 
 compile_commands.json

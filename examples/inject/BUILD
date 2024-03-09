@@ -1,10 +1,10 @@
-load("//:jasper_lang.bzl", "jasper_binary")
+load("//:zinnia_lang.bzl", "zinnia_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jasper_binary(
+zinnia_binary(
     name = "webserver",
-    main = "webserver.jp",
+    main = "webserver.zn",
 )

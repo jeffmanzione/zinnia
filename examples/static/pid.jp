@@ -1,5 +1,0 @@
-_ = None
-
-def current_process_id() {
-  __current_process_id()
-}
