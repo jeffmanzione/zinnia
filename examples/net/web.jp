@@ -1,5 +1,6 @@
 import inject
 import io
+import json
 import net
 import web
 
@@ -39,7 +40,7 @@ class RpcController {
 
   @net.Rpc
   method process(request) {
-    return 'true'
+    return json.jsonify({'message': 'Hello, world!'})
   }
 }
 
