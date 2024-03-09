@@ -749,10 +749,23 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->module_name);
   }
-  // Statics
+  // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
-    num_ins += produce_statics(analyzer, class, tape);
+    if (alist_len(class->def.parent_classes) == 0) {
+      continue;
+    }
+    ClassName *super = (ClassName *)alist_get(class->def.parent_classes, 0);
+    num_ins += tape_ins(tape, PUSH, class->def.name.token);
+
+    if (NULL != super->module) {
+      num_ins += tape_ins(tape, RES, super->module);
+      num_ins += tape_ins(tape, GET, super->token);
+    } else {
+      num_ins += tape_ins(tape, RES, super->token);
+    }
+
+    num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
   }
   // Function annotations
   for (i = 0; i < alist_len(module->functions); ++i) {
@@ -781,23 +794,10 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
           analyzer, class, (Annotation *)al_value(&annots), tape);
     }
   }
-  // Superclasses
+  // Statics
   for (i = 0; i < alist_len(module->classes); ++i) {
     ClassDef *class = (ClassDef *)alist_get(module->classes, i);
-    if (alist_len(class->def.parent_classes) == 0) {
-      continue;
-    }
-    ClassName *super = (ClassName *)alist_get(class->def.parent_classes, 0);
-    num_ins += tape_ins(tape, PUSH, class->def.name.token);
-
-    if (NULL != super->module) {
-      num_ins += tape_ins(tape, RES, super->module);
-      num_ins += tape_ins(tape, GET, super->token);
-    } else {
-      num_ins += tape_ins(tape, RES, super->token);
-    }
-
-    num_ins += tape_ins_text(tape, CALL, intern("$__set_super"), super->token);
+    num_ins += produce_statics(analyzer, class, tape);
   }
   // Statements
   for (i = 0; i < alist_len(module->statements); ++i) {

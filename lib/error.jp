@@ -41,7 +41,7 @@ class StackLine {
     func = function()
     result = color('31;1').extend(module_name)
     if func {
-      if func.is_method() {
+      if func.is_method() and func.parent_class() {
         result.extend('.').extend(func.parent_class().name())
       }
       result.extend('.').extend(func.name())

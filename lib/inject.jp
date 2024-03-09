@@ -162,7 +162,9 @@ class Injector {
   }
 
   method _install_provider_set(ps) {
-    ps.init()
+    if ps.init {
+      ps.init()
+    }
     for (_, meth) in ps.class().methods() {
       provides_annots = meth.annotations.where(a -> a is Provides)
       if provides_annots.len() == 0 {
@@ -196,7 +198,7 @@ class Provider {
 
 ; Annotation that marks a class as a singleton: there will only ever be one
 ; instance per Injector.
-class Singleton { method annotate(_) {} }
+class Singleton { method annotate(_) { } }
 
 ; Reprensents an injectable type.
 class Key {

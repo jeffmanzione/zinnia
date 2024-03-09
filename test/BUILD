@@ -20,6 +20,11 @@ jasper_binary(
 )
 
 jasper_binary(
+    name = "json_test",
+    main = "json_test.jp",
+)
+
+jasper_binary(
     name = "time_test",
     main = "time_test.jp",
 )

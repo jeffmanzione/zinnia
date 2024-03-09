@@ -154,7 +154,7 @@ class String {
 
 class Tuple {
   method ==(other) {
-    if (len() != other.len()) return False
+    if (~(other is Tuple) or len() != other.len()) return False
     for i=0, i<len(), i=i+1 {
       if (self[i] != other[i]) {
         return False
@@ -195,7 +195,7 @@ class Tuple {
 
 class Array {
   method ==(other) {
-    if (len() != other.len()) return False
+    if (~(other is Array) or len() != other.len()) return False
     for i=0, i<len(), i=i+1 {
       if (self[i] != other[i]) {
         return False
