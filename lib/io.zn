@@ -1,0 +1,79 @@
+import io_ext
+import struct
+
+self.IN = FileReader('__STDIN__', True)
+self.OUT = FileWriter('__STDOUT__', True)
+self.ERROR = FileWriter('__STDERR__', True)
+
+class _FileInternal {
+  field file
+  new(fn, rw, a, binary) {
+    mode = cat(rw)
+    if binary {
+      mode.extend('b')
+    }
+    if a {
+      mode.extend('+')
+    }
+    file = __File(fn, mode)
+  }
+  method gets(n) await file.__gets(n)
+  method getline() await file.__getline()
+  method getall() await file.__getall()
+  method puts(s) await file.__puts(s)
+  method close() await file.__close()
+}
+
+class FileReader {
+  field fi
+  new(fn, binary=False) {
+    fi = _FileInternal(fn, 'r', False, binary)
+  }
+  method close() fi.close()
+  method gets(n) fi.gets(n)
+  method getline() fi.getline()
+  method getlines() fi.getlines()
+  method getall() fi.getall()
+}
+
+class FileWriter {
+  field fi
+  new(fn, append=False, binary=False) {
+    fi = _FileInternal(fn, 'w', append, binary)
+  }
+  method write(s) fi.puts(s)
+  method writeln(s) {
+    fi.puts(s)
+    fi.puts('\n')
+  }
+  method close() fi.close()
+}
+
+def fprint(f, a) {
+  f.write(str(a))
+}
+
+def fprintln(f, a) {
+  f.writeln(str(a))
+}
+
+def print(a) {
+  fprint(OUT, a)
+}
+
+def println(a) {
+  fprintln(OUT, a)
+}
+
+def error(a) {
+  fprint(ERROR, a)
+}
+
+def errorln(a) {
+  fprintln(ERROR, a)
+}
+
+/*
+self.FileEvent = io_ext.FileEvent
+self.FileWatcher = io_ext.FileWatcher
+*/

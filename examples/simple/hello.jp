@@ -1,4 +1,0 @@
-import io
-
-io.print('Enter your name: ')
-io.println('Hi, ' + io.IN.getline().rtrim() + '! Say hello to the world!')

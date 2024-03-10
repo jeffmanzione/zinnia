@@ -1,0 +1,30 @@
+import io
+import socket
+
+host = args.host
+port = args.port | 1453
+
+if ~host {
+  io.println('Host not set. Use --host.')
+  exit
+}
+
+server = () async {
+  server_socket = socket.create_server_socket(args.host, port)
+  handle = await server_socket.accept()
+  await handle.send('Hello, world!')
+  handle.close()
+  server_socket.close()
+}()
+
+client = () async {
+  client = socket.create_client_socket(args.host, port)
+  handle = await client.connect()
+  io.println(await handle.receive())
+  client.close()
+}()
+
+await server
+await client
+
+socket.cleanup()

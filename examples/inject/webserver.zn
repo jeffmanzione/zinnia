@@ -1,0 +1,129 @@
+; A toy example of a webserver using dependency injection.
+import error
+import io
+import inject
+import net
+import socket
+
+
+self.HOST = args.host | '0.0.0.0'
+self.PORT = Int(args.port | 80)
+
+injector = inject.Injector().install(ServerProviders())
+
+injector.get(Server).run()
+
+class Host {}
+class Port {}
+class Favicon {}
+class Index {}
+class NotFound {}
+
+class ServerProviders : inject.ProviderSet {
+  method init() {
+    bind(Host, () -> HOST)
+    bind(Port, () -> PORT)
+  }
+
+  @inject.Singleton
+  @inject.Provides(key: Favicon)
+  method provide_favicon() {
+    io.FileReader('./examples/sockets/web/favicon.ico', True).getall()
+  }
+
+  @inject.Singleton
+  @inject.Provides(key: Index)
+  method provide_index() {
+    io.FileReader('./examples/sockets/web/index.html').getall()
+  }
+
+  @inject.Singleton
+  @inject.Provides(key: NotFound)
+  method provide_not_found() {
+    io.FileReader('./examples/sockets/web/not_found.html').getall()
+  }
+
+  @inject.Singleton
+  @inject.Provides(key: net.HttpSocket, params: [Host, Port])
+  method provide_http_socket(host, port) {
+    net.HttpSocket(socket.create_server_socket(host, port))
+  }
+}
+
+class RequestHandler {
+  method handle(request) { raise error.Error('Not implemented') }
+}
+
+@inject.Inject(keys: Favicon)
+class FaviconHandler : RequestHandler {
+  new(field favicon) {}
+  method handle(_) {
+    return net.HttpResponse()
+        .set_content_type('image/x-icon')
+        .add_content(favicon)
+  }
+}
+
+@inject.Inject(keys: Index)
+class IndexHandler : RequestHandler {
+  new(field index) {}
+  method handle(_) {
+    return net.HttpResponse().add_content(index)
+  }
+}
+
+@inject.Inject(keys: NotFound)
+class NotFoundHandler : RequestHandler {
+  new(field not_found) {}
+  method handle(_) {
+    return net.HttpResponse().set_status_code(404)
+        .set_status('NOT FOUND')
+        .add_content(not_found)
+  }
+}
+
+class RedirectHandler : RequestHandler {
+  new() {}
+  method handle(request) {
+    return net.redirect(request,  net.HttpResponse(), '/')
+  }
+}
+
+@inject.Inject(keys: [net.HttpSocket, inject.Injector, Host, Port])
+class Server {
+  field _request_handlers
+  new(field sock, field injector, field host, field port) {
+    _request_handlers = {
+      '/': IndexHandler,
+      '/index.html': RedirectHandler,
+      '/favicon.ico': FaviconHandler
+    }
+  }
+  method run() {
+    io.println('Starting server at ' + host + ':' + str(port) + '.')
+    try {
+      while True { 
+        _handle_connection(await sock.accept())
+      }
+    } catch e {
+      io.fprintln(io.ERROR, e)
+    }
+  }
+
+  method _handle_connection(handle) {
+    try {
+      request = await handle.receive()
+      if request {
+        io.println('Received request: ' + request.type + ' ' + request.path)
+        await handle.send(_get_handler(request.path).handle(request))
+      }
+    } catch e {
+      io.fprintln(io.ERROR, e)
+    }
+    handle.close()
+  }
+
+  method _get_handler(path) {
+    injector.get(_request_handlers.get_or_default(path, NotFoundHandler))
+  }
+}

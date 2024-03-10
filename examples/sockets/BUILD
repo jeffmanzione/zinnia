@@ -1,30 +1,30 @@
-load("//:jasper_lang.bzl", "jasper_binary")
+load("//:zinnia_lang.bzl", "zinnia_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-jasper_binary(
+zinnia_binary(
     name = "chat",
-    main = "chat.jp",
+    main = "chat.zn",
 )
 
-jasper_binary(
+zinnia_binary(
     name = "http_hello",
-    main = "http_hello.jp",
+    main = "http_hello.zn",
 )
 
-jasper_binary(
+zinnia_binary(
     name = "message",
-    main = "message.jp",
+    main = "message.zn",
 )
 
-jasper_binary(
+zinnia_binary(
     name = "simple_http",
-    main = "simple_http.jp",
+    main = "simple_http.zn",
 )
 
-jasper_binary(
+zinnia_binary(
     name = "webserver",
-    main = "webserver.jp",
+    main = "webserver.zn",
 )
