@@ -52,7 +52,7 @@ void _write_file_chunks(const char file_content[], FILE *out) {
 }
 
 char *_compile_to_file(const char file_name[]) {
-  if (ends_with(file_name, ".zn")) {
+  if (ends_with(file_name, ".jp")) {
 
     FILE *assembly_file = tmpfile();
     compile_to_assembly(file_name, assembly_file);
@@ -67,7 +67,7 @@ char *_compile_to_file(const char file_name[]) {
     DEALLOC(assembly_content);
     fclose(assembly_file);
     return escaped_assembly;
-  } else if (ends_with(file_name, ".zna")) {
+  } else if (ends_with(file_name, ".ja")) {
     FILE *file = FILE_FN(file_name, "rb");
     if (NULL == file) {
       FATALF("File does not exist: %s", file_name);
@@ -117,7 +117,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
   file_info_delete(fi);
 }
 
-int zinniap(int argc, const char *args[]) {
+int jasperp(int argc, const char *args[]) {
   alloc_init();
   strings_init();
   optimize_init();
@@ -129,10 +129,10 @@ int zinniap(int argc, const char *args[]) {
     return EXIT_FAILURE;
   }
 
-  const char *znmodules_file_name = args[2];
-  FILE *znmodules = FILE_FN(znmodules_file_name, "rb");
-  if (NULL == znmodules) {
-    fprintf(stderr, "Could not open file: \"%s\".\n", znmodules_file_name);
+  const char *jpmodules_file_name = args[2];
+  FILE *jpmodules = FILE_FN(jpmodules_file_name, "rb");
+  if (NULL == jpmodules) {
+    fprintf(stderr, "Could not open file: \"%s\".\n", jpmodules_file_name);
     return EXIT_FAILURE;
   }
 
@@ -141,7 +141,7 @@ int zinniap(int argc, const char *args[]) {
   Set extra_hdrs;
   set_init_default(&extra_hdrs);
 
-  _populate_native_modules(znmodules, &native_modules, &extra_hdrs);
+  _populate_native_modules(jpmodules, &native_modules, &extra_hdrs);
 
   fprintf(out, "#include <stdlib.h>\n\n"
                "#include \"alloc/alloc.h\"\n"
@@ -221,7 +221,7 @@ int zinniap(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
     char *escaped_dir_path = escape(dir_path);
-    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
+    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.ja\";\n",
             escaped_dir_path, file_base);
     fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
             file_base);
@@ -239,7 +239,7 @@ int zinniap(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(m->src, &dir_path, &file_base, &ext);
     char *escaped_dir_path = escape(dir_path);
-    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
+    fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.ja\";\n",
             escaped_dir_path, file_base);
     fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
             file_base);

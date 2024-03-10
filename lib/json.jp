@@ -1,0 +1,39 @@
+import struct
+
+def jsonify(value) {
+  if value == True {
+    return 'true'
+  } else if value == False {
+    return 'false'
+  } else if value is Object {
+    return _jsonify_object(value)
+  }
+  return str(value)
+}
+
+def _jsonify_object(obj) {
+  if obj is String {
+    return '\"' + obj + '\"'
+  } else if obj is Array {
+    return _jsonify_array(obj)
+  } else if obj is struct.Map {
+    return _jsonify_map(obj)
+  }
+  entries = []
+  for (_, f) in obj.class().fields() {
+    entries.append('"' + str(f) + '":' + jsonify(obj.$get(f)))
+  }
+  return '{' + ','.join(entries) + '}'
+}
+
+def _jsonify_array(arr) {
+  return '[' + ','.join(arr.map(e -> jsonify(e))) + ']'
+}
+
+def _jsonify_map(map) {
+  entries = []
+  for (k, v) in map {
+    entries.append('"' + str(k) + '":' + jsonify(v))
+  }
+  return '{' + ','.join(entries) + '}'
+}

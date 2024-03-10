@@ -1,0 +1,88 @@
+import io
+
+; Returns a data array of 0 values with the given length.
+def zeros(type, count) {
+  if type == Int {
+    return Int64Array(count)
+  } else if type == Float {
+    return Float64Array(count)
+  } else if type == Char {
+    return Int8Array(count)
+  } else {
+    return type(count)
+  }
+}
+
+; Returns a data matrix of 0 values with the given dimensions.
+def zeros2(type, dim1, dim2) {
+  if type == Int {
+    return Int64Matrix(dim1, dim2)
+  } else if type == Float {
+    return Float64Matrix(dim1, dim2)
+  } else if type == Char {
+    return Int8Matrix(dim1, dim2)
+  } else {
+    return type(dim1, dim2)
+  }
+}
+
+; Arrays
+class Int8Array : DataArray {}
+class Int32Array : DataArray {}
+class Int64Array : DataArray {}
+class Float32Array : DataArray {}
+class Float64Array : DataArray {}
+
+; Matrices
+class Int8Matrix : DataMatrix {}
+class Int32Matrix : DataMatrix {}
+class Int64Matrix : DataMatrix {}
+class Float32Matrix : DataMatrix {}
+class Float64Matrix : DataMatrix {}
+
+; Base class for data arrays.
+class DataArray {
+  method to_s() {
+    res = class().name() + '(['
+    l = len()
+    if l == 0 {
+      return res + '])'
+    }
+    if l < 8 {
+      for i = 0, i < l-1, i=i+1 {
+        res.extend(str(self[i]) + ', ')
+      }
+      res.extend(str(self[l-1]))
+    } else {
+      for i = 0, i < 5, i=i+1 {
+        res.extend(str(self[i]) + ', ')
+      }
+      res.extend('...' + str(self[l-1]))
+    }
+    return res + '])'
+  }
+}
+
+; Base class for data matrices.
+class DataMatrix {
+  method to_s() {
+    res = class().name() + '(['
+    l = shape()[0]
+    if l == 0 {
+      return res + '])'
+    }
+    res.extend('\n  ')
+    if l < 8 {
+      for i = 0, i < l-1, i=i+1 {
+        res.extend(str(self[i].to_arr()) + ',\n  ')
+      }
+      res.extend(str(self[l-1].to_arr()))
+    } else {
+      for i = 0, i < 5, i=i+1 {
+        res.extend(str(self[i].to_arr()) + ',\n  ')
+      }
+      res.extend('...\n  ' + str(self[l-1].to_arr()))
+    }
+    return res + ']\n  shape=' + str(shape()) + ')'
+  }
+}

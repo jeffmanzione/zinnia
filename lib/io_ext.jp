@@ -1,0 +1,120 @@
+_ = None
+
+None
+
+/*
+class FileEvent {
+  new(field file_name, field mask) {}
+  method to_s() {
+    masks = []
+    for (k, v) in _IN_TO_STR {
+      if (k & mask) > 0 {
+        masks.append(v)
+      }
+    }
+    return cat('FileEvent(file_name=',
+        file_name, ', type=', ','.join(masks), ')')
+  }
+}
+*/
+
+/*
+class FileWatcher {
+  field _fw, listeners, is_started
+  new() {
+    _fw = __FileWatcher()
+    listeners = {}
+    is_started = False
+  }
+  method watch(dir) {
+    if ~(dir is String) {
+      raise Error('FileWatcher.watch() only takes a String parameter.')
+    }
+    if ~_fw.__is_valid() {
+      raise Error('FileWatcher is not valid.')
+    }
+    wd = _fw.__watch(dir)
+    if ~is_started {
+      _start()
+      is_started = True
+    }
+    return wd
+  }
+  method unwatch(watch_dir) {
+    if ~(watch_dir is __WatchDir) {
+      raise Error('FileWatcher.unwatch() can only be called with a __WatchDir.')
+    }
+    _fw.__unwatch(watch_dir)
+  }
+  method _start() async {
+    while True {
+      await _fw.__read()
+      files_and_masks = _fw.__get_read()
+      for (_, (file, mask)) in files_and_masks {
+        for (type, callbacks) in listeners {
+          if (type & mask) > 0 {
+            for (_, callback) in callbacks {
+              callback(FileEvent(file, mask))
+            }
+          }
+        }
+      }
+    }
+  }
+  method close() {
+    _fw.__close()
+  }
+  method listen(callback, types=ALL_EVENTS) {
+    if listeners[types] {
+      listeners[types].append(callback)
+    } else {
+      listeners[types] = [callback]
+    }
+  }
+}
+*/
+
+/*
+self.IN_ACCESS = 1
+self.IN_ATTRIB = 4
+self.IN_CLOSE = 24
+self.IN_CLOSE_WRITE = 8
+self.IN_CLOSE_NOWRITE = 16
+self.IN_CREATE = 256
+self.IN_DELETE = 512
+self.IN_DELETE_SELF = 1024
+self.IN_MODIFY = 2
+self.IN_MOVE = 192
+self.IN_MOVE_SELF = 2048
+self.IN_MOVED_FROM = 64
+self.IN_MOVED_TO = 128
+self.IN_OPEN = 32
+self.IN_IGNORED = 32768
+self.IN_ISDIR = 1073741824
+self.IN_Q_OVERFLOW = 16384
+self.IN_UNMOUNT = 8192
+self.ALL_EVENTS = 4095
+*/
+
+/*
+self._IN_TO_STR = {
+  1: 'ACCESS',
+  4: 'ATTRIB',
+  24: 'CLOSE',
+  8: 'CLOSE_WRITE',
+  16: 'CLOSE_NOWRITE',
+  256: 'CREATE',
+  512: 'DELETE',
+  1024: 'DELETE_SELF',
+  2: 'MODIFY',
+  192: 'MOVE',
+  2048: 'MOVE_SELF',
+  64: 'MOVED_FROM',
+  128: 'MOVED_TO',
+  32: 'OPEN',
+  32768: 'IGNORED',
+  1073741824: 'ISDIR',
+  16384: 'Q_OVERFLOW',
+  8192: 'UNMOUNT'
+}
+*/

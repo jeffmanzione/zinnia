@@ -1,5 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//:zinnia_lang.bzl", "zinnia_binary", "zinnia_cc_library")
+load("//:jasper_lang.bzl", "jasper_binary", "jasper_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -18,31 +18,31 @@ cc_library(
     ],
 )
 
-zinnia_cc_library(
+jasper_cc_library(
     name = "pid",
     cc_deps = [
         ":pid_cc_lib",
     ],
     cc_init_fn = "init_pid",
-    src_module = "pid.zn",
+    src_module = "pid.jp",
 )
 
-zinnia_cc_library(
+jasper_cc_library(
     name = "custom_math",
     cc_deps = [
         "//examples/dynamic:_custom",
     ],
     cc_init_fn = "_init_custom",
-    src_module = "custom_math.zn",
+    src_module = "custom_math.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "pid_test",
     cc_deps = [
         ":pid_cc_lib",
         "//examples/dynamic:_custom",
     ],
-    main = "pid_test.zn",
+    main = "pid_test.jp",
     modules = [
         ":pid",
         ":custom_math",

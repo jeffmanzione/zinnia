@@ -1,0 +1,53 @@
+import io
+import test
+import time
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+class Test {}
+class Test1 {}
+class Test2 {}
+class Test3 {}
+class Test4 {}
+class Test5 {}
+
+class A {}
+
+@Test
+class B {}
+
+@Test1
+@Test2
+class C {}
+
+@Test3
+@Test4
+@Test5
+class D {}
+
+
+@test.TestClass
+class AnnotationsTest {
+  @test.Test
+  method test_no_annotations() {
+    expect(A.to_s(), 'class A')
+    expect(A.all_annotations(), [])
+  }
+  @test.Test
+  method test_1_annotation() {
+    expect(B.to_s(), 'class B @Test')
+    expect(B.all_annotations().map(a -> a.class()), [Test])
+  }
+  @test.Test
+  method test_2_annotation() {
+    expect(C.to_s(), 'class C @Test1 @Test2')
+    expect(C.all_annotations().map(a -> a.class()), [Test1, Test2])
+  }
+  @test.Test
+  method test_3_annotation() {
+    expect(D.to_s(), 'class D @Test3 @Test4 @Test5')
+    expect(D.all_annotations().map(a -> a.class()), [Test3, Test4, Test5])
+  }
+}

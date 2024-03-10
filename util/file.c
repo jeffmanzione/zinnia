@@ -43,19 +43,19 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   }
   strcpy(pos, file_prefix);
   pos += strlen(file_prefix);
-  strcpy(pos, ".znb");
+  strcpy(pos, ".jb");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
     return to_return;
   }
-  strcpy(pos, ".zna");
+  strcpy(pos, ".ja");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
     return to_return;
   }
-  strcpy(pos, ".zn");
+  strcpy(pos, ".jp");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
     DEALLOC(fn);
