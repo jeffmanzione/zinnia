@@ -28,12 +28,15 @@ def _zinnia_library_impl(ctx):
             inputs = [src],
             executable = compiler_executable,
             arguments = zinniac_args,
-            mnemonic = "CompileZN",
+            mnemonic = "zinniac",
             progress_message = "Running command: %s %s" % (compiler_executable_path, " ".join(zinniac_args)),
         )
     return [
         DefaultInfo(
             files = depset(out_files),
+        ),
+        OutputGroupInfo(
+            sources = depset(src_files),
         ),
     ]
 
@@ -63,32 +66,53 @@ _zinnia_library = rule(
 )
 
 def _prioritize_bin(file):
-    if file.extension.endswith(".znb"):
+    if file.extension.endswith("znb"):
         return 0
     else:
         return 1
 
-def zinnia_library(name, srcs, bin = True, assembly = True):
-    return _zinnia_library(name = name, srcs = srcs, bin = bin, assembly = True)
+def zinnia_library(name, srcs, deps = [], bin = True, assembly = True):
+    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = True)
 
 def _zinnia_binary_impl(ctx):
-    runner_executable = ctx.attr.runner.files_to_run.executable
+    compiler_executable = ctx.attr.compiler.files_to_run.executable
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
-    input_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".zna")]
-    input_files = [main_file] + input_files
-    zinnia_command = "./%s %s" % (runner_executable.short_path, " ".join([file.short_path for file in input_files]))
 
-    run_sh = ctx.actions.declare_file(ctx.label.name + ".sh")
-    ctx.actions.write(
-        output = run_sh,
-        is_executable = True,
-        content = zinnia_command,
+    znmodule_files = [file for target in ctx.attr.modules for file in target.files.to_list() if file.path.endswith(".znmodule")]
+    znmodules_file = ctx.actions.declare_file(ctx.label.name + "_merged.znmodule")
+
+    if len(znmodule_files) > 0:
+        ctx.actions.run_shell(
+            outputs = [znmodules_file],
+            inputs = znmodule_files,
+            command = "cat %s > %s" % (" ".join([file.path for file in znmodule_files]), znmodules_file.path),
+        )
+    else:
+        ctx.actions.run_shell(
+            outputs = [znmodules_file],
+            inputs = [],
+            command = "touch %s" % znmodules_file.path,
+        )
+
+    dep_files = [file for target in ctx.attr.deps for file in target.files.to_list() if file.path.endswith(".zn")] + [src for dep in ctx.attr.deps for src in dep[OutputGroupInfo].sources.to_list()]
+    src_files = [znmodules_file, main_file] + dep_files
+    out_file = ctx.actions.declare_file(ctx.label.name + ".c")
+
+    zinniap_args = [out_file.path] + [file.path for file in src_files]
+    input_files = src_files
+
+    ctx.actions.run(
+        outputs = [out_file],
+        inputs = input_files,
+        executable = compiler_executable,
+        arguments = zinniap_args,
+        mnemonic = "zinniap",
+        progress_message = "Running command: %s %s" %
+                           (compiler_executable.path, " ".join(zinniap_args)),
     )
     return [
         DefaultInfo(
-            files = depset(input_files + [runner_executable, run_sh]),
-            executable = run_sh,
-            default_runfiles = ctx.runfiles(files = input_files + [runner_executable, run_sh]),
+            files = depset([out_file]),
         ),
     ]
 
@@ -97,10 +121,13 @@ _zinnia_binary = rule(
     attrs = {
         "main": attr.label(
             doc = "Main file",
+            allow_single_file = True,
+            mandatory = True,
         ),
         "deps": attr.label_list(),
-        "runner": attr.label(
-            default = Label("//:zinnia"),
+        "modules": attr.label_list(),
+        "compiler": attr.label(
+            default = Label("//:zinniap"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -108,25 +135,72 @@ _zinnia_binary = rule(
         "builtins": attr.label_list(),
         "executable_ext": attr.string(default = ".sh"),
     },
-    executable = True,
 )
 
-def zinnia_binary(name, main, srcs = [], deps = []):
+def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
     if main in srcs:
         srcs.remove(main)
-
-    zinnia_library(
-        "%s_main" % name,
-        srcs = [main],
-    )
+    deps = deps + [mdep + "_lib" for mdep in modules]
     if len(srcs) > 0:
         zinnia_library(
-            "%s_srcs" % name,
+            name = "%s_srcs" % name,
             srcs = srcs,
         )
         deps = [":%s_srcs" % name] + deps
-    return _zinnia_binary(
-        name = name,
-        main = ":%s_main" % name,
+    _zinnia_binary(
+        name = "%s_bin" % name,
+        main = main,
         deps = deps,
+        modules = modules,
+    )
+    native.cc_binary(
+        name = name,
+        srcs = [":%s_bin" % name],
+        deps = cc_deps + [
+            "//run",
+            "//util/args:commandline",
+            "//util/args:commandlines",
+            "@c_data_structures//struct:alist",
+            "@memory_wrapper//alloc",
+            "@memory_wrapper//alloc/arena:intern",
+        ],
+    )
+
+def _zinnia_cc_library_impl(ctx):
+    src_module = ctx.file.src_module
+    out_file = ctx.actions.declare_file(ctx.label.name + ".znmodule")
+    cc_headers = [hdr for cc_dep in ctx.attr.cc_deps for hdr in cc_dep[CcInfo].compilation_context.direct_headers]
+    ctx.actions.run_shell(
+        outputs = [out_file],
+        inputs = cc_headers,
+        command = "echo \"%s:%s:%s\" > %s" % (src_module.path, ctx.attr.cc_init_fn, ",".join([hdr.path for hdr in cc_headers]), out_file.path),
+    )
+    return [DefaultInfo(files = depset([out_file]))]
+
+_zinnia_cc_library = rule(
+    implementation = _zinnia_cc_library_impl,
+    attrs = {
+        "src_module": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+            doc = "Module file",
+        ),
+        "cc_deps": attr.label_list(),
+        "cc_init_fn": attr.string(
+            doc = "The function to call to initialize the module.",
+        ),
+    },
+)
+
+def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = None):
+    zinnia_library(
+        name = "%s_lib" % name,
+        srcs = [src_module],
+        deps = deps,
+    )
+    return _zinnia_cc_library(
+        name = name,
+        src_module = src_module,
+        cc_deps = cc_deps,
+        cc_init_fn = cc_init_fn,
     )
