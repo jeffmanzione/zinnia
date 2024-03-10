@@ -1,4 +1,4 @@
-load("//:jasper_lang.bzl", "jasper_library")
+load("//:zinnia_lang.bzl", "zinnia_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -6,11 +6,11 @@ package(
 
 filegroup(
     name = "lib_srcs",
-    srcs = glob(["*.jp"]),
+    srcs = glob(["*.zn"]),
 )
 
-jasper_library(
-    name = "lib_ja_srcs",
+zinnia_library(
+    name = "lib_zna_srcs",
     srcs = [":lib_srcs"],
     bin = False,
 )
@@ -33,10 +33,10 @@ cc_binary(
 genrule(
     name = "lib_gen",
     srcs = [
-        ":lib_ja_srcs",
+        ":lib_zna_srcs",
     ],
     outs = ["lib.h"],
-    cmd = "./$(location :lib_gen_bin) $(location :lib.h) $(locations :lib_ja_srcs)",
+    cmd = "./$(location :lib_gen_bin) $(location :lib.h) $(locations :lib_zna_srcs)",
     tools = [":lib_gen_bin"],
 )
 

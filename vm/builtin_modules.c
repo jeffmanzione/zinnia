@@ -28,7 +28,7 @@
 #include "util/string.h"
 
 #define LIB_DIR "lib/"
-#define LIB_EXT ".ja"
+#define LIB_EXT ".zna"
 
 #define REGISTER_MODULE(mm, name, lib_location)                                \
   {                                                                            \

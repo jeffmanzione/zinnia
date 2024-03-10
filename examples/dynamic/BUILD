@@ -1,5 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//:jasper_lang.bzl", "jasper_binary", "jasper_library")
+load("//:zinnia_lang.bzl", "zinnia_binary", "zinnia_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -29,13 +29,13 @@ cc_binary(
     deps = [":_custom"],
 )
 
-jasper_library(
+zinnia_library(
     name = "custom",
-    srcs = ["custom.jp"],
+    srcs = ["custom.zn"],
 )
 
-jasper_binary(
+zinnia_binary(
     name = "dynamic_test",
-    main = "dynamic_test.jp",
+    main = "dynamic_test.zn",
     deps = [":custom"],
 )
