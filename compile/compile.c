@@ -86,23 +86,23 @@ Tape *_read_file(const char fn[], bool opt) {
   }
 }
 
-void write_tape(const char fn[], const Tape *tape, bool out_zna,
-                const char machine_dir[], bool out_znb,
+void write_tape(const char fn[], const Tape *tape, bool out_ja,
+                const char machine_dir[], bool out_jb,
                 const char bytecode_dir[]) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
-  if (out_zna && ends_with(fn, ".zn")) {
+  if (out_ja && ends_with(fn, ".jp")) {
     make_dir_if_does_not_exist(machine_dir);
-    char *file_path = combine_path_file(machine_dir, file_name, ".zna");
+    char *file_path = combine_path_file(machine_dir, file_name, ".ja");
     FILE *file = FILE_FN(file_path, "wb");
     tape_write(tape, file);
     fclose(file);
     DEALLOC(file_path);
   }
-  if (out_znb && !ends_with(fn, ".znb")) {
+  if (out_jb && !ends_with(fn, ".jb")) {
     make_dir_if_does_not_exist(bytecode_dir);
-    char *file_path = combine_path_file(bytecode_dir, file_name, ".znb");
+    char *file_path = combine_path_file(bytecode_dir, file_name, ".jb");
     FILE *file = FILE_FN(file_path, "wb");
     tape_write_binary(tape, file);
     fclose(file);
@@ -119,8 +119,8 @@ void compile_to_assembly(const char file_name[], FILE *out) {
   tape_delete(tape);
 }
 
-Map *compile(const Set *source_files, bool out_zna, const char machine_dir[],
-             bool out_znb, const char bytecode_dir[], bool opt) {
+Map *compile(const Set *source_files, bool out_ja, const char machine_dir[],
+             bool out_jb, const char bytecode_dir[], bool opt) {
   optimize_init();
 
   M_iter srcs = set_iter((Set *)source_files);
@@ -129,14 +129,14 @@ Map *compile(const Set *source_files, bool out_zna, const char machine_dir[],
     const char *src = value(&srcs);
     Tape *tape = _read_file(src, opt);
     map_insert(src_map, src, tape);
-    write_tape(src, tape, out_zna, machine_dir, out_znb, bytecode_dir);
+    write_tape(src, tape, out_ja, machine_dir, out_jb, bytecode_dir);
   }
 
   optimize_finalize();
   return src_map;
 }
 
-int zinniac(int argc, const char *argv[]) {
+int jasperc(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 
@@ -144,14 +144,14 @@ int zinniac(int argc, const char *argv[]) {
   argconfig_compile(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
-  const bool out_zna = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
+  const bool out_ja = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
   const char *machine_dir =
       argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
-  const bool out_znb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
+  const bool out_jb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
   const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
 
-  Map *src_map = compile(argstore_sources(store), out_zna, machine_dir, out_znb,
+  Map *src_map = compile(argstore_sources(store), out_ja, machine_dir, out_jb,
                          bytecode_dir, opt);
 
 #ifdef DEBUG

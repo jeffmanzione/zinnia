@@ -1,4 +1,4 @@
-# zinnia
+# jasper
 
 A process virtual machine that I've created in my spare time.
 
@@ -21,14 +21,14 @@ Download the latest binaries released on GitHub.
 | :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install). I promise it is very easy to install! |
 |-|
 
-To build zinnia:
+To build jasper:
 
 ```shell
 # Clones this git repository.
-git clone https://github.com/jeffmanzione/zinnia.git
+git clone https://github.com/jeffmanzione/jasper.git
 
 # Bazel requires building within the workspace.
-cd zinnia
+cd jasper
 
 # Builds the compiler and runner.
 bazel build -c opt //:all
@@ -36,7 +36,7 @@ bazel build -c opt //:all
 
 ## Compiling your program to assembly and bytecode
 
-Use `zinniac` to compile your program.
+Use `jasperc` to compile your program.
 
 * `-a`: Output assembly (default=`false`).
 * `-b`: Output binary (default=`false`).
@@ -45,21 +45,21 @@ Use `zinniac` to compile your program.
 * `-assembly_out_dir`: Output location for JA files (default=`"./"`).
 
 ```shell
-zinniac -a -b my_program.zn
+jasperc -a -b my_program.jp
 ```
 
 ## Running your program
 
-Use `zinnia` to run your program either from source, assembly, or bytecode.
+Use `jasper` to run your program either from source, assembly, or bytecode.
 
 ```shell
-zinnia my_program.zn
+jasper my_program.jp
 # or
-zinnia my_program.zna
+jasper my_program.ja
 # or
-zinnia my_program.znb
+jasper my_program.jb
 ```
 
 ## Examples
 
-Check out the [examples](https://github.com/jeffmanzione/zinnia/tree/master/examples).
+Check out the [examples](https://github.com/jeffmanzione/jasper/tree/master/examples).

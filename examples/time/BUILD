@@ -1,20 +1,20 @@
-load("//:zinnia_lang.bzl", "zinnia_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-zinnia_binary(
+jasper_binary(
     name = "date",
-    main = "date.zn",
+    main = "date.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "time",
-    main = "time.zn",
+    main = "time.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "timestamp",
-    main = "timestamp.zn",
+    main = "timestamp.jp",
 )

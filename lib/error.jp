@@ -1,0 +1,112 @@
+import async ; keep
+
+class Token {
+  new(field text, field line, field col) {}
+
+  method to_s() {
+    return cat('Token(text=\'', text, '\',line=', line, ',col=', col, ')')
+  }
+}
+
+class StackLine {
+  method token() {
+    tok = __token()
+    if tok {
+      return Token(tok)
+    }
+    return Token('', -1, -1)
+  }
+  method source_token() {
+    tok = __source_token()
+    if tok {
+      return Token(tok)
+    }
+    return Token('', -1, -1)
+  }
+  method has_source_map() {
+    return __has_source_map()
+  }
+  method to_s() {
+    tok = if has_source_map() then source_token() else token()
+    module_name = None
+    module_filename = None
+    if module() {
+      module_name = module().name()
+      module_filename = module().filename()
+    } else {
+      module_name = '<unknown-module>'
+      module_filename = '<unknown-file>'
+    }
+    filename = if has_source_map() then module().source_filename() else module_filename
+    func = function()
+    result = color('31;1').extend(module_name)
+    if func {
+      if func.is_method() and func.parent_class() {
+        result.extend('.').extend(func.parent_class().name())
+      }
+      result.extend('.').extend(func.name())
+    }
+    return result.extend('(')
+        .extend(color(0))
+        .extend(str(filename))
+        .extend(':')
+        .extend(str(tok.line + 1))
+        .extend(color('31;1'))
+        .extend(')')
+        .extend(color(0))
+  }
+}
+
+class Error {
+  method to_s() {
+    result = cat(color('31;1'), self.class().name(), ': ', message, '\n')
+    if stacktrace[0].linetext() {
+      stackline = stacktrace[0]
+      has_sourcemap = stackline.has_source_map()
+      error_token = if has_sourcemap then stackline.source_token() else stackline.token()
+      left_padding = _token_left_padding(error_token)
+      result.extend(str(error_token.line + 1)).extend(':')
+      result.extend(color(0))
+      line_text = if has_sourcemap then stackline.source_linetext() else stackline.linetext()
+      if line_text {
+        result.extend(line_text.substr(0, error_token.col))
+            .extend(color('41;1'))
+            .extend(line_text.substr(error_token.col, error_token.text.len()))
+            .extend(color(0))
+            .extend(line_text.substr(error_token.col + error_token.text.len()))
+        for i=0, i < left_padding, i=i+1 {
+          result.extend(' ')
+        }
+        result.extend(color(0))
+        for i=0, i < error_token.text.len(), i=i+1 {
+          result.extend('^')
+        }
+        result.extend(color('31;1'))
+      } else {
+        result.extend(' <missing-line>')
+      }
+      result.extend(color('31;1'))
+          .extend('\n')
+    }
+    for i=0, i<stacktrace.len(), i=i+1 {
+      result.extend('  ').extend(str(stacktrace[i])).extend('\n')  
+    }
+    return result + color(0)
+  }
+}
+
+; Left padding should be '<chars for row num>:<token col>'
+def _token_left_padding(token) {
+  line_text_space = 1
+  if token.line >= 9999 {
+    line_text_space = 5
+  } else if token.line >= 999 {
+    line_text_space = 4
+  } else if token.line >= 99 {
+    line_text_space = 3
+  } else if token.line >= 9 {
+    line_text_space = 2
+  }
+  ; +1 for the colon.
+  return token.col + line_text_space + 1
+}

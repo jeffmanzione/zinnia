@@ -1,30 +1,30 @@
-load("//:zinnia_lang.bzl", "zinnia_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-zinnia_binary(
+jasper_binary(
     name = "annotations_test",
-    main = "annotations_test.zn",
+    main = "annotations_test.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "data_test",
-    main = "data_test.zn",
+    main = "data_test.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "inject_test",
-    main = "inject_test.zn",
+    main = "inject_test.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "json_test",
-    main = "json_test.zn",
+    main = "json_test.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "time_test",
-    main = "time_test.zn",
+    main = "time_test.jp",
 )

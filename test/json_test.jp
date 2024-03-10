@@ -1,0 +1,48 @@
+import io
+import json
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+class Test1 {
+  new(field f1, field f2) {}
+}
+
+@test.TestClass
+class JsonTest {
+  @test.Test
+  method test_jsonify_primitives() {
+    expect(json.jsonify(True), 'true')
+    expect(json.jsonify(False), 'false')
+    expect(json.jsonify(5), '5')
+    expect(json.jsonify(1.5), '1.5')
+  }
+  @test.Test
+  method test_jsonify_string() {
+    expect(json.jsonify('Cat'), '"Cat"') 
+  }
+  @test.Test
+  method test_jsonify_array() {
+    expect(
+        json.jsonify([True, 5, 'Cat']),
+        '[true,5,"Cat"]'
+    ) 
+  }
+  @test.Test
+  method test_jsonify_map() {
+    expect(
+        json.jsonify({'cat': 'Cat', 'hat': 'Hat'}),
+        '{"cat":"Cat","hat":"Hat"}'
+    ) 
+  }
+  @test.Test
+  method test_jsonify_object() {
+    expect(
+        json.jsonify(Test1(True, 'Cat')),
+        '{"f1":true,"f2":"Cat"}'
+    )
+  }
+   
+}

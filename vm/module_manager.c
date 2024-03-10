@@ -214,7 +214,7 @@ FileInfo *_module_info_get_file(ModuleInfo *module_info) {
   return file_info(module_info->file_name);
 }
 
-Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
+Module *_read_jp(ModuleManager *mm, ModuleInfo *module_info) {
   FileInfo *fi = _module_info_get_file(module_info);
 
   Q tokens;
@@ -262,7 +262,7 @@ Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
   }
 }
 
-Module *_read_zna(ModuleManager *mm, ModuleInfo *module_info) {
+Module *_read_ja(ModuleManager *mm, ModuleInfo *module_info) {
   FileInfo *fi = _module_info_get_file(module_info);
   Q tokens;
   Q_init(&tokens);
@@ -277,7 +277,7 @@ Module *_read_zna(ModuleManager *mm, ModuleInfo *module_info) {
   return &module_info->module;
 }
 
-Module *_read_znb(ModuleManager *mm, ModuleInfo *module_info) {
+Module *_read_jb(ModuleManager *mm, ModuleInfo *module_info) {
   FILE *file = FILE_FN(module_info->file_name, "rb");
   if (NULL == file) {
     FATALF("Cannot open file '%s'. Exiting...", module_info->file_name);
@@ -352,12 +352,12 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
   Module *module = NULL;
   if (!module_info->is_loaded) {
     if (!module_info->is_dynamic) {
-      if (ends_with(module_info->file_name, ".znb")) {
-        module = _read_znb(mm, module_info);
-      } else if (ends_with(module_info->file_name, ".zna")) {
-        module = _read_zna(mm, module_info);
-      } else if (ends_with(module_info->file_name, ".zn")) {
-        module = _read_zn(mm, module_info);
+      if (ends_with(module_info->file_name, ".jb")) {
+        module = _read_jb(mm, module_info);
+      } else if (ends_with(module_info->file_name, ".ja")) {
+        module = _read_ja(mm, module_info);
+      } else if (ends_with(module_info->file_name, ".jp")) {
+        module = _read_jp(mm, module_info);
       } else {
         FATALF("Unknown file type.");
       }

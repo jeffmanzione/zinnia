@@ -1,15 +1,15 @@
-load("//:zinnia_lang.bzl", "zinnia_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-zinnia_binary(
+jasper_binary(
     name = "builder",
-    main = "builder.zn",
+    main = "builder.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "mvc",
-    main = "mvc.zn",
+    main = "mvc.jp",
 )

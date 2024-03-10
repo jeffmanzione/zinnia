@@ -1,40 +1,40 @@
-load("//:zinnia_lang.bzl", "zinnia_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-zinnia_binary(
+jasper_binary(
     name = "arguments",
-    main = "arguments.zn",
+    main = "arguments.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "exceptions",
-    main = "exceptions.zn",
+    main = "exceptions.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "fibonacci",
-    main = "fibonacci.zn",
+    main = "fibonacci.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "garbage_collection",
-    main = "garbage_collection.zn",
+    main = "garbage_collection.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "hello",
-    main = "hello.zn",
+    main = "hello.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "range",
-    main = "range.zn",
+    main = "range.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "static",
-    main = "static.zn",
+    main = "static.jp",
 )

@@ -5,19 +5,19 @@ package(
 )
 
 cc_binary(
-    name = "zinnia",
-    srcs = ["zinnia.c"],
+    name = "jasper",
+    srcs = ["jasper.c"],
     deps = ["//run"],
 )
 
 cc_binary(
-    name = "zinniac",
-    srcs = ["zinniac.c"],
+    name = "jasperc",
+    srcs = ["jasperc.c"],
     deps = ["//compile"],
 )
 
 cc_binary(
-    name = "zinniap",
-    srcs = ["zinniap.c"],
+    name = "jasperp",
+    srcs = ["jasperp.c"],
     deps = ["//package"],
 )

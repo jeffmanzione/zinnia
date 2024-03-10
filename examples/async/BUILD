@@ -1,25 +1,25 @@
-load("//:zinnia_lang.bzl", "zinnia_binary")
+load("//:jasper_lang.bzl", "jasper_binary")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-zinnia_binary(
+jasper_binary(
     name = "completers",
-    main = "completers.zn",
+    main = "completers.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "futures",
-    main = "futures.zn",
+    main = "futures.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "process",
-    main = "process.zn",
+    main = "process.jp",
 )
 
-zinnia_binary(
+jasper_binary(
     name = "remotes",
-    main = "remotes.zn",
+    main = "remotes.jp",
 )

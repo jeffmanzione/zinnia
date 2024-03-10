@@ -1,0 +1,12 @@
+import io
+import async
+
+work = () async {
+  await async.sleep(2)  ; Wait 2 seconds. 
+  io.println('Hard work done!')
+}()  ; Call the function.
+
+io.println('Waiting for work to complete!')
+await work
+
+io.println('Hard work was finished!')
