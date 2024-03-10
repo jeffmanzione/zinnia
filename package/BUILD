@@ -10,8 +10,10 @@ cc_library(
     hdrs = ["package.h"],
     deps = [
         "//compile",
+        "//program/optimization:optimize",
         "//util:file",
         "//util:string_util",
+        "//vm:intern",
         "@file_utils//util:string",
         "@file_utils//util/file:file_util",
         "@memory_wrapper//alloc",

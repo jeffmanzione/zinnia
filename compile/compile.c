@@ -151,8 +151,11 @@ int zinniac(int argc, const char *argv[]) {
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
   const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
 
-  Map *src_map = compile(argstore_sources(store), out_zna, machine_dir, out_znb,
-                         bytecode_dir, opt);
+#ifdef DEBUG
+  Map *src_map =
+#endif
+      compile(argstore_sources(store), out_zna, machine_dir, out_znb,
+              bytecode_dir, opt);
 
 #ifdef DEBUG
   M_iter tapes = map_iter(src_map);

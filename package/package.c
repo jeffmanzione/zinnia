@@ -7,12 +7,14 @@
 #include "alloc/arena/intern.h"
 #include "compile/compile.h"
 #include "debug/debug.h"
+#include "program/optimization/optimize.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
 #include "util/file/file_info.h"
 #include "util/file/file_util.h"
 #include "util/string.h"
 #include "util/string_util.h"
+#include "vm/intern.h"
 
 #define STRING_BLOCK_LEN 400
 
@@ -164,7 +166,7 @@ int zinniap(int argc, const char *args[]) {
       continue;
     }
     DEBUGF("Processing source: %s", file_name);
-    char *dir_path, *file_base, *ext, *file_content;
+    char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
 
     const char *escaped_assembly = _compile_to_file(file_name);
@@ -184,7 +186,7 @@ int zinniap(int argc, const char *args[]) {
     _NativeModuleInfo *info = (_NativeModuleInfo *)value(&it);
     const char *file_name = info->src;
     DEBUGF("Processing source: %s", file_name);
-    char *dir_path, *file_base, *ext, *file_content;
+    char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
 
     const char *escaped_assembly = _compile_to_file(file_name);
