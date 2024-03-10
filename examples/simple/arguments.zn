@@ -1,0 +1,11 @@
+; Run command: zinnia examples/simple/arguments.zn -- --alpha --nobeta --gamma=yoyoyo
+
+import io
+
+alpha = Bool(args.alpha)
+beta = Bool(args.beta)
+gamma = args.gamma
+
+io.println(cat('alpha=', alpha))  ; alpha=1
+io.println(cat('beta=', beta))    ; beta=None
+io.println(cat('gamma=', gamma))  ; gamma=yoyoyo

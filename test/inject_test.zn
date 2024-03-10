@@ -1,0 +1,84 @@
+import inject
+import test
+
+self.expect = test.expect
+self.expect_not = test.expect_not
+self.expect_is = test.expect_is
+
+test.Tester().test(self)
+
+@test.TestClass
+class InjectTest {
+  @test.Test
+  method test_simple_inject() {
+    injector = inject.Injector()
+    t = injector.get(BasicTest)
+    expect(t.class(), BasicTest)
+    ; Subsequent calls return new objects.
+    expect_not(t, injector.get(BasicTest))
+  }
+
+  @test.Test
+  method test_singleton() {
+    injector = inject.Injector()
+    t = injector.get(TestSingleton)
+    expect(t.class(), TestSingleton)
+    ; Subsequent calls return the same object.
+    expect(t, injector.get(TestSingleton))
+  }
+
+  @test.Test
+  method test_inject_with_providerset() {
+    injector = inject.Injector().install(TestProviders1())
+    test1 = injector.get(Test1)
+    expect_is(test1.test2, Test2)
+    expect_is(test1.test2, Test3)
+    expect(test1.marker1, 55)
+  }
+
+  @test.Test
+  method test_inject_with_only_annotations() {
+    injector = inject.Injector()
+    test1 = injector.get(Test5)
+    expect_is(test1.test4, Test4)
+    test2 = injector.get(Test5)
+    expect(test1, test2)
+  }
+}
+
+class BasicTest {}
+
+@inject.Singleton
+class TestSingleton {}
+
+class Test1 {
+  new(field test2, field marker1) {}
+  method to_s() {
+    cat('Test1(test2=', test2, ',marker1=', marker1, ')')
+  }
+}
+
+class Test2 {}
+class Test3 : Test2 {}
+class Marker1 {}
+class Test4 {}
+
+@inject.Singleton
+@inject.Inject(keys: [Test4])
+class Test5 {
+  new(field test4) {}
+}
+
+class TestProviders1 : inject.ProviderSet {
+  method init() {
+    bind(Test2, Test3)
+  }
+  @inject.Provides(key: Marker1)
+  method provide_marker1() {
+    return 55
+  }
+  @inject.Provides(key: Test1, params: [Test2, Marker1])
+  method provide_test1(test2, marker1) {
+    return Test1(test2, marker1)
+  }
+}

@@ -1,0 +1,127 @@
+import classes
+import error
+import io
+
+; Returns a future that completes in at least [duration_sec] seconds.
+def sleep(duration_sec) {
+  __sleep(duration_sec)
+}
+
+; Returns a newly-spawned process that executes [fn] with arguments [args].
+def create_process({fn, args=None, is_remote=False}) {
+  __create_process(fn, args, is_remote)
+}
+
+; Returns a remote instance of [cls] with arguments [args] that can control
+; the concrete instance of [cls] in a newly-spawned process.
+;
+; The remote class returned controls the actual class in a separate process.
+; Calls to the remote class return a future to the result of the execution of
+; work that is executed on the concrete class in the spawned process.
+;
+; Throws an error if [cls] is not annotated with [RemoteClass].
+; 
+; Example:
+; ```
+; @async.RemoteClass
+; class Test {
+;   new(field n) {}
+;   method mult_n(num) num * n
+; }
+; remote_instance = async.create_remote(Test, 5)
+; io.println(await remote_instance.mult_n(6)) /* Prints '30\n' */
+; ``` 
+def create_remote(cls, args=None) {
+  remote_class = _get_remote_class(cls)
+  process = create_process(
+      fn: (cls, args) -> cls(args),
+      args: (cls, args),
+      is_remote: True)
+  return remote_class(await process.start())
+}
+
+; Represents the state of an asynchronous piece of work.
+class Future {
+  ; Returns a future to the value of the result of this future with [fn]
+  ; applied.
+  method then(fn) async {
+    return fn(await self)
+  }
+  method then_async(fn) async {
+    return await fn(await self)
+  }
+}
+
+; Allows for the manual completion of a future.
+;
+; Example:
+; ```
+; do_something = (c) async -> c.complete('Hello')
+; completer = async.Completer()
+; do_something(completer)
+; io.println(await completer.as_future())
+; ```
+class Completer {
+  field completed, _value
+
+  new() {
+    completed = False
+    _value = None
+  }
+
+  ; Completes the future with the value [v].
+  method complete(v) {
+    _value = v
+    completed = True
+  }
+
+  ; Returns a future to the completed value.
+  method as_future() {
+    if completed {
+      return value(_value)
+    }
+    return () async {
+      while ~(() -> completed)() {}
+      return _value
+    }()
+  }
+}
+
+; Returns a future that completes when all futures in [futures] complete.
+def all(futures) async {
+  futures.map((f) -> await f)
+}
+
+; Generates a new class named ['Remote' + cls.name()] that allows comunication
+; from parent to child processes.
+class RemoteClass {
+  method annotate(cls) {
+    remote_class = classes.factory.create_class(
+        cat('Remote', cls.name()),
+        cls.module())
+    remote_class.get_constructor().with_parameter('remote_object', True)
+    cls.methods().each((m) {
+      method_name = m.name()
+      if method_name == 'new' {
+        return
+      }
+      remote_class.add_method(method_name)
+          .with_parameter('args')
+          .with_statement(cat(
+              'return async.__remote_call(remote_object, \'',
+              method_name,
+              '\', args)'))
+    })
+    remote_class.add_method('remote')
+        .with_statement('return remote_object')
+    return remote_class.build()
+  }
+}
+
+def _get_remote_class(cls) {
+  remote = cls.module().$get('Remote' + cls.name())
+  if ~remote {
+    raise error.Error('Could not find remote class for ' + cls.name() + '.')
+  }
+  return remote
+}

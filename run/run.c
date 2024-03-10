@@ -125,7 +125,7 @@ void run(const Set *source_files, ArgStore *store) {
 #endif
 }
 
-int jasper(int argc, const char *argv[]) {
+int zinnia(int argc, const char *argv[]) {
   alloc_init();
   strings_init();
 
