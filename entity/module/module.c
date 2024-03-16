@@ -13,9 +13,8 @@ void module_init(Module *module, const char name[], Tape *tape) {
   module->_reflection = NULL;
   module->_is_initialized = false;
 
-  // TODO: Switch to stable storage.
-  keyedlist_init(&module->_classes, Class, 128);
-  keyedlist_init(&module->_functions, Function, 128);
+  keyedlist_init(&module->_classes, Class, 32);
+  keyedlist_init(&module->_functions, Function, 32);
 
   module->_write_mutex = mutex_create();
 }

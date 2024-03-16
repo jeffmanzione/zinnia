@@ -14,6 +14,7 @@
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/q.h"
+#include "struct/slist.h"
 #include "util/string_util.h"
 
 #define DEFAULT_TAPE_SZ 64
@@ -212,7 +213,7 @@ size_t tape_size(const Tape *tape) {
 }
 
 uint32_t tape_class_count(const Tape *tape) {
-  return alist_len(&tape->class_refs._list);
+  return slist_len(&tape->class_refs._list);
 }
 
 KL_iter tape_classes(const Tape *tape) {
@@ -224,7 +225,7 @@ const ClassRef *tape_get_class(const Tape *tape, const char class_name[]) {
 }
 
 uint32_t tape_func_count(const Tape *tape) {
-  return alist_len(&tape->func_refs._list);
+  return slist_len(&tape->func_refs._list);
 }
 
 KL_iter tape_functions(const Tape *tape) {
@@ -254,17 +255,17 @@ void tape_write(const Tape *tape, FILE *file) {
   if (NULL != tape->external_source_fn) {
     fprintf(file, "source '%s'\n", tape->external_source_fn);
   }
-  AL_iter cls_iter = alist_iter((AList *)&tape->class_refs._list);
-  AL_iter func_iter = alist_iter((AList *)&tape->func_refs._list);
-  AL_iter cls_func_iter;
+  SL_iter cls_iter = slist_iter((SList *)&tape->class_refs._list);
+  SL_iter func_iter = slist_iter((SList *)&tape->func_refs._list);
+  SL_iter cls_func_iter;
   bool in_class = false;
   int i;
   for (i = 0; i <= alist_len(&tape->ins); ++i) {
-    if (!in_class && al_has(&cls_iter)) {
-      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
+    if (!in_class && sl_has(&cls_iter)) {
+      ClassRef *class_ref = (ClassRef *)sl_value(&cls_iter);
       if (class_ref->start_index == i) {
         in_class = true;
-        cls_func_iter = alist_iter((AList *)&class_ref->func_refs._list);
+        cls_func_iter = slist_iter((SList *)&class_ref->func_refs._list);
         fprintf(file, "class %s\n", class_ref->name);
 
         KL_iter fields = keyedlist_iter(&class_ref->field_refs);
@@ -274,25 +275,25 @@ void tape_write(const Tape *tape, FILE *file) {
         }
       }
     }
-    if (in_class && al_has(&cls_func_iter)) {
-      FunctionRef *func_ref = (FunctionRef *)al_value(&cls_func_iter);
+    if (in_class && sl_has(&cls_func_iter)) {
+      FunctionRef *func_ref = (FunctionRef *)sl_value(&cls_func_iter);
       if (func_ref->index == i) {
         if (func_ref->is_async) {
           fprintf(file, "@%s:async\n", func_ref->name);
         } else {
           fprintf(file, "@%s\n", func_ref->name);
         }
-        al_inc(&cls_func_iter);
+        sl_inc(&cls_func_iter);
       }
-    } else if (al_has(&func_iter)) {
-      FunctionRef *func_ref = (FunctionRef *)al_value(&func_iter);
+    } else if (sl_has(&func_iter)) {
+      FunctionRef *func_ref = (FunctionRef *)sl_value(&func_iter);
       if (func_ref->index == i) {
         if (func_ref->is_async) {
           fprintf(file, "@%s:async\n", func_ref->name);
         } else {
           fprintf(file, "@%s\n", func_ref->name);
         }
-        al_inc(&func_iter);
+        sl_inc(&func_iter);
       }
     }
     if (i < alist_len(&tape->ins)) {
@@ -305,15 +306,15 @@ void tape_write(const Tape *tape, FILE *file) {
       }
       fprintf(file, "\n");
     }
-    if (in_class && al_has(&cls_iter)) {
-      ClassRef *class_ref = (ClassRef *)al_value(&cls_iter);
+    if (in_class && sl_has(&cls_iter)) {
+      ClassRef *class_ref = (ClassRef *)sl_value(&cls_iter);
       if (class_ref->end_index == i || class_ref->end_index == i + 1) {
         in_class = false;
         fprintf(file, "endclass  ; %s\n", class_ref->name);
-        al_inc(&cls_iter);
+        sl_inc(&cls_iter);
         // Handles classes with no body.
-        if (al_has(&cls_iter) &&
-            ((ClassRef *)al_value(&cls_iter))->start_index == i) {
+        if (sl_has(&cls_iter) &&
+            ((ClassRef *)sl_value(&cls_iter))->start_index == i) {
           i--;
         }
       }

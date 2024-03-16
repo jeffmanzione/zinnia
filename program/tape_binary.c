@@ -11,6 +11,7 @@
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
 #include "struct/map.h"
+#include "struct/slist.h"
 #include "struct/struct_defaults.h"
 
 #define MAX_STIRNG_SZ 1024
@@ -188,7 +189,7 @@ void _serialize_class_ref(const ClassRef *cref, WBuffer *buffer,
     serialize_type(buffer, uint16_t, parent_name_index);
   }
 
-  uint16_t num_methods = alist_len(&cref->func_refs._list);
+  uint16_t num_methods = slist_len(&cref->func_refs._list);
   serialize_type(buffer, uint16_t, num_methods);
   KL_iter methods = keyedlist_iter((KeyedList *)&cref->func_refs);
   for (; kl_has(&methods); kl_inc(&methods)) {

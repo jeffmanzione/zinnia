@@ -2,9 +2,9 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "c_data_structures",
-    commit = "665946243facf82197216f0dd73c1b3689394ced",
+    commit = "446f1c9a78c9cdc1a4c828ad7650f313fdb426fa",
     remote = "https://github.com/jeffreymanzione/c-data-structures.git",
-    shallow_since = "1641665091 -0800",
+    shallow_since = "1710607130 -0700",
 )
 
 git_repository(
