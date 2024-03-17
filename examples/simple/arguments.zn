@@ -7,5 +7,5 @@ beta = Bool(args.beta)
 gamma = args.gamma
 
 io.println(cat('alpha=', alpha))  ; alpha=1
-io.println(cat('beta=', beta))    ; beta=None
+io.println(cat('beta=', beta))    ; beta=False
 io.println(cat('gamma=', gamma))  ; gamma=yoyoyo
