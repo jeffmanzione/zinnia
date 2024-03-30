@@ -2,7 +2,6 @@ import inject
 import io
 import json
 import net
-import web
 
 class IndexHtml {}
 class NotFoundHtml {}
