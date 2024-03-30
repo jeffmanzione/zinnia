@@ -402,7 +402,7 @@ typedef struct {
 
 typedef struct {
   Token *import_token;
-  Token *module_name;
+  AList *module_name;
 } Import;
 
 typedef struct {

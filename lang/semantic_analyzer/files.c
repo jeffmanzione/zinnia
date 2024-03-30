@@ -525,6 +525,30 @@ FunctionDef populate_function(SemanticAnalyzer *analyzer,
       set_function_def, set_function_args);
 }
 
+Import populate_import(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
+  Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
+                   .module_name = alist_create(Token *, 4)};
+  if (CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
+    *(Token **)alist_add(import.module_name) = CHILD_SYNTAX_AT(stree, 1)->token;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_module_name)) {
+    const SyntaxTree *module_name = CHILD_SYNTAX_AT(stree, 1);
+    *(Token **)alist_add(import.module_name) =
+        CHILD_SYNTAX_AT(module_name, 0)->token;
+    const SyntaxTree *module_name1 = CHILD_SYNTAX_AT(module_name, 1);
+    while (true) {
+      *(Token **)alist_add(import.module_name) =
+          CHILD_SYNTAX_AT(module_name1, 1)->token;
+      if (CHILD_COUNT(module_name1) < 3) {
+        break;
+      }
+      module_name1 = CHILD_SYNTAX_AT(module_name1, 2);
+    }
+  } else {
+    FATALF("Unknown rule.");
+  }
+  return import;
+}
+
 void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
                            ModuleDef *module) {
   if (IS_SYNTAX(stree, rule_module_statement)) {
@@ -537,11 +561,7 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
     module->name.module_token = CHILD_SYNTAX_AT(stree, 0)->token;
     module->name.module_name = CHILD_SYNTAX_AT(stree, 1)->token;
   } else if (IS_SYNTAX(stree, rule_import_statement)) {
-    if (!CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
-      FATALF("import AS not yet supported.");
-    }
-    Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
-                     .module_name = CHILD_SYNTAX_AT(stree, 1)->token};
+    Import import = populate_import(analyzer, stree);
     alist_append(module->imports, &import);
   } else if (IS_SYNTAX(stree, rule_class_definition_no_annotation)) {
     ClassDef class = populate_class(analyzer, stree);
@@ -594,6 +614,10 @@ void _delete_statement(SemanticAnalyzer *analyzer, void *ptr) {
 }
 
 void delete_module_def(SemanticAnalyzer *analyzer, ModuleDef *module) {
+  for (AL_iter imports = alist_iter(module->imports); al_has(&imports);
+       al_inc(&imports)) {
+    alist_delete(((Import *)al_value(&imports))->module_name);
+  }
   alist_delete(module->imports);
 
   for (AL_iter classes = alist_iter(module->classes); al_has(&classes);

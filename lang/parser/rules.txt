@@ -760,11 +760,13 @@ class_definition ->
     rule:class_definition_no_annotation
   );
 
+module_name -> LIST(token:SYMBOL_PERIOD, rule:identifier);
+
 import_statement ->
   OR(
     AND(
       token:KEYWORD_IMPORT,
-      rule:identifier,
+      rule:module_name,
       token:KEYWORD_AS,
       rule:identifier,
       token:TOKEN_NEWLINE
