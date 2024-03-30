@@ -4,9 +4,13 @@
 //     Author: Jeff Manzione
 
 #ifndef UTIL_FILE_H_
-#define UTIL_FILE_H_
+#define UTIL_FILE_H
+
+#include <stdbool.h>
 
 char *find_file_by_name(const char dir[], const char file_prefix[]);
+
+bool is_dir(const char file_path[]);
 
 typedef struct __DirIter DirIter;
 

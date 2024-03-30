@@ -90,6 +90,21 @@ void run_files(const AList *source_file_names, const AList *source_contents,
 #endif
 }
 
+void _traverse_dir(const char dir_path[]) {
+  DirIter *di = directory_iter(dir_path);
+  while (true) {
+    const char *fn = diriter_next_file(di);
+    if (NULL == fn) {
+      break;
+    }
+    if (is_dir(fn)) {
+      _traverse_dir(fn);
+    } else {
+      printf("%s\n", fn);
+    }
+  }
+}
+
 void run(const Set *source_files, ArgStore *store) {
   optimize_init();
 
@@ -105,12 +120,16 @@ void run(const Set *source_files, ArgStore *store) {
   M_iter srcs = set_iter((Set *)source_files);
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    ModuleInfo *module_info = mm_register_module(mm, src, NULL);
-    if (NULL == main_module) {
-      main_module = modulemanager_load(mm, module_info);
-      main_module->_is_initialized = true;
-      object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                        MAIN_KEY, &TRUE_ENTITY);
+    if (is_dir(src)) {
+      _traverse_dir(src);
+    } else {
+      ModuleInfo *module_info = mm_register_module(mm, src, NULL);
+      if (NULL == main_module) {
+        main_module = modulemanager_load(mm, module_info);
+        main_module->_is_initialized = true;
+        object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
+                          MAIN_KEY, &TRUE_ENTITY);
+      }
     }
   }
 

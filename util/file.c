@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
@@ -63,6 +65,12 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   }
   DEALLOC(fn);
   return NULL;
+}
+
+bool is_dir(const char file_path[]) {
+  struct stat path_stat;
+  stat(file_path, &path_stat);
+  return S_ISDIR(path_stat.st_mode);
 }
 
 struct __DirIter {

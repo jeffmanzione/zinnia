@@ -1,6 +1,10 @@
+; zinnia examples/module/module.zn examples/module
+
 import io
 import one
 import one.two as two
 import one.two.three as three
 
-io.println(one.ONE, two.TWO, three.THREE)
+if __main {
+  io.println(one.ONE, two.TWO, three.THREE)
+}
