@@ -91,18 +91,25 @@ void run_files(const AList *source_file_names, const AList *source_contents,
 }
 
 void _traverse_dir(const char dir_path[]) {
-  DirIter *di = directory_iter(dir_path);
+  char *dir_path_with_wildcard = combine_path_file(dir_path, "*", NULL);
+  DirIter *di = directory_iter(dir_path_with_wildcard);
   while (true) {
     const char *fn = diriter_next_file(di);
     if (NULL == fn) {
       break;
     }
-    if (is_dir(fn)) {
-      _traverse_dir(fn);
-    } else {
-      printf("%s\n", fn);
+    if (0 == strcmp(fn, ".") || 0 == strcmp(fn, "..")) {
+      continue;
     }
+    char *full_fn = combine_path_file(dir_path, fn, NULL);
+    if (is_dir(full_fn)) {
+      _traverse_dir(full_fn);
+    } else {
+      printf("file=%s\n", full_fn);
+    }
+    DEALLOC(full_fn);
   }
+  DEALLOC(dir_path_with_wildcard);
 }
 
 void run(const Set *source_files, ArgStore *store) {

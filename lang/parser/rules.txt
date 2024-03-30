@@ -5,7 +5,8 @@ identifier ->
     token:KEYWORD_MODULE,
     token:KEYWORD_ASYNC,
     token:KEYWORD_THEN,
-    token:KEYWORD_FUNCTION
+    token:KEYWORD_FUNCTION,
+    token:KEYWORD_FROM
   );
 
 new_expression -> token:KEYWORD_NEW;
@@ -760,20 +761,24 @@ class_definition ->
     rule:class_definition_no_annotation
   );
 
-module_name -> LIST(token:SYMBOL_PERIOD, rule:identifier);
-
 import_statement ->
   OR(
     AND(
       token:KEYWORD_IMPORT,
-      rule:module_name,
+      OR(
+        rule:identifier,
+        rule:string_literal
+      ),
       token:KEYWORD_AS,
       rule:identifier,
       token:TOKEN_NEWLINE
     ),
     AND(
       token:KEYWORD_IMPORT,
-      rule:identifier,
+      OR(
+        rule:identifier,
+        rule:string_literal
+      ),
       token:TOKEN_NEWLINE
     )
   );

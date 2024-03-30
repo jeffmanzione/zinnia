@@ -13,7 +13,8 @@ int main(int argc, const char *args[]) {
   alloc_init();
   intern_init();
 
-  FileInfo *fi = file_info("C:/Users/jeffr/git/zinnia/lib/inject.zn");
+  FileInfo *fi =
+      file_info("C:/Users/jeffr/git/zinnia/examples/module/module.zn");
 
   // while (true) {
   Q tokens;

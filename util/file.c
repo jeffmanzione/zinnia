@@ -70,7 +70,7 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
 bool is_dir(const char file_path[]) {
   struct stat path_stat;
   stat(file_path, &path_stat);
-  return S_ISDIR(path_stat.st_mode);
+  return (path_stat.st_mode & S_IFDIR) != 0;
 }
 
 struct __DirIter {

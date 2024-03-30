@@ -527,24 +527,21 @@ FunctionDef populate_function(SemanticAnalyzer *analyzer,
 
 Import populate_import(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
   Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
-                   .module_name = alist_create(Token *, 4)};
+                   .src_name = NULL,
+                   .as_token = NULL,
+                   .use_name = NULL,
+                   .is_string_import = false};
   if (CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
-    *(Token **)alist_add(import.module_name) = CHILD_SYNTAX_AT(stree, 1)->token;
-  } else if (CHILD_IS_SYNTAX(stree, 1, rule_module_name)) {
-    const SyntaxTree *module_name = CHILD_SYNTAX_AT(stree, 1);
-    *(Token **)alist_add(import.module_name) =
-        CHILD_SYNTAX_AT(module_name, 0)->token;
-    const SyntaxTree *module_name1 = CHILD_SYNTAX_AT(module_name, 1);
-    while (true) {
-      *(Token **)alist_add(import.module_name) =
-          CHILD_SYNTAX_AT(module_name1, 1)->token;
-      if (CHILD_COUNT(module_name1) < 3) {
-        break;
-      }
-      module_name1 = CHILD_SYNTAX_AT(module_name1, 2);
-    }
+    import.src_name = CHILD_SYNTAX_AT(stree, 1)->token;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_string_literal)) {
+    import.src_name = CHILD_SYNTAX_AT(stree, 1)->token;
+    import.is_string_import = true;
   } else {
     FATALF("Unknown rule.");
+  }
+  if (CHILD_COUNT(stree) > 2 && CHILD_IS_TOKEN(stree, 2, KEYWORD_AS)) {
+    import.as_token = CHILD_SYNTAX_AT(stree, 2)->token;
+    import.use_name = CHILD_SYNTAX_AT(stree, 3)->token;
   }
   return import;
 }
