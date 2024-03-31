@@ -16,7 +16,8 @@ cc_library(
     hdrs = ["file.h"],
     deps = [
         ":platform",
-        "@file_utils//util:string",
+        "@c_data_structures//struct:alist",
+        "@file_utils//util/file:file_util",
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena:intern",
     ],

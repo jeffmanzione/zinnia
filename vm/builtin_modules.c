@@ -33,20 +33,23 @@
 #define REGISTER_MODULE(mm, name, lib_location)                                \
   {                                                                            \
     if (NULL != lib_location) {                                                \
-      mm_register_module(mm, find_file_by_name(lib_location, #name), NULL);    \
+      mm_register_module(mm, find_file_by_name(lib_location, #name),           \
+                         find_file_by_name(lib_location, #name), NULL);        \
     } else {                                                                   \
-      mm_register_module(mm, LIB_DIR #name LIB_EXT, LIB_##name);               \
+      mm_register_module(mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT,     \
+                         LIB_##name);                                          \
     }                                                                          \
   }
 
 #define REGISTER_MODULE_WITH_CALLBACK(mm, name, lib_location)                  \
   {                                                                            \
     if (NULL != lib_location) {                                                \
-      mm_register_module_with_callback(mm,                                     \
-                                       find_file_by_name(lib_location, #name), \
-                                       NULL, name##_add_native);               \
+      mm_register_module_with_callback(                                        \
+          mm, find_file_by_name(lib_location, #name),                          \
+          find_file_by_name(lib_location, #name), NULL, name##_add_native);    \
     } else {                                                                   \
-      mm_register_module_with_callback(mm, LIB_DIR #name LIB_EXT, LIB_##name,  \
+      mm_register_module_with_callback(mm, LIB_DIR #name LIB_EXT,              \
+                                       LIB_DIR #name LIB_EXT, LIB_##name,      \
                                        name##_add_native);                     \
     }                                                                          \
   }

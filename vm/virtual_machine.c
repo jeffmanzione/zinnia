@@ -688,6 +688,23 @@ void _execute_SET(VM *vm, Task *task, Context *context,
   }
 }
 
+void _execute_MSET(VM *vm, Task *task, Context *context,
+                   const Instruction *ins) {
+  Entity tmp;
+  Entity *mdl = context_lookup(context, TMP_MODULE_HOLDER, &tmp);
+  if (!IS_CLASS(mdl, Class_Module)) {
+    FATALF("Temp held module must be of type Module.");
+  }
+  switch (ins->type) {
+  case INSTRUCTION_ID:
+    object_set_member_obj(task->parent_process->heap,
+                          context->module->_reflection, ins->id, mdl->obj);
+    break;
+  default:
+    FATALF("Invalid arg type=%d for SET.", ins->type);
+  }
+}
+
 void _execute_GET(VM *vm, Task *task, Context *context,
                   const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
@@ -1278,18 +1295,20 @@ void _execute_IS(VM *vm, Task *task, Context *context, const Instruction *ins) {
 
 bool _execute_LMDL(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
-  if (INSTRUCTION_ID != ins->type) {
+  if (INSTRUCTION_ID != ins->type && INSTRUCTION_STRING != ins->type) {
     FATALF("Weird type for LMDL.");
   }
-  Module *module = modulemanager_lookup(&vm->mm, ins->id);
+  Module *module = modulemanager_lookup(
+      &vm->mm, ins->type == INSTRUCTION_ID ? ins->id : ins->str);
   if (NULL == module) {
-    raise_error(task, context, "Module '%s' not found.", ins->id);
+    raise_error(task, context, "Module '%s' not found.",
+                ins->type == INSTRUCTION_ID ? ins->id : ins->str);
     return false;
   }
-  object_set_member_obj(task->parent_process->heap,
-                        context->module->_reflection, ins->id,
-                        module->_reflection);
-  return NULL != _maybe_load_module(task, module);
+  bool result = NULL != _maybe_load_module(task, module);
+  Entity module_reflection = entity_object(module->_reflection);
+  context_set(context, TMP_MODULE_HOLDER, &module_reflection);
+  return result;
 }
 
 bool _execute_CTCH(VM *vm, Task *task, Context *context,
@@ -1387,6 +1406,9 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       break;
     case SET:
       _execute_SET(vm, task, context, ins);
+      break;
+    case MSET:
+      _execute_MSET(vm, task, context, ins);
       break;
     case GET:
       _execute_GET(vm, task, context, ins);

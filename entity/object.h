@@ -71,6 +71,9 @@ struct _Module {
   KeyedList _functions;
   bool _is_initialized;
   Mutex _write_mutex;
+
+  const char *_full_path;
+  const char *_relative_path;
 };
 
 struct _Function {

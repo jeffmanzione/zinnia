@@ -15,6 +15,7 @@ typedef enum {
   TGET,
   TLEN,
   SET,
+  MSET,
   // Assigns a value locally.
   LET,
   PUSH,

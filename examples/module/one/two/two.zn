@@ -1,1 +1,3 @@
 self.TWO = 2
+
+_ = None

@@ -49,6 +49,7 @@ extern char *STACKLINE_NAME;
 extern char *STRING_NAME;
 extern char *SUPER_KEY;
 extern char *TASK_NAME;
+extern char *TMP_MODULE_HOLDER;
 extern char *TRUE_KEYWORD;
 extern char *TUPLE_NAME;
 extern char *VALUE_KEY;

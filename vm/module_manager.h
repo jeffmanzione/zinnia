@@ -30,11 +30,13 @@ void modulemanager_init(ModuleManager *mm, Heap *heap);
 void modulemanager_finalize(ModuleManager *mm);
 Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info);
 
-ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[],
+ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
+                               const char relative_path[],
                                const char *inline_file);
-
-ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
-                                             const char *inline_file,
+ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
+                                             const char full_path[],
+                                             const char relative_path[],
+                                             const char *inlined_file,
                                              NativeCallback callback);
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],

@@ -611,10 +611,6 @@ void _delete_statement(SemanticAnalyzer *analyzer, void *ptr) {
 }
 
 void delete_module_def(SemanticAnalyzer *analyzer, ModuleDef *module) {
-  for (AL_iter imports = alist_iter(module->imports); al_has(&imports);
-       al_inc(&imports)) {
-    alist_delete(((Import *)al_value(&imports))->module_name);
-  }
   alist_delete(module->imports);
 
   for (AL_iter classes = alist_iter(module->classes); al_has(&classes);
@@ -768,8 +764,10 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   // Imports
   for (i = 0; i < alist_len(module->imports); ++i) {
     Import *import = (Import *)alist_get(module->imports, i);
-    num_ins +=
-        tape_ins(tape, LMDL, *(Token **)alist_get(import->module_name, 0));
+    num_ins += tape_ins(tape, LMDL, import->src_name);
+    num_ins += tape_ins(tape, MSET,
+                        NULL == import->use_name ? import->src_name
+                                                 : import->use_name);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

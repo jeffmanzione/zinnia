@@ -70,7 +70,7 @@ void run_files(const AList *source_file_names, const AList *source_contents,
     const char *src_content = *(char **)alist_get(source_contents, i);
     NativeCallback init_fn = *(NativeCallback *)alist_get(init_fns, i);
     ModuleInfo *module_info =
-        mm_register_module_with_callback(mm, src, src_content, init_fn);
+        mm_register_module_with_callback(mm, src, src, src_content, init_fn);
     if (NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
       main_module->_is_initialized = true;
@@ -90,28 +90,6 @@ void run_files(const AList *source_file_names, const AList *source_contents,
 #endif
 }
 
-void _traverse_dir(const char dir_path[]) {
-  char *dir_path_with_wildcard = combine_path_file(dir_path, "*", NULL);
-  DirIter *di = directory_iter(dir_path_with_wildcard);
-  while (true) {
-    const char *fn = diriter_next_file(di);
-    if (NULL == fn) {
-      break;
-    }
-    if (0 == strcmp(fn, ".") || 0 == strcmp(fn, "..")) {
-      continue;
-    }
-    char *full_fn = combine_path_file(dir_path, fn, NULL);
-    if (is_dir(full_fn)) {
-      _traverse_dir(full_fn);
-    } else {
-      printf("file=%s\n", full_fn);
-    }
-    DEALLOC(full_fn);
-  }
-  DEALLOC(dir_path_with_wildcard);
-}
-
 void run(const Set *source_files, ArgStore *store) {
   optimize_init();
 
@@ -128,9 +106,17 @@ void run(const Set *source_files, ArgStore *store) {
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
     if (is_dir(src)) {
-      _traverse_dir(src);
+      FileLocs *locs = file_locs_create(src);
+      FileLoc_iter iter = file_locs_iter(locs);
+      for (; fl_has(&iter); fl_inc(&iter)) {
+        FileLoc *loc = fl_value(&iter);
+        mm_register_module(mm, file_loc_full_path(loc),
+                           file_loc_relative_path(loc), NULL);
+      }
+      file_locs_delete(locs);
+
     } else {
-      ModuleInfo *module_info = mm_register_module(mm, src, NULL);
+      ModuleInfo *module_info = mm_register_module(mm, src, src, NULL);
       if (NULL == main_module) {
         main_module = modulemanager_load(mm, module_info);
         main_module->_is_initialized = true;

@@ -13,6 +13,7 @@
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
+#include "util/file/file_util.h"
 #include "util/string.h"
 
 #include "util/platform.h"
@@ -30,6 +31,16 @@
 #include <unistd.h>
 
 #endif
+
+struct __FileLoc {
+  char *full_path;
+  char *base_path;
+  char *relative_path;
+};
+
+struct __FileLocs {
+  AList locs;
+};
 
 char *find_file_by_name(const char dir[], const char file_prefix[]) {
   size_t fn_len = strlen(dir) + strlen(file_prefix) + 3;
@@ -133,3 +144,96 @@ const char *diriter_next_file(DirIter *d) {
   return dnet->d_name;
 #endif
 }
+
+void _file_loc_init(FileLoc *loc, const char full_path[],
+                    const char base_path[]) {
+  loc->full_path = strdup(full_path);
+  replace_backslashes(loc->full_path);
+  loc->base_path = strdup(base_path);
+  replace_backslashes(loc->base_path);
+
+  int base_path_len = strlen(base_path);
+
+  char after_base_path = *(full_path + base_path_len);
+  int relative_start_index;
+  relative_start_index = ('/' == after_base_path || '\\' == after_base_path)
+                             ? base_path_len + 1
+                             : base_path_len;
+  loc->relative_path = strdup(loc->full_path + relative_start_index);
+}
+
+void _file_loc_finalize(FileLoc *loc) {
+  free(loc->full_path);
+  free(loc->base_path);
+  free(loc->relative_path);
+}
+
+const char *file_loc_full_path(FileLoc *loc) { return loc->full_path; }
+
+const char *file_loc_base_path(FileLoc *loc) { return loc->base_path; }
+
+const char *file_loc_relative_path(FileLoc *loc) { return loc->relative_path; }
+
+void replace_backslashes(char *str) {
+  int str_len = strlen(str);
+  for (int i = 0; i < str_len; ++i) {
+    if (str[i] == '\\') {
+      str[i] = '/';
+    }
+  }
+}
+
+void _traverse_dir(const char base_path[], const char dir_path[], AList *locs) {
+  char *dir_path_with_wildcard = combine_path_file(dir_path, "*", NULL);
+  DirIter *di = directory_iter(dir_path_with_wildcard);
+  while (true) {
+    const char *fn = diriter_next_file(di);
+    if (NULL == fn) {
+      break;
+    }
+    if (0 == strcmp(fn, ".") || 0 == strcmp(fn, "..")) {
+      continue;
+    }
+    char *full_fn = combine_path_file(dir_path, fn, NULL);
+    if (is_dir(full_fn)) {
+      _traverse_dir(base_path, full_fn, locs);
+    } else {
+      FileLoc *loc = (FileLoc *)alist_add(locs);
+      _file_loc_init(loc, full_fn, base_path);
+    }
+    DEALLOC(full_fn);
+  }
+  DEALLOC(dir_path_with_wildcard);
+}
+
+FileLocs *file_locs_create(const char path[]) {
+  FileLocs *locs = ALLOC2(FileLocs);
+  alist_init(&locs->locs, FileLoc, 6);
+  _traverse_dir(path, path, &locs->locs);
+  return locs;
+}
+
+void file_locs_delete(FileLocs *locs) {
+  AL_iter iter = alist_iter(&locs->locs);
+  for (; al_has(&iter); al_inc(&iter)) {
+    FileLoc *loc = (FileLoc *)al_value(&iter);
+    _file_loc_finalize(loc);
+  }
+  alist_finalize(&locs->locs);
+  DEALLOC(locs);
+}
+
+FileLoc_iter file_locs_iter(FileLocs *locs) {
+  FileLoc_iter iter = {._locs = locs, ._i = 0};
+  return iter;
+}
+
+bool fl_has(FileLoc_iter *iter) {
+  return iter->_i < alist_len(&iter->_locs->locs);
+}
+
+FileLoc *fl_value(FileLoc_iter *iter) {
+  return (FileLoc *)alist_get(&iter->_locs->locs, iter->_i);
+}
+
+void fl_inc(FileLoc_iter *iter) { iter->_i++; }

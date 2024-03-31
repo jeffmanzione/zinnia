@@ -33,7 +33,8 @@
 struct _ModuleInfo {
   Module module;
   FileInfo *fi;
-  const char *file_name, *module_name_from_file, *inlined_file;
+  const char *file_path, *relative_file_path, *module_name_from_file,
+      *inlined_file;
   bool is_inlined_file, is_loaded, has_native_callback, is_dynamic;
   NativeCallback native_callback;
 };
@@ -94,29 +95,33 @@ bool _hydrate_class(Module *module, ClassRef *cref) {
 }
 
 ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
-                               const char file_name[]) {
+                               const char module_key[], const char full_path[],
+                               const char relative_path[]) {
   ASSERT(NOT_NULL(mm));
   ModuleInfo *module_info;
   ModuleInfo *old = (ModuleInfo *)keyedlist_insert(
-      &mm->_modules, mm->intern(module_name), (void **)&module_info);
+      &mm->_modules, mm->intern(module_key), (void **)&module_info);
   if (old != NULL) {
     FATALF("Module by name '%s' already exists.", module_name);
   }
-  module_info->file_name = (NULL != file_name) ? mm->intern(file_name) : NULL;
+  module_info->file_path = (NULL != full_path) ? mm->intern(full_path) : NULL;
+  module_info->relative_file_path =
+      (NULL != relative_path) ? mm->intern(relative_path) : NULL;
   module_info->module_name_from_file = module_name;
   module_info->is_inlined_file = false;
   module_info->inlined_file = NULL;
   return module_info;
 }
 
-const char *module_info_file_name(ModuleInfo *mi) { return mi->file_name; }
+const char *module_info_file_name(ModuleInfo *mi) { return mi->file_path; }
 
 ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape,
                                    ModuleInfo *module_info) {
   ASSERT(NOT_NULL(mm), NOT_NULL(tape), NOT_NULL(module_info));
 
   Module *module = &module_info->module;
-  module_init(module, tape_module_name(tape), tape);
+  module_init(module, tape_module_name(tape), module_info->file_path,
+              module_info->relative_file_path, tape);
 
   KL_iter funcs = tape_functions(tape);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
@@ -211,7 +216,7 @@ FileInfo *_module_info_get_file(ModuleInfo *module_info) {
   if (module_info->is_inlined_file) {
     return file_info_sfile(sfile_open(module_info->inlined_file));
   }
-  return file_info(module_info->file_name);
+  return file_info(module_info->file_path);
 }
 
 Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
@@ -278,9 +283,9 @@ Module *_read_zna(ModuleManager *mm, ModuleInfo *module_info) {
 }
 
 Module *_read_znb(ModuleManager *mm, ModuleInfo *module_info) {
-  FILE *file = FILE_FN(module_info->file_name, "rb");
+  FILE *file = FILE_FN(module_info->file_path, "rb");
   if (NULL == file) {
-    FATALF("Cannot open file '%s'. Exiting...", module_info->file_name);
+    FATALF("Cannot open file '%s'. Exiting...", module_info->file_path);
   }
   Tape *tape = tape_create();
   tape_read_binary(tape, file);
@@ -288,16 +293,20 @@ Module *_read_znb(ModuleManager *mm, ModuleInfo *module_info) {
   return &module_info->module;
 }
 
-ModuleInfo *mm_register_module(ModuleManager *mm, const char fn[],
+ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
+                               const char relative_path[],
                                const char *inlined_file) {
-  return mm_register_module_with_callback(mm, fn, inlined_file, NULL);
+  return mm_register_module_with_callback(mm, full_path, relative_path,
+                                          inlined_file, NULL);
 }
 
 ModuleInfo *
 _create_and_init_moduleinfo(ModuleManager *mm, const char *module_name,
-                            const char *file_name, const char *inlined_file,
+                            const char *module_key, const char *full_path,
+                            const char *relative_path, const char *inlined_file,
                             NativeCallback native_callback, bool is_dynamic) {
-  ModuleInfo *module_info = _create_moduleinfo(mm, module_name, file_name);
+  ModuleInfo *module_info =
+      _create_moduleinfo(mm, module_name, module_key, full_path, relative_path);
   module_info->has_native_callback = native_callback != NULL;
   module_info->native_callback = native_callback;
   module_info->is_loaded = false;
@@ -309,19 +318,32 @@ _create_and_init_moduleinfo(ModuleManager *mm, const char *module_name,
   return module_info;
 }
 
-ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
+ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
+                                             const char full_path[],
+                                             const char relative_path[],
                                              const char *inlined_file,
                                              NativeCallback callback) {
-  ASSERT(NOT_NULL(mm), NOT_NULL(fn));
+  ASSERT(NOT_NULL(mm));
 
   char *dir_path, *module_name_tmp, *ext;
-  split_path_file(fn, &dir_path, &module_name_tmp, &ext);
+  split_path_file(full_path, &dir_path, &module_name_tmp, &ext);
 
   char *module_name = mm->intern(module_name_tmp);
+
+  char *module_key;
+
+  // lib is a magic directory name.
+  if (NULL == dir_path || strlen(dir_path) == 0 ||
+      0 == strcmp(dir_path, "lib/")) {
+    module_key = module_name;
+  } else {
+    module_key = mm->intern(relative_path);
+  }
+
   DEALLOC(module_name_tmp);
   // Module already exists.
   ModuleInfo *module_info =
-      (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_name);
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_key);
   if (NULL != module_info) {
     DEALLOC(dir_path);
     DEALLOC(ext);
@@ -329,7 +351,8 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm, const char fn[],
   }
 
   module_info =
-      _create_and_init_moduleinfo(mm, module_name, fn, inlined_file, callback,
+      _create_and_init_moduleinfo(mm, module_name, module_key, full_path,
+                                  relative_path, inlined_file, callback,
                                   /*is_dynamic=*/false);
 
   DEALLOC(dir_path);
@@ -342,9 +365,10 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
                                        NativeCallback init_fn) {
   ModuleInfo *module_info = _create_and_init_moduleinfo(
-      mm, mm->intern(module_name), NULL, NULL, init_fn,
+      mm, mm->intern(module_name), mm->intern(module_name), NULL, NULL, NULL,
+      init_fn,
       /*is_dynamic*/ true);
-  module_init(&module_info->module, mm->intern(module_name), NULL);
+  module_init(&module_info->module, mm->intern(module_name), NULL, NULL, NULL);
   return module_info;
 }
 
@@ -352,11 +376,11 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
   Module *module = NULL;
   if (!module_info->is_loaded) {
     if (!module_info->is_dynamic) {
-      if (ends_with(module_info->file_name, ".znb")) {
+      if (ends_with(module_info->file_path, ".znb")) {
         module = _read_znb(mm, module_info);
-      } else if (ends_with(module_info->file_name, ".zna")) {
+      } else if (ends_with(module_info->file_path, ".zna")) {
         module = _read_zna(mm, module_info);
-      } else if (ends_with(module_info->file_name, ".zn")) {
+      } else if (ends_with(module_info->file_path, ".zn")) {
         module = _read_zn(mm, module_info);
       } else {
         FATALF("Unknown file type.");
@@ -387,9 +411,9 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
                                            const Module *m) {
   ASSERT(NOT_NULL(mm));
   ASSERT(NOT_NULL(m));
-  ASSERT(NOT_NULL(m->_name));
-  const ModuleInfo *mi =
-      (ModuleInfo *)keyedlist_lookup((KeyedList *)&mm->_modules, m->_name);
+  ASSERT(NOT_NULL(m->_relative_path));
+  const ModuleInfo *mi = (ModuleInfo *)keyedlist_lookup(
+      (KeyedList *)&mm->_modules, m->_relative_path);
   if (NULL == mi) {
     return NULL;
   }
