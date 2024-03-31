@@ -14,7 +14,7 @@ int main(int argc, const char *args[]) {
   intern_init();
 
   FileInfo *fi =
-      file_info("C:/Users/jeffr/git/zinnia/examples/module/module.zn");
+      file_info("C:/Users/jeffr/git/zinnia/examples/module/one/one.zn");
 
   // while (true) {
   Q tokens;

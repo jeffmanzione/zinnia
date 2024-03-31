@@ -197,7 +197,8 @@ void _traverse_dir(const char base_path[], const char dir_path[], AList *locs) {
     char *full_fn = combine_path_file(dir_path, fn, NULL);
     if (is_dir(full_fn)) {
       _traverse_dir(base_path, full_fn, locs);
-    } else {
+    } else if (ends_with(fn, ".zn") || ends_with(fn, ".zna") ||
+               ends_with(fn, ".znb")) {
       FileLoc *loc = (FileLoc *)alist_add(locs);
       _file_loc_init(loc, full_fn, base_path);
     }

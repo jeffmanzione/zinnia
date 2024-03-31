@@ -58,6 +58,10 @@ Tape *_read_file(const char fn[], bool opt) {
     tape_set_external_source(tape, fn);
     semantic_analyzer_produce(&sa, etree, tape);
 
+    if (etree->type != rule_file_level_statement_list) {
+      tape_ins_int(tape, EXIT, 0, token_create(TOKEN_WORD, 0, 0, "", 0));
+    }
+
     if (NULL == tape_module_name(tape)) {
       char *dir_path, *module_name_tmp, *ext;
       split_path_file(fn, &dir_path, &module_name_tmp, &ext);

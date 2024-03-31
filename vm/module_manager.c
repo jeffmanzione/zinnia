@@ -245,6 +245,10 @@ Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
     semantic_analyzer_produce(&sa, etree, tape);
     tape_set_body(tape, fi);
 
+    if (etree->type != rule_file_level_statement_list) {
+      tape_ins_int(tape, EXIT, 0, token_create(TOKEN_WORD, 0, 0, "", 0));
+    }
+
     if (NULL == tape_module_name(tape)) {
       tape_module(tape,
                   token_create(TOKEN_WORD, 0, 0,
