@@ -700,8 +700,13 @@ void _execute_MSET(VM *vm, Task *task, Context *context,
     object_set_member_obj(task->parent_process->heap,
                           context->module->_reflection, ins->id, mdl->obj);
     break;
+  case INSTRUCTION_STRING:
+    object_set_member_obj(task->parent_process->heap,
+                          context->module->_reflection,
+                          mdl->obj->_module_obj->_name, mdl->obj);
+    break;
   default:
-    FATALF("Invalid arg type=%d for SET.", ins->type);
+    FATALF("Invalid arg type=%d for MSET.", ins->type);
   }
 }
 
