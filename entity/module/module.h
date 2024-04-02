@@ -5,7 +5,7 @@
 #include "program/tape.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], Tape *tape);
+                 const char relative_path[], const char key[], Tape *tape);
 void module_finalize(Module *module);
 const char *module_name(const Module *const module);
 const Tape *module_tape(const Module *const module);

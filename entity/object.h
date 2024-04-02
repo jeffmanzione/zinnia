@@ -74,6 +74,7 @@ struct _Module {
 
   const char *_full_path;
   const char *_relative_path;
+  const char *_key;
 };
 
 struct _Function {

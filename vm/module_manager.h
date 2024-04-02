@@ -42,7 +42,7 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
                                        NativeCallback init_fn);
 
-Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]);
+Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]);
 Module *modulemanager_lookup_without_reading(ModuleManager *mm,
                                              const char module_name[]);
 

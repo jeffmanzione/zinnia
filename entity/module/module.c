@@ -8,10 +8,11 @@
 #include "struct/struct_defaults.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], Tape *tape) {
+                 const char relative_path[], const char key[], Tape *tape) {
   module->_name = name;
   module->_full_path = full_path;
   module->_relative_path = relative_path;
+  module->_key = key;
   module->_tape = tape;
   module->_reflection = NULL;
   module->_is_initialized = false;

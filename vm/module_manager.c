@@ -34,7 +34,7 @@ struct _ModuleInfo {
   Module module;
   FileInfo *fi;
   const char *file_path, *relative_file_path, *module_name_from_file,
-      *inlined_file;
+      *inlined_file, *key;
   bool is_inlined_file, is_loaded, has_native_callback, is_dynamic;
   NativeCallback native_callback;
 };
@@ -107,6 +107,7 @@ ModuleInfo *_create_moduleinfo(ModuleManager *mm, const char module_name[],
   module_info->file_path = (NULL != full_path) ? mm->intern(full_path) : NULL;
   module_info->relative_file_path =
       (NULL != relative_path) ? mm->intern(relative_path) : NULL;
+  module_info->key = module_key;
   module_info->module_name_from_file = module_name;
   module_info->is_inlined_file = false;
   module_info->inlined_file = NULL;
@@ -121,7 +122,7 @@ ModuleInfo *_modulemanager_hydrate(ModuleManager *mm, Tape *tape,
 
   Module *module = &module_info->module;
   module_init(module, tape_module_name(tape), module_info->file_path,
-              module_info->relative_file_path, tape);
+              module_info->relative_file_path, module_info->key, tape);
 
   KL_iter funcs = tape_functions(tape);
   for (; kl_has(&funcs); kl_inc(&funcs)) {
@@ -341,7 +342,14 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
       0 == strcmp(dir_path, "lib/")) {
     module_key = module_name;
   } else {
-    module_key = mm->intern(relative_path);
+    char *path_no_ext = strdup(relative_path);
+    if (ends_with(path_no_ext, ".zn")) {
+      path_no_ext[strlen(path_no_ext) - 3] = '\0';
+    } else {
+      path_no_ext[strlen(path_no_ext) - 4] = '\0';
+    }
+    module_key = mm->intern(path_no_ext);
+    free(path_no_ext);
   }
 
   DEALLOC(module_name_tmp);
@@ -372,7 +380,8 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
       mm, mm->intern(module_name), mm->intern(module_name), NULL, NULL, NULL,
       init_fn,
       /*is_dynamic*/ true);
-  module_init(&module_info->module, mm->intern(module_name), NULL, NULL, NULL);
+  module_init(&module_info->module, mm->intern(module_name), NULL, NULL,
+              module_name, NULL);
   return module_info;
 }
 
@@ -402,9 +411,9 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
   return &module_info->module;
 }
 
-Module *modulemanager_lookup(ModuleManager *mm, const char module_name[]) {
+Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]) {
   ModuleInfo *module_info =
-      (ModuleInfo *)keyedlist_lookup(&mm->_modules, mm->intern(module_name));
+      (ModuleInfo *)keyedlist_lookup(&mm->_modules, mm->intern(module_key));
   if (NULL == module_info) {
     return NULL;
   }
@@ -416,8 +425,8 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
   ASSERT(NOT_NULL(mm));
   ASSERT(NOT_NULL(m));
   ASSERT(NOT_NULL(m->_relative_path));
-  const ModuleInfo *mi = (ModuleInfo *)keyedlist_lookup(
-      (KeyedList *)&mm->_modules, m->_relative_path);
+  const ModuleInfo *mi =
+      (ModuleInfo *)keyedlist_lookup((KeyedList *)&mm->_modules, m->_key);
   if (NULL == mi) {
     return NULL;
   }

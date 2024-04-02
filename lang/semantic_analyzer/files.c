@@ -766,8 +766,8 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->src_name);
     num_ins += tape_ins(tape, MSET,
-                        NULL == import->use_name ? import->src_name
-                                                 : import->use_name);
+                        (NULL == import->use_name) ? import->src_name
+                                                   : import->use_name);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

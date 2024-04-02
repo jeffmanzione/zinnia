@@ -1,8 +1,8 @@
-; To compile c library: bazel build -c opt //examples/dynamic:_custom
+; To compile c library: bazel build -c opt //examples/dynamic:_custom.dll
 ; To run: zinnia examples/dynamic/test.zn examples/dynamic/custom.zn
 
-import custom
 import io
+import 'examples/dynamic/custom'
 
 io.println(custom.sin(1.5))
 io.println(custom.cos(1.5))
