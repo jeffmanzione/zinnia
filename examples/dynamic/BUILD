@@ -35,7 +35,7 @@ zinnia_library(
 )
 
 zinnia_binary(
-    name = "dynamic_test",
-    main = "dynamic_test.zn",
+    name = "dynamic",
+    main = "dynamic.zn",
     deps = [":custom"],
 )
