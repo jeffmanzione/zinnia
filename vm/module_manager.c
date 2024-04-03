@@ -22,6 +22,7 @@
 #include "program/optimization/optimize.h"
 #include "program/tape_binary.h"
 #include "struct/struct_defaults.h"
+#include "util/file.h"
 #include "util/file/file_info.h"
 #include "util/file/file_util.h"
 #include "util/string.h"
@@ -343,12 +344,14 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
     module_key = module_name;
   } else {
     char *path_no_ext = strdup(relative_path);
+    replace_backslashes(path_no_ext);
     if (ends_with(path_no_ext, ".zn")) {
       path_no_ext[strlen(path_no_ext) - 3] = '\0';
     } else {
       path_no_ext[strlen(path_no_ext) - 4] = '\0';
     }
-    module_key = mm->intern(path_no_ext);
+    int offset = starts_with(path_no_ext, "./") ? 2 : 0;
+    module_key = mm->intern(path_no_ext + offset);
     free(path_no_ext);
   }
 
