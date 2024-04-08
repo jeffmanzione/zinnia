@@ -20,7 +20,7 @@
 
 #include "util/platform.h"
 
-Entity __sin(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity __sin_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {
     return raise_error(task, ctx,
                        "sin() takes exactly 1 primitive type argument.");
@@ -29,7 +29,7 @@ Entity __sin(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_float(sin(r));
 }
 
-Entity __cos(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity __cos_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {
     return raise_error(task, ctx,
                        "cos() takes exactly 1 primitive type argument.");
@@ -38,7 +38,7 @@ Entity __cos(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_float(cos(r));
 }
 
-Entity __tan(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity __tan_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {
     return raise_error(task, ctx,
                        "tan() takes exactly 1 primitive type argument.");
@@ -48,7 +48,7 @@ Entity __tan(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 void _init_custom(ModuleManager *mm, Module *custom) {
-  native_function(custom, mm->intern("sin"), __sin);
-  native_function(custom, mm->intern("cos"), __cos);
-  native_function(custom, mm->intern("tan"), __tan);
+  native_function(custom, mm->intern("sin"), __sin_impl);
+  native_function(custom, mm->intern("cos"), __cos_impl);
+  native_function(custom, mm->intern("tan"), __tan_impl);
 }

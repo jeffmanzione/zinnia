@@ -67,7 +67,6 @@ char *_compile_to_file(const char file_name[]) {
 
     DEALLOC(content);
     DEALLOC(assembly_content);
-    fclose(assembly_file);
     return escaped_assembly;
   } else if (ends_with(file_name, ".zna")) {
     FILE *file = FILE_FN(file_name, "rb");
@@ -151,7 +150,8 @@ int zinniap(int argc, const char *args[]) {
                "#include \"run/run.h\"\n"
                "#include \"struct/alist.h\"\n"
                "#include \"util/args/commandline.h\"\n"
-               "#include \"util/args/commandlines.h\"\n\n");
+               "#include \"util/args/commandlines.h\"\n"
+               "#include \"vm/intern.h\"\n");
 
   M_iter extra_hdrs_it = set_iter(&extra_hdrs);
   for (; has(&extra_hdrs_it); inc(&extra_hdrs_it)) {
@@ -260,22 +260,23 @@ int zinniap(int argc, const char *args[]) {
                "#ifdef DEBUG\n"
                "  argstore_delete(store);\n"
                "  argconfig_delete(config);\n"
-               "  strings_finalize();\n"
                "  token_finalize_all();\n"
+               "  strings_finalize();\n"
                "  alloc_finalize();\n"
                "#endif\n"
                "  return EXIT_SUCCESS;\n"
                "}\n");
 
+#ifdef DEBUG
   M_iter iter = map_iter(&native_modules);
   for (; has(&iter); inc(&iter)) {
-    DEALLOC(value(&iter));
+    void *val = value(&iter);
+    DEALLOC(val);
   }
   map_finalize(&native_modules);
 
   set_finalize(&extra_hdrs);
 
-#ifdef DEBUG
   optimize_finalize();
   strings_finalize();
   token_finalize_all();
