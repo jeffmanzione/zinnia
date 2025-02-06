@@ -7,7 +7,6 @@ import web
 class IndexHtml {}
 class NotFoundHtml {}
 
-
 def is_index(req) {
   net.parse_request(req).path == '/'
 }

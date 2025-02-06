@@ -23,8 +23,8 @@ import error
 ;   }
 ; }
 ;
-; injector = inject.Injector().install(Class1).install(ProviderSet1())
-; test3 = injector.get(Test3)
+; injector = inject.Injector().install(ProviderSet1())
+; class3 = injector.get(Class3)
 ; ```
 class Injector {
   field keys_to_providers, keys_to_singletons

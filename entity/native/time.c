@@ -68,7 +68,7 @@ Entity _micros_to_timestamp(Task *task, Context *ctx, Object *obj,
 }
 
 void time_add_native(ModuleManager *mm, Module *time) {
-  native_function(time, intern("now_usec"), _now_usec);
+  native_function(time, intern("__now_usec"), _now_usec);
   native_function(time, intern("__now_timestamp"), _now_timestamp);
   native_function(time, intern("__timestamp_to_micros"), _timestamp_to_micros);
   native_function(time, intern("__micros_to_timestamp"), _micros_to_timestamp);
