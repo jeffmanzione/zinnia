@@ -314,16 +314,29 @@ class RequestController {
   new(field matcher_fn=always_true) {}
   method marshall(req) { req }
   method unmarshall(resp) { resp }
-  method get_label(req) { Rpc }
+  method process(controller, req) {
+    return find_annotated_method(controller, Rpc)(req)
+  }
 }
 
 class HttpRequestController : RequestController {
   new(http_matcher_fn=always_true) {
     super(RequestController)(http_matcher_fn)
   }
-  method marshall(req) { parse_request(req) }
+  method marshall(req) { 
+    http_req = parse_request(req)
+    io.println('HTTP/' + http_req.version + ' ' + http_req.path)
+    return http_req
+  }
   method unmarshall(resp) { resp.to_s() }
-  method get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
+
+  method process(controller, req) {
+    resp = net.HttpResponse()
+    find_annotated_method(controller, _get_label(req))(req, resp)
+    return resp
+  }
+
+  method _get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
 }
 
 class Application {
@@ -364,6 +377,17 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
   'PATCH': Patch
 }
 
+def find_annotated_method(instance, annot) {
+  cls = instance.class()
+  methods = cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
+  if methods.len() == 0 {
+    raise error.Error(str(cls) + ' has no ' + str(annot) + ' annotated methods.')
+  } else if methods.len() > 1 {
+    raise error.Error(str(cls) + ' has multiple ' + str(annot) + ' annotated methods.')
+  }
+  return instance.$get(methods[0].name())
+}
+
 @async.RemoteClass
 class ApplicationRunner {
   field injector
@@ -384,8 +408,7 @@ class ApplicationRunner {
       ctrlr = injector.get(ctrlr_cls)
       request = req_ctrlr.marshall(request)
       injector.install(Request, () -> request)
-      method_annot = req_ctrlr.get_label(request)
-      return req_ctrlr.unmarshall(_process_internal(ctrlr_cls, ctrlr, method_annot, request))
+      return req_ctrlr.unmarshall(req_ctrlr.process(ctrlr, request))
     }
     raise error.Error('No controller found for request: ' + str(request))
   }
@@ -398,16 +421,6 @@ class ApplicationRunner {
       raise error.Error(str(ctrlr_cls) + ' has multiple RequestController annotations.')
     }
     return req_ctrlrs[0]
-  }
-
-  method _process_internal(ctrlr_cls, ctrlr, annot, request) {
-    methods = ctrlr_cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
-    if methods.len() == 0 {
-      raise error.Error(str(ctrlr_cls) + ' has no ' + str(annot) + ' annotated methods.')
-    } else if methods.len() > 1 {
-      raise error.Error(str(ctrlr_cls) + ' has multiple ' + str(annot) + ' annotated methods.')
-    }
-    return ctrlr.$get(methods[0].name())(request)
   }
 
   method run() {

@@ -282,8 +282,8 @@
     return entity_object(new_obj);                                             \
   }                                                                            \
                                                                                \
-  void _##class_name##_copy_fn(Heap *heap, Map *cpy_map, Object *target_obj,   \
-                               Object *src_obj) {                              \
+  void _##class_name##_copy_fn(EntityCopier *copier, Object *src_obj,          \
+                               Object *target_obj) {                           \
     class_name *src = (class_name *)src_obj->_internal_obj;                    \
     target_obj->_internal_obj = class_name##_copy(src);                        \
   }

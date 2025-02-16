@@ -802,8 +802,7 @@ Entity _function_ref_obj(Task *task, Context *ctx, Object *obj, Entity *args) {
 void _range_init(Object *obj) { obj->_internal_obj = ALLOC(_Range); }
 void _range_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
 
-void _range_copy(Heap *heap, Map *cpy_map, Object *target_obj,
-                 Object *src_obj) {
+void _range_copy(EntityCopier *copier, Object *src_obj, Object *target_obj) {
   _Range *src = (_Range *)src_obj->_internal_obj;
   _Range *target = (_Range *)target_obj->_internal_obj;
   *target = *src;
@@ -878,11 +877,7 @@ Entity _object_super(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _object_copy(Task *task, Context *ctx, Object *obj, Entity *args) {
   Entity e = entity_object(obj);
-  Map cpy_map;
-  map_init_default(&cpy_map);
-  Entity to_return = entity_copy(task->parent_process->heap, &cpy_map, &e);
-  map_finalize(&cpy_map);
-  return to_return;
+  return entity_copy(&e, task->parent_process->heap);
 }
 
 Entity _class_methods(Task *task, Context *ctx, Object *obj, Entity *args) {

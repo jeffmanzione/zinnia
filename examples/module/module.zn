@@ -1,9 +1,9 @@
-; zinnia examples/module/module.zn examples/module
+; zinnia examples/module/module.zn .
 
 import io
-import 'one/one'
-import 'one/two/two'
-import 'one/two/three/three'
+import 'examples/module/one/one'
+import 'examples/module/one/two/two'
+import 'examples/module/one/two/three/three'
 
 if __main {
   io.println(one.ONE, two.TWO, three.THREE)

@@ -21,13 +21,13 @@ typedef struct _Object Object;
 typedef struct _Class Class;
 typedef struct _Module Module;
 typedef struct _Function Function;
+typedef struct _EntityCopier EntityCopier;
 
 typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
 // TODO: This should only be temporary until to_s() is supported.
 typedef void (*ObjPrintFn)(const Object *, FILE *);
-typedef void (*ObjCopyFn)(void *heap, Map *cpy_map, Object *target,
-                          Object *src);
+typedef void (*ObjCopyFn)(EntityCopier *copier, Object *src, Object *target);
 
 // Represents an object with properties.
 struct _Object {

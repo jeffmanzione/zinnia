@@ -36,6 +36,9 @@ zinnia_library(
 
 zinnia_binary(
     name = "dynamic",
+    cc_deps = [
+        ":_custom.dll",
+    ],
     main = "dynamic.zn",
     deps = [":custom"],
 )

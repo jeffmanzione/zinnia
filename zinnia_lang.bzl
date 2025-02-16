@@ -148,7 +148,7 @@ _zinnia_binary = rule(
     },
 )
 
-def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
+def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = [], data = []):
     """Compiles an executable binary for a zinnia program.
 
     Args:
@@ -158,6 +158,7 @@ def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
         deps: Zinnia libraries that should be included in the binary.
         cc_deps: C (cc_library) targets that should be included in the binary.
         modules: Modules (zinnia_cc_library) targets that should be included in the binary.
+        data: Data needed by the program.
     """
     if main in srcs:
         srcs.remove(main)
@@ -178,6 +179,7 @@ def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
     native.cc_binary(
         name = name,
         srcs = [":%s_bin" % name],
+        data = data,
         deps = cc_deps + [
             "//run",
             "//util/args:commandline",

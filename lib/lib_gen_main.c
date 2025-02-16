@@ -23,6 +23,8 @@ int main(int argc, const char *args[]) {
     fprintf(stderr, "Could not open file: \"%s\".", out_file_name);
     return EXIT_FAILURE;
   }
+
+  fprintf(out, "#ifndef ZINNIA_LIB_LIB_H_\n#define ZINNIA_LIB_LIB_H_\n\n");
   for (int i = 2; i < argc; ++i) {
     const char *input_file_name = args[i];
     char *dir_path, *file_base, *ext;
@@ -59,6 +61,9 @@ int main(int argc, const char *args[]) {
 
     // fclose(input_file);
   }
+
+  fprintf(out, "#endif /* ZINNIA_LIB_LIB_H_ */\n");
+
   fclose(out);
   return EXIT_SUCCESS;
 }

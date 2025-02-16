@@ -25,4 +25,4 @@ f = p.start()
 
 io.println('Original process.')
 
-io.println(await f)
+await f

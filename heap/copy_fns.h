@@ -11,8 +11,11 @@
 #include "heap/heap.h"
 #include "struct/map.h"
 
-void array_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
-void tuple_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
-void string_copy(Heap *heap, Map *cpy_map, Object *target_obj, Object *src_obj);
+void array_copy(EntityCopier *copier, const Object *src_obj,
+                Object *target_obj);
+void tuple_copy(EntityCopier *copier, const Object *src_obj,
+                Object *target_obj);
+void string_copy(EntityCopier *copier, const Object *src_obj,
+                 Object *target_obj);
 
 #endif /* HEAP_COPY_FNS_H_ */

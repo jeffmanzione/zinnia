@@ -2,66 +2,109 @@ import inject
 import io
 import json
 import net
-import web
 
+class Favicon {}
 class IndexHtml {}
 class NotFoundHtml {}
 
-def is_index(req) {
+def is_favicon(req) {
+  net.parse_request(req).path == '/favicon.ico'
+}
+
+def is_not_found(req) {
+  net.parse_request(req).path == '/not_found.html'
+}
+
+def is_base_path(req) {
   net.parse_request(req).path == '/'
 }
 
-@net.HttpRequestController(is_index)
+@net.HttpRequestController(is_favicon)
+@inject.Inject(keys: Favicon)
+class FaviconController {
+  new(field favicon) {}
+
+  @net.Get
+  method get(http_request, http_response) {
+    http_response
+        .set_content_type('image/x-icon')
+        .add_content(favicon)
+  }
+}
+
+@net.HttpRequestController(is_base_path)
 @inject.Inject(keys: IndexHtml)
 class IndexController {
   new(field index_html) {}
 
   @net.Get
-  method get(http_request) {
-    net.HttpResponse().add_content(index_html)
+  method get(http_request, http_response) {
+    http_response.add_content(index_html)
   }
 }
 
-@net.HttpRequestController
+@net.HttpRequestController(is_not_found)
 @inject.Inject(keys: NotFoundHtml)
 class NotFoundController {
   new(field not_found) {}
 
   @net.Get
-  method get(http_request) {
-    net.HttpResponse().add_content(not_found)
+  method get(http_request, http_response) {
+    http_response.add_content(not_found)
+  }
+}
+
+@net.HttpRequestController
+class RedirectController {
+  @net.Get
+  method get(http_request, http_response) {
+    if (http_request.path == '/index.html') {
+      net.redirect(http_request, http_response, '/')
+    } else {
+      net.redirect(http_request, http_response, '/not_found.html')
+    }
   }
 }
 
 @net.RequestController
 class RpcController {
-  new() {}
-
   @net.Rpc
   method process(request) {
-    return json.jsonify({'message': 'Hello, world!'})
+    io.println('Ping')
+    ; For now, just ping back the request.
+    json.jsonify({'request': request, 'response': 'pong'})
   }
 }
 
 class WebProviders : inject.ProviderSet {
   @inject.Singleton
+  @inject.Provides(key: Favicon)
+  method provide_favicon() {
+    io.FileReader('./examples/sockets/web/favicon.ico', True).getall()
+  }
+
+  @inject.Singleton
   @inject.Provides(key: IndexHtml)
   method provide_index() {
-    io.FileReader('./examples/sockets/web/index.html').getall()
+    io.FileReader('examples/sockets/web/index.html').getall()
   }
+
   @inject.Singleton
   @inject.Provides(key: NotFoundHtml)
   method provide_not_found() {
-    io.FileReader('./examples/sockets/web/not_found.html').getall()
+    io.FileReader('examples/sockets/web/not_found.html').getall()
   }
 }
 
 net.Server()
     .add_application(
         net.Application('0.0.0.0', 80)
+            .add_controller(FaviconController)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
+            .add_controller(RedirectController)
             .add_provider_set(WebProviders))
     .add_application(
-        net.Application('0.0.0.0', 1453).add_controller(RpcController))
+        net.Application('0.0.0.0', 1453)
+            .add_controller(RpcController))
     .run()

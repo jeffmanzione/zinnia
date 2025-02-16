@@ -1590,13 +1590,10 @@ void _mark_remote_task_complete(Process *process, Task *task,
                                 bool should_push) {
   Task *remote_task = future_get_task(task->remote_future);
   Process *remote_proces = remote_task->parent_process;
-  Map cpys;
-  map_init_default(&cpys);
   SYNCHRONIZED(remote_proces->heap_access_lock, {
     *task_mutable_resval(remote_task) = entity_copy(
-        remote_proces->heap, &cpys, task_get_resval(process->current_task));
+        task_get_resval(process->current_task), remote_proces->heap);
   });
-  map_finalize(&cpys);
 
   remote_task->state = task->state;
 
@@ -1679,14 +1676,11 @@ void _process_broadcast_to_parent(Process *process) {
         create_remote_object(process_task->parent_process->heap, process,
                              task_get_resval(process->current_task)->obj));
   } else {
-    Map cpys;
-    map_init_default(&cpys);
     SYNCHRONIZED(process_task->parent_process->heap_access_lock, {
       *task_mutable_resval(process_task) =
-          entity_copy(process_task->parent_process->heap, &cpys,
-                      task_get_resval(process->current_task));
+          entity_copy(task_get_resval(process->current_task),
+                      process_task->parent_process->heap);
     });
-    map_finalize(&cpys);
   }
   process_remove_waiting_task(process_task->parent_process, process_task);
   process_task->state = TASK_COMPLETE;

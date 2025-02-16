@@ -147,13 +147,13 @@ Object *_object_create(Heap *heap, const Class *class) {
 
 void _print_object_summary(Object *object) {
   ASSERT(NOT_NULL(object));
-  if (0 == strcmp(object->_class->_name, "Class")) {
+  if (object->_class == Class_Class) {
     printf("\tClass('%s')", object->_class_obj->_name);
-  } else if (0 == strcmp(object->_class->_name, "Module")) {
+  } else if (object->_class == Class_Module) {
     printf("\tModule('%s')", object->_module_obj->_name);
-  } else if (0 == strcmp(object->_class->_name, "Function")) {
+  } else if (object->_class == Class_Function) {
     printf("\tFunction('%s')", object->_function_obj->_name);
-  } else if (0 == strcmp(object->_class->_name, "String")) {
+  } else if (object->_class == Class_String) {
     printf("\tString('%.*s', %p)",
            String_size(((String *)object->_internal_obj)),
            ((String *)object->_internal_obj)->table, object->_internal_obj);
@@ -236,7 +236,8 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
 
 Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
 
-// Does this need to handle overwrites?
+// This function does not handle overwrites, so references to overwritten
+// members will persist.
 void tuple_set(Heap *heap, Object *tuple, int32_t index, const Entity *child) {
   ASSERT(NOT_NULL(heap), NOT_NULL(tuple), NOT_NULL(child));
   ASSERT(index >= 0, index < tuple_size((Tuple *)tuple->_internal_obj));
@@ -315,7 +316,19 @@ Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   return tuple_obj;
 }
 
-Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
+void entitycopier_init(EntityCopier *copier, Heap *target) {
+  ASSERT(NOT_NULL(copier), NOT_NULL(target));
+  copier->target = target;
+  map_init_default(&copier->copy_map);
+}
+
+void entitycopier_finalize(EntityCopier *copier) {
+  ASSERT(NOT_NULL(copier));
+  map_finalize(&copier->copy_map);
+}
+
+Entity entitycopier_copy(EntityCopier *copier, const Entity *e) {
+  ASSERT(NOT_NULL(copier), NOT_NULL(e));
   ASSERT(NOT_NULL(e));
   switch (e->type) {
   case NONE:
@@ -326,28 +339,47 @@ Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e) {
   }
   Object *obj = e->obj;
   // Guarantee only one copied version of each object.
-  Object *cpy = (Object *)map_lookup(copy_map, obj);
+  Object *cpy = (Object *)map_lookup(&copier->copy_map, obj);
   if (NULL != cpy) {
     return entity_object(cpy);
   }
+  // Modules and Classes should not be copied.
+  // These objects should be treated as effectively immutable (although as of
+  // 2025-02-16, they are still mutable), allowing for pointer comparison and
+  // shared use across threads.
   if (IS_CLASS(e, Class_Module) || IS_CLASS(e, Class_Class)) {
-    map_insert(copy_map, obj, obj);
+    map_insert(&copier->copy_map, obj, obj);
     return *e;
   }
-  cpy = heap_new(heap, obj->_class);
-  map_insert(copy_map, obj, cpy);
+  cpy = heap_new(copier->target, obj->_class);
+  map_insert(&copier->copy_map, obj, cpy);
 
   if (NULL != obj->_class->_copy_fn) {
-    obj->_class->_copy_fn(heap, copy_map, cpy, obj);
+    obj->_class->_copy_fn(copier, obj, cpy);
   }
 
   KL_iter members = keyedlist_iter(&obj->_members);
   for (; kl_has(&members); kl_inc(&members)) {
     Entity member_cpy =
-        entity_copy(heap, copy_map, &((Member *)kl_value(&members))->entity);
-    object_set_member(heap, cpy, kl_key(&members), &member_cpy);
+        entitycopier_copy(copier, &((Member *)kl_value(&members))->entity);
+    object_set_member(copier->target, cpy, kl_key(&members), &member_cpy);
   }
   return entity_object(cpy);
+}
+
+Entity entity_copy(const Entity *e, Heap *target) {
+  Entity copy;
+  BULK_COPY(copier, target, { copy = entitycopier_copy(&copier, e); });
+  return copy;
+}
+
+M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
+  return map_iter((Map *)&hp->object_type_counts);
+}
+
+void heapprofile_delete(HeapProfile *hp) {
+  map_finalize(&hp->object_type_counts);
+  DEALLOC(hp);
 }
 
 HeapProfile *heap_create_profile(const Heap *const heap) {
@@ -367,13 +399,4 @@ HeapProfile *heap_create_profile(const Heap *const heap) {
     }
   }
   return hp;
-}
-
-M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
-  return map_iter((Map *)&hp->object_type_counts);
-}
-
-void heapprofile_delete(HeapProfile *hp) {
-  map_finalize(&hp->object_type_counts);
-  DEALLOC(hp);
 }

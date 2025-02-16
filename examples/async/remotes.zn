@@ -16,7 +16,7 @@ class Test {
   }
 
   method cause_error() {
-    raise error.Error('Oh no!')
+    raise error.Error('This is intentional!')
   }
 
   method to_s() {

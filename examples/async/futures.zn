@@ -6,7 +6,7 @@ work = () async {
   io.println('Hard work done!')
 }()  ; Call the function.
 
-io.println('Waiting for work to complete!')
+io.println('Waiting for work to complete! (2 seconds)')
 await work
 
 io.println('Hard work was finished!')
