@@ -1,5 +1,5 @@
+import async
 import io
-import process
 import time
 
 
@@ -9,11 +9,12 @@ def nanos_to_seconds(nanos) {
   Float(nanos) / time.MILLIS_PER_SECOND / time.NANOS_PER_MILLI
 }
 
+io.println('Start!')
 timer.start()
-await process.sleep(1)
+await async.sleep(1)
 io.println(cat('Elapsed seconds = ', nanos_to_seconds(timer.mark('first'))))
-await process.sleep(2)
+await async.sleep(2)
 io.println(cat('Elapsed seconds = ', nanos_to_seconds(timer.mark('second'))))
-await process.sleep(3)
+await async.sleep(3)
 io.println(cat('Elapsed seconds = ', nanos_to_seconds(timer.mark('third'))))
 io.println(timer.elapsed_usec())

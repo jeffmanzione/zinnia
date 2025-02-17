@@ -29,7 +29,7 @@ Object *function_ref_get_object(Object *fn_ref_obj);
 const Function *function_ref_get_func(Object *fn_ref_obj);
 void *function_ref_get_parent_context(Object *fn_ref_obj);
 
-void function_ref_copy(Heap *heap, Map *cpy_map, Object *target_obj,
-                       Object *src_obj);
+void function_ref_copy(EntityCopier *copier, const Object *src_obj,
+                       Object *target_obj);
 
 #endif /* OBJECT_FUNCTION_FUNCTION_H_ */

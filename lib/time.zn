@@ -5,7 +5,7 @@ self.NANOS_PER_MILLI = 1000
 class Clock {
   new(
     field now_timestamp = () -> Timestamp(__now_timestamp()),
-    field now_usec = now_usec
+    field now_usec = () -> __now_usec()
   ) {}
   method to_s() {
     str(now_timestamp())

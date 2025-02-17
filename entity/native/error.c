@@ -189,8 +189,8 @@ Object *error_new(Task *task, Context *ctx, Object *error_msg) {
   return err;
 }
 
-void _stackline_copy(Heap *heap, Map *cpy_map, Object *target_obj,
-                     Object *src_obj) {
+void _stackline_copy(EntityCopier *copier, Object *src_obj,
+                     Object *target_obj) {
   _StackLine *src = (_StackLine *)src_obj->_internal_obj;
   _StackLine *target = (_StackLine *)target_obj->_internal_obj;
   *target = *src;

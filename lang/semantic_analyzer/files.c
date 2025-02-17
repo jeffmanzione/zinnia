@@ -525,6 +525,27 @@ FunctionDef populate_function(SemanticAnalyzer *analyzer,
       set_function_def, set_function_args);
 }
 
+Import populate_import(SemanticAnalyzer *analyzer, const SyntaxTree *stree) {
+  Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
+                   .src_name = NULL,
+                   .as_token = NULL,
+                   .use_name = NULL,
+                   .is_string_import = false};
+  if (CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
+    import.src_name = CHILD_SYNTAX_AT(stree, 1)->token;
+  } else if (CHILD_IS_SYNTAX(stree, 1, rule_string_literal)) {
+    import.src_name = CHILD_SYNTAX_AT(stree, 1)->token;
+    import.is_string_import = true;
+  } else {
+    FATALF("Unknown rule.");
+  }
+  if (CHILD_COUNT(stree) > 2 && CHILD_IS_TOKEN(stree, 2, KEYWORD_AS)) {
+    import.as_token = CHILD_SYNTAX_AT(stree, 2)->token;
+    import.use_name = CHILD_SYNTAX_AT(stree, 3)->token;
+  }
+  return import;
+}
+
 void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
                            ModuleDef *module) {
   if (IS_SYNTAX(stree, rule_module_statement)) {
@@ -537,11 +558,7 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
     module->name.module_token = CHILD_SYNTAX_AT(stree, 0)->token;
     module->name.module_name = CHILD_SYNTAX_AT(stree, 1)->token;
   } else if (IS_SYNTAX(stree, rule_import_statement)) {
-    if (!CHILD_IS_SYNTAX(stree, 1, rule_identifier)) {
-      FATALF("import AS not yet supported.");
-    }
-    Import import = {.import_token = CHILD_SYNTAX_AT(stree, 0)->token,
-                     .module_name = CHILD_SYNTAX_AT(stree, 1)->token};
+    Import import = populate_import(analyzer, stree);
     alist_append(module->imports, &import);
   } else if (IS_SYNTAX(stree, rule_class_definition_no_annotation)) {
     ClassDef class = populate_class(analyzer, stree);
@@ -747,7 +764,10 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   // Imports
   for (i = 0; i < alist_len(module->imports); ++i) {
     Import *import = (Import *)alist_get(module->imports, i);
-    num_ins += tape_ins(tape, LMDL, import->module_name);
+    num_ins += tape_ins(tape, LMDL, import->src_name);
+    num_ins += tape_ins(tape, MSET,
+                        (NULL == import->use_name) ? import->src_name
+                                                   : import->use_name);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

@@ -402,7 +402,10 @@ typedef struct {
 
 typedef struct {
   Token *import_token;
-  Token *module_name;
+  Token *src_name;
+  Token *as_token;
+  Token *use_name;
+  bool is_string_import;
 } Import;
 
 typedef struct {

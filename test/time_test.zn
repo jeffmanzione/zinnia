@@ -1,3 +1,7 @@
+; TODO: Update test so that it isn't affected by system time zone.
+;
+; This issue was discovered while traveling.
+
 import io
 import test
 import time

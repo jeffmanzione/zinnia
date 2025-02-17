@@ -10,7 +10,7 @@ completer = async.Completer()
   completer.complete()
 }()  ; Call the function.
 
-io.println('Waiting for work to complete!')
+io.println('Waiting for work to complete! (2 seconds)')
 
 await completer.as_future()
 io.println('Hard work was finished!')

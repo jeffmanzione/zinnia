@@ -10,8 +10,8 @@ zinnia_binary(
 )
 
 zinnia_binary(
-    name = "time",
-    main = "time.zn",
+    name = "timer",
+    main = "timer.zn",
 )
 
 zinnia_binary(

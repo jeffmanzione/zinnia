@@ -70,7 +70,7 @@ void run_files(const AList *source_file_names, const AList *source_contents,
     const char *src_content = *(char **)alist_get(source_contents, i);
     NativeCallback init_fn = *(NativeCallback *)alist_get(init_fns, i);
     ModuleInfo *module_info =
-        mm_register_module_with_callback(mm, src, src_content, init_fn);
+        mm_register_module_with_callback(mm, src, src, src_content, init_fn);
     if (NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
       main_module->_is_initialized = true;
@@ -105,12 +105,24 @@ void run(const Set *source_files, ArgStore *store) {
   M_iter srcs = set_iter((Set *)source_files);
   for (; has(&srcs); inc(&srcs)) {
     const char *src = value(&srcs);
-    ModuleInfo *module_info = mm_register_module(mm, src, NULL);
-    if (NULL == main_module) {
-      main_module = modulemanager_load(mm, module_info);
-      main_module->_is_initialized = true;
-      object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                        MAIN_KEY, &TRUE_ENTITY);
+    if (is_dir(src)) {
+      FileLocs *locs = file_locs_create(src);
+      FileLoc_iter iter = file_locs_iter(locs);
+      for (; fl_has(&iter); fl_inc(&iter)) {
+        FileLoc *loc = fl_value(&iter);
+        mm_register_module(mm, file_loc_full_path(loc),
+                           file_loc_relative_path(loc), NULL);
+      }
+      file_locs_delete(locs);
+
+    } else {
+      ModuleInfo *module_info = mm_register_module(mm, src, src, NULL);
+      if (NULL == main_module) {
+        main_module = modulemanager_load(mm, module_info);
+        main_module->_is_initialized = true;
+        object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
+                          MAIN_KEY, &TRUE_ENTITY);
+      }
     }
   }
 

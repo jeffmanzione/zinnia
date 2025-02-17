@@ -126,7 +126,7 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       DEALLOC(fn);
       DEALLOC(mode);
       if (NULL == f->fp) {
-        return raise_error(task, ctx, "File could not be opened.");
+        return raise_error(task, ctx, "File (%s) could not be opened.", fn);
       }
     }
   } else {

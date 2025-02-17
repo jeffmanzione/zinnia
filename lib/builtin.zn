@@ -353,7 +353,7 @@ class Range {
   }
 }
 
-self.Iteartor = builtin_ext.Iterator
+self.Iterator = builtin_ext.Iterator
 self.IndexIterator = builtin_ext.IndexIterator
 self.KVIterator = builtin_ext.KVIterator
 self.range = builtin_ext.range

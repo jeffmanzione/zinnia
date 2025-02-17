@@ -67,7 +67,6 @@ char *_compile_to_file(const char file_name[]) {
 
     DEALLOC(content);
     DEALLOC(assembly_content);
-    fclose(assembly_file);
     return escaped_assembly;
   } else if (ends_with(file_name, ".zna")) {
     FILE *file = FILE_FN(file_name, "rb");
@@ -119,6 +118,22 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
   file_info_delete(fi);
 }
 
+bool _is_alphanumeric(const char c) {
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+         (c >= 'a' && c <= 'z');
+}
+
+char *_convert_lib_path_to_var_name(const char lib_path[]) {
+  char *var_name = ALLOC_STRDUP(lib_path);
+  for (int i = 0; i < strlen(var_name); ++i) {
+    const char c = var_name[i];
+    if (!_is_alphanumeric(c)) {
+      var_name[i] = '_';
+    }
+  }
+  return var_name;
+}
+
 int zinniap(int argc, const char *args[]) {
   alloc_init();
   strings_init();
@@ -151,7 +166,8 @@ int zinniap(int argc, const char *args[]) {
                "#include \"run/run.h\"\n"
                "#include \"struct/alist.h\"\n"
                "#include \"util/args/commandline.h\"\n"
-               "#include \"util/args/commandlines.h\"\n\n");
+               "#include \"util/args/commandlines.h\"\n"
+               "#include \"vm/intern.h\"\n");
 
   M_iter extra_hdrs_it = set_iter(&extra_hdrs);
   for (; has(&extra_hdrs_it); inc(&extra_hdrs_it)) {
@@ -166,18 +182,16 @@ int zinniap(int argc, const char *args[]) {
       continue;
     }
     DEBUGF("Processing source: %s", file_name);
-    char *dir_path, *file_base, *ext;
-    split_path_file(file_name, &dir_path, &file_base, &ext);
 
     const char *escaped_assembly = _compile_to_file(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", file_base);
+    const char *var_name = _convert_lib_path_to_var_name(file_name);
+
+    fprintf(out, "const char LIB_%s[] =", var_name);
     _write_file_chunks(escaped_assembly, out);
     fprintf(out, ";\n\n");
 
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    DEALLOC(var_name);
     DEALLOC(escaped_assembly);
   }
 
@@ -191,13 +205,13 @@ int zinniap(int argc, const char *args[]) {
 
     const char *escaped_assembly = _compile_to_file(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", file_base);
+    const char *var_name = _convert_lib_path_to_var_name(file_name);
+
+    fprintf(out, "const char LIB_%s[] =", var_name);
     _write_file_chunks(escaped_assembly, out);
     fprintf(out, ";\n\n");
 
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    DEALLOC(var_name);
     DEALLOC(escaped_assembly);
   }
 
@@ -223,12 +237,16 @@ int zinniap(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
     char *escaped_dir_path = escape(dir_path);
+
+    const char *lib_var_name = _convert_lib_path_to_var_name(file_name);
+
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
     fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
-            file_base);
+            lib_var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  NULL;\n");
 
+    DEALLOC(lib_var_name);
     DEALLOC(escaped_dir_path);
     DEALLOC(dir_path);
     DEALLOC(file_base);
@@ -238,15 +256,19 @@ int zinniap(int argc, const char *args[]) {
   it = map_iter(&native_modules);
   for (; has(&it); inc(&it)) {
     const _NativeModuleInfo *m = (_NativeModuleInfo *)value(&it);
+
+    const char *var_name = _convert_lib_path_to_var_name(m->src);
+
     char *dir_path, *file_base, *ext;
     split_path_file(m->src, &dir_path, &file_base, &ext);
     char *escaped_dir_path = escape(dir_path);
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
-            file_base);
+    fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
+            var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  %s;\n", m->init_fn);
 
+    DEALLOC(var_name);
     DEALLOC(escaped_dir_path);
     DEALLOC(dir_path);
     DEALLOC(file_base);
@@ -260,22 +282,23 @@ int zinniap(int argc, const char *args[]) {
                "#ifdef DEBUG\n"
                "  argstore_delete(store);\n"
                "  argconfig_delete(config);\n"
-               "  strings_finalize();\n"
                "  token_finalize_all();\n"
+               "  strings_finalize();\n"
                "  alloc_finalize();\n"
                "#endif\n"
                "  return EXIT_SUCCESS;\n"
                "}\n");
 
+#ifdef DEBUG
   M_iter iter = map_iter(&native_modules);
   for (; has(&iter); inc(&iter)) {
-    DEALLOC(value(&iter));
+    void *val = value(&iter);
+    DEALLOC(val);
   }
   map_finalize(&native_modules);
 
   set_finalize(&extra_hdrs);
 
-#ifdef DEBUG
   optimize_finalize();
   strings_finalize();
   token_finalize_all();

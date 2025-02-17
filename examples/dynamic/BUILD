@@ -35,7 +35,10 @@ zinnia_library(
 )
 
 zinnia_binary(
-    name = "dynamic_test",
-    main = "dynamic_test.zn",
+    name = "dynamic",
+    cc_deps = [
+        ":_custom.dll",
+    ],
+    main = "dynamic.zn",
     deps = [":custom"],
 )

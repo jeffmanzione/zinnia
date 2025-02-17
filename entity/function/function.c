@@ -75,11 +75,11 @@ void *function_ref_get_parent_context(Object *fn_ref_obj) {
   return func_ref->parent_context;
 }
 
-void function_ref_copy(Heap *heap, Map *cpy_map, Object *target_obj,
-                       Object *src_obj) {
+void function_ref_copy(EntityCopier *copier, const Object *src_obj,
+                       Object *target_obj) {
   _FunctionRef *func_ref = (_FunctionRef *)src_obj->_internal_obj;
   Entity e = entity_object(func_ref->obj);
-  Entity cpy_obj = entity_copy(heap, cpy_map, &e);
+  Entity cpy_obj = entitycopier_copy(copier, &e);
   // TODO: Deep copy parent context?
   __function_ref_init(target_obj, cpy_obj.obj, func_ref->func,
                       func_ref->parent_context);

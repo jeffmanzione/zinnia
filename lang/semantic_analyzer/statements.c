@@ -16,7 +16,7 @@ POPULATE_IMPL(compound_statement, const SyntaxTree *stree,
   if (CHILD_IS_TOKEN(stree, 1, SYMBOL_RBRACE)) {
     return;
   }
-  ASSERT(!CHILD_HAS_TOKEN(stree, 1), CHILD_IS_TOKEN(stree, 2, SYMBOL_RBRACE));
+  ASSERT(CHILD_IS_TOKEN(stree, 2, SYMBOL_RBRACE));
 
   if (!CHILD_IS_SYNTAX(stree, 1, rule_statement_list)) {
     ExpressionTree *elt =

@@ -2,6 +2,17 @@
 //
 // Created on: May 28, 2020
 //     Author: Jeff Manzione
+//
+// A memory-allocating heap for allocating new objects and deleting them once
+// they are no longer referenced.
+//
+// NOTE: Heap is NOT threadsafe. Heap wraps MGraph, which is not threadsafe and
+// provides no additional thread safety. To safely pass objects between a source
+// and target heaps, the following must occur in the specified order:
+//   1. The soure and target heaps must be locked.
+//   2. The object from the source heap must be DEEPLY copied in the target heap
+//      using entity_copy().
+//   3. Locks are released.
 
 #ifndef HEAP_HEAP_H_
 #define HEAP_HEAP_H_
@@ -61,9 +72,66 @@ Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
 typedef struct _HeapProfile HeapProfile;
 
 HeapProfile *heap_create_profile(const Heap *const heap);
+
 M_iter heapprofile_object_type_counts(const HeapProfile *const hp);
 void heapprofile_delete(HeapProfile *hp);
 
-Entity entity_copy(Heap *heap, Map *copy_map, const Entity *e);
+/**
+ * @brief Struct for creating deep copies of multiple objects that should share
+ * the same deep copies of objects.
+ *
+ */
+struct _EntityCopier {
+  Heap *target;
+  /* Map of entities in source to their copies in target.*/
+  Map copy_map;
+};
+
+typedef struct _EntityCopier EntityCopier;
+
+/**
+ * @brief Initializes an EntityCopier.
+ *
+ * @param copier The EntityCopier to initialize.
+ * @param target The heap into which copies should be created.
+ */
+void entitycopier_init(EntityCopier *copier, Heap *target);
+
+/**
+ * @brief Finalizes the EntityCopier, destroying its copy state.
+ *
+ * @param copier
+ */
+void entitycopier_finalize(EntityCopier *copier);
+
+/**
+ * @brief Creates a copy of an Entity.
+ *
+ * @param copier The EntityCopier to create the copy.
+ * @param e The entity to copy.
+ * @return The newly-created entity.
+ */
+Entity entitycopier_copy(EntityCopier *copier, const Entity *e);
+
+/**
+ * @brief Creates a deep copy of an Entity in a Heap and returns it.
+ *
+ * This is only for use when copying one object. If multiple objects are being
+ * copied and they should share the same underlying deep copies, then
+ * EntityCopier should be used instead.
+ *
+ * @param e The entity to be copied.
+ * @param heap The target heap for the copy.
+ * @return The newly-created copy of e in heap.
+ */
+Entity entity_copy(const Entity *e, Heap *heap);
+
+#define BULK_COPY(copier_var_name, target_heap, exp)                           \
+  {                                                                            \
+    EntityCopier copier_var_name;                                              \
+    entitycopier_init(&copier_var_name, target_heap);                          \
+    exp;                                                                       \
+    entitycopier_finalize(&copier_var_name);                                   \
+  }
 
 #endif /* HEAP_HEAP_H_ */

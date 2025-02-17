@@ -134,15 +134,13 @@ Entity _create_process(Task *current_task, Context *current_ctx, Object *obj,
                        "__create_processes expects (Function, ANY).");
   }
 
-  Map cps;
-  map_init_default(&cps);
-  Entity self_e = entity_object(self);
-  self = entity_copy(new_process->heap, &cps, &self_e).obj;
-  new_ctx =
-      task_create_context(new_task, self, (Module *)f->_module, f->_ins_pos);
-  *task_mutable_resval(new_task) =
-      entity_copy(new_process->heap, &cps, fn_args);
-  map_finalize(&cps);
+  BULK_COPY(copier, new_process->heap, {
+    Entity self_e = entity_object(self);
+    self = entitycopier_copy(&copier, &self_e).obj;
+    new_ctx =
+        task_create_context(new_task, self, (Module *)f->_module, f->_ins_pos);
+    *task_mutable_resval(new_task) = entitycopier_copy(&copier, fn_args);
+  });
 
   context_set_function(new_ctx, f);
 
@@ -260,7 +258,7 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
   SYNCHRONIZED(current_task->parent_process->heap_access_lock, {
     SYNCHRONIZED(remote_process->heap_access_lock, {
       *task_mutable_resval(remote_task) =
-          entity_copy(remote_process->heap, &cps, fn_args);
+          entity_copy(fn_args, remote_process->heap);
     });
   });
   map_finalize(&cps);

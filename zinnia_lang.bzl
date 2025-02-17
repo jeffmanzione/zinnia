@@ -1,3 +1,5 @@
+"""Rules for the zinnia programming language."""
+
 def _zinnia_library_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
     compiler_executable_path = "./" + compiler_executable.short_path
@@ -72,6 +74,15 @@ def _prioritize_bin(file):
         return 1
 
 def zinnia_library(name, srcs, deps = [], bin = True, assembly = True):
+    """Generates compiled files for the zinnia programming langyage.
+
+    Args:
+        name: Name of the target.
+        srcs: zinnia sources.
+        deps: zinnia_library dependencies.
+        bin: Whether binary (.znb) files should be generated.
+        assembly: Whether assemplty (.zna) files should be generated.
+    """
     return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = True)
 
 def _zinnia_binary_impl(ctx):
@@ -137,10 +148,22 @@ _zinnia_binary = rule(
     },
 )
 
-def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
+def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = [], data = []):
+    """Compiles an executable binary for a zinnia program.
+
+    Args:
+        name: Name of the binary.
+        main: The zinnia file to serve as main().
+        srcs: Additional sources to the main program.
+        deps: Zinnia libraries that should be included in the binary.
+        cc_deps: C (cc_library) targets that should be included in the binary.
+        modules: Modules (zinnia_cc_library) targets that should be included in the binary.
+        data: Data needed by the program.
+    """
     if main in srcs:
         srcs.remove(main)
     deps = deps + [mdep + "_lib" for mdep in modules]
+    cc_deps = cc_deps + [mdep + "_lib_cc_deps" for mdep in modules]
     if len(srcs) > 0:
         zinnia_library(
             name = "%s_srcs" % name,
@@ -156,6 +179,7 @@ def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = []):
     native.cc_binary(
         name = name,
         srcs = [":%s_bin" % name],
+        data = data,
         deps = cc_deps + [
             "//run",
             "//util/args:commandline",
@@ -193,10 +217,23 @@ _zinnia_cc_library = rule(
 )
 
 def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = None):
+    """Generates the files necessary to statically link C used with zinnia code into a zinna_binary() as a module.
+
+    Args:
+        name: Name of the target.
+        src_module: The .zn file used as the source.
+        deps: zinnia_library() deps needed by src_module.
+        cc_deps: C (cc_library) targets that should be included in the binary.
+        cc_init_fn: The C function name that should be called to initiate the library.
+    """
     zinnia_library(
         name = "%s_lib" % name,
         srcs = [src_module],
         deps = deps,
+    )
+    native.cc_library(
+        name = "%s_lib_cc_deps" % name,
+        deps = cc_deps,
     )
     return _zinnia_cc_library(
         name = name,

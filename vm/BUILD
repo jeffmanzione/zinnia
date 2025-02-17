@@ -70,6 +70,7 @@ cc_library(
         "//program:tape",
         "//program:tape_binary",
         "//program/optimization:optimize",
+        "//util:file",
         "@c_data_structures//struct:keyed_list",
         "@file_utils//util:string",
         "@file_utils//util/file:file_info",

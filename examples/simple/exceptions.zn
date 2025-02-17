@@ -2,13 +2,13 @@ import error
 import io
 
 try {
-  None.field_on_none ; Will trigger an exception.
+  None.this_is_intentional ; Will trigger an exception.
 } catch e {
   io.fprintln(io.ERROR, e)
 }
 
 try {
-  raise error.Error('Hello, world!')
+  raise error.Error('This is intentional!')
 } catch e {
   io.fprintln(io.ERROR, e)
 }

@@ -1,3 +1,2 @@
 ; No idea why some code is needed here...
 self.exists = True
-def nop() None

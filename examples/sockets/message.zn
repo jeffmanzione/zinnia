@@ -2,7 +2,7 @@ import io
 import socket
 
 host = args.host
-port = args.port | 1453
+port = Int(args.port) | 1453
 
 if ~host {
   io.println('Host not set. Use --host.')

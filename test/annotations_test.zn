@@ -1,6 +1,5 @@
 import io
 import test
-import time
 
 self.expect = test.expect
 
