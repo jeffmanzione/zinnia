@@ -1,7 +1,7 @@
 // heap.h
 //
 // Created on: May 28, 2020
-//     Author: Jeff Manzion
+//     Author: Jeff Manzione
 //
 // A memory-allocating heap for allocating new objects and deleting them once
 // they are no longer referenced.
