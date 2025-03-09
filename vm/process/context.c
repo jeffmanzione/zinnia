@@ -57,7 +57,7 @@ Module *context_module(Context *ctx) {
 Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
                              Context *ctx) {
   Object *fn_ref = heap_new(heap, Class_FunctionRef);
-  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL);
+  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL, heap);
   return fn_ref;
 }
 

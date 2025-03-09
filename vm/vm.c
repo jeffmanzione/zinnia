@@ -78,9 +78,12 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
   return member;
 }
 
+// Need to investigate whether there is an issue with creating edges cross-heap.
 void _task_inc_all_context(Process *process, Task *task) {
   Heap *heap = process->heap;
-  if (NULL != task->parent_task) {
+  heap_inc_edge(heap, process->_reflection, task->_reflection);
+
+  if (NULL != task->parent_task && task->parent_process == process) {
     heap_inc_edge(heap, task->_reflection, task->parent_task->_reflection);
   }
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
@@ -100,6 +103,8 @@ void _task_inc_all_context(Process *process, Task *task) {
   }
   Context *ctx = task->current;
   while (NULL != ctx) {
+    printf("_task_inc_all_context task=%p ctx=%p self=%p\n", task->_reflection,
+           ctx->_reflection, IS_NONE(&ctx->self) ? "NONE" : ctx->self.obj);
     heap_inc_edge(heap, task->_reflection, ctx->_reflection);
     heap_inc_edge(heap, ctx->_reflection, ctx->self.obj);
     if (NULL != ctx->error) {
@@ -111,7 +116,9 @@ void _task_inc_all_context(Process *process, Task *task) {
 
 void _task_dec_all_context(Process *process, Task *task) {
   Heap *heap = process->heap;
-  if (NULL != task->parent_task) {
+  heap_dec_edge(heap, process->_reflection, task->_reflection);
+
+  if (NULL != task->parent_task && task->parent_process == process) {
     heap_dec_edge(heap, task->_reflection, task->parent_task->_reflection);
   }
   M_iter dependent_tasks = set_iter(&task->dependent_tasks);
@@ -144,17 +151,17 @@ void _delete_completed_tasks(Process *process) {
   M_iter completed_tasks = set_iter(&process->completed_tasks);
   for (; has(&completed_tasks); inc(&completed_tasks)) {
     Task *completed_task = (Task *)value(&completed_tasks);
-    set_remove(&process->completed_tasks, completed_task);
     process_delete_task(process, completed_task);
   }
+  // TODO: Switch to set_clear() after that is implemented.
+  set_finalize(&process->completed_tasks);
+  set_init_default(&process->completed_tasks);
 }
 
 void _inc_queued_tasks(Process *process) {
   Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
   for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
     Task *queued_task = *(Task **)Q_value(&queued_tasks);
-    heap_inc_edge(process->heap, process->_reflection,
-                  queued_task->_reflection);
     _task_inc_all_context(process, queued_task);
   }
 }
@@ -163,8 +170,6 @@ void _dec_queued_tasks(Process *process) {
   Q_iter queued_tasks = Q_iterator(&process->queued_tasks);
   for (; Q_has(&queued_tasks); Q_inc(&queued_tasks)) {
     Task *queued_task = *(Task **)Q_value(&queued_tasks);
-    heap_dec_edge(process->heap, process->_reflection,
-                  queued_task->_reflection);
     _task_dec_all_context(process, queued_task);
   }
 }
@@ -173,7 +178,6 @@ void _inc_task_set(Process *process, Set *task_set) {
   M_iter tasks = set_iter(task_set);
   for (; has(&tasks); inc(&tasks)) {
     Task *task = (Task *)value(&tasks);
-    heap_inc_edge(process->heap, process->_reflection, task->_reflection);
     _task_inc_all_context(process, task);
   }
 }
@@ -182,7 +186,6 @@ void _dec_task_set(Process *process, Set *task_set) {
   M_iter tasks = set_iter(task_set);
   for (; has(&tasks); inc(&tasks)) {
     Task *task = (Task *)value(&tasks);
-    heap_dec_edge(process->heap, process->_reflection, task->_reflection);
     _task_dec_all_context(process, task);
   }
 }
@@ -197,13 +200,21 @@ uint32_t process_collect_garbage(Process *process) {
         _delete_completed_tasks(process);
 
         _task_inc_all_context(process, process->current_task);
+        if (process->is_remote) {
+          _task_inc_all_context(process, process->remote_non_daemon_task);
+        }
         _inc_queued_tasks(process);
         _inc_task_set(process, &process->waiting_tasks);
         _inc_task_set(process, &process->background_tasks);
 
+        // printf("process_collect_garbage()\n");
+
         deleted_nodes_count = heap_collect_garbage(process->heap);
 
         _task_dec_all_context(process, process->current_task);
+        if (process->is_remote) {
+          _task_dec_all_context(process, process->remote_non_daemon_task);
+        }
         _dec_queued_tasks(process);
         _dec_task_set(process, &process->waiting_tasks);
         _dec_task_set(process, &process->background_tasks);

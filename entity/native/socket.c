@@ -29,6 +29,7 @@ Entity _SocketHandle_constructor(Task *task, Context *ctx, Object *obj,
 
 void _Socket_init(Object *obj) {}
 void _Socket_delete(Object *obj) {
+  printf("Socket.delete\n");
   socket_delete((Socket *)obj->_internal_obj);
 }
 void _SocketHandle_init(Object *obj) {}
@@ -76,6 +77,7 @@ Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
 }
 
 Entity _Socket_close(Task *task, Context *ctx, Object *obj, Entity *args) {
+  printf("Socket.close\n");
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
     return raise_error(task, ctx, "Weird Socket error.");

@@ -405,9 +405,9 @@ class ApplicationRunner {
       if ~req_ctrlr.matcher_fn(request) {
         continue
       }
-      ctrlr = injector.get(ctrlr_cls)
       request = req_ctrlr.marshall(request)
       injector.install(Request, () -> request)
+      ctrlr = injector.get(ctrlr_cls)
       return req_ctrlr.unmarshall(req_ctrlr.process(ctrlr, request))
     }
     raise error.Error('No controller found for request: ' + str(request))
@@ -429,10 +429,10 @@ class ApplicationRunner {
       handle = await sock.accept()
       try {
         await handle.send(process(await handle.receive()))
-        handle.close()
       } catch e {
         io.fprintln(io.ERROR, e)
       }
+      handle.close()
     }
   }
 }

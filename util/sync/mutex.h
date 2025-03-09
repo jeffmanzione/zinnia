@@ -13,7 +13,11 @@
 typedef void *Mutex;
 #else
 #include <pthread.h>
-typedef pthread_mutex_t *Mutex;
+typedef struct {
+  pthread_mutexattr_t attr;
+  pthread_mutex_t lock;
+} _Mutex;
+typedef _Mutex *Mutex;
 #endif
 
 #define SYNCHRONIZED(mutex, block)                                             \

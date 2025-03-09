@@ -184,7 +184,7 @@ void heap_print_debug_summary(Heap *heap) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  // _print_object_summary(object);
+  _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }

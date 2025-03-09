@@ -41,12 +41,15 @@ void function_finalize(Function *f) { ASSERT(NOT_NULL(f)); }
 void __function_ref_create(Object *obj) { obj->_internal_obj = NULL; }
 
 void __function_ref_init(Object *fn_ref_obj, Object *obj, const Function *func,
-                         void *parent_context) {
+                         void *parent_context, Heap *heap) {
   _FunctionRef *func_ref =
       (_FunctionRef *)(fn_ref_obj->_internal_obj = ALLOC2(_FunctionRef));
   func_ref->obj = obj;
   func_ref->func = func;
   func_ref->parent_context = parent_context;
+  // To prevent the base object from being collected if there is a reference to
+  // its method.
+  heap_inc_edge(heap, fn_ref_obj, obj);
 }
 
 void __function_ref_delete(Object *obj) {
@@ -82,5 +85,5 @@ void function_ref_copy(EntityCopier *copier, const Object *src_obj,
   Entity cpy_obj = entitycopier_copy(copier, &e);
   // TODO: Deep copy parent context?
   __function_ref_init(target_obj, cpy_obj.obj, func_ref->func,
-                      func_ref->parent_context);
+                      func_ref->parent_context, copier->target);
 }
