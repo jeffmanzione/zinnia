@@ -201,7 +201,8 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
 Object *_wrap_function_in_ref2(const Function *f, Object *obj, Task *task,
                                Context *ctx) {
   Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
-  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL);
+  __function_ref_init(fn_ref, obj, f, f->_is_anon ? ctx : NULL,
+                      task->parent_process->heap);
   return fn_ref;
 }
 
@@ -985,7 +986,6 @@ Entity _create_future_for_process(Process *process, Process *new_process,
   Object *future_obj = future_create(new_task);
   new_process->future = (Future *)future_obj->_internal_obj;
 
-  new_task->state = TASK_WAITING;
   process_insert_waiting_task(process, new_task);
 
   return entity_object(future_obj);

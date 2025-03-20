@@ -148,7 +148,6 @@ Entity _create_process(Task *current_task, Context *current_ctx, Object *obj,
   if (new_process->is_remote) {
     new_process->remote_non_daemon_task =
         process_create_unqueued_task(new_process);
-    new_process->remote_non_daemon_task->state = TASK_WAITING;
     process_insert_waiting_task(new_process,
                                 new_process->remote_non_daemon_task);
   }
@@ -207,7 +206,6 @@ Entity _create_future_for_task(Task *current_task, Task *remote_task) {
   Object *future_obj = future_create(new_task);
   remote_task->remote_future = (Future *)future_obj->_internal_obj;
 
-  new_task->state = TASK_WAITING;
   process_insert_waiting_task(current_task->parent_process, new_task);
 
   return entity_object(future_obj);
@@ -247,24 +245,25 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
   }
 
   Task *remote_task = process_create_unqueued_task(remote_process);
+  // NOTE: This is a reference to a task in another heap.
   remote_task->parent_task = current_task;
 
   Context *remote_ctx = task_create_context(remote_task, remote_object,
                                             (Module *)f->_module, f->_ins_pos);
+
+  // printf("context=%p, task=%p\n", remote_ctx->_reflection,
+  //        remote_task->_reflection);
+
   context_set_function(remote_ctx, f);
 
-  Map cps;
-  map_init_default(&cps);
   SYNCHRONIZED(current_task->parent_process->heap_access_lock, {
     SYNCHRONIZED(remote_process->heap_access_lock, {
       *task_mutable_resval(remote_task) =
           entity_copy(fn_args, remote_process->heap);
     });
   });
-  map_finalize(&cps);
 
   process_enqueue_task(remote_process, remote_task);
-
   Entity future_entity = _create_future_for_task(current_task, remote_task);
   condition_broadcast(remote_process->task_wait_cond);
   return future_entity;

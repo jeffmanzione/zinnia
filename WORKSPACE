@@ -1,3 +1,7 @@
+# Legacy file for dependencies that can be deleted once all dependencies are migrated to bzlmod.
+
+workspace(name = "com_github_jeffmanzione_zinnia")
+
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
@@ -16,9 +20,9 @@ git_repository(
 
 git_repository(
     name = "memory_wrapper",
-    commit = "7756cb14ca16eaca50bc51b49ba77aaf33fc71ea",
+    commit = "d70b764979fc17dc4d2c250f2f5c3240ace7351b",
     remote = "https://github.com/jeffreymanzione/memory-wrapper.git",
-    shallow_since = "1676919816 -0800",
+    shallow_since = "1742497699 -0300",
 )
 
 git_repository(

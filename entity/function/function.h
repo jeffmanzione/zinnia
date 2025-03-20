@@ -21,7 +21,7 @@ void function_finalize(Function *f);
 
 void __function_ref_create(Object *obj);
 void __function_ref_init(Object *fn_ref_obj, Object *obj, const Function *func,
-                         void *parent_context);
+                         void *parent_context, Heap *heap);
 void __function_ref_delete(Object *obj);
 void __function_ref_print(const Object *obj, FILE *out);
 

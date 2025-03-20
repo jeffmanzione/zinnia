@@ -1,0 +1,9 @@
+""" MODULE.bazel """
+
+module(
+    name = "zinnia",
+    repo_name = "com_github_jeffmanzione_zinnia",
+    version = "0.0.7",
+)
+
+bazel_dep(name = "rules_cc", version = "0.0.9", dev_dependency = True)
