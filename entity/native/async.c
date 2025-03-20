@@ -251,8 +251,8 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
   Context *remote_ctx = task_create_context(remote_task, remote_object,
                                             (Module *)f->_module, f->_ins_pos);
 
-  printf("context=%p, task=%p\n", remote_ctx->_reflection,
-         remote_task->_reflection);
+  // printf("context=%p, task=%p\n", remote_ctx->_reflection,
+  //        remote_task->_reflection);
 
   context_set_function(remote_ctx, f);
 

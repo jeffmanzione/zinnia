@@ -45,7 +45,7 @@ cc_library(
     }),
     deps = [
         ":platform",
-        "//util/sync:mutex",
+        # "//util/sync:mutex",
         "@memory_wrapper//alloc",
     ],
 )

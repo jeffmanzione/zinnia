@@ -24,6 +24,7 @@ cc_library(
         "//vm/process",
         "//vm/process:processes",
         "@c_data_structures//struct:alist",
+        "@memory_wrapper//struct:struct_defaults",
     ],
 )
 

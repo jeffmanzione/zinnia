@@ -92,6 +92,9 @@ void heap_make_root(Heap *heap, Object *obj) {
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
                        const Entity *child) {
+  // if (0 == strcmp("sock", key)) {
+  //   printf("--------->ctx(%p@%p).sock=(%p)\n", parent, heap, child->obj);
+  // }
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
@@ -162,14 +165,14 @@ void _print_object_summary(Object *object) {
   }
   printf(" (%p)\n", object);
 
-  KL_iter members = keyedlist_iter(&object->_members);
-  for (; kl_has(&members); kl_inc(&members)) {
-    const Member *member = (Member *)kl_value(&members);
-    if (NULL != member && OBJECT == member->entity.type) {
-      printf("\t\t(%p)\n", member->entity.obj);
-    }
-  }
-  fflush(stdout);
+  // KL_iter members = keyedlist_iter(&object->_members);
+  // for (; kl_has(&members); kl_inc(&members)) {
+  //   const Member *member = (Member *)kl_value(&members);
+  // if (NULL != member && OBJECT == member->entity.type) {
+  //   printf("\t\t%s(%p)\n", (char *)kl_key(&members), member->entity.obj);
+  // }
+  // }
+  // fflush(stdout);
 }
 
 void heap_print_debug_summary(Heap *heap) {
@@ -184,7 +187,7 @@ void heap_print_debug_summary(Heap *heap) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  _print_object_summary(object);
+  // _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }

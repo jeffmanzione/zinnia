@@ -6,6 +6,7 @@
 #include "vm/vm.h"
 
 #include "entity/class/classes_def.h"
+#include "struct/struct_defaults.h"
 #include "vm/process/context.h"
 #include "vm/process/process.h"
 
@@ -103,8 +104,9 @@ void _task_inc_all_context(Process *process, Task *task) {
   }
   Context *ctx = task->current;
   while (NULL != ctx) {
-    printf("_task_inc_all_context task=%p ctx=%p self=%p\n", task->_reflection,
-           ctx->_reflection, IS_NONE(&ctx->self) ? "NONE" : ctx->self.obj);
+    // printf("_task_inc_all_context task=%p ctx=%p self=%p\n",
+    // task->_reflection,
+    //        ctx->_reflection, IS_NONE(&ctx->self) ? NULL : ctx->self.obj);
     heap_inc_edge(heap, task->_reflection, ctx->_reflection);
     heap_inc_edge(heap, ctx->_reflection, ctx->self.obj);
     if (NULL != ctx->error) {
@@ -112,6 +114,7 @@ void _task_inc_all_context(Process *process, Task *task) {
     }
     ctx = ctx->previous_context;
   }
+  // printf("done\n");
 }
 
 void _task_dec_all_context(Process *process, Task *task) {
@@ -207,7 +210,7 @@ uint32_t process_collect_garbage(Process *process) {
         _inc_task_set(process, &process->waiting_tasks);
         _inc_task_set(process, &process->background_tasks);
 
-        // printf("process_collect_garbage()\n");
+        // printf("process_collect_garbage(%p)\n", process->heap);
 
         deleted_nodes_count = heap_collect_garbage(process->heap);
 

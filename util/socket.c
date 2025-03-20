@@ -20,26 +20,30 @@
 
 #include "alloc/alloc.h"
 #include "debug/debug.h"
-#include "util/sync/mutex.h"
+// #include "util/sync/mutex.h"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET 0
+#endif
+
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR -1
 #endif
 
 struct __Socket {
   struct sockaddr_in in;
   SOCKET sock;
   bool is_closed;
-  bool is_threadsafe;
-  Mutex lock;
+  // bool is_threadsafe;
+  // Mutex lock;
 };
 
 struct __SocketHandle {
   struct sockaddr_in client;
   SOCKET client_sock;
   bool is_closed;
-  bool is_threadsafe;
-  Mutex lock;
+  // bool is_threadsafe;
+  // Mutex lock;
 };
 
 void sockets_init() {
@@ -55,15 +59,15 @@ void sockets_cleanup() {
 #endif
 }
 
-void _init_socket_lock(Socket *sock) {
-  sock->is_threadsafe = true;
-  sock->lock = mutex_create();
-}
+// void _init_socket_lock(Socket *sock) {
+//   sock->is_threadsafe = true;
+//   sock->lock = mutex_create();
+// }
 
-void _init_sockethandle_lock(SocketHandle *handle) {
-  handle->is_threadsafe = true;
-  handle->lock = mutex_create();
-}
+// void _init_sockethandle_lock(SocketHandle *handle) {
+//   handle->is_threadsafe = true;
+//   handle->lock = mutex_create();
+// }
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
@@ -73,7 +77,7 @@ Socket *socket_create(int domain, int type, int protocol, unsigned long host,
   sock->in.sin_addr.s_addr = host;
   sock->in.sin_port = htons(port);
   sock->is_closed = false;
-  _init_socket_lock(sock);
+  // _init_socket_lock(sock);
   return sock;
 }
 
@@ -97,10 +101,10 @@ SocketHandle *socket_accept(Socket *socket) {
   SocketHandle *sh = ALLOC2(SocketHandle);
   sh->is_closed = false;
   int addr_len = sizeof(sh->client);
-  if (socket->is_threadsafe) {
-    _init_sockethandle_lock(sh);
-    mutex_lock(socket->lock);
-  }
+  // if (socket->is_threadsafe) {
+  //   _init_sockethandle_lock(sh);
+  //   mutex_lock(socket->lock);
+  // }
 
   sh->client_sock = accept(socket->sock, (struct sockaddr *)&sh->client,
 #ifdef OS_LINUX
@@ -114,14 +118,13 @@ SocketHandle *socket_accept(Socket *socket) {
     printf("[accept] error_code=%d\n", error_code);
 #else
     printf("[accept] errno=%d\n", errno);
-    fflush(stdout);
 #endif
     fflush(stdout);
   }
 
-  if (socket->is_threadsafe) {
-    mutex_unlock(socket->lock);
-  }
+  // if (socket->is_threadsafe) {
+  //   mutex_unlock(socket->lock);
+  // }
   return sh;
 }
 
@@ -129,10 +132,10 @@ SocketHandle *socket_connect(Socket *socket) {
   SocketHandle *sh = ALLOC2(SocketHandle);
   sh->is_closed = false;
 
-  if (socket->is_threadsafe) {
-    _init_sockethandle_lock(sh);
-    mutex_lock(socket->lock);
-  }
+  // if (socket->is_threadsafe) {
+  //   _init_sockethandle_lock(sh);
+  //   mutex_lock(socket->lock);
+  // }
 
   const int result =
       connect(socket->sock, (struct sockaddr *)&socket->in, sizeof(socket->in));
@@ -147,26 +150,24 @@ SocketHandle *socket_connect(Socket *socket) {
     fflush(stdout);
   }
 
-  if (socket->is_threadsafe) {
-    mutex_unlock(socket->lock);
-  }
+  // if (socket->is_threadsafe) {
+  //   mutex_unlock(socket->lock);
+  // }
 
   sh->client_sock = socket->sock;
   return sh;
 }
 
 void socket_close(Socket *socket) {
-  printf("socket close()\n");
-  fflush(stdout);
   socket->is_closed = true;
 #ifdef OS_WINDOWS
   closesocket(socket->sock);
 #else
   close(socket->sock);
 #endif
-  if (socket->is_threadsafe) {
-    mutex_close(socket->lock);
-  }
+  // if (socket->is_threadsafe) {
+  //   mutex_close(socket->lock);
+  // }
 }
 
 void socket_delete(Socket *socket) {
@@ -182,9 +183,9 @@ bool sockethandle_is_valid(const SocketHandle *sh) {
 
 int32_t sockethandle_send(SocketHandle *sh, const char *const msg,
                           int msg_len) {
-  if (sh->is_threadsafe) {
-    mutex_lock(sh->lock);
-  }
+  // if (sh->is_threadsafe) {
+  //   mutex_lock(sh->lock);
+  // }
   const int32_t result = send(sh->client_sock, msg, msg_len, 0);
 
   if (result == SOCKET_ERROR) {
@@ -193,20 +194,20 @@ int32_t sockethandle_send(SocketHandle *sh, const char *const msg,
     printf("[send] error_code=%d\n", error_code);
 #else
     printf("[send] errno=%d\n", errno);
-    fflush(stdout);
 #endif
+    fflush(stdout);
   }
 
-  if (sh->is_threadsafe) {
-    mutex_unlock(sh->lock);
-  }
+  // if (sh->is_threadsafe) {
+  //   mutex_unlock(sh->lock);
+  // }
   return result;
 }
 
 int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
-  if (sh->is_threadsafe) {
-    mutex_lock(sh->lock);
-  }
+  // if (sh->is_threadsafe) {
+  //   mutex_lock(sh->lock);
+  // }
   const int32_t result = recv(sh->client_sock, buf, buf_len, 0);
 
   if (result == SOCKET_ERROR) {
@@ -219,24 +220,22 @@ int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
     fflush(stdout);
   }
 
-  if (sh->is_threadsafe) {
-    mutex_unlock(sh->lock);
-  }
+  // if (sh->is_threadsafe) {
+  //   mutex_unlock(sh->lock);
+  // }
   return result;
 }
 
 void sockethandle_close(SocketHandle *sh) {
-  printf("sockethandle close()\n");
-  fflush(stdout);
   sh->is_closed = true;
 #ifdef OS_WINDOWS
   closesocket(sh->client_sock);
 #else
   close(sh->client_sock);
 #endif
-  if (sh->is_threadsafe) {
-    mutex_close(sh->lock);
-  }
+  // if (sh->is_threadsafe) {
+  //   mutex_close(sh->lock);
+  // }
 }
 
 void sockethandle_delete(SocketHandle *sh) {
