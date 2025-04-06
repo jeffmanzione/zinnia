@@ -40,16 +40,16 @@ def max(sequence) {
 }
 
 ; Returns the value of [num] raised to [power], i.e., num^power.
-; def pow(num, power)
+; def pow(num, power) {}
 
 ; Returns the absolute value of [x].
-; def abs(x)
+; def abs(x) {}
 
 ; Returns the ceiling of [x].
-; def ceil(x)
+; def ceil(x) {}
 
 ; Returns the floor of [x].
-; def floor(x)
+; def floor(x) {}
 
 ; Returns the logarithm of the specified value [x] with base [base].
 def log(x, base=math.E) {
@@ -70,7 +70,7 @@ def log10(x) {
 def sqrt(x) pow(x, 0.5)
 
 ; Returns the remainder of [n] divided by [d].
-; def mod(n, d)
+; def mod(n, d) {}
 
 ; Returns (n / d, mod(n, d)).
 def div(n, d) {

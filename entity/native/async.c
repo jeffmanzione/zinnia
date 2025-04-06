@@ -42,14 +42,14 @@ struct _Future {
 };
 
 void _future_init(Object *obj) {
-  Future *f = ALLOC2(Future);
+  Future *f = MNEW(Future);
   f->_is_complete = false;
   f->_is_result_set = false;
   f->task = NULL;
   obj->_internal_obj = f;
 }
 
-void _future_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
+void _future_delete(Object *obj) { RELEASE(obj->_internal_obj); }
 
 Object *future_create(Task *task) {
   Heap *heap = task->parent_process->heap;

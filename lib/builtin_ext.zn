@@ -96,5 +96,5 @@ def _quick_sort(seq, l, h, cmp) {
 }
 
 def sort(seq, cmp=cmp) {
-  _quick_sort(seq, 0, seq.len()-1, cmp)
+  _quick_sort(seq, 0, seq.len() - 1, cmp)
 }

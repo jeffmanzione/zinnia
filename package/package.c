@@ -33,7 +33,7 @@ bool _extract_file(const char input_file_name[], char **dir_path,
   char *input;
   getall(input_file, &input);
   *escaped_input = escape(input);
-  DEALLOC(input);
+  RELEASE(input);
   return true;
 }
 
@@ -65,8 +65,8 @@ char *_compile_to_file(const char file_name[]) {
     getall(assembly_file, &content);
     char *escaped_assembly = escape(content);
 
-    DEALLOC(content);
-    DEALLOC(assembly_content);
+    RELEASE(content);
+    RELEASE(assembly_content);
     return escaped_assembly;
   } else if (ends_with(file_name, ".zna")) {
     FILE *file = FILE_FN(file_name, "rb");
@@ -76,7 +76,7 @@ char *_compile_to_file(const char file_name[]) {
     char *content = NULL;
     getall(file, &content);
     char *escaped_content = escape(content);
-    DEALLOC(content);
+    RELEASE(content);
     return escaped_content;
   } else {
     FATALF("Uknown file type: %s", file_name);
@@ -100,7 +100,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
     char *first_colon = find_str(line, strlen(line), ":", strlen(":"));
     char *second_colon =
         find_str(first_colon + 1, strlen(line), ":", strlen(":"));
-    _NativeModuleInfo *m = ALLOC2(_NativeModuleInfo);
+    _NativeModuleInfo *m = MNEW(_NativeModuleInfo);
     m->src = intern_range(line, 0, first_colon - line);
     m->init_fn =
         intern_range(line, first_colon - line + 1, second_colon - line);
@@ -113,7 +113,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
     }
     set_insert(hdrs, intern_range(prev_comma, 1, strlen(prev_comma)));
 
-    DEALLOC(line);
+    RELEASE(line);
   }
   file_info_delete(fi);
 }
@@ -191,8 +191,8 @@ int zinniap(int argc, const char *args[]) {
     _write_file_chunks(escaped_assembly, out);
     fprintf(out, ";\n\n");
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_assembly);
+    RELEASE(var_name);
+    RELEASE(escaped_assembly);
   }
 
   M_iter it = map_iter(&native_modules);
@@ -211,8 +211,8 @@ int zinniap(int argc, const char *args[]) {
     _write_file_chunks(escaped_assembly, out);
     fprintf(out, ";\n\n");
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_assembly);
+    RELEASE(var_name);
+    RELEASE(escaped_assembly);
   }
 
   fprintf(out,
@@ -246,11 +246,11 @@ int zinniap(int argc, const char *args[]) {
             lib_var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  NULL;\n");
 
-    DEALLOC(lib_var_name);
-    DEALLOC(escaped_dir_path);
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    RELEASE(lib_var_name);
+    RELEASE(escaped_dir_path);
+    RELEASE(dir_path);
+    RELEASE(file_base);
+    RELEASE(ext);
   }
 
   it = map_iter(&native_modules);
@@ -268,11 +268,11 @@ int zinniap(int argc, const char *args[]) {
             var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  %s;\n", m->init_fn);
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_dir_path);
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    RELEASE(var_name);
+    RELEASE(escaped_dir_path);
+    RELEASE(dir_path);
+    RELEASE(file_base);
+    RELEASE(ext);
   }
 
   fprintf(out, "  run_files(&srcs, &src_contents, &init_fns, store);\n"
@@ -293,7 +293,7 @@ int zinniap(int argc, const char *args[]) {
   M_iter iter = map_iter(&native_modules);
   for (; has(&iter); inc(&iter)) {
     void *val = value(&iter);
-    DEALLOC(val);
+    RELEASE(val);
   }
   map_finalize(&native_modules);
 

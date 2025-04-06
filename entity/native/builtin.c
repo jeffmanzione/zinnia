@@ -64,10 +64,10 @@ bool _str_to_int64(String *str, int64_t *result) {
   *result = strtol(cstr, &endptr, INFER_FROM_STRING);
   // Error scenario.
   if (0 == result && endptr - cstr != String_size(str)) {
-    DEALLOC(cstr);
+    RELEASE(cstr);
     return false;
   }
-  DEALLOC(cstr);
+  RELEASE(cstr);
   return true;
 }
 
@@ -112,10 +112,10 @@ bool _str_to_float(String *str, double *result) {
   *result = strtod(cstr, &endptr);
   // Error scenario.
   if (0 == result && endptr - cstr != String_size(str)) {
-    DEALLOC(cstr);
+    RELEASE(cstr);
     return false;
   }
-  DEALLOC(cstr);
+  RELEASE(cstr);
   return true;
 }
 
@@ -159,16 +159,16 @@ bool _str_to_bool(String *str, bool *result) {
   if (0 == strcmp("True", cstr) || 0 == strcmp("true", cstr) ||
       0 == strcmp("T", cstr) || 0 == strcmp("t", cstr)) {
     *result = true;
-    DEALLOC(cstr);
+    RELEASE(cstr);
     return true;
   }
   if (0 == strcmp("False", cstr) || 0 == strcmp("false", cstr) ||
       0 == strcmp("F", cstr) || 0 == strcmp("f", cstr)) {
     *result = false;
-    DEALLOC(cstr);
+    RELEASE(cstr);
     return true;
   }
-  DEALLOC(cstr);
+  RELEASE(cstr);
   return false;
 }
 
@@ -800,8 +800,8 @@ Entity _function_ref_obj(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(f_obj);
 }
 
-void _range_init(Object *obj) { obj->_internal_obj = ALLOC(_Range); }
-void _range_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
+void _range_init(Object *obj) { obj->_internal_obj = CNEW(_Range); }
+void _range_delete(Object *obj) { RELEASE(obj->_internal_obj); }
 
 void _range_copy(EntityCopier *copier, Object *src_obj, Object *target_obj) {
   _Range *src = (_Range *)src_obj->_internal_obj;

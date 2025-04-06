@@ -447,7 +447,7 @@ void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
         char *str = *(char **)Q_value(&iter);
         total_len += strlen(str);
       }
-      char *tmp_str = ALLOC_ARRAY2(char, total_len + 1);
+      char *tmp_str = MNEW_ARR(char, total_len + 1);
       tmp_str[0] = '\0';
       iter = Q_iterator(&strs);
       for (; Q_has(&iter); Q_inc(&iter)) {
@@ -461,7 +461,7 @@ void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
       o_Replace(oh, i - 2, new_ins);
       o_Remove(oh, i - 1);
       o_Remove(oh, i);
-      DEALLOC(tmp_str);
+      RELEASE(tmp_str);
       i = j;
     }
   }

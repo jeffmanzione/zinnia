@@ -45,8 +45,8 @@ struct __ArgConfig {
 };
 
 ArgConfig *argconfig_create() {
-  ArgConfig *config = ALLOC2(ArgConfig);
-  config->args = ALLOC_ARRAY(Arg, ArgKey__END);
+  ArgConfig *config = MNEW(ArgConfig);
+  config->args = CNEW_ARR(Arg, ArgKey__END);
   config->mandatory_sources = true;
   map_init_default(&config->arg_names);
   return config;
@@ -57,19 +57,19 @@ void argconfig_delete(ArgConfig *config) {
   int i;
   for (i = 0; i < ArgKey__END; ++i) {
     if (ArgType__stringlist == config->args[i].type) {
-      DEALLOC(config->args[i].stringlist_val);
+      RELEASE(config->args[i].stringlist_val);
     }
   }
-  DEALLOC(config->args);
+  RELEASE(config->args);
   map_finalize(&config->arg_names);
-  DEALLOC(config);
+  RELEASE(config);
 }
 
 ArgStore *argstore_create(const ArgConfig *config) {
   ASSERT(NOT_NULL(config));
-  ArgStore *store = ALLOC2(ArgStore);
+  ArgStore *store = MNEW(ArgStore);
   store->config = config;
-  store->args = ALLOC_ARRAY(Arg, ArgKey__END);
+  store->args = CNEW_ARR(Arg, ArgKey__END);
   set_init_default(&store->src_files);
   map_init_default(&store->program_args);
   return store;
@@ -82,11 +82,11 @@ void argstore_delete(ArgStore *store) {
   int i;
   for (i = 0; i < ArgKey__END; ++i) {
     if (ArgType__stringlist == store->args[i].type) {
-      DEALLOC(store->args[i].stringlist_val);
+      RELEASE(store->args[i].stringlist_val);
     }
   }
-  DEALLOC(store->args);
-  DEALLOC(store);
+  RELEASE(store->args);
+  RELEASE(store);
 }
 
 const Arg *argstore_get(const ArgStore *store, ArgKey key) {

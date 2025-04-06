@@ -53,11 +53,11 @@ int main(int argc, const char *args[]) {
     }
     fprintf(out, ";\n\n");
 
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
-    DEALLOC(input);
-    DEALLOC(escaped_input);
+    RELEASE(dir_path);
+    RELEASE(file_base);
+    RELEASE(ext);
+    RELEASE(input);
+    RELEASE(escaped_input);
 
     // fclose(input_file);
   }

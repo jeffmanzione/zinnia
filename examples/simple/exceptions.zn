@@ -2,7 +2,7 @@ import error
 import io
 
 try {
-  None.this_is_intentional ; Will trigger an exception.
+  ''.this_is_intentional ; Will trigger an exception.
 } catch e {
   io.fprintln(io.ERROR, e)
 }

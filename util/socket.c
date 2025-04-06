@@ -71,7 +71,7 @@ void sockets_cleanup() {
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
-  Socket *sock = ALLOC2(Socket);
+  Socket *sock = MNEW(Socket);
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
   sock->in.sin_addr.s_addr = host;
@@ -98,7 +98,7 @@ SocketStatus socket_listen(Socket *socket, int num_connections) {
 }
 
 SocketHandle *socket_accept(Socket *socket) {
-  SocketHandle *sh = ALLOC2(SocketHandle);
+  SocketHandle *sh = MNEW(SocketHandle);
   sh->is_closed = false;
   int addr_len = sizeof(sh->client);
   // if (socket->is_threadsafe) {
@@ -129,7 +129,7 @@ SocketHandle *socket_accept(Socket *socket) {
 }
 
 SocketHandle *socket_connect(Socket *socket) {
-  SocketHandle *sh = ALLOC2(SocketHandle);
+  SocketHandle *sh = MNEW(SocketHandle);
   sh->is_closed = false;
 
   // if (socket->is_threadsafe) {
@@ -174,7 +174,7 @@ void socket_delete(Socket *socket) {
   if (!socket->is_closed) {
     socket_close(socket);
   }
-  DEALLOC(socket);
+  RELEASE(socket);
 }
 
 bool sockethandle_is_valid(const SocketHandle *sh) {
@@ -242,12 +242,12 @@ void sockethandle_delete(SocketHandle *sh) {
   if (!sh->is_closed) {
     sockethandle_close(sh);
   }
-  DEALLOC(sh);
+  RELEASE(sh);
 }
 
 unsigned long socket_inet_address(const char *host, size_t host_len) {
   char *host_str = ALLOC_STRNDUP(host, host_len);
   unsigned long addr = inet_addr(host_str);
-  DEALLOC(host_str);
+  RELEASE(host_str);
   return addr;
 }

@@ -45,7 +45,7 @@ char *escape(const char str[]) {
   }
   const char *ptr = str;
   char c;
-  char *escaped_str = ALLOC_ARRAY2(char, DEFAULT_ESCAPED_STRING_SZ);
+  char *escaped_str = MNEW_ARR(char, DEFAULT_ESCAPED_STRING_SZ);
   int escaped_len = 0, escaped_buffer_sz = DEFAULT_ESCAPED_STRING_SZ;
   while ('\0' != (c = *ptr)) {
     if (escaped_len > escaped_buffer_sz - 3) {
@@ -83,7 +83,7 @@ char *unescape(const char str[]) {
   }
   const char *ptr = str;
   char c;
-  char *unescaped_str = ALLOC_ARRAY2(char, DEFAULT_ESCAPED_STRING_SZ);
+  char *unescaped_str = MNEW_ARR(char, DEFAULT_ESCAPED_STRING_SZ);
   int unescaped_len = 0, unescaped_buffer_sz = DEFAULT_ESCAPED_STRING_SZ;
   while ('\0' != (c = *ptr)) {
     if (unescaped_len > unescaped_buffer_sz - 3) {

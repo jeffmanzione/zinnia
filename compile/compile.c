@@ -66,9 +66,9 @@ Tape *_read_file(const char fn[], bool opt) {
       char *dir_path, *module_name_tmp, *ext;
       split_path_file(fn, &dir_path, &module_name_tmp, &ext);
       char *module_name = intern(module_name_tmp);
-      DEALLOC(module_name_tmp);
-      DEALLOC(dir_path);
-      DEALLOC(ext);
+      RELEASE(module_name_tmp);
+      RELEASE(dir_path);
+      RELEASE(ext);
       tape_module(tape, token_create(TOKEN_WORD, 0, 0, module_name,
                                      strlen(module_name)));
     }
@@ -102,7 +102,7 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     FILE *file = FILE_FN(file_path, "wb");
     tape_write(tape, file);
     fclose(file);
-    DEALLOC(file_path);
+    RELEASE(file_path);
   }
   if (out_znb && !ends_with(fn, ".znb")) {
     make_dir_if_does_not_exist(bytecode_dir);
@@ -110,11 +110,11 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     FILE *file = FILE_FN(file_path, "wb");
     tape_write_binary(tape, file);
     fclose(file);
-    DEALLOC(file_path);
+    RELEASE(file_path);
   }
-  DEALLOC(path);
-  DEALLOC(file_name);
-  DEALLOC(ext);
+  RELEASE(path);
+  RELEASE(file_name);
+  RELEASE(ext);
 }
 
 void compile_to_assembly(const char file_name[], FILE *out) {

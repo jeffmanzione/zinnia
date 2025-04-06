@@ -46,7 +46,7 @@ void _classref_init(ClassRef *ref, const char name[]);
 void _classref_finalize(ClassRef *ref);
 
 Tape *tape_create() {
-  Tape *tape = ALLOC2(Tape);
+  Tape *tape = MNEW(Tape);
   alist_init(&tape->ins, Instruction, DEFAULT_TAPE_SZ);
   alist_init(&tape->source_map, SourceMapping, DEFAULT_TAPE_SZ);
   alist_init(&tape->source_lines, char *, DEFAULT_TAPE_SZ);
@@ -69,7 +69,7 @@ void tape_delete(Tape *tape) {
   }
   keyedlist_finalize(&tape->class_refs);
   keyedlist_finalize(&tape->func_refs);
-  DEALLOC(tape);
+  RELEASE(tape);
 }
 
 Instruction *tape_add(Tape *tape) {
@@ -203,7 +203,7 @@ const char *tape_get_sourceline(const Tape *const tape, int line) {
   const char *escaped_line = *(char **)alist_get(&tape->source_lines, line);
   const char *unescaped_line = unescape(escaped_line);
   const char *to_return = intern(unescaped_line);
-  DEALLOC(unescaped_line);
+  RELEASE(unescaped_line);
   return to_return;
 }
 
@@ -389,7 +389,7 @@ void tape_append(Tape *head, Tape *tail) {
   alist_finalize(&tail->source_map);
   keyedlist_finalize(&tail->class_refs);
   keyedlist_finalize(&tail->func_refs);
-  DEALLOC(tail);
+  RELEASE(tail);
 }
 
 Token *_q_peek(Q *tokens) {
@@ -592,7 +592,7 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
     ins->type = INSTRUCTION_STRING;
     unescaped_str = unescape(token->text);
     ins->str = intern(unescaped_str);
-    DEALLOC(unescaped_str);
+    RELEASE(unescaped_str);
     break;
   case TOKEN_WORD:
   default:
@@ -686,10 +686,10 @@ int tape_label_text_async(Tape *tape, const char text[]) {
 
 char *anon_fn_for_token(const Token *token) {
   size_t needed = snprintf(NULL, 0, "$anon_%d_%d", token->line, token->col) + 1;
-  char *buffer = ALLOC_ARRAY2(char, needed);
+  char *buffer = MNEW_ARR(char, needed);
   snprintf(buffer, needed, "$anon_%d_%d", token->line, token->col);
   char *label = intern(buffer);
-  DEALLOC(buffer);
+  RELEASE(buffer);
   return label;
 }
 
@@ -752,6 +752,6 @@ void tape_set_body(Tape *const tape, FileInfo *fi) {
   for (int i = 0; i < len; ++i) {
     const char *line_escaped = escape(file_info_lookup(fi, i + 1)->line_text);
     *(char **)alist_add(&tape->source_lines) = intern(line_escaped);
-    DEALLOC(line_escaped);
+    RELEASE(line_escaped);
   }
 }

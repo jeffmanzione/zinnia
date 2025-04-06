@@ -35,7 +35,7 @@ void _object_delete(Object *object, Heap *heap);
 
 Heap *heap_create(HeapConf *config) {
   ASSERT(NOT_NULL(config));
-  Heap *heap = ALLOC2(Heap);
+  Heap *heap = MNEW(Heap);
   config->mgraph_config.ctx = heap;
   heap->config = *config;
   heap->object_count_threshold_for_garbage_collection =
@@ -49,7 +49,7 @@ void heap_delete(Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(heap->mg));
   mgraph_delete(heap->mg);
   __arena_finalize(&heap->object_arena);
-  DEALLOC(heap);
+  RELEASE(heap);
 }
 
 uint32_t heap_collect_garbage(Heap *heap) {
@@ -382,11 +382,11 @@ M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
 
 void heapprofile_delete(HeapProfile *hp) {
   map_finalize(&hp->object_type_counts);
-  DEALLOC(hp);
+  RELEASE(hp);
 }
 
 HeapProfile *heap_create_profile(const Heap *const heap) {
-  HeapProfile *hp = ALLOC2(HeapProfile);
+  HeapProfile *hp = MNEW(HeapProfile);
   map_init_default(&hp->object_type_counts);
   const Set *nodes = mgraph_nodes(heap->mg);
   M_iter iter = set_iter((Set *)nodes);

@@ -98,13 +98,13 @@ class WebProviders : inject.ProviderSet {
 
 net.Server()
     .add_application(
-        net.Application('0.0.0.0', 80)
+        net.Application('0.0.0.0', 8080)
             .add_controller(FaviconController)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
             .add_controller(RedirectController)
             .add_provider_set(WebProviders))
     .add_application(
-        net.Application('0.0.0.0', 1453)
+        net.Application('0.0.0.0', 5000)
             .add_controller(RpcController))
     .run()

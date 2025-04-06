@@ -18,7 +18,7 @@ WBuffer *buffer_init(WBuffer *const buffer, FILE *file, size_t size) {
   buffer->file = file;
   buffer->pos = 0;
   buffer->buff_size = size;
-  buffer->buff = ALLOC_ARRAY(unsigned char, buffer->buff_size);
+  buffer->buff = CNEW_ARR(unsigned char, buffer->buff_size);
   return buffer;
 }
 
@@ -33,7 +33,7 @@ void buffer_flush(WBuffer *const buffer) {
 void buffer_finalize(WBuffer *const buffer) {
   ASSERT(NOT_NULL(buffer));
   buffer_flush(buffer);
-  DEALLOC(buffer->buff);
+  RELEASE(buffer->buff);
 }
 
 void buffer_write(WBuffer *const buffer, const char *start, int num_bytes) {

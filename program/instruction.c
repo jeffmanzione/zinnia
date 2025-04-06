@@ -28,7 +28,7 @@ int instruction_write(const Instruction *ins, FILE *file) {
     tmp = escape(ins->str);
     num = fprintf(file, OP_FMT STR_FMT, op_to_str(ins->op), (int)(strlen(tmp)),
                   tmp);
-    DEALLOC(tmp);
+    RELEASE(tmp);
     return num;
   case INSTRUCTION_PRIMITIVE:
     return _instruction_write_primitive(ins, file);

@@ -85,9 +85,9 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
 #endif
 
   if (NULL == init_fn) {
-    DEALLOC(file_name);
-    DEALLOC(module_name);
-    DEALLOC(init_fn_name);
+    RELEASE(file_name);
+    RELEASE(module_name);
+    RELEASE(init_fn_name);
 #ifdef OS_WINDOWS
     return raise_error(task, ctx, "'%s' not found in library: %s.",
                        init_fn_name, file_name);
@@ -102,9 +102,9 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   mm_register_dynamic_module(mm, module_name, init_fn);
   // Forces module to be loaded eagerly.
   Module *module = modulemanager_lookup(mm, module_name);
-  DEALLOC(file_name);
-  DEALLOC(module_name);
-  DEALLOC(init_fn_name);
+  RELEASE(file_name);
+  RELEASE(module_name);
+  RELEASE(init_fn_name);
   return entity_object(module->_reflection);
 }
 

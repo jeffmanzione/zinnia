@@ -393,7 +393,7 @@ void _add_filename_method(VM *vm) {
 
 VM *vm_create(const char *lib_location, uint32_t max_process_object_count,
               bool async_enabled) {
-  VM *vm = ALLOC2(VM);
+  VM *vm = MNEW(VM);
   vm->async_enabled = async_enabled;
   alist_init(&vm->processes, Process, DEFAULT_ARRAY_SZ);
   HeapConf heap_conf = {
@@ -423,7 +423,7 @@ void vm_delete(VM *vm) {
   mutex_close(vm->process_create_lock);
   threadpool_delete(vm->background_pool);
   modulemanager_finalize(&vm->mm);
-  DEALLOC(vm);
+  RELEASE(vm);
 }
 
 Process *vm_main_process(VM *vm) { return vm->main; }
@@ -769,7 +769,7 @@ void _execute_in_background_callback(BackgroundThreadArgs *args) {
   args->task->state = TASK_COMPLETE;
   _mark_task_complete(args->task->parent_process, args->task,
                       /*should_push=*/false);
-  DEALLOC(args);
+  RELEASE(args);
 }
 
 Task *_maybe_load_module(Task *task, Module *module) {
@@ -790,7 +790,7 @@ BackgroundThreadArgs *_create_background_thread_args(Task *task,
                                                      Context *context,
                                                      const Function *func,
                                                      Object *self) {
-  BackgroundThreadArgs *args = ALLOC2(BackgroundThreadArgs);
+  BackgroundThreadArgs *args = MNEW(BackgroundThreadArgs);
   args->task = task;
   args->context = context;
   args->func = func;
@@ -1368,7 +1368,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
   }
   for (;;) {
     if (NULL != context->error) {
-      // char *tmp = ALLOC_ARRAY(char, 100);
+      // char *tmp = CNEW_ARR(char, 100);
       // size_t sz;
       // getline(&tmp, &sz, stdin);
       if (!_attemp_catch_error(task, context)) {

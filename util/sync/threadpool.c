@@ -31,20 +31,20 @@ void _do_work(ThreadPool *tp) {
     if (NULL != w) {
       w->fn(w->fn_args);
       w->callback(w->fn_args);
-      DEALLOC(w);
+      RELEASE(w);
       w = NULL;
     }
   }
 }
 
 ThreadPool *threadpool_create(size_t num_threads) {
-  ThreadPool *tp = ALLOC2(ThreadPool);
+  ThreadPool *tp = MNEW(ThreadPool);
   Q_init(&tp->work);
 
   tp->num_threads = num_threads;
   tp->work_mutex = critical_section_create();
   tp->work_cond = critical_section_create_condition(tp->work_mutex);
-  tp->threads = ALLOC_ARRAY2(ThreadHandle, num_threads);
+  tp->threads = MNEW_ARR(ThreadHandle, num_threads);
   int i;
   for (i = 0; i < num_threads; ++i) {
     tp->threads[i] = thread_create((VoidFn)_do_work, (VoidPtr)tp);
@@ -60,8 +60,8 @@ void threadpool_delete(ThreadPool *tp) {
   for (i = 0; i < tp->num_threads; ++i) {
     thread_close(tp->threads[i]);
   }
-  DEALLOC(tp->threads);
-  DEALLOC(tp);
+  RELEASE(tp->threads);
+  RELEASE(tp);
 }
 
 void threadpool_execute(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
@@ -72,7 +72,7 @@ void threadpool_execute(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
 
 Work *threadpool_create_work(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
                              VoidPtr fn_args) {
-  Work *w = ALLOC2(Work);
+  Work *w = MNEW(Work);
   w->fn = fn;
   w->callback = callback;
   w->fn_args = fn_args;

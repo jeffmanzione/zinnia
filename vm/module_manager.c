@@ -355,13 +355,13 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
     free(path_no_ext);
   }
 
-  DEALLOC(module_name_tmp);
+  RELEASE(module_name_tmp);
   // Module already exists.
   ModuleInfo *module_info =
       (ModuleInfo *)keyedlist_lookup(&mm->_modules, module_key);
   if (NULL != module_info) {
-    DEALLOC(dir_path);
-    DEALLOC(ext);
+    RELEASE(dir_path);
+    RELEASE(ext);
     return module_info;
   }
 
@@ -370,8 +370,8 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                   relative_path, inlined_file, callback,
                                   /*is_dynamic=*/false);
 
-  DEALLOC(dir_path);
-  DEALLOC(ext);
+  RELEASE(dir_path);
+  RELEASE(ext);
 
   return module_info;
 }

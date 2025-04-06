@@ -21,7 +21,7 @@ Mutex mutex_create() {
 #ifdef OS_WINDOWS
   return CreateMutex(NULL, false, NULL);
 #else
-  Mutex mutex = ALLOC2(_Mutex);
+  Mutex mutex = MNEW(_Mutex);
   pthread_mutexattr_init(&mutex->attr);
   pthread_mutexattr_settype(&mutex->attr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&mutex->lock, &mutex->attr);
@@ -50,6 +50,6 @@ void mutex_close(Mutex mutex) {
   CloseHandle(mutex);
 #else
   pthread_mutex_destroy(&mutex->lock);
-  DEALLOC(mutex);
+  RELEASE(mutex);
 #endif
 }
