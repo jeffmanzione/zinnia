@@ -29,6 +29,6 @@ class GCStatus {
 }
 
 ; Forces a garbage collection and returns the result of the colletion.
-def collect_garbage() async {
+function collect_garbage() async {
   GCStatus(await __collect_garbage())
 }

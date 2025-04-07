@@ -44,7 +44,7 @@ class KVIterator : Iterator {
   }
 }
 
-def range(params) {
+function range(params) {
   start = params[0]
   if params.len() == 3 {
     inc = params[1]
@@ -56,7 +56,7 @@ def range(params) {
   Range(start, inc, end)
 }
 
-def memoize(fn) {
+function memoize(fn) {
   cache = {}
   memoized_fn = (args) {
     result = cache[args]
@@ -69,7 +69,7 @@ def memoize(fn) {
   return memoized_fn
 }
 
-def _partition(seq, l, h, cmp) {
+function _partition(seq, l, h, cmp) {
   pivot = seq[h]
   i = l - 1
   for j = l, j < h, j = j + 1 {
@@ -86,7 +86,7 @@ def _partition(seq, l, h, cmp) {
   return i + 1
 }
 
-def _quick_sort(seq, l, h, cmp) {
+function _quick_sort(seq, l, h, cmp) {
   if l < h {
     p = _partition(seq, l, h, cmp)
     _quick_sort(seq, l, p - 1, cmp)
@@ -95,6 +95,6 @@ def _quick_sort(seq, l, h, cmp) {
   seq
 }
 
-def sort(seq, cmp=cmp) {
+function sort(seq, cmp=cmp) {
   _quick_sort(seq, 0, seq.len() - 1, cmp)
 }

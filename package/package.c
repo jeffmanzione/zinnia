@@ -55,7 +55,6 @@ void _write_file_chunks(const char file_content[], FILE *out) {
 
 char *_compile_to_file(const char file_name[]) {
   if (ends_with(file_name, ".zn")) {
-
     FILE *assembly_file = tmpfile();
     compile_to_assembly(file_name, assembly_file);
 
@@ -242,9 +241,9 @@ int zinniap(int argc, const char *args[]) {
 
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
+    fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
             lib_var_name);
-    fprintf(out, "  *(void **)alist_add(&init_fns) =  NULL;\n");
+    fprintf(out, "  *(void **)alist_add(&init_fns) = NULL;\n");
 
     RELEASE(lib_var_name);
     RELEASE(escaped_dir_path);

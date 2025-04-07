@@ -456,6 +456,10 @@ bool _execute_EQ(VM *vm, Task *task, Context *context, const Instruction *ins) {
           IS_NONE(&second) && (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
       return false;
     }
+    if (IS_NONE(&second)) {
+      *task_mutable_resval(task) = (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+      return false;
+    }
     if (PRIMITIVE != second.type) {
       raise_error(task, context, "RHS for op 'EQ' must be primitive (1).");
       return false;

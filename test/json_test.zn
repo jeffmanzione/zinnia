@@ -18,6 +18,7 @@ class JsonTest {
     expect(json.jsonify(False), 'false')
     expect(json.jsonify(5), '5')
     expect(json.jsonify(1.5), '1.5')
+    expect(json.jsonify(None), 'null')
   }
   @test.Test
   method test_jsonify_string() {

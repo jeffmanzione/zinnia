@@ -6,14 +6,14 @@ self._custom = dynamic.import_c_library(
   init_fn_name: '_init_custom'
 )
 
-def sin(x) {
+function sin(x) {
   self._custom.sin(x)
 }
 
-def cos(x) {
+function cos(x) {
   self._custom.cos(x)
 }
 
-def tan(x) {
+function tan(x) {
   self._custom.tan(x)
 }

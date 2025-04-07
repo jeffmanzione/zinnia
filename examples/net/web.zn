@@ -7,15 +7,15 @@ class Favicon {}
 class IndexHtml {}
 class NotFoundHtml {}
 
-def is_favicon(req) {
+function is_favicon(req) {
   net.parse_request(req).path == '/favicon.ico'
 }
 
-def is_not_found(req) {
+function is_not_found(req) {
   net.parse_request(req).path == '/not_found.html'
 }
 
-def is_base_path(req) {
+function is_base_path(req) {
   net.parse_request(req).path == '/'
 }
 

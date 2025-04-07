@@ -23,7 +23,7 @@ class ExpectError : error.Error {
   }
 }
 
-def expect(actual, expected) {
+function expect(actual, expected) {
   try {
     if actual == expected {
       return
@@ -32,7 +32,7 @@ def expect(actual, expected) {
   raise ExpectError('Expected \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
-def expect_not(actual, not_expected) {
+function expect_not(actual, not_expected) {
   try {
     if actual != expected {
       return
@@ -41,7 +41,7 @@ def expect_not(actual, not_expected) {
   raise ExpectError('Expected not \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
-def expect_raises(exp, error_class=None) {
+function expect_raises(exp, error_class=None) {
   try {
     exp()
   } catch e {
@@ -53,7 +53,7 @@ def expect_raises(exp, error_class=None) {
   raise ExpectError('Does not raise')
 }
 
-def expect_is(actual, expected_class) {
+function expect_is(actual, expected_class) {
   try {
     if actual is expected_class {
       return

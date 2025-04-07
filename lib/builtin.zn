@@ -3,12 +3,12 @@ import error
 import io
 import struct
 
-def str(input) {
+function str(input) {
   if (input is Object) return input.to_s()
   __stringify(input)  ; Native C function
 }
 
-def cat(args) {
+function cat(args) {
   result = ''
   if ~(args is Tuple) {
     result.extend(str(args))
@@ -20,14 +20,14 @@ def cat(args) {
   return result
 }
 
-def hash(x) {
+function hash(x) {
   if x is Object {
     return x.hash()
   }
   return Int(x)
 }
 
-def cmp(o1, o2) {
+function cmp(o1, o2) {
   if (o1 is Object) and ~(o2 is Object) {
     return -1
   }
@@ -46,7 +46,7 @@ def cmp(o1, o2) {
   return 1
 }
 
-def tuple(args) {
+function tuple(args) {
   if args is Tuple {
     return args
   } else if ~(args is Array) {

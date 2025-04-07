@@ -3,12 +3,12 @@ import error
 import io
 
 ; Returns a future that completes in at least [duration_sec] seconds.
-def sleep(duration_sec) {
+function sleep(duration_sec) {
   __sleep(duration_sec)
 }
 
 ; Returns a newly-spawned process that executes [fn] with arguments [args].
-def create_process({fn, args=None, is_remote=False}) {
+function create_process({fn, args=None, is_remote=False}) {
   __create_process(fn, args, is_remote)
 }
 
@@ -31,7 +31,7 @@ def create_process({fn, args=None, is_remote=False}) {
 ; remote_instance = async.create_remote(Test, 5)
 ; io.println(await remote_instance.mult_n(6)) /* Prints '30\n' */
 ; ``` 
-def create_remote(cls, args=None) {
+function create_remote(cls, args=None) {
   remote_class = _get_remote_class(cls)
   process = create_process(
       fn: (cls, args) -> cls(args),
@@ -88,7 +88,7 @@ class Completer {
 }
 
 ; Returns a future that completes when all futures in [futures] complete.
-def all(futures) async {
+function all(futures) async {
   futures.map((f) -> await f)
 }
 
@@ -118,7 +118,7 @@ class RemoteClass {
   }
 }
 
-def _get_remote_class(cls) {
+function _get_remote_class(cls) {
   remote = cls.module().$get('Remote' + cls.name())
   if ~remote {
     raise error.Error('Could not find remote class for ' + cls.name() + '.')

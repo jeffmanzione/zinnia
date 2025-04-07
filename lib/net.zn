@@ -44,7 +44,7 @@ class Header {
   }
 }
 
-def parse_header(header_text) {
+function parse_header(header_text) {
   i = header_text.find('/')
   protocol = header_text.substr(0, i)
   i2 = i + 1 + header_text.find(' ', i+1)
@@ -174,7 +174,7 @@ class HttpResponse {
   }
 }
 
-def redirect(request, response, target) {
+function redirect(request, response, target) {
   response.set_status_code(301)
   location = target
   if request.params and (request.params.keys.len() > 0) {
@@ -189,7 +189,7 @@ def redirect(request, response, target) {
   return response
 }
 
-def parse_params(path) {
+function parse_params(path) {
   q_index = path.find(QUESTION)
   if ~q_index {
     return (path, {})
@@ -211,7 +211,7 @@ def parse_params(path) {
         {}))
 }
 
-def parse_request(req) {
+function parse_request(req) {
   try {
     parts = req.split(RETURN_NEWLINE)
     if parts.len() == 0 {
@@ -250,7 +250,7 @@ class Cookies {
   }
 }
 
-def parse_cookie(cookie) {
+function parse_cookie(cookie) {
   res = {}
   kvs = cookie.split(COOKIE_SEPARATOR)
   for i=0, i<kvs.len(), i=i+1 {
@@ -306,7 +306,7 @@ class Options { method annotate(_) {} }
 class Trace { method annotate(_) {} }
 class Patch { method annotate(_) {} }
 
-def always_true() {
+function always_true() {
   True
 }
 
@@ -377,7 +377,7 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
   'PATCH': Patch
 }
 
-def find_annotated_method(instance, annot) {
+function find_annotated_method(instance, annot) {
   cls = instance.class()
   methods = cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
   if methods.len() == 0 {
