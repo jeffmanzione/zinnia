@@ -6,29 +6,6 @@ import net
 import socket
 import struct
 
-self.HTTP = 'HTTP'
-self.OK = 'OK'
-self.TEXT_HTML = 'text/html'
-self.UTF_8 = 'UTF-8'
-
-self.LT = '<'
-self.GT = '>'
-self.LT_ESCAPED = '&lt;'
-self.GT_ESCAPED = '&gt;'
-self.AMPER = '&'
-self.QUESTION = '?'
-self.EQUALS = '='
-self.WHITE_SPACE = ' '
-self.F_SLASH = '/'
-self.COLON = ':'
-self.RETURN_NEWLINE = '\r\n'
-
-self.COOKIE_KEY = 'Cookie'
-self.COOKIE_SEPARATOR = '; '
-
-self.NOT_FOUND = 'Could not find file.'
-
-
 class Header {
   new(field protocol,
       field version,
@@ -91,16 +68,16 @@ class HttpRequest {
       return _headers['Cookie']
     }
     method to_s() {
-      ret = cat(type, WHITE_SPACE, path)
+      ret = cat(type, ' ', path)
       if params and (params.keys.len() > 0) {
-        ret.extend(QUESTION)
+        ret.extend('?')
         param_arr = []
         for (k, v) in params {
-          param_arr.append(cat(k, EQUALS, v))
+          param_arr.append(cat(k, '=', v))
         }
-        ret.extend(AMPER.join(param_arr))
+        ret.extend('&'.join(param_arr))
       }
-      ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
+      ret.extend(' ').extend(protocol).extend('/')
           .extend(version).extend('\r\n')
       if _headers {
         for (k, v) in _headers {
@@ -117,7 +94,7 @@ class HttpResponse {
   field _protocol, _version, _status_code, _status
   field _headers, _content, _set_cookies
   new() {
-    _protocol = HTTP
+    _protocol = 'HTTP'
     _version = 1.1
     _status_code = 200
     _status = 'OK'
@@ -185,29 +162,29 @@ function redirect(request, response, target) {
   response.set_status_code(301)
   location = target
   if request.params and (request.params.keys.len() > 0) {
-    location.extend(QUESTION)
+    location.extend('?')
     param_arr = []
     for (k, v) in request.params {
-      param_arr.append(cat(k, EQUALS, v))
+      param_arr.append(cat(k, '=', v))
     }
-    location.extend(AMPER.join(param_arr))
+    location.extend('&'.join(param_arr))
   }
   response._headers['Location'] = location
   return response
 }
 
 function parse_params(path) {
-  q_index = path.find(QUESTION)
+  q_index = path.find('?')
   if ~q_index {
     return (path, {})
   }
   (
     path.substr(0, q_index),
     path.substr(q_index + 1)
-      .split(AMPER)
+      .split('&')
       .collect(
         (a, part) {
-          eq_index = part.find(EQUALS)
+          eq_index = part.find('=')
           if ~eq_index {
             a[part] ='1'
           } else {
@@ -220,20 +197,20 @@ function parse_params(path) {
 
 function parse_request(req) {
   try {
-    parts = req.split(RETURN_NEWLINE)
+    parts = req.split('\r\n')
     if parts.len() == 0 {
       raise error.Error(cat('Invalid request: ', req))
     }
     request = parts[0].trim()
-    req_head = request.split(WHITE_SPACE)
+    req_head = request.split(' ')
     type = req_head[0]
     path = req_head[1]
     (path, params) = parse_params(path)
-    protocol = req_head[2].split(F_SLASH)
+    protocol = req_head[2].split('/')
     
     map = {}
     for i=1, i<parts.len(), i=i+1 {
-      kv = parts[i].split(COLON)
+      kv = parts[i].split(':')
       key = kv[0].trim()
       map[kv[0].trim()] = kv[1].trim()
     }
@@ -267,9 +244,9 @@ class Cookies {
     }
 
     res = {}
-    kvs = cookie_string.split(COOKIE_SEPARATOR)
+    kvs = cookie_string.split('; ')
     for i=0, i<kvs.len(), i=i+1 {
-      kv = kvs[i].split(EQUALS)
+      kv = kvs[i].split('=')
       res[kv[0]] = kv[1]
     }
     return res
