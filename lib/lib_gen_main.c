@@ -10,7 +10,10 @@
 #include "util/file/file_util.h"
 #include "util/string_util.h"
 
-#define STRING_BLOCK_LEN 400
+// This *should* keep the individual concatenated liberals < 509 characters
+// which is the max length of string literal in ANSI.
+#define LOOSE_LITERAL_PRECAT_UPPER_BOUND 100
+#define LOOSE_LITERAL_UPPER_BOUND 480
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -37,21 +40,36 @@ int main(int argc, const char *args[]) {
     char *input;
     getall(input_file, &input);
     const char *escaped_input = escape(input);
-    fprintf(out, "const char LIB_%s[] =", file_base);
-    int start = 0, end = STRING_BLOCK_LEN;
-    for (; end <= strlen(escaped_input); end += STRING_BLOCK_LEN) {
-      while (escaped_input[end] != ' ' && end < strlen(escaped_input)) {
+    const escaped_input_len = strlen(escaped_input);
+    fprintf(out, "const char *LIB_%s[] = {", file_base);
+    int start = 0, end = LOOSE_LITERAL_PRECAT_UPPER_BOUND;
+    int current_literal_len = 0;
+    int num_segments = 0;
+    for (; end <= escaped_input_len; end += LOOSE_LITERAL_PRECAT_UPPER_BOUND) {
+      while (escaped_input[end] != ' ' && end < escaped_input_len) {
         ++end;
       }
-      int len = min(end - start, strlen(escaped_input + start));
+      int len = min(end - start, escaped_input_len - start);
+      current_literal_len += len;
       fprintf(out, "\n  \"%.*s\"", len, escaped_input + start);
       start = end;
+
+      if (current_literal_len > LOOSE_LITERAL_UPPER_BOUND) {
+        num_segments++;
+        fprintf(out, ",");
+        current_literal_len = 0;
+      }
     }
-    if (start < strlen(escaped_input)) {
-      fprintf(out, "\n  \"%.*s\"", (int)strlen(escaped_input + start),
+    if (start < escaped_input_len) {
+      num_segments++;
+      // Means that a comma was just added.
+      fprintf(out, "\n  \"%.*s\"", escaped_input_len - start,
               escaped_input + start);
     }
-    fprintf(out, ";\n\n");
+    fprintf(out, "};\n\n");
+
+    fprintf(out, "const int LIB_%s_segments = %d;\n\n", file_base,
+            num_segments);
 
     RELEASE(dir_path);
     RELEASE(file_base);

@@ -28,6 +28,6 @@ typedef struct {
   };
 } Instruction;
 
-int instruction_write(const Instruction *ins, FILE *file);
+int instruction_write(const Instruction *ins, FILE *file, bool minimize);
 
 #endif /* PROGRAM_INSTRUCTION_H_ */

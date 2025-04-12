@@ -15,6 +15,7 @@ void argconfig_compile(ArgConfig *const config) {
   ASSERT(NOT_NULL(config));
   argconfig_add(config, ArgKey__OUT_ASSEMBLY, "assembly", 'a', arg_bool(false));
   argconfig_add(config, ArgKey__OUT_BINARY, "bytecode", 'b', arg_bool(false));
+  argconfig_add(config, Argkey__MINIMIZE, "minimize", 'm', arg_bool(false));
   argconfig_add(config, ArgKey__BIN_OUT_DIR, "binary_out_dir", '\0',
                 arg_string("./"));
   argconfig_add(config, ArgKey__ASSEMBLY_OUT_DIR, "assembly_out_dir", '\0',

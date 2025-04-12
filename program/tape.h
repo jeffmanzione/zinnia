@@ -76,7 +76,7 @@ void tape_end_class_at_index(Tape *tape, uint32_t index);
 
 void tape_append(Tape *head, Tape *tail);
 
-void tape_write(const Tape *tape, FILE *file);
+void tape_write(const Tape *tape, FILE *file, bool minimize);
 void tape_read(Tape *const tape, Q *tokens);
 
 void tape_set_external_source(Tape *const tape, const char file_name[]);

@@ -32,11 +32,13 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info);
 
 ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
                                const char relative_path[],
-                               const char *inline_file);
+                               const char *inline_file_segs[],
+                               int num_inlined_file_segs);
 ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              const char full_path[],
                                              const char relative_path[],
-                                             const char *inlined_file,
+                                             const char *inlined_file_segs[],
+                                             int num_inlined_file_segs,
                                              NativeCallback callback);
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],

@@ -38,8 +38,8 @@ bool _extract_file(const char input_file_name[], char **dir_path,
 }
 
 void _write_file_chunks(const char file_content[], FILE *out) {
-  int start = 0, end = STRING_BLOCK_LEN;
-  for (; end <= strlen(file_content); end += STRING_BLOCK_LEN) {
+  int start = 0, end = LOOSE_UPPER_BOUND_PRECAT_LEN;
+  for (; end <= strlen(file_content); end += LOOSE_UPPER_BOUND_PRECAT_LEN) {
     while (file_content[end] != ' ' && end < strlen(file_content)) {
       ++end;
     }
@@ -56,7 +56,7 @@ void _write_file_chunks(const char file_content[], FILE *out) {
 char *_compile_to_file(const char file_name[]) {
   if (ends_with(file_name, ".zn")) {
     FILE *assembly_file = tmpfile();
-    compile_to_assembly(file_name, assembly_file);
+    compile_to_assembly(file_name, assembly_file, true);
 
     rewind(assembly_file);
 

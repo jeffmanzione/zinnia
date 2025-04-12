@@ -5,6 +5,8 @@
 
 #include "vm/module_manager.h"
 
+#include <string.h>
+
 #include "alloc/arena/intern.h"
 #include "entity/class/class.h"
 #include "entity/class/classes_def.h"
@@ -57,6 +59,9 @@ void modulemanager_finalize(ModuleManager *mm) {
     ModuleInfo *module_info = (ModuleInfo *)kl_value(&iter);
     if (!module_info->is_loaded) {
       continue;
+    }
+    if (NULL != module_info->inlined_file) {
+      RELEASE(module_info->inlined_file);
     }
     if (NULL != module_info->fi) {
       file_info_delete(module_info->fi);
@@ -301,9 +306,11 @@ Module *_read_znb(ModuleManager *mm, ModuleInfo *module_info) {
 
 ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
                                const char relative_path[],
-                               const char *inlined_file) {
+                               const char *inlined_file_segs[],
+                               int num_inlined_file_segs) {
   return mm_register_module_with_callback(mm, full_path, relative_path,
-                                          inlined_file, NULL);
+                                          inlined_file_segs,
+                                          num_inlined_file_segs, NULL);
 }
 
 ModuleInfo *
@@ -327,7 +334,8 @@ _create_and_init_moduleinfo(ModuleManager *mm, const char *module_name,
 ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              const char full_path[],
                                              const char relative_path[],
-                                             const char *inlined_file,
+                                             const char *inlined_file_segs[],
+                                             int num_inlined_file_segs,
                                              NativeCallback callback) {
   ASSERT(NOT_NULL(mm));
 
@@ -365,11 +373,22 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
     return module_info;
   }
 
+  char *inlined_file = NULL;
+  if (inlined_file_segs != NULL) {
+    int total_file_content_len = 0;
+    for (int i = 0; i < num_inlined_file_segs; ++i) {
+      total_file_content_len += strlen(inlined_file_segs[i]);
+    }
+    inlined_file = CNEW_ARR(char, total_file_content_len + 1);
+    inlined_file[0] = 0x0;
+    for (int i = 0; i < num_inlined_file_segs; ++i) {
+      strcat(inlined_file, inlined_file_segs[i]);
+    }
+  }
   module_info =
       _create_and_init_moduleinfo(mm, module_name, module_key, full_path,
                                   relative_path, inlined_file, callback,
                                   /*is_dynamic=*/false);
-
   RELEASE(dir_path);
   RELEASE(ext);
 

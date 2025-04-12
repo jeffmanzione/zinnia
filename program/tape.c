@@ -247,7 +247,7 @@ void _classref_finalize(ClassRef *ref) {
   alist_finalize(&ref->supers);
 }
 
-void tape_write(const Tape *tape, FILE *file) {
+void tape_write(const Tape *tape, FILE *file, bool minimize) {
   ASSERT(NOT_NULL(tape), NOT_NULL(file));
   if (tape->module_name && 0 != strcmp("$", tape->module_name)) {
     fprintf(file, "module %s\n", tape->module_name);
@@ -271,7 +271,7 @@ void tape_write(const Tape *tape, FILE *file) {
         KL_iter fields = keyedlist_iter(&class_ref->field_refs);
         for (; kl_has(&fields); kl_inc(&fields)) {
           FieldRef *field = (FieldRef *)kl_value(&fields);
-          fprintf(file, " field %s\n", field->name);
+          fprintf(file, "%sfield %s\n", minimize ? "" : " ", field->name);
         }
       }
     }
@@ -298,10 +298,11 @@ void tape_write(const Tape *tape, FILE *file) {
     }
     if (i < alist_len(&tape->ins)) {
       Instruction *ins = alist_get(&tape->ins, i);
-      int chars_written = instruction_write(ins, file);
+      int chars_written = instruction_write(ins, file, minimize);
       SourceMapping *sm = (SourceMapping *)alist_get(&tape->source_map, i);
       if (sm->col >= 0 && sm->line >= 0) {
-        int lpadding = max(INSTRUCTION_COMMENT_LPAD - chars_written, 0);
+        int lpadding =
+            minimize ? 0 : max(INSTRUCTION_COMMENT_LPAD - chars_written, 0);
         fprintf(file, "%*s #%d %d", lpadding, PADDING, sm->line, sm->col);
       }
       fprintf(file, "\n");
@@ -310,7 +311,11 @@ void tape_write(const Tape *tape, FILE *file) {
       ClassRef *class_ref = (ClassRef *)sl_value(&cls_iter);
       if (class_ref->end_index == i || class_ref->end_index == i + 1) {
         in_class = false;
-        fprintf(file, "endclass  ; %s\n", class_ref->name);
+        if (minimize) {
+          fprintf(file, "endclass\n");
+        } else {
+          fprintf(file, "endclass  ; %s\n", class_ref->name);
+        }
         sl_inc(&cls_iter);
         // Handles classes with no body.
         if (sl_has(&cls_iter) &&
@@ -324,7 +329,8 @@ void tape_write(const Tape *tape, FILE *file) {
   if (num_src_lines > 0) {
     fprintf(file, "body\n");
     for (int i = 0; i < num_src_lines; ++i) {
-      fprintf(file, " '%s'\n", *(char **)alist_get(&tape->source_lines, i));
+      fprintf(file, "%s'%s'\n", minimize ? "" : " ",
+              *(char **)alist_get(&tape->source_lines, i));
     }
   }
 }

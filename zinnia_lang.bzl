@@ -13,7 +13,10 @@ def _zinnia_library_impl(ctx):
             a_out_file = ctx.actions.declare_file(src.basename.replace(".zn", ".zna"))
             out_files.append(a_out_file)
             out_dir = a_out_file.root.path + "/" + src.dirname
-            zinniac_args.extend(["-a", "--assembly_out_dir=" + out_dir])
+            zinniac_args.append("-a")
+            if ctx.attr.minimize:
+                zinniac_args.append("-m")
+            zinniac_args.append("--assembly_out_dir=" + out_dir)
             outputs.append(a_out_file)
 
         if ctx.attr.bin:
@@ -64,6 +67,10 @@ _zinnia_library = rule(
             default = True,
             doc = "Whether to output .zna files.",
         ),
+        "minimize": attr.bool(
+            default = False,
+            doc = "Whether the .zna output should be minimzed.",
+        ),
     },
 )
 
@@ -73,7 +80,7 @@ def _prioritize_bin(file):
     else:
         return 1
 
-def zinnia_library(name, srcs, deps = [], bin = True, assembly = True):
+def zinnia_library(name, srcs, deps = [], bin = True, assembly = True, minimize = False):
     """Generates compiled files for the zinnia programming langyage.
 
     Args:
@@ -81,9 +88,10 @@ def zinnia_library(name, srcs, deps = [], bin = True, assembly = True):
         srcs: zinnia sources.
         deps: zinnia_library dependencies.
         bin: Whether binary (.znb) files should be generated.
-        assembly: Whether assemplty (.zna) files should be generated.
+        assembly: Whether assembly (.zna) files should be generated.
+        minimize: Whether asembly should be minimized.
     """
-    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = True)
+    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = assembly, minimize = minimize)
 
 def _zinnia_binary_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable

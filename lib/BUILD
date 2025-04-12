@@ -13,6 +13,7 @@ zinnia_library(
     name = "lib_zna_srcs",
     srcs = [":lib_srcs"],
     bin = False,
+    minimize = True,
 )
 
 cc_library(

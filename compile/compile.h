@@ -13,12 +13,12 @@
 #include "struct/set.h"
 
 Map *compile(const Set *source_files, bool out_zna, const char machine_dir[],
-             bool out_znb, const char bytecode_dir[], bool opt);
+             bool out_znb, const char bytecode_dir[], bool opt, bool minimize);
 void compile_to_assembly(const char file_name[], FILE *out);
 
 void write_tape(const char fn[], const Tape *tape, bool out_zna,
                 const char machine_dir[], bool out_znb,
-                const char bytecode_dir[]);
+                const char bytecode_dir[], bool machine);
 int zinniac(int argc, const char *argv[]);
 
 #endif /* COMPILE_COMPILE_H_ */
