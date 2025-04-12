@@ -13,6 +13,7 @@ cc_library(
         "//program/optimization:optimize",
         "//util:file",
         "//util:string_util",
+        "//version",
         "//vm:intern",
         "@file_utils//util:string",
         "@file_utils//util/file:file_util",

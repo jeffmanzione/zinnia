@@ -34,7 +34,7 @@ Entity _timestamp_to_entity(Heap *heap, Timestamp *ts) {
 }
 
 Entity _now_timestamp(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Timestamp ts = current_timestamp();
+  Timestamp ts = current_local_timestamp();
   return _timestamp_to_entity(task->parent_process->heap, &ts);
 }
 

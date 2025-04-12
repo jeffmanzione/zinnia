@@ -14,6 +14,7 @@
 #include "util/file/file_util.h"
 #include "util/string.h"
 #include "util/string_util.h"
+#include "version/version.h"
 #include "vm/intern.h"
 
 #define STRING_BLOCK_LEN 400
@@ -37,9 +38,10 @@ bool _extract_file(const char input_file_name[], char **dir_path,
   return true;
 }
 
+// TODO: Need to handle string literal size limit.
 void _write_file_chunks(const char file_content[], FILE *out) {
-  int start = 0, end = LOOSE_UPPER_BOUND_PRECAT_LEN;
-  for (; end <= strlen(file_content); end += LOOSE_UPPER_BOUND_PRECAT_LEN) {
+  int start = 0, end = STRING_BLOCK_LEN;
+  for (; end <= strlen(file_content); end += STRING_BLOCK_LEN) {
     while (file_content[end] != ' ' && end < strlen(file_content)) {
       ++end;
     }
@@ -56,7 +58,7 @@ void _write_file_chunks(const char file_content[], FILE *out) {
 char *_compile_to_file(const char file_name[]) {
   if (ends_with(file_name, ".zn")) {
     FILE *assembly_file = tmpfile();
-    compile_to_assembly(file_name, assembly_file, true);
+    compile_to_assembly(file_name, assembly_file);
 
     rewind(assembly_file);
 
@@ -134,6 +136,11 @@ char *_convert_lib_path_to_var_name(const char lib_path[]) {
 }
 
 int zinniap(int argc, const char *args[]) {
+  if (0 == strcmp(args[1], "--version")) {
+    printf("%s@%s\n", version_string(), version_timestamp_string());
+    return EXIT_SUCCESS;
+  }
+
   alloc_init();
   strings_init();
   optimize_init();
@@ -219,7 +226,7 @@ int zinniap(int argc, const char *args[]) {
           "  alloc_init();\n"
           "  strings_init();\n"
           "  ArgConfig *config = argconfig_create();\n"
-          "  argconfig_packaged(config);\n"
+          "  argconfig_package(config);\n"
           "  ArgStore *store = commandline_parse_args(config, argc, argv);\n"
           "  AList srcs;\n"
           "  alist_init(&srcs, char *, argc - 1);\n"

@@ -10,6 +10,6 @@
 
 void argconfig_compile(ArgConfig *const config);
 void argconfig_run(ArgConfig *const config);
-void argconfig_packaged(ArgConfig *const config);
+void argconfig_package(ArgConfig *const config);
 
 #endif /* UTIL_ARGS_COMMANDLINES_H_ */

@@ -10,6 +10,7 @@ cc_library(
     hdrs = ["commandline.h"],
     deps = [
         ":commandline_arg",
+        "//version",
         "@memory_wrapper//alloc",
         "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
