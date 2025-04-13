@@ -1383,7 +1383,7 @@ TaskState vm_execute_task(VM *vm, Task *task) {
 #ifdef DEBUG
     SYNCHRONIZED(vm->process_create_lock, {
       fprintf(stdout, "(p=%p, t=%p) ", task->parent_process, task);
-      instruction_write(ins, stdout);
+      instruction_write(ins, stdout, /* minimize */ false);
       fprintf(stdout, "\n");
       fflush(stdout);
     });

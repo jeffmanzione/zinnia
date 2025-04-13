@@ -10,6 +10,7 @@
 #include "program/optimization/optimize.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
+#include "util/codegen.h"
 #include "util/file/file_info.h"
 #include "util/file/file_util.h"
 #include "util/string.h"
@@ -17,7 +18,7 @@
 #include "version/version.h"
 #include "vm/intern.h"
 
-#define STRING_BLOCK_LEN 400
+#define MAX_VAR_NAME_LEN 127
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -38,37 +39,16 @@ bool _extract_file(const char input_file_name[], char **dir_path,
   return true;
 }
 
-// TODO: Need to handle string literal size limit.
-void _write_file_chunks(const char file_content[], FILE *out) {
-  int start = 0, end = STRING_BLOCK_LEN;
-  for (; end <= strlen(file_content); end += STRING_BLOCK_LEN) {
-    while (file_content[end] != ' ' && end < strlen(file_content)) {
-      ++end;
-    }
-    int len = min(end - start, strlen(file_content + start));
-    fprintf(out, "\n  \"%.*s\"", len, file_content + start);
-    start = end;
-  }
-  if (start < strlen(file_content)) {
-    fprintf(out, "\n  \"%.*s\"", (int)strlen(file_content + start),
-            file_content + start);
-  }
-}
-
-char *_compile_to_file(const char file_name[]) {
+char *_compile_to_string(const char file_name[]) {
   if (ends_with(file_name, ".zn")) {
     FILE *assembly_file = tmpfile();
     compile_to_assembly(file_name, assembly_file);
 
     rewind(assembly_file);
 
-    char *content = NULL, *assembly_content = NULL;
+    char *content = NULL;
     getall(assembly_file, &content);
-    char *escaped_assembly = escape(content);
-
-    RELEASE(content);
-    RELEASE(assembly_content);
-    return escaped_assembly;
+    return content;
   } else if (ends_with(file_name, ".zna")) {
     FILE *file = FILE_FN(file_name, "rb");
     if (NULL == file) {
@@ -76,9 +56,7 @@ char *_compile_to_file(const char file_name[]) {
     }
     char *content = NULL;
     getall(file, &content);
-    char *escaped_content = escape(content);
-    RELEASE(content);
-    return escaped_content;
+    return content;
   } else {
     FATALF("Uknown file type: %s", file_name);
     return NULL;
@@ -189,16 +167,16 @@ int zinniap(int argc, const char *args[]) {
     }
     DEBUGF("Processing source: %s", file_name);
 
-    const char *escaped_assembly = _compile_to_file(file_name);
-
+    const char *assembly = _compile_to_string(file_name);
     const char *var_name = _convert_lib_path_to_var_name(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", var_name);
-    _write_file_chunks(escaped_assembly, out);
-    fprintf(out, ";\n\n");
+    char lib_var_name[MAX_VAR_NAME_LEN + 1];
+    lib_var_name[0] = 0x0;
+    sprintf(lib_var_name, "LIB_%s", var_name);
+    print_string_as_var(lib_var_name, assembly, out);
 
     RELEASE(var_name);
-    RELEASE(escaped_assembly);
+    RELEASE(assembly);
   }
 
   M_iter it = map_iter(&native_modules);
@@ -209,16 +187,16 @@ int zinniap(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
 
-    const char *escaped_assembly = _compile_to_file(file_name);
-
+    const char *assembly = _compile_to_string(file_name);
     const char *var_name = _convert_lib_path_to_var_name(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", var_name);
-    _write_file_chunks(escaped_assembly, out);
-    fprintf(out, ";\n\n");
+    char lib_var_name[MAX_VAR_NAME_LEN + 1];
+    lib_var_name[0] = 0x0;
+    sprintf(lib_var_name, "LIB_%s", var_name);
+    print_string_as_var(lib_var_name, assembly, out);
 
     RELEASE(var_name);
-    RELEASE(escaped_assembly);
+    RELEASE(assembly);
   }
 
   fprintf(out,
@@ -231,7 +209,7 @@ int zinniap(int argc, const char *args[]) {
           "  AList srcs;\n"
           "  alist_init(&srcs, char *, argc - 1);\n"
           "  AList src_contents;\n"
-          "  alist_init(&src_contents, char *, argc - 1);\n"
+          "  alist_init(&src_contents, FileParts, argc - 1);\n"
           "  AList init_fns;\n"
           "  alist_init(&init_fns, void *, argc - 1);\n");
 
@@ -248,8 +226,10 @@ int zinniap(int argc, const char *args[]) {
 
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
-            lib_var_name);
+    fprintf(out,
+            "  *(FileParts *)alist_add(&src_contents) = (FileParts){ .parts = "
+            "LIB_%s, .num_parts = sizeof(LIB_%s) / sizeof(LIB_%s[0])};\n",
+            lib_var_name, lib_var_name, lib_var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) = NULL;\n");
 
     RELEASE(lib_var_name);
