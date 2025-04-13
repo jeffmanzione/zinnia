@@ -44,7 +44,6 @@ int main(int argc, const char *args[]) {
     fprintf(out, "const char *LIB_%s[] = {", file_base);
     int start = 0, end = LOOSE_LITERAL_PRECAT_UPPER_BOUND;
     int current_literal_len = 0;
-    int num_segments = 0;
     for (; end <= escaped_input_len; end += LOOSE_LITERAL_PRECAT_UPPER_BOUND) {
       while (escaped_input[end] != ' ' && end < escaped_input_len) {
         ++end;
@@ -55,21 +54,16 @@ int main(int argc, const char *args[]) {
       start = end;
 
       if (current_literal_len > LOOSE_LITERAL_UPPER_BOUND) {
-        num_segments++;
         fprintf(out, ",");
         current_literal_len = 0;
       }
     }
     if (start < escaped_input_len) {
-      num_segments++;
       // Means that a comma was just added.
       fprintf(out, "\n  \"%.*s\"", escaped_input_len - start,
               escaped_input + start);
     }
     fprintf(out, "};\n\n");
-
-    fprintf(out, "const int LIB_%s_segments = %d;\n\n", file_base,
-            num_segments);
 
     RELEASE(dir_path);
     RELEASE(file_base);

@@ -37,7 +37,8 @@
                          find_file_by_name(lib_location, #name), NULL, -1);    \
     } else {                                                                   \
       mm_register_module(mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT,     \
-                         LIB_##name, LIB_##name##_segments);                   \
+                         LIB_##name,                                           \
+                         sizeof(LIB_##name) / sizeof(LIB_##name[0]));          \
     }                                                                          \
   }
 
@@ -51,7 +52,7 @@
     } else {                                                                   \
       mm_register_module_with_callback(                                        \
           mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT, LIB_##name,        \
-          LIB_##name##_segments, name##_add_native);                           \
+          sizeof(LIB_##name) / sizeof(LIB_##name[0]), name##_add_native);      \
     }                                                                          \
   }
 
