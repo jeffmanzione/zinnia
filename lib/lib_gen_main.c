@@ -38,7 +38,7 @@ int main(int argc, const char *args[]) {
     char *input;
     getall(input_file, &input);
 
-    print_string_as_var(var_name, input, out);
+    print_string_as_var_default(var_name, input, out);
 
     RELEASE(dir_path);
     RELEASE(file_base);

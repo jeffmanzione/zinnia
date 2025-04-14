@@ -173,7 +173,7 @@ int zinniap(int argc, const char *args[]) {
     char lib_var_name[MAX_VAR_NAME_LEN + 1];
     lib_var_name[0] = 0x0;
     sprintf(lib_var_name, "LIB_%s", var_name);
-    print_string_as_var(lib_var_name, assembly, out);
+    print_string_as_var_default(lib_var_name, assembly, out);
 
     RELEASE(var_name);
     RELEASE(assembly);
@@ -193,7 +193,7 @@ int zinniap(int argc, const char *args[]) {
     char lib_var_name[MAX_VAR_NAME_LEN + 1];
     lib_var_name[0] = 0x0;
     sprintf(lib_var_name, "LIB_%s", var_name);
-    print_string_as_var(lib_var_name, assembly, out);
+    print_string_as_var_default(lib_var_name, assembly, out);
 
     RELEASE(var_name);
     RELEASE(assembly);
