@@ -24,7 +24,7 @@ int instruction_write(const Instruction *ins, FILE *file, bool minimize) {
     chars_written += fprintf(file, "%s", INSTRUCTION_INDENT);
   }
   char *tmp;
-  int num = 0;
+  int escaped_len = 0, num = 0;
   switch (ins->type) {
   case INSTRUCTION_NO_ARG:
     return chars_written + fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
@@ -32,9 +32,9 @@ int instruction_write(const Instruction *ins, FILE *file, bool minimize) {
     return chars_written + fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
            fprintf(file, ID_FMT, ins->id);
   case INSTRUCTION_STRING:
-    tmp = escape(ins->str);
+    escaped_len = escape(ins->str, &tmp);
     num = chars_written + fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
-          fprintf(file, STR_FMT, (int)(strlen(tmp)), tmp);
+          fprintf(file, STR_FMT, escaped_len, tmp);
     RELEASE(tmp);
     return num;
   case INSTRUCTION_PRIMITIVE:

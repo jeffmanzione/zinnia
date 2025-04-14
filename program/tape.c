@@ -201,7 +201,8 @@ const char *tape_get_sourceline(const Tape *const tape, int line) {
     return NULL;
   }
   const char *escaped_line = *(char **)alist_get(&tape->source_lines, line);
-  const char *unescaped_line = unescape(escaped_line);
+  char *unescaped_line;
+  unescape(escaped_line, &unescaped_line);
   const char *to_return = intern(unescaped_line);
   RELEASE(unescaped_line);
   return to_return;
@@ -596,7 +597,7 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
     break;
   case TOKEN_STRING:
     ins->type = INSTRUCTION_STRING;
-    unescaped_str = unescape(token->text);
+    unescape(token->text, &unescaped_str);
     ins->str = intern(unescaped_str);
     RELEASE(unescaped_str);
     break;
@@ -756,7 +757,8 @@ void tape_set_body(Tape *const tape, FileInfo *fi) {
   ASSERT(NOT_NULL(fi));
   int len = file_info_len(fi);
   for (int i = 0; i < len; ++i) {
-    const char *line_escaped = escape(file_info_lookup(fi, i + 1)->line_text);
+    const char *line_escaped;
+    escape(file_info_lookup(fi, i + 1)->line_text, &line_escaped);
     *(char **)alist_add(&tape->source_lines) = intern(line_escaped);
     RELEASE(line_escaped);
   }

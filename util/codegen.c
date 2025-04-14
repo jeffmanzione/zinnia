@@ -19,12 +19,16 @@ void print_string_as_var_default(const char var_name[], const char content[],
                       /*avoid_splitting_tokens*/ true, target);
 }
 
+void _print_literal(char *text, int num_chars, FILE *target) {
+  fprintf(target, "\n  \"%.*s\"", num_chars, text);
+}
+
 void print_string_as_var(const char var_name[], const char content[],
                          int max_literal_total_length,
                          int max_literal_precat_length,
                          bool avoid_splitting_tokens, FILE *target) {
-  const char *escaped_content = escape(content);
-  const escaped_input_len = strlen(escaped_content);
+  char *escaped_content;
+  const escaped_input_len = escape(content, &escaped_content);
   fprintf(target, "const char *%s[] = {", var_name);
   int start = 0, end = max_literal_precat_length;
   int current_literal_len = 0;
@@ -42,7 +46,7 @@ void print_string_as_var(const char var_name[], const char content[],
     // Each precat literal counts an extra character toward to string literal
     // length total.
     current_literal_len += len + 1;
-    fprintf(target, "\n  \"%.*s\"", len, escaped_content + start);
+    _print_literal(escaped_content + start, len, target);
     start = end;
 
     if (current_literal_len > max_literal_total_length) {
@@ -51,9 +55,7 @@ void print_string_as_var(const char var_name[], const char content[],
     }
   }
   if (start < escaped_input_len) {
-    // Means that a comma was just added.
-    fprintf(target, "\n  \"%.*s\"", escaped_input_len - start,
-            escaped_content + start);
+    _print_literal(escaped_content + start, escaped_input_len - start, target);
   }
   fprintf(target, "};\n\n");
   RELEASE(escaped_content);

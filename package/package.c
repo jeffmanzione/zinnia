@@ -34,7 +34,7 @@ bool _extract_file(const char input_file_name[], char **dir_path,
   }
   char *input;
   getall(input_file, &input);
-  *escaped_input = escape(input);
+  escape(input, escaped_input);
   RELEASE(input);
   return true;
 }
@@ -220,7 +220,8 @@ int zinniap(int argc, const char *args[]) {
     }
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
-    char *escaped_dir_path = escape(dir_path);
+    char *escaped_dir_path;
+    escape(dir_path, &escaped_dir_path);
 
     const char *lib_var_name = _convert_lib_path_to_var_name(file_name);
 
@@ -247,7 +248,8 @@ int zinniap(int argc, const char *args[]) {
 
     char *dir_path, *file_base, *ext;
     split_path_file(m->src, &dir_path, &file_base, &ext);
-    char *escaped_dir_path = escape(dir_path);
+    char *escaped_dir_path;
+    escape(dir_path, &escaped_dir_path);
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
     fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
