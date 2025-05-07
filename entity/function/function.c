@@ -12,12 +12,6 @@
 #include "debug/debug.h"
 #include "entity/object.h"
 
-typedef struct {
-  Object *obj;
-  const Function *func;
-  void *parent_context; // To avoid circular dependency.
-} _FunctionRef;
-
 bool is_anon(const char name[]) { return 0 == strncmp("$anon_", name, 6); }
 
 void function_init(Function *f, const char name[], const Module *module,

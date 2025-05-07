@@ -9,6 +9,7 @@ cc_library(
     srcs = ["function.c"],
     hdrs = ["function.h"],
     deps = [
+        "//entity",
         "//entity:object",
         "//heap",
         "@memory_wrapper//alloc",

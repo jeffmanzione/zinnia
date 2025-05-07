@@ -757,7 +757,7 @@ void tape_set_body(Tape *const tape, FileInfo *fi) {
   ASSERT(NOT_NULL(fi));
   int len = file_info_len(fi);
   for (int i = 0; i < len; ++i) {
-    const char *line_escaped;
+    char *line_escaped;
     escape(file_info_lookup(fi, i + 1)->line_text, &line_escaped);
     *(char **)alist_add(&tape->source_lines) = intern(line_escaped);
     RELEASE(line_escaped);

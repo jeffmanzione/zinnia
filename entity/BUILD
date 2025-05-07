@@ -17,7 +17,6 @@ cc_library(
 
 cc_library(
     name = "object",
-    srcs = ["object.c"],
     hdrs = ["object.h"],
     deps = [
         "//program:tape",

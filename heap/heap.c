@@ -92,9 +92,6 @@ void heap_make_root(Heap *heap, Object *obj) {
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
                        const Entity *child) {
-  // if (0 == strcmp("sock", key)) {
-  //   printf("--------->ctx(%p@%p).sock=(%p)\n", parent, heap, child->obj);
-  // }
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
@@ -155,7 +152,16 @@ void _print_object_summary(Object *object) {
   } else if (object->_class == Class_Module) {
     printf("\tModule('%s')", object->_module_obj->_name);
   } else if (object->_class == Class_Function) {
-    printf("\tFunction('%s')", object->_function_obj->_name);
+    const Function *func = object->_function_obj;
+    if (NULL != func->_parent_class) {
+      printf("\tMethod('%s.%s')", func->_parent_class->_name, func->_name);
+    } else {
+      printf("\tFunction('%s')", func->_name);
+    }
+  } else if (object->_class == Class_FunctionRef) {
+    const _FunctionRef *fref = (_FunctionRef *)object->_internal_obj;
+    printf("\tFunctionRef('%s.%s')", fref->obj->_class->_name,
+           fref->func->_name);
   } else if (object->_class == Class_String) {
     printf("\tString('%.*s', %p)",
            String_size(((String *)object->_internal_obj)),
@@ -187,7 +193,7 @@ void heap_print_debug_summary(Heap *heap) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  // _print_object_summary(object);
+  _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }

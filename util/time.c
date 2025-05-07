@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef linux
 #include <time.h>
@@ -114,7 +115,7 @@ TimezoneOffset create_timezone_offset(int8_t hours, int8_t minutes) {
 void timestamp_to_iso8601(const Timestamp *ts, const TimezoneOffset *tz_offset,
                           char *buffer) {
   const int chars_written = sprintf(
-      buffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03lu", ts->year, ts->month,
+      buffer, "%04u-%02u-%02uT%02u:%02u:%02u.%03u", ts->year, ts->month,
       ts->day_of_month, ts->hour, ts->minute, ts->second, ts->millisecond);
   buffer += chars_written;
 

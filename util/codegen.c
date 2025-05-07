@@ -28,7 +28,7 @@ void print_string_as_var(const char var_name[], const char content[],
                          int max_literal_precat_length,
                          bool avoid_splitting_tokens, FILE *target) {
   char *escaped_content;
-  const escaped_input_len = escape(content, &escaped_content);
+  const int escaped_input_len = escape(content, &escaped_content);
   fprintf(target, "const char *%s[] = {", var_name);
   int start = 0, end = max_literal_precat_length;
   int current_literal_len = 0;
@@ -38,8 +38,13 @@ void print_string_as_var(const char var_name[], const char content[],
       --end;
     }
     if (avoid_splitting_tokens) {
-      while (escaped_content[end] != ' ') {
-        --end;
+      int new_end = end;
+      while (escaped_content[new_end] != ' ') {
+        --new_end;
+      }
+      // Only backtrack if the resulting literal will be non-empty.
+      if (new_end > start) {
+        end = new_end;
       }
     }
     int len = min(end - start, escaped_input_len - start);
