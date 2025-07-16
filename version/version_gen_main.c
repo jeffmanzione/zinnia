@@ -41,7 +41,7 @@ void print_timestamp_fn() {
   const Timestamp local_now = current_local_timestamp();
   const Timestamp gmt_now = current_gmt_timestamp();
 
-  const tz_diff_mins =
+  const int64_t tz_diff_mins =
       (timestamp_to_micros(&local_now) - timestamp_to_micros(&gmt_now)) /
       MICROS_PER_MINUTE;
   const TimezoneOffset tz_offset = create_timezone_offset(
