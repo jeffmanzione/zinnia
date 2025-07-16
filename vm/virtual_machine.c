@@ -1689,12 +1689,16 @@ void _process_broadcast_to_parent(Process *process) {
   Task *process_task = future_get_task(process->future);
 
   if (process->is_remote) {
-    Object *remote_result = task_get_resval(process->current_task)->obj;
-    // Must keep remote objects since other process assumes it will always
-    // exist. In the future, there must be a better cleanup process.
-    heap_make_root(process->heap, remote_result);
-    *task_mutable_resval(process_task) = entity_object(create_remote_object(
-        process_task->parent_process->heap, process, remote_result));
+    const Entity *remote_result = task_get_resval(process->current_task);
+    if (IS_OBJECT(remote_result)) {
+      // Must keep remote objects since other process assumes it will always
+      // exist. In the future, there must be a better cleanup process.
+      heap_make_root(process->heap, remote_result->obj);
+      *task_mutable_resval(process_task) = entity_object(create_remote_object(
+          process_task->parent_process->heap, process, remote_result->obj));
+    } else {
+      *task_mutable_resval(process_task) = *remote_result;
+    }
   } else {
     SYNCHRONIZED(process_task->parent_process->heap_access_lock, {
       *task_mutable_resval(process_task) =
