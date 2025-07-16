@@ -67,10 +67,10 @@ void run_files(const AList *source_file_names, const AList *source_contents,
 
   for (int i = 0; i < alist_len(source_file_names); ++i) {
     const char *src = *(char **)alist_get(source_file_names, i);
-    const char *src_content = *(char **)alist_get(source_contents, i);
+    const FileParts *src_content = alist_get(source_contents, i);
     NativeCallback init_fn = *(NativeCallback *)alist_get(init_fns, i);
-    ModuleInfo *module_info =
-        mm_register_module_with_callback(mm, src, src, src_content, init_fn);
+    ModuleInfo *module_info = mm_register_module_with_callback(
+        mm, src, src, src_content->parts, src_content->num_parts, init_fn);
     if (NULL == main_module) {
       main_module = modulemanager_load(mm, module_info);
       main_module->_is_initialized = true;
@@ -111,12 +111,12 @@ void run(const Set *source_files, ArgStore *store) {
       for (; fl_has(&iter); fl_inc(&iter)) {
         FileLoc *loc = fl_value(&iter);
         mm_register_module(mm, file_loc_full_path(loc),
-                           file_loc_relative_path(loc), NULL);
+                           file_loc_relative_path(loc), NULL, -1);
       }
       file_locs_delete(locs);
 
     } else {
-      ModuleInfo *module_info = mm_register_module(mm, src, src, NULL);
+      ModuleInfo *module_info = mm_register_module(mm, src, src, NULL, -1);
       if (NULL == main_module) {
         main_module = modulemanager_load(mm, module_info);
         main_module->_is_initialized = true;

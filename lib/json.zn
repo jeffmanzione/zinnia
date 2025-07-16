@@ -1,7 +1,9 @@
 import struct
 
-def jsonify(value) {
-  if value == True {
+function jsonify(value) {
+  if value == None {
+    return 'null'
+  } else if value == True {
     return 'true'
   } else if value == False {
     return 'false'
@@ -11,7 +13,7 @@ def jsonify(value) {
   return str(value)
 }
 
-def _jsonify_object(obj) {
+function _jsonify_object(obj) {
   if obj is String {
     return '\"' + obj + '\"'
   } else if obj is Array {
@@ -26,11 +28,11 @@ def _jsonify_object(obj) {
   return '{' + ','.join(entries) + '}'
 }
 
-def _jsonify_array(arr) {
+function _jsonify_array(arr) {
   return '[' + ','.join(arr.map(e -> jsonify(e))) + ']'
 }
 
-def _jsonify_map(map) {
+function _jsonify_map(map) {
   entries = []
   for (k, v) in map {
     entries.append('"' + str(k) + '":' + jsonify(v))

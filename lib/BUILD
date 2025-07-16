@@ -1,3 +1,4 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//:zinnia_lang.bzl", "zinnia_library")
 
 package(
@@ -13,13 +14,14 @@ zinnia_library(
     name = "lib_zna_srcs",
     srcs = [":lib_srcs"],
     bin = False,
+    minimize = True,
 )
 
 cc_library(
     name = "lib_gen_main",
     srcs = ["lib_gen_main.c"],
     deps = [
-        "//util:string_util",
+        "//util:codegen",
         "@file_utils//util/file:file_util",
         "@memory_wrapper//alloc",
     ],

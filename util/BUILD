@@ -5,6 +5,17 @@ package(
 )
 
 cc_library(
+    name = "codegen",
+    srcs = ["codegen.c"],
+    hdrs = ["codegen.h"],
+    deps = [
+        "//util:string_util",
+        "@file_utils//util/file:file_util",
+        "@memory_wrapper//alloc",
+    ],
+)
+
+cc_library(
     name = "platform",
     hdrs = ["platform.h"],
     deps = [],

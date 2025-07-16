@@ -59,14 +59,14 @@ typedef struct {
 
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
-  char *out = ALLOC_ARRAY2(char, str_len + 1);
+  char *out = MNEW_ARR(char, str_len + 1);
   memmove(out, str->table, str_len);
   out[str_len] = 0;
   return out;
 }
 
 void __file_init(Object *obj) {
-  _File *f = ALLOC2(_File);
+  _File *f = MNEW(_File);
   f->fp = NULL;
   obj->_internal_obj = f;
 }
@@ -79,7 +79,7 @@ void __file_delete(Object *obj) {
   if (NULL != f->fp && f->fp != stdout && f->fp != stderr) {
     fclose(f->fp);
   }
-  DEALLOC(f);
+  RELEASE(f);
 }
 
 Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -93,7 +93,7 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
     fn = _String_nullterm((String *)args->obj->_internal_obj);
     mode = intern("r");
     f->fp = fopen(fn, mode);
-    DEALLOC(fn);
+    RELEASE(fn);
   } else if (Class_Tuple == args->obj->_class) {
     Tuple *tup = (Tuple *)args->obj->_internal_obj;
     if (tuple_size(tup) < 2) {
@@ -123,8 +123,8 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       fn = _String_nullterm((String *)e_fn->obj->_internal_obj);
       mode = _String_nullterm((String *)e_mode->obj->_internal_obj);
       f->fp = fopen(fn, mode);
-      DEALLOC(fn);
-      DEALLOC(mode);
+      RELEASE(fn);
+      RELEASE(mode);
       if (NULL == f->fp) {
         return raise_error(task, ctx, "File (%s) could not be opened.", fn);
       }
@@ -154,7 +154,7 @@ Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
       PRIMITIVE_INT != ptype(&args->pri)) {
     return native_background_raise_error(task, ctx, "Invalid input to gets.");
   }
-  char *buf = ALLOC_ARRAY2(char, pint(&args->pri) + 1);
+  char *buf = MNEW_ARR(char, pint(&args->pri) + 1);
   Entity string;
   if (fgets(buf, pint(&args->pri), f->fp)) {
     string = entity_object(native_background_string_new(task->parent_process,
@@ -162,7 +162,7 @@ Entity _file_gets(Task *task, Context *ctx, Object *obj, Entity *args) {
   } else {
     string = NONE_ENTITY;
   }
-  DEALLOC(buf);
+  RELEASE(buf);
   return string;
 }
 
@@ -180,7 +180,7 @@ Entity _file_getline(Task *task, Context *ctx, Object *obj, Entity *args) {
         native_background_string_new(task->parent_process, line, nread));
   }
   if (line != NULL) {
-    DEALLOC(line);
+    RELEASE(line);
   }
   return string;
 }
@@ -218,7 +218,7 @@ Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 #ifndef OS_WINDOWS
 void _watch_dir_init(Object *obj) {
-  _WatchDir *wd = ALLOC2(_WatchDir);
+  _WatchDir *wd = MNEW(_WatchDir);
   obj->_internal_obj = wd;
 }
 
@@ -228,11 +228,11 @@ void _watch_dir_delete(Object *obj) {
     return;
   }
   free(wd->dir);
-  DEALLOC(wd);
+  RELEASE(wd);
 }
 
 void _file_watcher_init(Object *obj) {
-  _FileWatcher *fw = ALLOC2(_FileWatcher);
+  _FileWatcher *fw = MNEW(_FileWatcher);
   fw->fd = inotify_init();
   fw->is_closed = false;
   obj->_internal_obj = fw;
@@ -247,7 +247,7 @@ void _file_watcher_delete(Object *obj) {
     close(fw->fd);
     fw->is_closed = true;
   }
-  DEALLOC(fw);
+  RELEASE(fw);
 }
 
 Entity _file_watcher_is_valid(Task *task, Context *ctx, Object *obj,

@@ -14,23 +14,23 @@ class Clock {
 
 self.clock = Clock()
 
-def current_timestamp() {
+function current_timestamp() {
   clock.now_timestamp()
 }
 
-def timestamp_from_micros(micros) {
+function timestamp_from_micros(micros) {
   Timestamp(__micros_to_timestamp(micros))
 }
 
-def date_from_timestamp(timestamp) {
+function date_from_timestamp(timestamp) {
   Date(timestamp.year, timestamp.month, timestamp.day_of_month)
 }
 
-def current_date() {
+function current_date() {
   current_timestamp().to_date()
 }
 
-def date_from_days_since_epoch(days) {
+function date_from_days_since_epoch(days) {
   z = days + 719468
   era = (if z >= 0 then z else (z - 146096)) / 146097
   doe = z - era * 146097

@@ -63,7 +63,7 @@ bool parse_stringlist(const char val[], char ***stringlist_val, int *count) {
     pos++;
   }
   *count = comma_count + 1;
-  *stringlist_val = ALLOC_ARRAY2(char *, comma_count + 1);
+  *stringlist_val = MNEW_ARR(char *, comma_count + 1);
 
   char *prev = (char *)val;
   pos = (char *)val;

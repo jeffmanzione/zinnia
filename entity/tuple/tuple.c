@@ -38,9 +38,9 @@ void __tuple_print(const Object *obj, FILE *out) {
 }
 
 Tuple *tuple_create(size_t size) {
-  Tuple *t = ALLOC(Tuple);
+  Tuple *t = CNEW(Tuple);
   t->size = size;
-  t->table = ALLOC_ARRAY2(Entity, size);
+  t->table = MNEW_ARR(Entity, size);
   return t;
 }
 
@@ -60,9 +60,9 @@ uint32_t tuple_size(const Tuple *t) {
 
 void tuple_delete(Tuple *t) {
   if (t->size > 0) {
-    DEALLOC(t->table);
+    RELEASE(t->table);
   }
-  DEALLOC(t);
+  RELEASE(t);
 }
 
 void tuple_print(const Tuple *t, FILE *file) {

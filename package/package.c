@@ -10,13 +10,15 @@
 #include "program/optimization/optimize.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
+#include "util/codegen.h"
 #include "util/file/file_info.h"
 #include "util/file/file_util.h"
 #include "util/string.h"
 #include "util/string_util.h"
+#include "version/version.h"
 #include "vm/intern.h"
 
-#define STRING_BLOCK_LEN 400
+#define MAX_VAR_NAME_LEN 127
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -32,42 +34,21 @@ bool _extract_file(const char input_file_name[], char **dir_path,
   }
   char *input;
   getall(input_file, &input);
-  *escaped_input = escape(input);
-  DEALLOC(input);
+  escape(input, escaped_input);
+  RELEASE(input);
   return true;
 }
 
-void _write_file_chunks(const char file_content[], FILE *out) {
-  int start = 0, end = STRING_BLOCK_LEN;
-  for (; end <= strlen(file_content); end += STRING_BLOCK_LEN) {
-    while (file_content[end] != ' ' && end < strlen(file_content)) {
-      ++end;
-    }
-    int len = min(end - start, strlen(file_content + start));
-    fprintf(out, "\n  \"%.*s\"", len, file_content + start);
-    start = end;
-  }
-  if (start < strlen(file_content)) {
-    fprintf(out, "\n  \"%.*s\"", (int)strlen(file_content + start),
-            file_content + start);
-  }
-}
-
-char *_compile_to_file(const char file_name[]) {
+char *_compile_to_string(const char file_name[]) {
   if (ends_with(file_name, ".zn")) {
-
     FILE *assembly_file = tmpfile();
     compile_to_assembly(file_name, assembly_file);
 
     rewind(assembly_file);
 
-    char *content = NULL, *assembly_content = NULL;
+    char *content = NULL;
     getall(assembly_file, &content);
-    char *escaped_assembly = escape(content);
-
-    DEALLOC(content);
-    DEALLOC(assembly_content);
-    return escaped_assembly;
+    return content;
   } else if (ends_with(file_name, ".zna")) {
     FILE *file = FILE_FN(file_name, "rb");
     if (NULL == file) {
@@ -75,9 +56,7 @@ char *_compile_to_file(const char file_name[]) {
     }
     char *content = NULL;
     getall(file, &content);
-    char *escaped_content = escape(content);
-    DEALLOC(content);
-    return escaped_content;
+    return content;
   } else {
     FATALF("Uknown file type: %s", file_name);
     return NULL;
@@ -100,7 +79,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
     char *first_colon = find_str(line, strlen(line), ":", strlen(":"));
     char *second_colon =
         find_str(first_colon + 1, strlen(line), ":", strlen(":"));
-    _NativeModuleInfo *m = ALLOC2(_NativeModuleInfo);
+    _NativeModuleInfo *m = MNEW(_NativeModuleInfo);
     m->src = intern_range(line, 0, first_colon - line);
     m->init_fn =
         intern_range(line, first_colon - line + 1, second_colon - line);
@@ -113,7 +92,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
     }
     set_insert(hdrs, intern_range(prev_comma, 1, strlen(prev_comma)));
 
-    DEALLOC(line);
+    RELEASE(line);
   }
   file_info_delete(fi);
 }
@@ -135,6 +114,11 @@ char *_convert_lib_path_to_var_name(const char lib_path[]) {
 }
 
 int zinniap(int argc, const char *args[]) {
+  if (0 == strcmp(args[1], "--version")) {
+    printf("%s@%s\n", version_string(), version_timestamp_string());
+    return EXIT_SUCCESS;
+  }
+
   alloc_init();
   strings_init();
   optimize_init();
@@ -183,16 +167,16 @@ int zinniap(int argc, const char *args[]) {
     }
     DEBUGF("Processing source: %s", file_name);
 
-    const char *escaped_assembly = _compile_to_file(file_name);
-
+    const char *assembly = _compile_to_string(file_name);
     const char *var_name = _convert_lib_path_to_var_name(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", var_name);
-    _write_file_chunks(escaped_assembly, out);
-    fprintf(out, ";\n\n");
+    char lib_var_name[MAX_VAR_NAME_LEN + 1];
+    lib_var_name[0] = 0x0;
+    sprintf(lib_var_name, "LIB_%s", var_name);
+    print_string_as_var_default(lib_var_name, assembly, out);
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_assembly);
+    RELEASE(var_name);
+    RELEASE(assembly);
   }
 
   M_iter it = map_iter(&native_modules);
@@ -203,16 +187,16 @@ int zinniap(int argc, const char *args[]) {
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
 
-    const char *escaped_assembly = _compile_to_file(file_name);
-
+    const char *assembly = _compile_to_string(file_name);
     const char *var_name = _convert_lib_path_to_var_name(file_name);
 
-    fprintf(out, "const char LIB_%s[] =", var_name);
-    _write_file_chunks(escaped_assembly, out);
-    fprintf(out, ";\n\n");
+    char lib_var_name[MAX_VAR_NAME_LEN + 1];
+    lib_var_name[0] = 0x0;
+    sprintf(lib_var_name, "LIB_%s", var_name);
+    print_string_as_var_default(lib_var_name, assembly, out);
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_assembly);
+    RELEASE(var_name);
+    RELEASE(assembly);
   }
 
   fprintf(out,
@@ -220,12 +204,12 @@ int zinniap(int argc, const char *args[]) {
           "  alloc_init();\n"
           "  strings_init();\n"
           "  ArgConfig *config = argconfig_create();\n"
-          "  argconfig_packaged(config);\n"
+          "  argconfig_package(config);\n"
           "  ArgStore *store = commandline_parse_args(config, argc, argv);\n"
           "  AList srcs;\n"
           "  alist_init(&srcs, char *, argc - 1);\n"
           "  AList src_contents;\n"
-          "  alist_init(&src_contents, char *, argc - 1);\n"
+          "  alist_init(&src_contents, FileParts, argc - 1);\n"
           "  AList init_fns;\n"
           "  alist_init(&init_fns, void *, argc - 1);\n");
 
@@ -236,21 +220,24 @@ int zinniap(int argc, const char *args[]) {
     }
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
-    char *escaped_dir_path = escape(dir_path);
+    char *escaped_dir_path;
+    escape(dir_path, &escaped_dir_path);
 
     const char *lib_var_name = _convert_lib_path_to_var_name(file_name);
 
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) =  (char*) LIB_%s;\n",
-            lib_var_name);
-    fprintf(out, "  *(void **)alist_add(&init_fns) =  NULL;\n");
+    fprintf(out,
+            "  *(FileParts *)alist_add(&src_contents) = (FileParts){ .parts = "
+            "LIB_%s, .num_parts = sizeof(LIB_%s) / sizeof(LIB_%s[0])};\n",
+            lib_var_name, lib_var_name, lib_var_name);
+    fprintf(out, "  *(void **)alist_add(&init_fns) = NULL;\n");
 
-    DEALLOC(lib_var_name);
-    DEALLOC(escaped_dir_path);
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    RELEASE(lib_var_name);
+    RELEASE(escaped_dir_path);
+    RELEASE(dir_path);
+    RELEASE(file_base);
+    RELEASE(ext);
   }
 
   it = map_iter(&native_modules);
@@ -261,18 +248,19 @@ int zinniap(int argc, const char *args[]) {
 
     char *dir_path, *file_base, *ext;
     split_path_file(m->src, &dir_path, &file_base, &ext);
-    char *escaped_dir_path = escape(dir_path);
+    char *escaped_dir_path;
+    escape(dir_path, &escaped_dir_path);
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
     fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
             var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  %s;\n", m->init_fn);
 
-    DEALLOC(var_name);
-    DEALLOC(escaped_dir_path);
-    DEALLOC(dir_path);
-    DEALLOC(file_base);
-    DEALLOC(ext);
+    RELEASE(var_name);
+    RELEASE(escaped_dir_path);
+    RELEASE(dir_path);
+    RELEASE(file_base);
+    RELEASE(ext);
   }
 
   fprintf(out, "  run_files(&srcs, &src_contents, &init_fns, store);\n"
@@ -293,7 +281,7 @@ int zinniap(int argc, const char *args[]) {
   M_iter iter = map_iter(&native_modules);
   for (; has(&iter); inc(&iter)) {
     void *val = value(&iter);
-    DEALLOC(val);
+    RELEASE(val);
   }
   map_finalize(&native_modules);
 

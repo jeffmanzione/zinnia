@@ -505,7 +505,14 @@ function_parameters ->
     rule:function_parameters_no_parameters
   );
 
-def_identifier -> AND(token:KEYWORD_DEF, rule:identifier);
+def_identifier ->
+  AND(
+    OR(
+      token:KEYWORD_DEF,
+      token:KEYWORD_FUNCTION
+    ),
+    rule:identifier
+  );
 
 function_signature_no_qualifier ->
   AND(

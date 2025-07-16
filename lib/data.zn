@@ -1,7 +1,7 @@
 import io
 
 ; Returns a data array of 0 values with the given length.
-def zeros(type, count) {
+function zeros(type, count) {
   if type == Int {
     return Int64Array(count)
   } else if type == Float {
@@ -14,7 +14,7 @@ def zeros(type, count) {
 }
 
 ; Returns a data matrix of 0 values with the given dimensions.
-def zeros2(type, dim1, dim2) {
+function zeros2(type, dim1, dim2) {
   if type == Int {
     return Int64Matrix(dim1, dim2)
   } else if type == Float {

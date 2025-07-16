@@ -96,7 +96,7 @@ class Error {
 }
 
 ; Left padding should be '<chars for row num>:<token col>'
-def _token_left_padding(token) {
+function _token_left_padding(token) {
   line_text_space = 1
   if token.line >= 9999 {
     line_text_space = 5

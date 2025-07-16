@@ -14,7 +14,7 @@ struct __Condition {
 
 CriticalSection critical_section_create() {
 #ifdef OS_WINDOWS
-  CriticalSection cs = ALLOC(CRITICAL_SECTION);
+  CriticalSection cs = CNEW(CRITICAL_SECTION);
   InitializeCriticalSection(cs);
   return cs;
 #else
@@ -41,14 +41,14 @@ void critical_section_leave(CriticalSection critical_section) {
 void critical_section_delete(CriticalSection critical_section) {
 #ifdef OS_WINDOWS
   DeleteCriticalSection(critical_section);
-  DEALLOC(critical_section);
+  RELEASE(critical_section);
 #else
   mutex_close(critical_section);
 #endif
 }
 
 Condition *critical_section_create_condition(CriticalSection critical_section) {
-  Condition *cond = ALLOC(Condition);
+  Condition *cond = CNEW(Condition);
   cond->cs = critical_section;
 #ifndef OS_WINDOWS
   pthread_cond_init(&cond->cond, NULL);
@@ -76,5 +76,5 @@ void condition_delete(Condition *cond) {
 #ifndef OS_WINDOWS
   pthread_cond_destroy(&cond->cond);
 #endif
-  DEALLOC(cond);
+  RELEASE(cond);
 }

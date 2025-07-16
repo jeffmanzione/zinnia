@@ -39,13 +39,13 @@ char _escape_char(char c) {
   }
 }
 
-char *escape(const char str[]) {
+int escape(const char str[], char **target) {
   if (NULL == str) {
-    return NULL;
+    return 0;
   }
   const char *ptr = str;
   char c;
-  char *escaped_str = ALLOC_ARRAY2(char, DEFAULT_ESCAPED_STRING_SZ);
+  char *escaped_str = MNEW_ARR(char, DEFAULT_ESCAPED_STRING_SZ);
   int escaped_len = 0, escaped_buffer_sz = DEFAULT_ESCAPED_STRING_SZ;
   while ('\0' != (c = *ptr)) {
     if (escaped_len > escaped_buffer_sz - 3) {
@@ -59,7 +59,9 @@ char *escape(const char str[]) {
     ptr++;
   }
   escaped_str[escaped_len] = '\0';
-  return REALLOC(escaped_str, char, escaped_len + 1);
+  escaped_str = REALLOC(escaped_str, char, escaped_len + 1);
+  *target = escaped_str;
+  return escaped_len;
 }
 
 char _unescape_char(char c) {
@@ -77,13 +79,13 @@ char _unescape_char(char c) {
   }
 }
 
-char *unescape(const char str[]) {
+int unescape(const char str[], char **target) {
   if (NULL == str) {
-    return NULL;
+    return 0;
   }
   const char *ptr = str;
   char c;
-  char *unescaped_str = ALLOC_ARRAY2(char, DEFAULT_ESCAPED_STRING_SZ);
+  char *unescaped_str = MNEW_ARR(char, DEFAULT_ESCAPED_STRING_SZ);
   int unescaped_len = 0, unescaped_buffer_sz = DEFAULT_ESCAPED_STRING_SZ;
   while ('\0' != (c = *ptr)) {
     if (unescaped_len > unescaped_buffer_sz - 3) {
@@ -100,5 +102,7 @@ char *unescape(const char str[]) {
     ptr++;
   }
   unescaped_str[unescaped_len] = '\0';
-  return REALLOC(unescaped_str, char, unescaped_len + 1);
+  unescaped_str = REALLOC(unescaped_str, char, unescaped_len + 1);
+  *target = unescaped_str;
+  return unescaped_len;
 }

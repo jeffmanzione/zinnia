@@ -33,8 +33,8 @@ typedef struct {
 void _error_init(Object *obj) {}
 void _error_delete(Object *obj) {}
 
-void _stackline_init(Object *obj) { obj->_internal_obj = ALLOC(_StackLine); }
-void _stackline_delete(Object *obj) { DEALLOC(obj->_internal_obj); }
+void _stackline_init(Object *obj) { obj->_internal_obj = CNEW(_StackLine); }
+void _stackline_delete(Object *obj) { RELEASE(obj->_internal_obj); }
 
 Entity raise_error_with_object(Task *task, Context *context, Object *err) {
   context->error = err;

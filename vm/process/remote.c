@@ -26,13 +26,13 @@ Object *create_remote_object(Heap *heap, Process *remote_process,
 }
 
 void create_remote_on_object(Object *obj) {
-  Remote *remote = ALLOC2(Remote);
+  Remote *remote = MNEW(Remote);
   remote->remote_process = NULL;
   remote->remote_object = NULL;
   obj->_internal_obj = remote;
 }
 
-void remote_delete(Remote *remote) { DEALLOC(remote); }
+void remote_delete(Remote *remote) { RELEASE(remote); }
 
 Object *remote_get_object(Remote *remote) { return remote->remote_object; }
 

@@ -52,7 +52,7 @@ int main(int argc, const char *args[]) {
     Token token = {.text = intern("TEST")};
     tape_module(tape, &token);
     semantic_analyzer_produce(&sa, etree, tape);
-    tape_write(tape, stdout);
+    tape_write(tape, stdout, /* minimize */ false);
 
     tape_delete(tape);
 

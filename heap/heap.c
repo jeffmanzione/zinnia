@@ -35,7 +35,7 @@ void _object_delete(Object *object, Heap *heap);
 
 Heap *heap_create(HeapConf *config) {
   ASSERT(NOT_NULL(config));
-  Heap *heap = ALLOC2(Heap);
+  Heap *heap = MNEW(Heap);
   config->mgraph_config.ctx = heap;
   heap->config = *config;
   heap->object_count_threshold_for_garbage_collection =
@@ -49,7 +49,7 @@ void heap_delete(Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(heap->mg));
   mgraph_delete(heap->mg);
   __arena_finalize(&heap->object_arena);
-  DEALLOC(heap);
+  RELEASE(heap);
 }
 
 uint32_t heap_collect_garbage(Heap *heap) {
@@ -92,9 +92,6 @@ void heap_make_root(Heap *heap, Object *obj) {
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
                        const Entity *child) {
-  // if (0 == strcmp("sock", key)) {
-  //   printf("--------->ctx(%p@%p).sock=(%p)\n", parent, heap, child->obj);
-  // }
   ASSERT(NOT_NULL(heap), NOT_NULL(parent), NOT_NULL(child));
   Entity *entry_pos;
   Entity *old_member =
@@ -155,7 +152,16 @@ void _print_object_summary(Object *object) {
   } else if (object->_class == Class_Module) {
     printf("\tModule('%s')", object->_module_obj->_name);
   } else if (object->_class == Class_Function) {
-    printf("\tFunction('%s')", object->_function_obj->_name);
+    const Function *func = object->_function_obj;
+    if (NULL != func->_parent_class) {
+      printf("\tMethod('%s.%s')", func->_parent_class->_name, func->_name);
+    } else {
+      printf("\tFunction('%s')", func->_name);
+    }
+  } else if (object->_class == Class_FunctionRef) {
+    const _FunctionRef *fref = (_FunctionRef *)object->_internal_obj;
+    printf("\tFunctionRef('%s.%s')", fref->obj->_class->_name,
+           fref->func->_name);
   } else if (object->_class == Class_String) {
     printf("\tString('%.*s', %p)",
            String_size(((String *)object->_internal_obj)),
@@ -187,7 +193,7 @@ void heap_print_debug_summary(Heap *heap) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  // _print_object_summary(object);
+  _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
@@ -382,11 +388,11 @@ M_iter heapprofile_object_type_counts(const HeapProfile *const hp) {
 
 void heapprofile_delete(HeapProfile *hp) {
   map_finalize(&hp->object_type_counts);
-  DEALLOC(hp);
+  RELEASE(hp);
 }
 
 HeapProfile *heap_create_profile(const Heap *const heap) {
-  HeapProfile *hp = ALLOC2(HeapProfile);
+  HeapProfile *hp = MNEW(HeapProfile);
   map_init_default(&hp->object_type_counts);
   const Set *nodes = mgraph_nodes(heap->mg);
   M_iter iter = set_iter((Set *)nodes);

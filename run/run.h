@@ -10,6 +10,11 @@
 #include "struct/set.h"
 #include "util/args/commandline.h"
 
+typedef struct {
+  const char **parts;
+  size_t num_parts;
+} FileParts;
+
 void run(const Set *source_files, ArgStore *store);
 void run_files(const AList *source_file_names, const AList *source_contents,
                const AList *init_fns, ArgStore *store);

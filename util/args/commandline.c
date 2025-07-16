@@ -14,6 +14,7 @@
 #include "debug/debug.h"
 #include "struct/map.h"
 #include "struct/struct_defaults.h"
+#include "version/version.h"
 
 #define _CONST_CHAR_POINTER(ptr) ((const char *)(ptr))
 
@@ -45,10 +46,11 @@ struct __ArgConfig {
 };
 
 ArgConfig *argconfig_create() {
-  ArgConfig *config = ALLOC2(ArgConfig);
-  config->args = ALLOC_ARRAY(Arg, ArgKey__END);
+  ArgConfig *config = MNEW(ArgConfig);
+  config->args = CNEW_ARR(Arg, ArgKey__END);
   config->mandatory_sources = true;
   map_init_default(&config->arg_names);
+  argconfig_add(config, ArgKey__VERSION, "version", 'v', arg_bool(false));
   return config;
 }
 
@@ -57,19 +59,19 @@ void argconfig_delete(ArgConfig *config) {
   int i;
   for (i = 0; i < ArgKey__END; ++i) {
     if (ArgType__stringlist == config->args[i].type) {
-      DEALLOC(config->args[i].stringlist_val);
+      RELEASE(config->args[i].stringlist_val);
     }
   }
-  DEALLOC(config->args);
+  RELEASE(config->args);
   map_finalize(&config->arg_names);
-  DEALLOC(config);
+  RELEASE(config);
 }
 
 ArgStore *argstore_create(const ArgConfig *config) {
   ASSERT(NOT_NULL(config));
-  ArgStore *store = ALLOC2(ArgStore);
+  ArgStore *store = MNEW(ArgStore);
   store->config = config;
-  store->args = ALLOC_ARRAY(Arg, ArgKey__END);
+  store->args = CNEW_ARR(Arg, ArgKey__END);
   set_init_default(&store->src_files);
   map_init_default(&store->program_args);
   return store;
@@ -82,11 +84,11 @@ void argstore_delete(ArgStore *store) {
   int i;
   for (i = 0; i < ArgKey__END; ++i) {
     if (ArgType__stringlist == store->args[i].type) {
-      DEALLOC(store->args[i].stringlist_val);
+      RELEASE(store->args[i].stringlist_val);
     }
   }
-  DEALLOC(store->args);
-  DEALLOC(store);
+  RELEASE(store->args);
+  RELEASE(store);
 }
 
 const Arg *argstore_get(const ArgStore *store, ArgKey key) {
@@ -263,6 +265,16 @@ void _parse_sources(int argc, const char *const argv[], Set *sources) {
   }
 }
 
+int _num_args(int argc, const char *argv[]) {
+  for (int i = 1; i < argc; ++i) {
+    const char *arg = argv[i];
+    if (arg[0] != '-' || 0 == strcmp(arg, "--")) {
+      return i - 1;
+    }
+  }
+  return argc - 1;
+}
+
 int _index_of_sources(int argc, const char *argv[]) {
   int i;
   for (i = 1; i < argc; ++i) {
@@ -296,17 +308,11 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
   Map args;
   map_init_default(&args);
 
+  int num_args = _num_args(argc, argv);
   int index_of_sources = _index_of_sources(argc, argv);
-
-  if (config->mandatory_sources && index_of_sources < 0) {
-    fprintf(stderr, "ERROR: No sources.\n");
-    FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
-           "--arg1 --noarg2 --arg3=5]");
-  }
-
   int index_of_dd = _index_of_double_dash(argc, argv);
 
-  _parse_compiler_args(index_of_sources - 1, argv + 1, &args);
+  _parse_compiler_args(num_args, argv + 1, &args);
   M_iter args_iter = map_iter(&args);
   for (; has(&args_iter); inc(&args_iter)) {
     const char *k = _CONST_CHAR_POINTER(key(&args_iter));
@@ -338,6 +344,18 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
   if (index_of_sources >= 0) {
     _parse_sources(index_of_dd - index_of_sources, argv + index_of_sources,
                    &store->src_files);
+  }
+
+  const bool version = argstore_lookup_bool(store, ArgKey__VERSION);
+  if (version) {
+    printf("%s@%s\n", version_string(), version_timestamp_string());
+    exit(EXIT_SUCCESS);
+  }
+
+  if (config->mandatory_sources && index_of_sources < 0) {
+    fprintf(stderr, "ERROR: No sources.\n");
+    FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
+           "--arg1 --noarg2 --arg3=5]");
   }
 
   return store;

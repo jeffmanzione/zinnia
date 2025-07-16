@@ -12,12 +12,6 @@
 #include "debug/debug.h"
 #include "entity/object.h"
 
-typedef struct {
-  Object *obj;
-  const Function *func;
-  void *parent_context; // To avoid circular dependency.
-} _FunctionRef;
-
 bool is_anon(const char name[]) { return 0 == strncmp("$anon_", name, 6); }
 
 void function_init(Function *f, const char name[], const Module *module,
@@ -43,7 +37,7 @@ void __function_ref_create(Object *obj) { obj->_internal_obj = NULL; }
 void __function_ref_init(Object *fn_ref_obj, Object *obj, const Function *func,
                          void *parent_context, Heap *heap) {
   _FunctionRef *func_ref =
-      (_FunctionRef *)(fn_ref_obj->_internal_obj = ALLOC2(_FunctionRef));
+      (_FunctionRef *)(fn_ref_obj->_internal_obj = MNEW(_FunctionRef));
   func_ref->obj = obj;
   func_ref->func = func;
   func_ref->parent_context = parent_context;
@@ -56,7 +50,7 @@ void __function_ref_delete(Object *obj) {
   if (NULL == obj->_internal_obj) {
     return;
   }
-  DEALLOC(obj->_internal_obj);
+  RELEASE(obj->_internal_obj);
 }
 
 void __function_ref_print(const Object *obj, FILE *out) {

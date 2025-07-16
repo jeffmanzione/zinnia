@@ -3,19 +3,22 @@ import io
 import json
 import net
 
+web_port = args.web_port | 8080
+api_port = args.api_port | 5000
+
 class Favicon {}
 class IndexHtml {}
 class NotFoundHtml {}
 
-def is_favicon(req) {
+function is_favicon(req) {
   net.parse_request(req).path == '/favicon.ico'
 }
 
-def is_not_found(req) {
+function is_not_found(req) {
   net.parse_request(req).path == '/not_found.html'
 }
 
-def is_base_path(req) {
+function is_base_path(req) {
   net.parse_request(req).path == '/'
 }
 
@@ -33,12 +36,14 @@ class FaviconController {
 }
 
 @net.HttpRequestController(is_base_path)
-@inject.Inject(keys: IndexHtml)
+@inject.Inject(keys: [IndexHtml, inject.Provider(net.Cookies)])
 class IndexController {
-  new(field index_html) {}
+  new(field index_html, field cookies_provider) {}
 
   @net.Get
   method get(http_request, http_response) {
+    cookies = cookies_provider()
+    cookies['poop'] = 'big'
     http_response.add_content(index_html)
   }
 }
@@ -58,11 +63,8 @@ class NotFoundController {
 class RedirectController {
   @net.Get
   method get(http_request, http_response) {
-    if (http_request.path == '/index.html') {
-      net.redirect(http_request, http_response, '/')
-    } else {
-      net.redirect(http_request, http_response, '/not_found.html')
-    }
+    target = if (http_request.path == '/index.html') then '/' else '/not_found.html'
+    net.redirect(http_request, http_response, target)
   }
 }
 
@@ -98,13 +100,13 @@ class WebProviders : inject.ProviderSet {
 
 net.Server()
     .add_application(
-        net.Application('0.0.0.0', 80)
+        net.Application('0.0.0.0', web_port)
             .add_controller(FaviconController)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
             .add_controller(RedirectController)
             .add_provider_set(WebProviders))
     .add_application(
-        net.Application('0.0.0.0', 1453)
+        net.Application('0.0.0.0', api_port)
             .add_controller(RpcController))
     .run()

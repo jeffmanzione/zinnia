@@ -11,8 +11,10 @@ cc_library(
     deps = [
         "//compile",
         "//program/optimization:optimize",
+        "//util:codegen",
         "//util:file",
         "//util:string_util",
+        "//version",
         "//vm:intern",
         "@file_utils//util:string",
         "@file_utils//util/file:file_util",

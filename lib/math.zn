@@ -18,7 +18,7 @@ self.PI = 3.141592653589793
 self.E = exp(1)
 
 ; Returns the comparatively smalles number from [sequence].
-def min(sequence) {
+function min(sequence) {
 	m = sequence[0]
   for i=1, i < sequence.len(), i=i+1 {
     if sequence[i] < m {
@@ -29,7 +29,7 @@ def min(sequence) {
 }
 
 ; Returns the comparatively largest number from [sequence].
-def max(sequence) {
+function max(sequence) {
 	m = sequence[0]
   for i=1, i < sequence.len(), i=i+1 {
     if sequence[i] > m {
@@ -40,45 +40,45 @@ def max(sequence) {
 }
 
 ; Returns the value of [num] raised to [power], i.e., num^power.
-; def pow(num, power)
+; function pow(num, power) {}
 
 ; Returns the absolute value of [x].
-; def abs(x)
+; function abs(x) {}
 
 ; Returns the ceiling of [x].
-; def ceil(x)
+; function ceil(x) {}
 
 ; Returns the floor of [x].
-; def floor(x)
+; function floor(x) {}
 
 ; Returns the logarithm of the specified value [x] with base [base].
-def log(x, base=math.E) {
+function log(x, base=math.E) {
   __log(x, base)
 }
 
 ; Returns the natural logarithm of the specified valued [x].
-def ln(x) {
+function ln(x) {
   log(x)
 }
 
 ; Returns the base-10 logarithm of the specified value [x].
-def log10(x) {
+function log10(x) {
   log(x, 10)
 }
 
 ; Returns the square root of [x].
-def sqrt(x) pow(x, 0.5)
+function sqrt(x) pow(x, 0.5)
 
 ; Returns the remainder of [n] divided by [d].
-; def mod(n, d)
+; function mod(n, d) {}
 
 ; Returns (n / d, mod(n, d)).
-def div(n, d) {
+function div(n, d) {
   return (n / d, mod(n, d))
 }
 
 ; Like [n] / [d], except when [d] is 0, then returns None.
-def safe_divide(n, d) {
+function safe_divide(n, d) {
   if d == 0 {
     return None
   }

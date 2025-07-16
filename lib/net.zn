@@ -6,29 +6,6 @@ import net
 import socket
 import struct
 
-self.HTTP = 'HTTP'
-self.OK = 'OK'
-self.TEXT_HTML = 'text/html'
-self.UTF_8 = 'UTF-8'
-
-self.LT = '<'
-self.GT = '>'
-self.LT_ESCAPED = '&lt;'
-self.GT_ESCAPED = '&gt;'
-self.AMPER = '&'
-self.QUESTION = '?'
-self.EQUALS = '='
-self.WHITE_SPACE = ' '
-self.F_SLASH = '/'
-self.COLON = ':'
-self.RETURN_NEWLINE = '\r\n'
-
-self.COOKIE_KEY = 'Cookie'
-self.COOKIE_SEPARATOR = '; '
-
-self.NOT_FOUND = 'Could not find file.'
-
-
 class Header {
   new(field protocol,
       field version,
@@ -44,7 +21,7 @@ class Header {
   }
 }
 
-def parse_header(header_text) {
+function parse_header(header_text) {
   i = header_text.find('/')
   protocol = header_text.substr(0, i)
   i2 = i + 1 + header_text.find(' ', i+1)
@@ -87,17 +64,20 @@ class HttpRequest {
     method get_accept() {
       return _headers['Accept'].split(',')
     }
+    method get_cookie() {
+      return _headers['Cookie']
+    }
     method to_s() {
-      ret = cat(type, WHITE_SPACE, path)
+      ret = cat(type, ' ', path)
       if params and (params.keys.len() > 0) {
-        ret.extend(QUESTION)
+        ret.extend('?')
         param_arr = []
         for (k, v) in params {
-          param_arr.append(cat(k, EQUALS, v))
+          param_arr.append(cat(k, '=', v))
         }
-        ret.extend(AMPER.join(param_arr))
+        ret.extend('&'.join(param_arr))
       }
-      ret.extend(WHITE_SPACE).extend(protocol).extend(F_SLASH)
+      ret.extend(' ').extend(protocol).extend('/')
           .extend(version).extend('\r\n')
       if _headers {
         for (k, v) in _headers {
@@ -112,9 +92,9 @@ class HttpRequest {
 
 class HttpResponse {
   field _protocol, _version, _status_code, _status
-  field _headers, _content
+  field _headers, _content, _set_cookies
   new() {
-    _protocol = HTTP
+    _protocol = 'HTTP'
     _version = 1.1
     _status_code = 200
     _status = 'OK'
@@ -123,6 +103,7 @@ class HttpResponse {
     _headers['Accept-Ranges'] = 'bytes'
     _headers['Content-Length'] = 0
     _content = ''
+    _set_cookies = {}
   }
   method set_status(status) {
     _status = status
@@ -152,11 +133,8 @@ class HttpResponse {
     _headers['Accept-Ranges'] = ranges
     return self
   }
-  method set_cookie(cookie) {
-    if cookie is Cookies {
-      cookie = cookie.to_s()
-    }
-    _headers['Set-Cookie'] = cookie
+  method set_cookie(name, value) {
+    _set_cookies[str(name)] = str(value)
   }
   method add_content(text) {
     _content.extend(text)
@@ -168,39 +146,45 @@ class HttpResponse {
     for (k, v) in _headers {
       res.extend(cat(k, ': ', v, '\r\n'))
     }
+    for (name, value) in _set_cookies {
+      res.extend((cat('Set-Cookie: ', _set_cookie_string(name, value), '\r\n')))
+    }
     res.extend('\r\n')
     res.extend(_content)
     return res
   }
+  method _set_cookie_string(name, value) {
+    return cat(name, '="', value, '"')
+  }
 }
 
-def redirect(request, response, target) {
+function redirect(request, response, target) {
   response.set_status_code(301)
   location = target
   if request.params and (request.params.keys.len() > 0) {
-    location.extend(QUESTION)
+    location.extend('?')
     param_arr = []
     for (k, v) in request.params {
-      param_arr.append(cat(k, EQUALS, v))
+      param_arr.append(cat(k, '=', v))
     }
-    location.extend(AMPER.join(param_arr))
+    location.extend('&'.join(param_arr))
   }
   response._headers['Location'] = location
   return response
 }
 
-def parse_params(path) {
-  q_index = path.find(QUESTION)
+function parse_params(path) {
+  q_index = path.find('?')
   if ~q_index {
     return (path, {})
   }
   (
     path.substr(0, q_index),
     path.substr(q_index + 1)
-      .split(AMPER)
+      .split('&')
       .collect(
         (a, part) {
-          eq_index = part.find(EQUALS)
+          eq_index = part.find('=')
           if ~eq_index {
             a[part] ='1'
           } else {
@@ -211,22 +195,22 @@ def parse_params(path) {
         {}))
 }
 
-def parse_request(req) {
+function parse_request(req) {
   try {
-    parts = req.split(RETURN_NEWLINE)
+    parts = req.split('\r\n')
     if parts.len() == 0 {
       raise error.Error(cat('Invalid request: ', req))
     }
     request = parts[0].trim()
-    req_head = request.split(WHITE_SPACE)
+    req_head = request.split(' ')
     type = req_head[0]
     path = req_head[1]
     (path, params) = parse_params(path)
-    protocol = req_head[2].split(F_SLASH)
+    protocol = req_head[2].split('/')
     
     map = {}
     for i=1, i<parts.len(), i=i+1 {
-      kv = parts[i].split(COLON)
+      kv = parts[i].split(':')
       key = kv[0].trim()
       map[kv[0].trim()] = kv[1].trim()
     }
@@ -237,27 +221,36 @@ def parse_request(req) {
   }
 }
 
+@inject.Inject(keys: [HttpRequest, HttpResponse])
 class Cookies {
-  new(field map) {}
-  method get(key) {
-    return map[key]
+  field cookies_map
+
+  new(field req, field resp) {
+    cookies_map = _parse_cookie_map(req.get_cookie())
+  }
+  method [](name) {
+    return cookies_map[name]
+  }
+  method []=(name, value) {
+    cookies_map[name] = value
+    resp.set_cookie(name, value)
   }
   method to_s() {
-    res = '{'
-    map.each((k,v) -> res.extend('\"').extend(str(k)).extend('\":\"').extend(str(v)).extend('\" '))
-    res.extend('}')
+    return cookies_map.to_s()
+  }
+  method _parse_cookie_map(cookie_string) {
+    if ~cookie_string or cookie_string == '' {
+      return {}
+    }
+
+    res = {}
+    kvs = cookie_string.split('; ')
+    for i=0, i<kvs.len(), i=i+1 {
+      kv = kvs[i].split('=')
+      res[kv[0]] = kv[1]
+    }
     return res
   }
-}
-
-def parse_cookie(cookie) {
-  res = {}
-  kvs = cookie.split(COOKIE_SEPARATOR)
-  for i=0, i<kvs.len(), i=i+1 {
-    kv = kvs[i].split(EQUALS)
-    res[kv[0]] = kv[1]
-  }
-  return Cookies(res)
 }
 
 class HttpSocketHandle {
@@ -293,7 +286,6 @@ class HttpSocket {
   }
 }
 
-class Request {}
 class Rpc { method annotate(_) {} }
 
 class Get { method annotate(_) {} }
@@ -306,7 +298,7 @@ class Options { method annotate(_) {} }
 class Trace { method annotate(_) {} }
 class Patch { method annotate(_) {} }
 
-def always_true() {
+function always_true() {
   True
 }
 
@@ -314,7 +306,8 @@ class RequestController {
   new(field matcher_fn=always_true) {}
   method marshall(req) { req }
   method unmarshall(resp) { resp }
-  method process(controller, req) {
+  method preinject(injector, req) {}
+  method process(controller, req, injector) {
     return find_annotated_method(controller, Rpc)(req)
   }
 }
@@ -323,15 +316,23 @@ class HttpRequestController : RequestController {
   new(http_matcher_fn=always_true) {
     super(RequestController)(http_matcher_fn)
   }
+
   method marshall(req) { 
     http_req = parse_request(req)
     io.println('HTTP/' + http_req.version + ' ' + http_req.path)
     return http_req
   }
+
   method unmarshall(resp) { resp.to_s() }
 
-  method process(controller, req) {
+  method preinject(injector, req) {
     resp = net.HttpResponse()
+    injector.install(HttpRequest, () -> req)
+    injector.install(HttpResponse, () -> resp)
+  }
+
+  method process(controller, req, injector) {
+    resp = injector.get(HttpResponse)
     find_annotated_method(controller, _get_label(req))(req, resp)
     return resp
   }
@@ -377,7 +378,7 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
   'PATCH': Patch
 }
 
-def find_annotated_method(instance, annot) {
+function find_annotated_method(instance, annot) {
   cls = instance.class()
   methods = cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
   if methods.len() == 0 {
@@ -399,18 +400,27 @@ class ApplicationRunner {
     }
   }
 
-  method process(request) {
+  method _select_controller(request) {
     for (_, ctrlr_cls) in controller_classes {
       req_ctrlr = _get_request_controller(ctrlr_cls)
-      if ~req_ctrlr.matcher_fn(request) {
-        continue
+      if req_ctrlr.matcher_fn(request) {
+        return (req_ctrlr, ctrlr_cls)
       }
-      request = req_ctrlr.marshall(request)
-      injector.install(Request, () -> request)
-      ctrlr = injector.get(ctrlr_cls)
-      return req_ctrlr.unmarshall(req_ctrlr.process(ctrlr, request))
     }
-    raise error.Error('No controller found for request: ' + str(request))
+    return (None, None)
+  }
+
+  method process(request, timer) {
+    (req_ctrlr, ctrlr_cls) = _select_controller(request)
+    if ~req_ctrlr or ~ctrlr_cls {
+      raise error.Error('No controller found for request: ' + str(request))
+    }
+    request = req_ctrlr.marshall(request)
+    req_ctrlr.preinject(injector, request)
+    ctrlr = injector.get(ctrlr_cls)
+    resp = req_ctrlr.process(ctrlr, request, injector)
+    resp = req_ctrlr.unmarshall(resp)
+    return resp
   }
 
   method _get_request_controller(ctrlr_cls) {
@@ -428,7 +438,9 @@ class ApplicationRunner {
     while True {
       handle = await sock.accept()
       try {
-        await handle.send(process(await handle.receive()))
+        req = await handle.receive()
+        resp = process(req, timer)
+        await handle.send(resp)
       } catch e {
         io.fprintln(io.ERROR, e)
       }

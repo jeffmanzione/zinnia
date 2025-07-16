@@ -47,7 +47,7 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   if (!ends_with(dir, "/")) {
     fn_len++;
   }
-  const char *fn = ALLOC_ARRAY2(char, fn_len + 1);
+  const char *fn = MNEW_ARR(char, fn_len + 1);
   char *pos = (char *)fn;
   strcpy(pos, dir);
   pos += strlen(dir);
@@ -59,22 +59,22 @@ char *find_file_by_name(const char dir[], const char file_prefix[]) {
   strcpy(pos, ".znb");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
-    DEALLOC(fn);
+    RELEASE(fn);
     return to_return;
   }
   strcpy(pos, ".zna");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
-    DEALLOC(fn);
+    RELEASE(fn);
     return to_return;
   }
   strcpy(pos, ".zn");
   if (access(fn, F_OK) != -1) {
     char *to_return = intern_range(fn, 0, fn_len);
-    DEALLOC(fn);
+    RELEASE(fn);
     return to_return;
   }
-  DEALLOC(fn);
+  RELEASE(fn);
   return NULL;
 }
 
@@ -95,7 +95,7 @@ struct __DirIter {
 };
 
 DirIter *directory_iter(const char dir_name[]) {
-  DirIter *d = ALLOC2(DirIter);
+  DirIter *d = MNEW(DirIter);
 #ifdef OS_WINDOWS
   d->dir_name = dir_name;
   d->h_find = NULL;
@@ -115,7 +115,7 @@ void diriter_close(DirIter *d) {
     closedir(d->dir);
   }
 #endif
-  DEALLOC(d);
+  RELEASE(d);
 }
 
 const char *diriter_next_file(DirIter *d) {
@@ -202,13 +202,13 @@ void _traverse_dir(const char base_path[], const char dir_path[], AList *locs) {
       FileLoc *loc = (FileLoc *)alist_add(locs);
       _file_loc_init(loc, full_fn, base_path);
     }
-    DEALLOC(full_fn);
+    RELEASE(full_fn);
   }
-  DEALLOC(dir_path_with_wildcard);
+  RELEASE(dir_path_with_wildcard);
 }
 
 FileLocs *file_locs_create(const char path[]) {
-  FileLocs *locs = ALLOC2(FileLocs);
+  FileLocs *locs = MNEW(FileLocs);
   alist_init(&locs->locs, FileLoc, 6);
   _traverse_dir(path, path, &locs->locs);
   return locs;
@@ -221,7 +221,7 @@ void file_locs_delete(FileLocs *locs) {
     _file_loc_finalize(loc);
   }
   alist_finalize(&locs->locs);
-  DEALLOC(locs);
+  RELEASE(locs);
 }
 
 FileLoc_iter file_locs_iter(FileLocs *locs) {

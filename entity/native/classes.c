@@ -102,7 +102,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                               &new_classes);
 
   if (1 != map_size(&new_classes)) {
-    DEALLOC(c_str_text);
+    RELEASE(c_str_text);
     return raise_error(task, ctx, "Weird error adding a new class.");
   }
 
@@ -111,7 +111,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
 
   map_finalize(&new_classes);
 
-  DEALLOC(c_str_text);
+  RELEASE(c_str_text);
 
   return entity_object(new_class->_reflection);
 }

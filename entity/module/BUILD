@@ -9,9 +9,11 @@ cc_library(
     srcs = ["module.c"],
     hdrs = ["module.h"],
     deps = [
+        "//entity",
         "//entity:object",
         "//entity/class",
         "//entity/function",
+        "//heap",
         "//program:tape",
         "@c_data_structures//struct:keyed_list",
     ],

@@ -66,9 +66,9 @@ Tape *_read_file(const char fn[], bool opt) {
       char *dir_path, *module_name_tmp, *ext;
       split_path_file(fn, &dir_path, &module_name_tmp, &ext);
       char *module_name = intern(module_name_tmp);
-      DEALLOC(module_name_tmp);
-      DEALLOC(dir_path);
-      DEALLOC(ext);
+      RELEASE(module_name_tmp);
+      RELEASE(dir_path);
+      RELEASE(ext);
       tape_module(tape, token_create(TOKEN_WORD, 0, 0, module_name,
                                      strlen(module_name)));
     }
@@ -92,7 +92,7 @@ Tape *_read_file(const char fn[], bool opt) {
 
 void write_tape(const char fn[], const Tape *tape, bool out_zna,
                 const char machine_dir[], bool out_znb,
-                const char bytecode_dir[]) {
+                const char bytecode_dir[], bool minimize) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
@@ -100,9 +100,9 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     make_dir_if_does_not_exist(machine_dir);
     char *file_path = combine_path_file(machine_dir, file_name, ".zna");
     FILE *file = FILE_FN(file_path, "wb");
-    tape_write(tape, file);
+    tape_write(tape, file, minimize);
     fclose(file);
-    DEALLOC(file_path);
+    RELEASE(file_path);
   }
   if (out_znb && !ends_with(fn, ".znb")) {
     make_dir_if_does_not_exist(bytecode_dir);
@@ -110,21 +110,21 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     FILE *file = FILE_FN(file_path, "wb");
     tape_write_binary(tape, file);
     fclose(file);
-    DEALLOC(file_path);
+    RELEASE(file_path);
   }
-  DEALLOC(path);
-  DEALLOC(file_name);
-  DEALLOC(ext);
+  RELEASE(path);
+  RELEASE(file_name);
+  RELEASE(ext);
 }
 
 void compile_to_assembly(const char file_name[], FILE *out) {
   Tape *tape = _read_file(file_name, /* opt= */ true);
-  tape_write(tape, out);
+  tape_write(tape, out, /* minimize */ true);
   tape_delete(tape);
 }
 
 Map *compile(const Set *source_files, bool out_zna, const char machine_dir[],
-             bool out_znb, const char bytecode_dir[], bool opt) {
+             bool out_znb, const char bytecode_dir[], bool opt, bool minimize) {
   optimize_init();
 
   M_iter srcs = set_iter((Set *)source_files);
@@ -133,7 +133,8 @@ Map *compile(const Set *source_files, bool out_zna, const char machine_dir[],
     const char *src = value(&srcs);
     Tape *tape = _read_file(src, opt);
     map_insert(src_map, src, tape);
-    write_tape(src, tape, out_zna, machine_dir, out_znb, bytecode_dir);
+    write_tape(src, tape, out_zna, machine_dir, out_znb, bytecode_dir,
+               minimize);
   }
 
   optimize_finalize();
@@ -149,6 +150,7 @@ int zinniac(int argc, const char *argv[]) {
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
   const bool out_zna = argstore_lookup_bool(store, ArgKey__OUT_ASSEMBLY);
+  const bool minimize = argstore_lookup_bool(store, Argkey__MINIMIZE);
   const char *machine_dir =
       argstore_lookup_string(store, ArgKey__ASSEMBLY_OUT_DIR);
   const bool out_znb = argstore_lookup_bool(store, ArgKey__OUT_BINARY);
@@ -159,7 +161,7 @@ int zinniac(int argc, const char *argv[]) {
   Map *src_map =
 #endif
       compile(argstore_sources(store), out_zna, machine_dir, out_znb,
-              bytecode_dir, opt);
+              bytecode_dir, opt, minimize);
 
 #ifdef DEBUG
   M_iter tapes = map_iter(src_map);

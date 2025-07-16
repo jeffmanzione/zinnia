@@ -300,11 +300,11 @@
   void _##class_name##_init(Object *obj) { obj->_internal_obj = NULL; }        \
   void _##class_name##_delete(Object *obj) {                                   \
     array_class_name##_delete(((class_name *)obj->_internal_obj)->arr);        \
-    DEALLOC(obj->_internal_obj);                                               \
+    RELEASE(obj->_internal_obj);                                               \
   }                                                                            \
                                                                                \
   class_name *_##class_name##_create(int dim1, int dim2, bool clear) {         \
-    class_name *mat = ALLOC2(class_name);                                      \
+    class_name *mat = MNEW(class_name);                                        \
     mat->dim1 = dim1;                                                          \
     mat->dim2 = dim2;                                                          \
     mat->arr = array_class_name##_create_sz(dim1 * dim2);                      \

@@ -49,27 +49,27 @@ class FileWriter {
   method close() fi.close()
 }
 
-def fprint(f, a) {
+function fprint(f, a) {
   f.write(str(a))
 }
 
-def fprintln(f, a) {
+function fprintln(f, a) {
   f.writeln(str(a))
 }
 
-def print(a) {
+function print(a) {
   fprint(OUT, a)
 }
 
-def println(a) {
+function println(a) {
   fprintln(OUT, a)
 }
 
-def error(a) {
+function error(a) {
   fprint(ERROR, a)
 }
 
-def errorln(a) {
+function errorln(a) {
   fprintln(ERROR, a)
 }
 

@@ -15,7 +15,7 @@ Semaphore semaphore_create(uint32_t count) {
 #if defined(OS_WINDOWS)
   return CreateSemaphore(NULL, 0, count, NULL);
 #else
-  Semaphore sem = ALLOC2(sem_t);
+  Semaphore sem = MNEW(sem_t);
   sem_init(sem, 0, count);
   return sem;
 #endif
@@ -42,6 +42,6 @@ void semaphore_close(Semaphore s) {
   CloseHandle(s);
 #else
   sem_destroy(s);
-  DEALLOC(s);
+  RELEASE(s);
 #endif
 }
