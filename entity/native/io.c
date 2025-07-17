@@ -41,7 +41,7 @@ typedef struct {
 #ifndef OS_WINDOWS
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
-#define EVENT_BUFFER_LENGTH                                                    \
+#define EVENT_BUFFER_LENGTH \
   (MAX_EVENTS * (EVENT_SIZE + FILE_NAME_LENGTH_ESTIMATE))
 
 typedef struct {
@@ -120,13 +120,16 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
           Class_String != e_mode->obj->_class) {
         return raise_error(task, ctx, "File mode must be a String.");
       }
-      fn = _String_nullterm((String *)e_fn->obj->_internal_obj);
+      String *fn_string = (String *)e_fn->obj->_internal_obj;
+      fn = _String_nullterm(fn_string);
       mode = _String_nullterm((String *)e_mode->obj->_internal_obj);
       f->fp = fopen(fn, mode);
       RELEASE(fn);
       RELEASE(mode);
       if (NULL == f->fp) {
-        return raise_error(task, ctx, "File (%s) could not be opened.", fn);
+        return raise_error(task, ctx, "File '%*s' could not be opened.",
+                           String_size(fn_string),
+                           String_get_ref(fn_string, 0));
       }
     }
   } else {

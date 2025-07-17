@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #include "alloc/memory_graph/memory_graph.h"
-#include "lang/lexer/token.h"
 #include "program/tape.h"
 #include "struct/alist.h"
 #include "struct/keyed_list.h"
@@ -33,7 +32,7 @@ typedef void (*ObjCopyFn)(EntityCopier *copier, Object *src, Object *target);
 struct _Object {
   const Node *_node_ref;
   const Class *_class;
-  KeyedList _members; // Member
+  KeyedList _members;  // Member
 
   // If the object is reflected.
   union {
@@ -91,14 +90,14 @@ struct _Function {
   bool _is_background;
   union {
     uint32_t _ins_pos;
-    void *_native_fn; // NativeFn
+    void *_native_fn;  // NativeFn
   };
 };
 
 typedef struct {
   Object *obj;
   const Function *func;
-  void *parent_context; // To avoid circular dependency.
+  void *parent_context;  // To avoid circular dependency.
 } _FunctionRef;
 
 #endif /* ENTITY_OBJECT_H_ */

@@ -58,7 +58,7 @@ Condition *critical_section_create_condition(CriticalSection critical_section) {
 
 void condition_broadcast(Condition *cond) {
 #ifdef OS_WINDOWS
-  WakeConditionVariable(&cond->cv);
+  WakeAllConditionVariable(&cond->cv);
 #else
   pthread_cond_broadcast(&cond->cond);
 #endif

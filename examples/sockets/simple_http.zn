@@ -8,12 +8,12 @@ import struct
 ; Either directly invoke SimpleHttpServer(dir, port).start() or from the command line:
 ; 
 ; ```
-;   zinnia examples/sockets/simple_http.zn -- --dir=. --port=80
+;   zinnia examples/sockets/simple_http.zn -- --dir=. --port=8080
 ; ```
 class SimpleHttpServer {
   field cache, stop_called, sock ;, fw
-  new(field dir='.', field port=80) {
-    cache = struct.Cache(255)
+  new(field dir, field port) {
+    cache = struct.LoadingCache(factory: _read_file)
     ;fw = io.FileWatcher()
     ;fw.watch(dir)
     ;fw.listen(
@@ -27,25 +27,29 @@ class SimpleHttpServer {
     while ~stop_called {
       handle = await sock.accept()
       request = await handle.receive()
-      io.println(cat('Received request: ', request.type, ' ', request.path))
-      response = net.HttpResponse()
-      if _is_icon(request) {
-        response.set_content_type('image/x-icon')
+      try {
+        io.println(cat('Received request: ', request.type, ' ', request.path))
+        response = net.HttpResponse()
+        if _is_icon(request) {
+          response.set_content_type('image/x-icon')
+        }
+        if request.path == '/' {
+          path = '/index.html'
+        }
+        response_content = cache.get(request.path)
+        if ~response_content {
+          response.set_status_code(404)
+              .set_status('NOT FOUND')
+              .add_content('<title>Page not found</title><h1>Sorry, page not found.</h1>')
+        } else {
+          response.add_content('<pre>')
+              .add_content(response_content)
+              .add_content('</pre>')
+        }
+        await handle.send(response)
+      } catch e {
+        io.fprintln(io.ERROR, e)
       }
-      if request.path == '/' {
-        path = '/index.html'
-      }
-      response_content = cache.get(request.path, _read_file)
-      if ~response_content {
-        response.set_status_code(404)
-            .set_status('NOT FOUND')
-            .add_content('<title>Page not found</title><h1>Sorry, page not found.</h1>')
-      } else {
-        response.add_content('<pre>')
-            .add_content(response_content)
-            .add_content('</pre>')
-      }
-      await handle.send(response)
       handle.close()
     }
     sock.close()
@@ -71,6 +75,6 @@ class SimpleHttpServer {
 
 if __main {
   dir = args.dir | '.'
-  port = Int(args.port | 80)
+  port = Int(args.port | 8080)
   await SimpleHttpServer(dir, port).start()
 }
