@@ -263,8 +263,7 @@ void _execute_ADD_with_string(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = string_concat(task, &first, &second);
       return;
     }
-  }
-  if (INSTRUCTION_ID == ins->type) {
+  } else if (INSTRUCTION_ID == ins->type) {
     const Entity *resval = task_get_resval(task);
     if (IS_CLASS(resval, Class_String)) {
       Entity tmp;
