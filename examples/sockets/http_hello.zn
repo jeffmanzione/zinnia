@@ -6,7 +6,7 @@ import net
 import socket
 
 ADDRESS = '0.0.0.0'
-PORT = 80
+PORT = 8080
 
 ; Creates the socket listening on port 80, wrapping it in HTTP.
 sock = net.HttpSocket(socket.create_server_socket(ADDRESS, PORT))
@@ -33,7 +33,7 @@ handle_connection = (handle) {
     io.println('Sending response.')
     await handle.send(net.HttpResponse().add_content('Hello, world!'))
   } else {
-    io.println('Connectiong gracefully closed.')
+    io.println('Connection gracefully closed.')
   }
   handle.close()
 }

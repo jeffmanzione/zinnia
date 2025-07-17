@@ -66,8 +66,8 @@ uint32_t heap_max_object_count(const Heap *const heap) {
   return heap->config.max_object_count;
 }
 
-uint32_t
-heap_object_count_threshold_for_garbage_collection(const Heap *const heap) {
+uint32_t heap_object_count_threshold_for_garbage_collection(
+    const Heap *const heap) {
   ASSERT(NOT_NULL(heap));
   return heap->object_count_threshold_for_garbage_collection;
 }
@@ -193,7 +193,7 @@ void heap_print_debug_summary(Heap *heap) {
 
 void _object_delete(Object *object, Heap *heap) {
   ASSERT(NOT_NULL(heap), NOT_NULL(object));
-  _print_object_summary(object);
+  // _print_object_summary(object);
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
@@ -340,11 +340,11 @@ Entity entitycopier_copy(EntityCopier *copier, const Entity *e) {
   ASSERT(NOT_NULL(copier), NOT_NULL(e));
   ASSERT(NOT_NULL(e));
   switch (e->type) {
-  case NONE:
-  case PRIMITIVE:
-    return *e;
-  default:
-    ASSERT(OBJECT == e->type);
+    case NONE:
+    case PRIMITIVE:
+      return *e;
+    default:
+      ASSERT(OBJECT == e->type);
   }
   Object *obj = e->obj;
   // Guarantee only one copied version of each object.

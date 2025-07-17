@@ -94,13 +94,20 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   if (NULL != f) {
     Object *f_ref =
         wrap_function_in_ref(f, ctx->self.obj, task->parent_process->heap, ctx);
-    if (f->_is_anon) {
-      *tmp = entity_object(f_ref);
-      return tmp;
-    } else {
-      return object_set_member_obj(task->parent_process->heap, ctx->self.obj,
-                                   id, f_ref);
-    }
+
+    // TODO: With this uncommented code, the function ref can be collected when
+    // allocated by a different heap from the object. This needs to be resolved.
+    //
+    // if (f->_is_anon) {
+    //   *tmp = entity_object(f_ref);
+    //   return tmp;
+    // } else {
+    //   return object_set_member_obj(task->parent_process->heap, ctx->self.obj,
+    //                                id, f_ref);
+    // }
+
+    *tmp = entity_object(f_ref);
+    return tmp;
   }
   member = object_get(ctx->module->_reflection, id);
   if (NULL != member) {
@@ -114,8 +121,8 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
           obj->_function_obj, ctx->self.obj, task->parent_process->heap, ctx));
       return tmp;
     }
-    return object_set_member_obj(_context_heap(ctx), ctx->module->_reflection,
-                                 id, obj);
+    *tmp = entity_object(obj);
+    return tmp;
   }
 
   member = object_get(Module_builtin->_reflection, id);
@@ -125,8 +132,8 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
 
   obj = module_lookup(Module_builtin, id);
   if (NULL != obj) {
-    return object_set_member_obj(_context_heap(ctx),
-                                 Module_builtin->_reflection, id, obj);
+    *tmp = entity_object(obj);
+    return tmp;
   }
   return NULL;
 }

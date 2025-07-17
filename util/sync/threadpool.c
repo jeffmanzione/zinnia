@@ -80,8 +80,6 @@ Work *threadpool_create_work(ThreadPool *tp, VoidFnPtr fn, VoidFnPtr callback,
 }
 
 void threadpool_execute_work(ThreadPool *tp, Work *w) {
-  CRITICAL(tp->work_mutex, {
-    *Q_add_last(&tp->work) = w;
-    condition_broadcast(tp->work_cond);
-  });
+  CRITICAL(tp->work_mutex, { *Q_add_last(&tp->work) = w; });
+  condition_broadcast(tp->work_cond);
 }

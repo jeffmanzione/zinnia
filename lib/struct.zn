@@ -165,7 +165,7 @@ class Cache {
 }
 
 class LoadingCache {
-  new(field cache=Cache(255), field factory) {}
+  new({field cache=Cache(255), field factory}) {}
   method get(k) {
     cache.get(k, factory) 
   }
