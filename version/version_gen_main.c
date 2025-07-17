@@ -56,7 +56,7 @@ void print_timestamp_fn() {
 
 int main(int argc, const char *args[]) {
   if (argc != 2) {
-    fprintf(stderr, "Expected exactly 1 argument. Received %d", argc);
+    fprintf(stderr, "Expected exactly 1 argument. Received %d", argc - 1);
     return EXIT_FAILURE;
   }
 
