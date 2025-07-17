@@ -17,5 +17,7 @@ void tuple_copy(EntityCopier *copier, const Object *src_obj,
                 Object *target_obj);
 void string_copy(EntityCopier *copier, const Object *src_obj,
                  Object *target_obj);
+void istring_copy(EntityCopier *copier, const Object *src_obj,
+                  Object *target_obj);
 
 #endif /* HEAP_COPY_FNS_H_ */

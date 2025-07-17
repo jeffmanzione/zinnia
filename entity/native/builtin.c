@@ -48,13 +48,13 @@ ThreadHandle process_run_in_new_thread(Process *process);
 
 bool _is_any_space(const char c) {
   switch (c) {
-  case ' ':
-  case '\t':
-  case '\n':
-  case '\r':
-    return true;
-  default:
-    return false;
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -77,31 +77,31 @@ Entity _Int(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_int(0);
   }
   switch (args->type) {
-  case NONE:
-    return entity_int(0);
-  case OBJECT:
-    if (!IS_CLASS(args, Class_String)) {
-      return raise_error(task, ctx, "Cannot convert input to Int.");
-    }
-    if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
-      return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
-                         String_size((String *)args->obj->_internal_obj),
-                         args->obj->_internal_obj);
-    }
-    return entity_int(result);
-  case PRIMITIVE:
-    switch (ptype(&args->pri)) {
-    case PRIMITIVE_CHAR:
-      return entity_int((int64_t)pchar(&args->pri));
-    case PRIMITIVE_INT:
-      return *args;
-    case PRIMITIVE_FLOAT:
-      return entity_int((int64_t)pfloat(&args->pri));
+    case NONE:
+      return entity_int(0);
+    case OBJECT:
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to Int.");
+      }
+      if (!_str_to_int64((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return entity_int(result);
+    case PRIMITIVE:
+      switch (ptype(&args->pri)) {
+        case PRIMITIVE_CHAR:
+          return entity_int((int64_t)pchar(&args->pri));
+        case PRIMITIVE_INT:
+          return *args;
+        case PRIMITIVE_FLOAT:
+          return entity_int((int64_t)pfloat(&args->pri));
+        default:
+          return raise_error(task, ctx, "Unknown primitive type.");
+      }
     default:
-      return raise_error(task, ctx, "Unknown primitive type.");
-    }
-  default:
-    return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -125,31 +125,31 @@ Entity _Float(Task *task, Context *ctx, Object *obj, Entity *args) {
     return entity_float(0);
   }
   switch (args->type) {
-  case NONE:
-    return entity_float(0.f);
-  case OBJECT:
-    if (!IS_CLASS(args, Class_String)) {
-      return raise_error(task, ctx, "Cannot convert input to Float.");
-    }
-    if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
-      return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
-                         String_size((String *)args->obj->_internal_obj),
-                         args->obj->_internal_obj);
-    }
-    return entity_float(result);
-  case PRIMITIVE:
-    switch (ptype(&args->pri)) {
-    case PRIMITIVE_CHAR:
-      return entity_float((double)pchar(&args->pri));
-    case PRIMITIVE_INT:
-      return entity_float((double)pint(&args->pri));
-    case PRIMITIVE_FLOAT:
-      return *args;
+    case NONE:
+      return entity_float(0.f);
+    case OBJECT:
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to Float.");
+      }
+      if (!_str_to_float((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return entity_float(result);
+    case PRIMITIVE:
+      switch (ptype(&args->pri)) {
+        case PRIMITIVE_CHAR:
+          return entity_float((double)pchar(&args->pri));
+        case PRIMITIVE_INT:
+          return entity_float((double)pint(&args->pri));
+        case PRIMITIVE_FLOAT:
+          return *args;
+        default:
+          return raise_error(task, ctx, "Unknown primitive type.");
+      }
     default:
-      return raise_error(task, ctx, "Unknown primitive type.");
-    }
-  default:
-    return raise_error(task, ctx, "Unknown type.");
+      return raise_error(task, ctx, "Unknown type.");
   }
   return entity_float(0.f);
 }
@@ -178,22 +178,22 @@ Entity __Bool(Task *task, Context *ctx, Object *obj, Entity *args) {
     return FALSE_ENTITY;
   }
   switch (args->type) {
-  case NONE:
-    return FALSE_ENTITY;
-  case OBJECT:
-    if (!IS_CLASS(args, Class_String)) {
-      return raise_error(task, ctx, "Cannot convert input to bool Int.");
-    }
-    if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
-      return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
-                         String_size((String *)args->obj->_internal_obj),
-                         args->obj->_internal_obj);
-    }
-    return result ? TRUE_ENTITY : FALSE_ENTITY;
-  case PRIMITIVE:
-    return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
-  default:
-    return raise_error(task, ctx, "Unknown type.");
+    case NONE:
+      return FALSE_ENTITY;
+    case OBJECT:
+      if (!IS_CLASS(args, Class_String)) {
+        return raise_error(task, ctx, "Cannot convert input to bool Int.");
+      }
+      if (!_str_to_bool((String *)args->obj->_internal_obj, &result)) {
+        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
+                           String_size((String *)args->obj->_internal_obj),
+                           args->obj->_internal_obj);
+      }
+      return result ? TRUE_ENTITY : FALSE_ENTITY;
+    case PRIMITIVE:
+      return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
+    default:
+      return raise_error(task, ctx, "Unknown type.");
   }
   return FALSE_ENTITY;
 }
@@ -269,19 +269,19 @@ Entity _stringify(Task *task, Context *ctx, Object *obj, Entity *args) {
   Primitive val = args->pri;
 
   switch (ptype(&val)) {
-  case PRIMITIVE_BOOL:
-    num_written =
-        snprintf(buffer, BUFFER_SIZE, "%s", pbool(&val) ? "True" : "False");
-    break;
-  case PRIMITIVE_INT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%" PRId64, pint(&val));
-    break;
-  case PRIMITIVE_FLOAT:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%g", pfloat(&val));
-    break;
-  default /*CHAR*/:
-    num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
-    break;
+    case PRIMITIVE_BOOL:
+      num_written =
+          snprintf(buffer, BUFFER_SIZE, "%s", pbool(&val) ? "True" : "False");
+      break;
+    case PRIMITIVE_INT:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%" PRId64, pint(&val));
+      break;
+    case PRIMITIVE_FLOAT:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%g", pfloat(&val));
+      break;
+    default /*CHAR*/:
+      num_written = snprintf(buffer, BUFFER_SIZE, "%c", pchar(&val));
+      break;
   }
   ASSERT(num_written > 0);
   return entity_object(
@@ -412,10 +412,10 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-#define IS_OBJECT_CLASS(e, class)                                              \
+#define IS_OBJECT_CLASS(e, class) \
   ((NULL != (e)) && (OBJECT == (e)->type) && ((class) == (e)->obj->_class))
 
-#define IS_VALUE_TYPE(e, valtype)                                              \
+#define IS_VALUE_TYPE(e, valtype) \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -1045,6 +1045,27 @@ void _builtin_add_string(Module *builtin) {
   native_method(Class_String, intern("split"), _string_split);
   native_method(Class_String, intern("__starts_with"), _string_starts_with);
   native_method(Class_String, intern("__ends_with"), _string_ends_with);
+}
+
+void _builtin_add_istring(Module *builtin) {
+  native_method(Class_String, CMP_FN_NAME, _istring_cmp);
+  native_method(Class_String, EQ_FN_NAME, _istring_eq);
+  native_method(Class_String, NEQ_FN_NAME, _istring_neq);
+  native_method(Class_String, ARRAYLIKE_INDEX_KEY, _istring_index);
+  native_method(Class_String, intern("__find"), _istring_find);
+  native_method(Class_String, intern("__find_all"), _istring_find_all);
+  native_method(Class_String, intern("len"), _istring_len);
+  native_method(Class_String, HASH_KEY, _istring_hash);
+  native_method(Class_String, intern("__substr"), _istring_substr);
+  // native_method(Class_String, intern("copy"), _istring_copy);
+  // native_method(Class_String, intern("ltrim"), _string_ltrim);
+  // native_method(Class_String, intern("rtrim"), _string_rtrim);
+  // native_method(Class_String, intern("trim"), _string_trim);
+  // native_method(Class_String, intern("lshrink"), _string_lshrink);
+  // native_method(Class_String, intern("rshrink"), _string_rshrink);
+  // native_method(Class_String, intern("split"), _string_split);
+  native_method(Class_String, intern("__starts_with"), _istring_starts_with);
+  native_method(Class_String, intern("__ends_with"), _istring_ends_with);
 }
 
 void _builtin_add_function(Module *builtin) {

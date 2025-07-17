@@ -25,6 +25,7 @@ Class *Class_FunctionRef;
 Class *Class_Module;
 Class *Class_Array;
 Class *Class_String;
+Class *Class_IString;
 Class *Class_Tuple;
 Class *Class_Range;
 Class *Class_Error;
@@ -43,6 +44,7 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_Module = module_add_class(builtin, MODULE_NAME, Class_Object);
   Class_Array = module_add_class(builtin, ARRAY_NAME, Class_Object);
   Class_String = module_add_class(builtin, STRING_NAME, Class_Object);
+  Class_IString = module_add_class(builtin, ISTRING_NAME, Class_Object);
   Class_Tuple = module_add_class(builtin, TUPLE_NAME, Class_Object);
   Class_Error = NULL;
   Class_Process = NULL;
@@ -90,6 +92,14 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_String->_delete_fn = __string_delete;
   Class_String->_print_fn = __string_print;
   Class_String->_copy_fn = (ObjCopyFn)string_copy;
+
+  Class_IString->_super = Class_Object;
+  Class_IString->_reflection = heap_new(heap, Class_Class);
+  Class_IString->_reflection->_class_obj = Class_IString;
+  Class_IString->_init_fn = __istring_create;
+  Class_IString->_delete_fn = __istring_delete;
+  Class_IString->_print_fn = __istring_print;
+  Class_IString->_copy_fn = (ObjCopyFn)istring_copy;
 
   Class_Tuple->_super = Class_Object;
   Class_Tuple->_reflection = heap_new(heap, Class_Class);
