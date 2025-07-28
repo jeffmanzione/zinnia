@@ -24,6 +24,7 @@
 #include "entity/native/native.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "struct/struct_defaults.h"
 #include "util/sync/mutex.h"
@@ -192,7 +193,7 @@ Entity _validate_remote_call(Task *current_task, Context *current_ctx,
   }
 
   const Entity *fn_name_entity = tuple_get(tuple, 1);
-  if (!IS_CLASS(fn_name_entity, Class_String)) {
+  if (!IS_STRING(fn_name_entity)) {
     return raise_error(current_task, current_ctx,
                        "__remote_call expects (Remote, String, args).");
   }
@@ -227,9 +228,7 @@ Entity _remote_call(Task *current_task, Context *current_ctx, Object *obj,
   Process *remote_process = remote_get_process(remote);
   Object *remote_object = remote_get_object(remote);
 
-  String *fn_name_string = (String *)fn_name_entity->obj->_internal_obj;
-  const char *fn_name =
-      intern_range(fn_name_string->table, 0, String_size(fn_name_string));
+  const char *fn_name = intern_entity(fn_name_entity);
 
   Entity fn =
       object_get_maybe_wrap(remote_object, fn_name, remote_process->heap, NULL);

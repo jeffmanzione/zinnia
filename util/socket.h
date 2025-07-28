@@ -12,6 +12,10 @@
 
 #include "util/platform.h"
 
+#ifndef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN (15 + 1)
+#endif
+
 #ifndef OS_WINDOWS
 typedef uint32_t SOCKET;
 #endif
@@ -56,5 +60,15 @@ void sockethandle_close(SocketHandle *sh);
 void sockethandle_delete(SocketHandle *sh);
 
 unsigned long socket_inet_address(const char *host, size_t host_len);
+
+typedef enum {
+  ADDRESS_LOOKUP_STATUS_SUCCESS = 0,
+  ADDRESS_LOOKUP_STATUS_FAILED_SOCKET = 1,
+  ADDRESS_LOOKUP_STATUS_FAILED_CONNECT = 2,
+  ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME = 3,
+  ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP = 4
+} AddressLookupStatus;
+
+AddressLookupStatus local_ip_address(char *buf);
 
 #endif /* UTIL_SOCKET_H_ */

@@ -240,14 +240,20 @@ PRIMITIVE_OP(BXOR, ^, MATH_OP_INT(BXOR, ^));
 PRIMITIVE_OP(BOR, |, MATH_OP_INT(BOR, |));
 
 Entity string_concat(Task *task, const Entity *s1, const Entity *s2) {
-  ASSERT(IS_CLASS(s1, Class_String));
-  ASSERT(IS_CLASS(s2, Class_String));
-  String *s1_str = (String *)s1->obj->_internal_obj;
-  String *s2_str = (String *)s2->obj->_internal_obj;
-  Object *new = string_new(task->parent_process->heap, s1_str->table,
-                           String_size(s1_str));
+  ASSERT(IS_STRING(s1));
+  ASSERT(IS_STRING(s2));
+
+  char *s1_str;
+  int s1_str_len;
+  extract_string(s1, &s1_str, &s1_str_len);
+
+  char *s2_str;
+  int s2_str_len;
+  extract_string(s2, &s2_str, &s2_str_len);
+
+  Object *new = string_new(task->parent_process->heap, s1_str, s1_str_len);
   String *new_str = (String *)new->_internal_obj;
-  String_append(new_str, s2_str);
+  String_append_raw(new_str, s2_str, s2_str_len);
   return entity_object(new);
 }
 
@@ -256,8 +262,7 @@ void _execute_ADD_with_string(VM *vm, Task *task, Context *context,
   if (INSTRUCTION_NO_ARG == ins->type) {
     const Entity *first_ptr = task_peekstack_n(task, 1);
     const Entity *second_ptr = task_peekstack(task);
-    if (IS_CLASS(first_ptr, Class_String) &&
-        IS_CLASS(second_ptr, Class_String)) {
+    if (IS_STRING(first_ptr) && IS_STRING(second_ptr)) {
       Entity second = task_popstack(task);
       Entity first = task_popstack(task);
       *task_mutable_resval(task) = string_concat(task, &first, &second);
@@ -265,10 +270,10 @@ void _execute_ADD_with_string(VM *vm, Task *task, Context *context,
     }
   } else if (INSTRUCTION_ID == ins->type) {
     const Entity *resval = task_get_resval(task);
-    if (IS_CLASS(resval, Class_String)) {
+    if (IS_STRING(resval)) {
       Entity tmp;
       Entity *lookup = context_lookup(context, ins->id, &tmp);
-      if (!IS_CLASS(lookup, Class_String)) {
+      if (!IS_STRING(lookup)) {
         raise_error(task, context, "RHS for op '+' must be String.");
         return;
       }
@@ -356,9 +361,9 @@ Entity _module_filename(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == file_info_name(fi)) {
     return NONE_ENTITY;
   }
-  return entity_object(string_new(task->parent_process->heap,
-                                  file_info_name(fi),
-                                  strlen(file_info_name(fi))));
+  return entity_object(istring_new(task->parent_process->heap,
+                                   file_info_name(fi),
+                                   strlen(file_info_name(fi))));
 }
 
 Entity _module_source_filename(Task *task, Context *ctx, Object *obj,
@@ -366,7 +371,7 @@ Entity _module_source_filename(Task *task, Context *ctx, Object *obj,
   const char *source_fn = tape_get_external_source(obj->_module_obj->_tape);
   if (NULL != source_fn) {
     return entity_object(
-        string_new(task->parent_process->heap, source_fn, strlen(source_fn)));
+        istring_new(task->parent_process->heap, source_fn, strlen(source_fn)));
   } else {
     return NONE_ENTITY;
   }

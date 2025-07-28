@@ -52,6 +52,7 @@ char *STRING_NAME;
 char *SUPER_KEY;
 char *TASK_NAME;
 char *TMP_MODULE_HOLDER;
+char *TO_S_KEY;
 char *TRUE_KEYWORD;
 char *TUPLE_NAME;
 char *VALUE_KEY;
@@ -102,6 +103,7 @@ void _strings_insert_constants() {
   SUPER_KEY = intern("super");
   TASK_NAME = intern("Task");
   TMP_MODULE_HOLDER = intern("$tmp_module_holder");
+  TO_S_KEY = intern("to_s");
   TRUE_KEYWORD = intern("True");
   TUPLE_NAME = intern("Tuple");
   VALUE_KEY = intern("value");

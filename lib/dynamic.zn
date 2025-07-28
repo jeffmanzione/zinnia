@@ -1,13 +1,13 @@
 import error
 
 function import_c_library({file_name, module_name, init_fn_name}) {
-  if ~(file_name is String) {
+  if ~is_string(file_name) {
     raise error.Error('file_name must be a String')
   }
-  if ~(module_name is String) {
+  if ~is_string(module_name) {
     raise error.Error('module_name must be a String')
   }
-  if ~(init_fn_name is String) {
+  if ~is_string(init_fn_name) {
     raise error.Error('init_fn_name must be a String')
   }
   __open_c_lib(file_name, module_name, init_fn_name)

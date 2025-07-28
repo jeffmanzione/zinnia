@@ -194,8 +194,8 @@ void _add_reflection_to_class(Heap *heap, Module *module, Class *class) {
   KL_iter fields = class_fields(class);
   for (; kl_has(&fields); kl_inc(&fields)) {
     Field *field = (Field *)kl_value(&fields);
-    Entity str =
-        entity_object(string_new(heap, field->name, strlen(field->name)));
+    Entity str = entity_object(
+        istring_new_no_intern(heap, field->name, strlen(field->name)));
     array_add(heap, field_arr, &str);
   }
 
@@ -257,10 +257,10 @@ Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
     }
 
     if (NULL == tape_module_name(tape)) {
-      tape_module(tape,
-                  token_create(TOKEN_WORD, 0, 0,
-                               module_info->module_name_from_file,
-                               strlen(module_info->module_name_from_file)));
+      tape_module(
+          tape,
+          token_create(TOKEN_WORD, 0, 0, module_info->module_name_from_file,
+                       strlen(module_info->module_name_from_file)));
     }
 
     semantic_analyzer_delete(&sa, etree);
@@ -313,11 +313,10 @@ ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
                                           num_inlined_file_segs, NULL);
 }
 
-ModuleInfo *
-_create_and_init_moduleinfo(ModuleManager *mm, const char *module_name,
-                            const char *module_key, const char *full_path,
-                            const char *relative_path, const char *inlined_file,
-                            NativeCallback native_callback, bool is_dynamic) {
+ModuleInfo *_create_and_init_moduleinfo(
+    ModuleManager *mm, const char *module_name, const char *module_key,
+    const char *full_path, const char *relative_path, const char *inlined_file,
+    NativeCallback native_callback, bool is_dynamic) {
   ModuleInfo *module_info =
       _create_moduleinfo(mm, module_name, module_key, full_path, relative_path);
   module_info->has_native_callback = native_callback != NULL;
@@ -458,7 +457,7 @@ const FileInfo *modulemanager_get_fileinfo(const ModuleManager *mm,
 void modulemanager_update_module(ModuleManager *mm, Module *m,
                                  Map *new_classes) {
   ASSERT(NOT_NULL(mm), NOT_NULL(m), NOT_NULL(new_classes));
-  Tape *tape = (Tape *)m->_tape; // bless
+  Tape *tape = (Tape *)m->_tape;  // bless
 
   KL_iter classes = tape_classes(tape);
   Q classes_to_process;
@@ -466,12 +465,12 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
 
   for (; kl_has(&classes); kl_inc(&classes)) {
     ClassRef *cref = (ClassRef *)kl_value(&classes);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (NULL != c) {
       continue;
     }
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {
@@ -480,9 +479,9 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   }
   while (Q_size(&classes_to_process) > 0) {
     ClassRef *cref = (ClassRef *)Q_pop(&classes_to_process);
-    Class *c = (Class *)module_lookup_class(m, cref->name); // bless
+    Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (_hydrate_class(m, cref)) {
-      c = (Class *)module_lookup_class(m, cref->name); // bless
+      c = (Class *)module_lookup_class(m, cref->name);  // bless
       map_insert(new_classes, cref->name, c);
       _add_reflection_to_class(mm->_heap, m, c);
     } else {

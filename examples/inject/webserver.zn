@@ -6,7 +6,7 @@ import net
 import socket
 
 
-self.HOST = args.host | '0.0.0.0'
+self.HOST = args.host | socket.lookup_local_address()
 self.PORT = Int(args.port | 80)
 
 injector = inject.Injector().install(ServerProviders())

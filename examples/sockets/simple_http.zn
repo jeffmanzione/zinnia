@@ -23,7 +23,7 @@ class SimpleHttpServer {
   }
 
   method start() async {
-    sock = net.HttpSocket(socket.create_server_socket('0.0.0.0', port))
+    sock = net.HttpSocket(socket.create_server_socket(socket.lookup_local_address(), port))
     while ~stop_called {
       handle = await sock.accept()
       request = await handle.receive()

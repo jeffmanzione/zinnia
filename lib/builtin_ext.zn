@@ -12,7 +12,7 @@ class Iterator {
 class IndexIterator : Iterator {
   field indexable, start, end, i, index
   new(args) {
-    if (args is Array) or (args is String) {
+    if (args is Array) or is_string(args) {
       indexable = args
       start = 0
       end = args.len()

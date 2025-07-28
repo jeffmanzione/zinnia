@@ -12,6 +12,7 @@ cc_library(
         "//entity",
         "//entity:object",
         "@c_data_structures//struct:arraylike",
+        "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
     ],
 )
@@ -25,6 +26,7 @@ cc_library(
         "//entity:object",
         "//entity/class:classes",
         "//heap",
+        "@memory_wrapper//alloc/arena:intern",
         "@memory_wrapper//debug",
     ],
 )

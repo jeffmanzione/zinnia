@@ -4,6 +4,7 @@
 //     Author: Jeff Manzione
 
 #include "entity/native/classes.h"
+
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/class/classes_def.h"
@@ -11,6 +12,7 @@
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "lang/parser/lang_parser.h"
 #include "lang/parser/parser.h"
@@ -54,17 +56,20 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   }
   Module *m = arg0->obj->_module_obj;
 
-  if (!IS_CLASS(arg1, Class_String)) {
+  if (!IS_STRING(arg1)) {
     return raise_error(task, ctx,
                        "Invalid argument(1) for "
                        "__load_class_from_text: Expected type String.");
   }
-  String *class_text = (String *)arg1->obj->_internal_obj;
 
-  char *c_str_text = ALLOC_STRNDUP(class_text->table, String_size(class_text));
+  char *class_text;
+  int class_text_len;
+  extract_string(arg1, &class_text, &class_text_len);
+
+  char *c_str_text = ALLOC_STRNDUP(class_text, class_text_len);
   SFILE *file = sfile_open(c_str_text);
 
-  Tape *tape = (Tape *)m->_tape; // bless
+  Tape *tape = (Tape *)m->_tape;  // bless
   FileInfo *fi = file_info_sfile(file);
   FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
       vm_module_manager(task->parent_process->vm), m);

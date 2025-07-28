@@ -89,8 +89,8 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
 
   char *fn, *mode;
-  if (Class_String == args->obj->_class) {
-    fn = _String_nullterm((String *)args->obj->_internal_obj);
+  if (IS_STRING(args)) {
+    fn = entity_string_copy(args);
     mode = intern("r");
     f->fp = fopen(fn, mode);
     RELEASE(fn);
@@ -100,36 +100,30 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       return raise_error(task, ctx, "Too few arguments for File constructor.");
     }
     const Entity *e_fn = tuple_get(tup, 0);
-    // entity_print(e_fn, stdout);
-    if (NULL == e_fn || OBJECT != e_fn->type ||
-        Class_String != e_fn->obj->_class) {
+    if (!IS_STRING(e_fn)) {
       return raise_error(task, ctx, "File name must be a String.");
     }
-    if (0 == strncmp("__STDOUT__", ((String *)e_fn->obj->_internal_obj)->table,
-                     10)) {
+    char *fn;
+    int fn_len;
+    extract_string(e_fn, &fn, &fn_len);
+    if (0 == strncmp("__STDOUT__", fn, min(fn_len, 10))) {
       f->fp = stdout;
-    } else if (0 == strncmp("__STDERR__",
-                            ((String *)e_fn->obj->_internal_obj)->table, 10)) {
+    } else if (0 == strncmp("__STDERR__", fn, min(fn_len, 10))) {
       f->fp = stderr;
-    } else if (0 == strncmp("__STDIN__",
-                            ((String *)e_fn->obj->_internal_obj)->table, 9)) {
+    } else if (0 == strncmp("__STDIN__", fn, min(fn_len, 9))) {
       f->fp = stdin;
     } else {
       const Entity *e_mode = tuple_get(tup, 1);
-      if (NULL == e_mode || OBJECT != e_mode->type ||
-          Class_String != e_mode->obj->_class) {
+      if (!IS_STRING(e_mode)) {
         return raise_error(task, ctx, "File mode must be a String.");
       }
-      String *fn_string = (String *)e_fn->obj->_internal_obj;
-      fn = _String_nullterm(fn_string);
-      mode = _String_nullterm((String *)e_mode->obj->_internal_obj);
+      fn = entity_string_copy(e_fn);
+      mode = entity_string_copy(e_mode);
       f->fp = fopen(fn, mode);
       RELEASE(fn);
       RELEASE(mode);
       if (NULL == f->fp) {
-        return raise_error(task, ctx, "File '%*s' could not be opened.",
-                           String_size(fn_string),
-                           String_get_ref(fn_string, 0));
+        return raise_error(task, ctx, "File '%s' could not be opened.", fn);
       }
     }
   } else {
@@ -210,12 +204,13 @@ Entity _file_getall(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
   ASSERT(NOT_NULL(f));
-  if (NULL == args || NONE == args->type || OBJECT != args->type ||
-      Class_String != args->obj->_class) {
+  if (!IS_STRING(args)) {
     return NONE_ENTITY;
   }
-  String *string = (String *)args->obj->_internal_obj;
-  fprintf(f->fp, "%.*s", String_size(string), string->table);
+  char *string;
+  int len;
+  extract_string(args, &string, &len);
+  fprintf(f->fp, "%.*s", len, string);
   return NONE_ENTITY;
 }
 

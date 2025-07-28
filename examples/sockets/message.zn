@@ -1,7 +1,7 @@
 import io
 import socket
 
-host = args.host | '0.0.0.0'
+host = args.host | socket.lookup_local_address()
 port = Int(args.port) | 1453
 message = args.message | 'Hello, world!'
 

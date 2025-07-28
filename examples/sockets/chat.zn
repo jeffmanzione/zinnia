@@ -13,7 +13,7 @@ import io
 import socket
 
 if __main {
-  ADDRESS = args.address | '0.0.0.0'
+  ADDRESS = args.address | socket.lookup_local_address()
   PORT = Int(args.port | 1453)
   app = None
   if Bool(args.server) {

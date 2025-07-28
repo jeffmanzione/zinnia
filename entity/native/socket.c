@@ -50,12 +50,18 @@ Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
     return raise_error(task, ctx, "Expected tuple to have exactly 7 args.");
   }
 
-  String *host = (String *)tuple_get(tuple, 3)->obj->_internal_obj;
+  char *host;
+  int host_len;
+  const bool host_is_string =
+      extract_string(tuple_get(tuple, 3), &host, &host_len);
+
+  if (!host_is_string) {
+    return raise_error(task, ctx, "Host must be a string");
+  }
 
   Socket *socket = socket_create(
       pint(&tuple_get(tuple, 0)->pri), pint(&tuple_get(tuple, 1)->pri),
-      pint(&tuple_get(tuple, 2)->pri),
-      socket_inet_address(host->table, String_size(host)),
+      pint(&tuple_get(tuple, 2)->pri), socket_inet_address(host, host_len),
       pint(&tuple_get(tuple, 4)->pri));
 
   obj->_internal_obj = socket;
@@ -146,16 +152,27 @@ Entity _SocketHandle_send(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == sh) {
     return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
-  if (IS_CLASS(args, Class_String)) {
-    String *msg = args->obj->_internal_obj;
-    sockethandle_send(sh, msg->table, String_size(msg));
+
+  char *msg;
+  int msg_len;
+  const is_string = extract_string(args, &msg, &msg_len);
+
+  if (is_string) {
+    sockethandle_send(sh, msg, msg_len);
     return NONE_ENTITY;
   } else if (IS_CLASS(args, Class_Array)) {
     Array *arr = args->obj->_internal_obj;
     int i, arr_len = Array_size(arr);
     for (i = 0; i < arr_len; ++i) {
-      String *msg = Array_get_ref(arr, i)->obj->_internal_obj;
-      sockethandle_send(sh, msg->table, String_size(msg));
+      char *msg;
+      int msg_len;
+      const bool is_string =
+          extract_string(Array_get_ref(arr, i), &msg, &msg_len);
+      if (!is_string) {
+        return native_background_raise_error(
+            task, ctx, "Cannot send non-string at index %d.", i);
+      }
+      sockethandle_send(sh, msg, msg_len);
     }
     return NONE_ENTITY;
   } else {
@@ -193,9 +210,33 @@ Entity _cleanup_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
+static char *LOCAL_ADDRESS_ERROR_MESSAGES[] = {
+    "OK",
+    "socket() call failed",
+    "connect() call failed",
+    "getsocketname() call failed",
+    "inet_ntop() call failed",
+};
+
+Entity _lookup_local_address(Task *task, Context *ctx, Object *obj,
+                             Entity *args) {
+  char buf[INET_ADDRSTRLEN];
+  const AddressLookupStatus status = local_ip_address(buf);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return entity_object(string_new(task->parent_process->heap, buf,
+                                  strnlen(buf, INET_ADDRSTRLEN)));
+}
+
 void socket_add_native(ModuleManager *mm, Module *socket) {
   native_function(socket, intern("__init"), _init_sockets);
   native_function(socket, intern("__cleanup"), _cleanup_sockets);
+  native_function(socket, intern("__lookup_local_address"),
+                  _lookup_local_address);
   Class_SocketHandle = native_class(socket, intern("SocketHandle"),
                                     _SocketHandle_init, _SocketHandle_delete);
   native_method(Class_SocketHandle, intern("new"), _SocketHandle_constructor);

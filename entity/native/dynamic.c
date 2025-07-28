@@ -19,6 +19,7 @@
 #include "entity/native/error.h"
 #include "entity/native/native.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
@@ -40,27 +41,25 @@ Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
   const Entity *arg0 = tuple_get(t, 0);
   const Entity *arg1 = tuple_get(t, 1);
   const Entity *arg2 = tuple_get(t, 2);
-  if (!IS_CLASS(arg0, Class_String)) {
+  if (!IS_STRING(arg0)) {
     return raise_error(task, ctx,
                        "Invalid argument(0) for "
                        "__open_c_lib: Expected type String.");
   }
-  if (!IS_CLASS(arg1, Class_String)) {
+  if (!IS_STRING(arg1)) {
     return raise_error(task, ctx,
                        "Invalid argument(1) for "
                        "__open_c_lib: Expected type String.");
   }
-  if (!IS_CLASS(arg2, Class_String)) {
+  if (!IS_STRING(arg2)) {
     return raise_error(task, ctx,
                        "Invalid argument(2) for "
                        "__open_c_lib: Expected type String.");
   }
-  String *str_arg0 = (String *)arg0->obj->_internal_obj;
-  String *str_arg1 = (String *)arg1->obj->_internal_obj;
-  String *str_arg2 = (String *)arg2->obj->_internal_obj;
-  char *file_name = ALLOC_STRNDUP(str_arg0->table, String_size(str_arg0));
-  char *module_name = ALLOC_STRNDUP(str_arg1->table, String_size(str_arg1));
-  char *init_fn_name = ALLOC_STRNDUP(str_arg2->table, String_size(str_arg2));
+
+  char *file_name = entity_string_copy(arg0);
+  char *module_name = entity_string_copy(arg1);
+  char *init_fn_name = entity_string_copy(arg2);
 
 #ifdef OS_WINDOWS
   HMODULE dl_handle = LoadLibrary(TEXT(file_name));

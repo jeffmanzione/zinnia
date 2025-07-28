@@ -2,7 +2,9 @@ import inject
 import io
 import json
 import net
+import socket
 
+host = args.host | socket.lookup_local_address()
 web_port = args.web_port | 8080
 api_port = args.api_port | 5000
 
@@ -100,13 +102,13 @@ class WebProviders : inject.ProviderSet {
 
 net.Server()
     .add_application(
-        net.Application('0.0.0.0', web_port)
+        net.Application(host, web_port)
             .add_controller(FaviconController)
             .add_controller(IndexController)
             .add_controller(NotFoundController)
             .add_controller(RedirectController)
             .add_provider_set(WebProviders))
     .add_application(
-        net.Application('0.0.0.0', api_port)
+        net.Application(host, api_port)
             .add_controller(RpcController))
     .run()
