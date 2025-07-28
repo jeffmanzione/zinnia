@@ -5,7 +5,7 @@ import io
 import net
 import socket
 
-ADDRESS = '0.0.0.0'
+ADDRESS = socket.lookup_local_address()
 PORT = 8080
 
 ; Creates the socket listening on port 80, wrapping it in HTTP.
