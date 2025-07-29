@@ -22,6 +22,7 @@
 #include "entity/class/classes_def.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
@@ -93,33 +94,30 @@ const Entity *future_get_value(Heap *heap, Object *obj) {
 
 Task *future_get_task(Future *f) { return f->task; }
 
-Entity _create_process(Task *current_task, Context *current_ctx, Object *obj,
-                       Entity *args) {
+Entity _create_process(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(
-        current_task, current_ctx,
+        task, ctx,
         "Cannot call __create_process with something other than (Function, "
         "ANY, ANY).");
   }
-  Tuple *tuple = (Tuple *)args->obj->_internal_obj;
-  if (3 != tuple_size(tuple)) {
-    return raise_error(current_task, current_ctx,
-                       "__create_process expects 3 args.");
-  }
+
+  EXTRACT_TUPLE_ARGS(tuple, args, 3, task, ctx);
+
   const Entity *fn = tuple_get(tuple, 0);
   const Entity *fn_args = tuple_get(tuple, 1);
   const Entity *is_remote_arg = tuple_get(tuple, 2);
   if (!IS_OBJECT(fn) || !(inherits_from(fn->obj->_class, Class_Function) ||
                           IS_CLASS(fn, Class_FunctionRef))) {
-    return raise_error(current_task, current_ctx,
+    return raise_error(task, ctx,
                        "__create_processes expects (Function, ANY, ANY).");
   }
 
-  VM *vm = current_task->parent_process->vm;
+  VM *vm = task->parent_process->vm;
   Process *new_process = vm_create_process(vm);
   new_process->is_remote = !IS_NONE(is_remote_arg);
   Task *new_task = process_create_task(new_process);
-  new_task->parent_task = current_task;
+  new_task->parent_task = task;
   Context *new_ctx;
 
   const Function *f;
@@ -131,7 +129,7 @@ Entity _create_process(Task *current_task, Context *current_ctx, Object *obj,
     f = function_ref_get_func(fn->obj);
     self = function_ref_get_object(fn->obj);
   } else {
-    return raise_error(current_task, current_ctx,
+    return raise_error(task, ctx,
                        "__create_processes expects (Function, ANY).");
   }
 
@@ -181,11 +179,9 @@ Entity _validate_remote_call(Task *current_task, Context *current_ctx,
                        "Cannot call __remote_call with something other than "
                        "(Remote, String, args).");
   }
-  Tuple *tuple = (Tuple *)args->obj->_internal_obj;
-  if (3 != tuple_size(tuple)) {
-    return raise_error(current_task, current_ctx,
-                       "__remote_call expects 2 args.");
-  }
+
+  EXTRACT_TUPLE_ARGS(tuple, args, 3, current_task, current_ctx);
+
   const Entity *remote_entity = tuple_get(tuple, 0);
   if (!IS_CLASS(remote_entity, Class_Remote)) {
     return raise_error(current_task, current_ctx,

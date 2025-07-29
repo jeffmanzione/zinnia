@@ -12,6 +12,14 @@
 
 #include "util/platform.h"
 
+typedef enum {
+  ADDRESS_LOOKUP_STATUS_SUCCESS = 0,
+  ADDRESS_LOOKUP_STATUS_FAILED_SOCKET = 1,
+  ADDRESS_LOOKUP_STATUS_FAILED_CONNECT = 2,
+  ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME = 3,
+  ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP = 4
+} AddressLookupStatus;
+
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN (15 + 1)
 #endif
@@ -39,11 +47,11 @@ Socket *socket_create(int domain, int type, int protocol, unsigned long host,
 bool socket_is_valid(const Socket *socket);
 
 SocketStatus socket_bind(Socket *socket);
-
 SocketStatus socket_listen(Socket *socket, int num_connections);
-
 SocketHandle *socket_accept(Socket *socket);
 SocketHandle *socket_connect(Socket *socket);
+AddressLookupStatus socket_address(Socket *socket, char *host_buf);
+AddressLookupStatus socket_port(Socket *socket, int *port);
 
 void socket_close(Socket *socket);
 
@@ -60,14 +68,6 @@ void sockethandle_close(SocketHandle *sh);
 void sockethandle_delete(SocketHandle *sh);
 
 unsigned long socket_inet_address(const char *host, size_t host_len);
-
-typedef enum {
-  ADDRESS_LOOKUP_STATUS_SUCCESS = 0,
-  ADDRESS_LOOKUP_STATUS_FAILED_SOCKET = 1,
-  ADDRESS_LOOKUP_STATUS_FAILED_CONNECT = 2,
-  ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME = 3,
-  ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP = 4
-} AddressLookupStatus;
 
 AddressLookupStatus local_ip_address(char *buf);
 

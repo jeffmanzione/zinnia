@@ -132,6 +132,32 @@ SocketHandle *socket_connect(Socket *socket) {
   return sh;
 }
 
+AddressLookupStatus socket_address(Socket *socket, char *host_buf) {
+  struct sockaddr_in sin;
+  int len = sizeof(sin);
+
+  if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
+  }
+  if (inet_ntop(AF_INET, &sin.sin_addr, host_buf, INET_ADDRSTRLEN) == 0x0) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP;
+  }
+  return ADDRESS_LOOKUP_STATUS_SUCCESS;
+}
+
+AddressLookupStatus socket_port(Socket *socket, int *port) {
+  struct sockaddr_in sin;
+  int len = sizeof(sin);
+
+  if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
+    *port = -1;
+    return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
+  }
+
+  *port = ntohs(sin.sin_port);
+  return ADDRESS_LOOKUP_STATUS_SUCCESS;
+}
+
 void socket_close(Socket *socket) {
   socket->is_closed = true;
   _close_socket(socket->sock);

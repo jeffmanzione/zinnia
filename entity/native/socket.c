@@ -11,6 +11,7 @@
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
@@ -23,6 +24,14 @@
 
 static Class *Class_SocketHandle;
 static Class *Class_Socket;
+
+static char *LOCAL_ADDRESS_ERROR_MESSAGES[] = {
+    "OK",
+    "socket() call failed",
+    "connect() call failed",
+    "getsocketname() call failed",
+    "inet_ntop() call failed",
+};
 
 Entity _SocketHandle_constructor(Task *task, Context *ctx, Object *obj,
                                  Entity *args);
@@ -41,40 +50,27 @@ void _SocketHandle_delete(Object *obj) {
 
 Entity _Socket_constructor(Task *task, Context *ctx, Object *obj,
                            Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected tuple input.");
-  }
-  Tuple *tuple = (Tuple *)args->obj->_internal_obj;
+  EXTRACT_TUPLE_ARGS(tuple, args, 6, task, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t domain, tuple, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t type, tuple, 1);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t protocol, tuple, 2);
+  EXCTRACT_STRING_OR_THROW(host, host_len, tuple_get(tuple, 3));
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t port, tuple, 4);
+  EXTRACT_BOOL_AT_INDEX_OR_THROW(const bool is_server, tuple, 5);
 
-  if (tuple_size(tuple) != 7) {
-    return raise_error(task, ctx, "Expected tuple to have exactly 7 args.");
-  }
+  const uint64_t address = socket_inet_address(host, host_len);
 
-  char *host;
-  int host_len;
-  const bool host_is_string =
-      extract_string(tuple_get(tuple, 3), &host, &host_len);
-
-  if (!host_is_string) {
-    return raise_error(task, ctx, "Host must be a string");
-  }
-
-  Socket *socket = socket_create(
-      pint(&tuple_get(tuple, 0)->pri), pint(&tuple_get(tuple, 1)->pri),
-      pint(&tuple_get(tuple, 2)->pri), socket_inet_address(host, host_len),
-      pint(&tuple_get(tuple, 4)->pri));
+  Socket *socket = socket_create(domain, type, protocol, address, port);
 
   obj->_internal_obj = socket;
-  // Auto bind.
-  if (IS_TRUE(tuple_get(tuple, 6))) {
+  if (is_server) {
     if (!socket_is_valid(socket)) {
       return raise_error(task, ctx, "Invalid socket.");
     }
     if (SOCKET_ERROR == socket_bind(socket)) {
       return raise_error(task, ctx, "Could not bind to socket.");
     }
-    if (SOCKET_ERROR ==
-        socket_listen(socket, pint(&tuple_get(tuple, 4)->pri))) {
+    if (SOCKET_ERROR == socket_listen(socket, port)) {
       return raise_error(task, ctx, "Could not listen to socket.");
     }
   }
@@ -101,6 +97,41 @@ Entity _Socket_accept(Task *task, Context *ctx, Object *obj, Entity *args) {
   Entity arg = entity_object(obj);
   _SocketHandle_constructor(task, ctx, socket_handle, &arg);
   return entity_object(socket_handle);
+}
+
+Entity _Socket_host(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(task, ctx, "Weird Socket error.");
+  }
+
+  char host_buf[INET_ADDRSTRLEN];
+  const AddressLookupStatus status = socket_address(socket, host_buf);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return entity_object(string_new(task->parent_process->heap, host_buf,
+                                  strnlen(host_buf, INET_ADDRSTRLEN)));
+}
+
+Entity _Socket_port(Task *task, Context *ctx, Object *obj, Entity *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(task, ctx, "Weird Socket error.");
+  }
+
+  int port;
+  const AddressLookupStatus status = socket_port(socket, &port);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return entity_int(port);
 }
 
 Entity _SocketHandle_connect_constructor(Task *task, Context *ctx, Object *obj,
@@ -210,14 +241,6 @@ Entity _cleanup_sockets(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-static char *LOCAL_ADDRESS_ERROR_MESSAGES[] = {
-    "OK",
-    "socket() call failed",
-    "connect() call failed",
-    "getsocketname() call failed",
-    "inet_ntop() call failed",
-};
-
 Entity _lookup_local_address(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
   char buf[INET_ADDRSTRLEN];
@@ -249,6 +272,8 @@ void socket_add_native(ModuleManager *mm, Module *socket) {
   Class_Socket =
       native_class(socket, intern("Socket"), _Socket_init, _Socket_delete);
   native_method(Class_Socket, intern("new"), _Socket_constructor);
+  native_method(Class_Socket, intern("host"), _Socket_host);
+  native_method(Class_Socket, intern("port"), _Socket_port);
   native_background_method(Class_Socket, intern("accept"), _Socket_accept);
   native_background_method(Class_Socket, intern("connect"), _Socket_connect);
   native_method(Class_Socket, intern("close"), _Socket_close);

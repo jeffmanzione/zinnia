@@ -11,6 +11,7 @@
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
@@ -33,19 +34,7 @@
 
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx,
-                       "Invalid arguments for __load_class_from_text: Input is "
-                       "wrong type. Expected tuple(2).");
-  }
-  const Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(t)) {
-    return raise_error(
-        task, ctx,
-        "Invalid number of arguments for "
-        "__load_class_from_text: Expected 2 arguments but got %d.",
-        tuple_size(t));
-  }
+  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
 
   const Entity *arg0 = tuple_get(t, 0);
   const Entity *arg1 = tuple_get(t, 1);
@@ -62,11 +51,7 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                        "__load_class_from_text: Expected type String.");
   }
 
-  char *class_text;
-  int class_text_len;
-  extract_string(arg1, &class_text, &class_text_len);
-
-  char *c_str_text = ALLOC_STRNDUP(class_text, class_text_len);
+  char *c_str_text = entity_string_copy(arg1);
   SFILE *file = sfile_open(c_str_text);
 
   Tape *tape = (Tape *)m->_tape;  // bless

@@ -18,6 +18,7 @@
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
@@ -26,18 +27,8 @@
 #include "vm/vm.h"
 
 Entity _open_c_lib(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx,
-                       "Invalid arguments for __open_c_lib: Input is the "
-                       "wrong type. Expected tuple(3).");
-  }
-  const Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (3 != tuple_size(t)) {
-    return raise_error(task, ctx,
-                       "Invalid number of arguments for "
-                       "__open_c_lib: Expected 3 arguments but got %d.",
-                       tuple_size(t));
-  }
+  EXTRACT_TUPLE_ARGS(t, args, 3, task, ctx);
+
   const Entity *arg0 = tuple_get(t, 0);
   const Entity *arg1 = tuple_get(t, 1);
   const Entity *arg2 = tuple_get(t, 2);

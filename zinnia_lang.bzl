@@ -1,5 +1,9 @@
 """Rules for the zinnia programming language."""
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+
 def _zinnia_library_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
     compiler_executable_path = "./" + compiler_executable.short_path
@@ -152,7 +156,6 @@ _zinnia_binary = rule(
             cfg = "target",
         ),
         "builtins": attr.label_list(),
-        "executable_ext": attr.string(default = ".sh"),
     },
 )
 
@@ -184,7 +187,7 @@ def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = [], 
         deps = deps,
         modules = modules,
     )
-    native.cc_binary(
+    cc_binary(
         name = name,
         srcs = [":%s_bin" % name],
         data = data,
@@ -239,7 +242,7 @@ def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = No
         srcs = [src_module],
         deps = deps,
     )
-    native.cc_library(
+    cc_library(
         name = "%s_lib_cc_deps" % name,
         deps = cc_deps,
     )

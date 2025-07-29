@@ -16,6 +16,7 @@
 #include "entity/native/async.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/primitive.h"
 #include "entity/string/string.h"
@@ -505,32 +506,18 @@ Entity _istring_len(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected tuple input.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(tupl_args)) {
-    return raise_error(task, ctx,
-                       "Ïnvalid number of arguments, expected 2, got %d",
-                       tuple_size(tupl_args));
-  }
-  const Entity *index = tuple_get(tupl_args, 0);
+
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const uint64_t index, tupl_args, 0);
   const Entity *val = tuple_get(tupl_args, 1);
 
-  if (NULL == index || PRIMITIVE != index->type ||
-      PRIMITIVE_INT != ptype(&index->pri)) {
-    return raise_error(task, ctx,
-                       "Cannot index a string with something not an int.");
-  }
   if (NULL != val && PRIMITIVE == val->type &&
       PRIMITIVE_CHAR == ptype(&val->pri)) {
-    String_set(str, pint(&index->pri), pchar(&val->pri));
+    String_set(str, index, pchar(&val->pri));
   } else if (IS_CLASS(val, Class_String)) {
-    String_set(str, pint(&index->pri),
-               ((String *)val->obj->_internal_obj)->table[0]);
+    String_set(str, index, ((String *)val->obj->_internal_obj)->table[0]);
   } else if (IS_CLASS(val, Class_IString)) {
-    String_set(str, pint(&index->pri),
-               ((IString *)val->obj->_internal_obj)->str[0]);
+    String_set(str, index, ((IString *)val->obj->_internal_obj)->str[0]);
   } else {
     return raise_error(task, ctx, "Bad string index.");
   }
@@ -545,36 +532,20 @@ Entity _string_set(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_find(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *string_arg = tuple_get(tupl_args, 0);
-  const Entity *index = tuple_get(tupl_args, 1);
-  if (!IS_STRING(string_arg)) {
-    return raise_error(task, ctx, "Only a String can be in a String.");
-  }
-  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
-    return raise_error(task, ctx, "Expected a starting index.");
-  }
-  char *substr;
-  int substr_len;
-  extract_string(string_arg, &substr, &substr_len);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
-  int32_t index_int = pint(&index->pri);
-  if (index_int < 0) {
+  if (index < 0) {
     return raise_error(task, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
-                       index_int, String_size(str));
+                       index, String_size(str));
   }
-  if ((index_int + substr_len) > String_size(str)) {
+  if ((index + substr_len) > String_size(str)) {
     return NONE_ENTITY;
   }
-  char *start_index = str->table + index_int;
-  size_t size_after_start = String_size(str) - index_int;
+  char *start_index = str->table + index;
+  size_t size_after_start = String_size(str) - index;
 
   char *found_index =
       find_str(start_index, size_after_start, substr, substr_len);
@@ -589,36 +560,20 @@ Entity _istring_find(Task *task, Context *ctx, Object *obj, Entity *args) {
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *string_arg = tuple_get(tupl_args, 0);
-  const Entity *index = tuple_get(tupl_args, 1);
-  if (!IS_STRING(string_arg)) {
-    return raise_error(task, ctx, "Only a String can be in a String.");
-  }
-  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
-    return raise_error(task, ctx, "Expected a starting index.");
-  }
-  char *substr;
-  int substr_len;
-  extract_string(string_arg, &substr, &substr_len);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
-  int32_t index_int = pint(&index->pri);
-  if (index_int < 0) {
+  if (index < 0) {
     return raise_error(task, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
-                       index_int, substr_len);
+                       index, substr_len);
   }
-  if ((index_int + substr_len) > substr_len) {
+  if ((index + substr_len) > substr_len) {
     return NONE_ENTITY;
   }
-  char *start_index = str + index_int;
-  size_t size_after_start = str_len - index_int;
+  char *start_index = str + index;
+  size_t size_after_start = str_len - index;
 
   char *found_index =
       find_str(start_index, size_after_start, substr, substr_len);
@@ -630,39 +585,23 @@ Entity _istring_find(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _string_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *string_arg = tuple_get(tupl_args, 0);
-  const Entity *index = tuple_get(tupl_args, 1);
-  if (!IS_STRING(string_arg)) {
-    return raise_error(task, ctx, "Only a String can be in a String.");
-  }
-  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
-    return raise_error(task, ctx, "Expected a starting index.");
-  }
 
-  char *substr;
-  int substr_len;
-  extract_string(string_arg, &substr, &substr_len);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
-  int32_t index_int = pint(&index->pri);
-  if (index_int < 0) {
+  if (index < 0) {
     return raise_error(task, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
-                       index_int, String_size(str));
+                       index, String_size(str));
   }
   Object *array_obj = array_create(task->parent_process->heap);
-  if ((index_int + substr_len) > String_size(str)) {
+  if ((index + substr_len) > String_size(str)) {
     return entity_object(array_obj);
   }
 
-  size_t chars_remaining = String_size(str) - index_int;
-  char *i_index = str->table + index_int;
+  size_t chars_remaining = String_size(str) - index;
+  char *i_index = str->table + index;
   while (chars_remaining >= substr_len &&
          NULL != (i_index =
                       find_str(i_index, chars_remaining, substr, substr_len))) {
@@ -680,39 +619,22 @@ Entity _istring_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *string_arg = tuple_get(tupl_args, 0);
-  const Entity *index = tuple_get(tupl_args, 1);
-  if (!IS_STRING(string_arg)) {
-    return raise_error(task, ctx, "Only a String can be in a String.");
-  }
-  if (!IS_VALUE_TYPE(index, PRIMITIVE_INT)) {
-    return raise_error(task, ctx, "Expected a starting index.");
-  }
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
-  char *substr;
-  int substr_len;
-  extract_string(string_arg, &substr, &substr_len);
-
-  int32_t index_int = pint(&index->pri);
-  if (index_int < 0) {
+  if (index < 0) {
     return raise_error(task, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
-                       index_int, str_len);
+                       index, str_len);
   }
   Object *array_obj = array_create(task->parent_process->heap);
-  if ((index_int + substr_len) > str_len) {
+  if ((index + substr_len) > str_len) {
     return entity_object(array_obj);
   }
 
-  size_t chars_remaining = str_len - index_int;
-  char *i_index = str + index_int;
+  size_t chars_remaining = str_len - index;
+  char *i_index = str + index;
   while (chars_remaining >= substr_len &&
          NULL != (i_index =
                       find_str(i_index, chars_remaining, substr, substr_len))) {
@@ -728,25 +650,9 @@ Entity _istring_find_all(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _string_substr(Task *task, Context *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
 
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *index_start = tuple_get(tupl_args, 0);
-  if (PRIMITIVE_INT != ptype(&index_start->pri)) {
-    return raise_error(task, ctx, "Expected start_index to be Int.");
-  }
-
-  const Entity *index_end = tuple_get(tupl_args, 1);
-  if (PRIMITIVE_INT != ptype(&index_end->pri)) {
-    return raise_error(task, ctx, "Expected end_index to be an Int.");
-  }
-
-  int64_t start = pint(&index_start->pri);
-  int64_t end = pint(&index_end->pri);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t start, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t end, tupl_args, 1);
 
   if (start < 0 || start > String_size(str)) {
     return raise_error(task, ctx, "start_index out of bounds.");
@@ -766,25 +672,9 @@ Entity _istring_substr(Task *task, Context *ctx, Object *obj, Entity *args) {
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected more than one arg.");
-  }
-  Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tupl_args) != 2) {
-    return raise_error(task, ctx, "Expected 2 arguments.");
-  }
-  const Entity *index_start = tuple_get(tupl_args, 0);
-  if (PRIMITIVE_INT != ptype(&index_start->pri)) {
-    return raise_error(task, ctx, "Expected start_index to be Int.");
-  }
-
-  const Entity *index_end = tuple_get(tupl_args, 1);
-  if (PRIMITIVE_INT != ptype(&index_end->pri)) {
-    return raise_error(task, ctx, "Expected end_index to be an Int.");
-  }
-
-  int64_t start = pint(&index_start->pri);
-  int64_t end = pint(&index_end->pri);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t start, tupl_args, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t end, tupl_args, 1);
 
   if (start < 0 || start > str_len) {
     return raise_error(task, ctx, "start_index out of bounds.");
@@ -1116,30 +1006,14 @@ void _range_copy(EntityCopier *copier, Object *src_obj, Object *target_obj) {
 }
 
 Entity _range_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (!IS_CLASS(args, Class_Tuple)) {
-    return raise_error(task, ctx, "Input to range() is not a tuple.");
-  }
-  const Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (3 != tuple_size(t)) {
-    return raise_error(task, ctx, "Invalid tuple size for range(). Was %d",
-                       tuple_size(t));
-  }
-  const Entity *first = tuple_get(t, 0);
-  const Entity *second = tuple_get(t, 1);
-  const Entity *third = tuple_get(t, 2);
-  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&first->pri)) {
-    return raise_error(task, ctx, "Input to range() is invalid.");
-  }
-  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&second->pri)) {
-    return raise_error(task, ctx, "Input to range() is invalid.");
-  }
-  if (PRIMITIVE != first->type || PRIMITIVE_INT != ptype(&third->pri)) {
-    return raise_error(task, ctx, "Input to range() is invalid.");
-  }
+  EXTRACT_TUPLE_ARGS(t, args, 3, task, ctx);
+
   _Range *range = (_Range *)obj->_internal_obj;
-  range->start = pint(&first->pri);
-  range->inc = pint(&second->pri);
-  range->end = pint(&third->pri);
+
+  EXTRACT_INT_AT_INDEX_OR_THROW(range->start, t, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(range->inc, t, 1);
+  EXTRACT_INT_AT_INDEX_OR_THROW(range->end, t, 2);
+
   return entity_object(obj);
 }
 
@@ -1217,15 +1091,8 @@ Entity _class_fields(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "$set() can only be called with a Tuple.");
-  }
-  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(t_args)) {
-    return raise_error(task, ctx,
-                       "$set() can only be called with 2 args. %d provided.",
-                       tuple_size(t_args));
-  }
+  EXTRACT_TUPLE_ARGS(t_args, args, 2, task, ctx);
+
   if (!IS_STRING(tuple_get(t_args, 0))) {
     return raise_error(task, ctx, "First argument to $set() must be a String.");
   }
@@ -1235,16 +1102,8 @@ Entity _set_member(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx,
-                       "$set_method() can only be called with a Tuple.");
-  }
-  Tuple *t_args = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(t_args)) {
-    return raise_error(
-        task, ctx, "$set_method() can only be called with 2 args. %d provided.",
-        tuple_size(t_args));
-  }
+  EXTRACT_TUPLE_ARGS(t_args, args, 2, task, ctx);
+
   if (!IS_STRING(tuple_get(t_args, 0))) {
     return raise_error(task, ctx,
                        "First argument to $set_method() must be a String.");

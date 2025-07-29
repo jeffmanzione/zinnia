@@ -20,6 +20,7 @@
 #include "entity/class/classes_def.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
@@ -99,13 +100,9 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
     if (tuple_size(tup) < 2) {
       return raise_error(task, ctx, "Too few arguments for File constructor.");
     }
-    const Entity *e_fn = tuple_get(tup, 0);
-    if (!IS_STRING(e_fn)) {
-      return raise_error(task, ctx, "File name must be a String.");
-    }
-    char *fn;
-    int fn_len;
-    extract_string(e_fn, &fn, &fn_len);
+
+    EXCTRACT_STRING_AT_INDEX_OR_THROW(fn, fn_len, tup, 0);
+
     if (0 == strncmp("__STDOUT__", fn, min(fn_len, 10))) {
       f->fp = stdout;
     } else if (0 == strncmp("__STDERR__", fn, min(fn_len, 10))) {
@@ -113,12 +110,9 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
     } else if (0 == strncmp("__STDIN__", fn, min(fn_len, 9))) {
       f->fp = stdin;
     } else {
-      const Entity *e_mode = tuple_get(tup, 1);
-      if (!IS_STRING(e_mode)) {
-        return raise_error(task, ctx, "File mode must be a String.");
-      }
-      fn = entity_string_copy(e_fn);
-      mode = entity_string_copy(e_mode);
+      EXCTRACT_STRING_AT_INDEX_OR_THROW(mode, mode_len, tup, 1);
+      fn = ALLOC_STRNDUP(fn, fn_len);
+      mode = ALLOC_STRNDUP(mode, mode_len);
       f->fp = fopen(fn, mode);
       RELEASE(fn);
       RELEASE(mode);
