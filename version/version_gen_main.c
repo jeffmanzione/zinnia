@@ -1,12 +1,17 @@
 // Writes a C implementation of VERSION_H_FILE functions based on the provided
 // version and current timestamp.
 //
-// Usage: version_gen_bin "1.0.0" > version.c
+// Usage: version_gen_bin > version.c
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "util/time.h"
+
+// This should be overwritten by compiler arg.
+#ifndef VERSION
+#define VERSION "local"
+#endif
 
 // Source: https://en.wikipedia.org/wiki/ISO_8601
 #define MAX_ISO_TIMESTAMP_CHARS 27
@@ -33,8 +38,8 @@ void print_required_includes() {
   }
 }
 
-void print_version_fn(const char version[]) {
-  printf("const char *%s() {\n  return \"%s\";\n}", VERSION_FN_NAME, version);
+void print_version_fn() {
+  printf("const char *%s() {\n  return \"%s\";\n}", VERSION_FN_NAME, VERSION);
 }
 
 void print_timestamp_fn() {
@@ -55,16 +60,11 @@ void print_timestamp_fn() {
 }
 
 int main(int argc, const char *args[]) {
-  if (argc != 2) {
-    fprintf(stderr, "Expected exactly 1 argument. Received %d", argc - 1);
-    return EXIT_FAILURE;
-  }
-
   print_version_h_include();
   printf(FILE_STATEMENT_SEP);
   print_required_includes();
   printf(FILE_STATEMENT_SEP);
-  print_version_fn(args[1]);
+  print_version_fn();
   printf(FILE_STATEMENT_SEP);
   print_timestamp_fn();
 

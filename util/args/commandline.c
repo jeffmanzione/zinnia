@@ -345,6 +345,12 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     map_finalize(&args);
   }
 
+  const bool version = argstore_lookup_bool(store, ArgKey__VERSION);
+  if (version) {
+    printf("%s@%s\n", version_string(), version_timestamp_string());
+    exit(EXIT_SUCCESS);
+  }
+
   if (!config->allow_compiler_args_and_sources || double_dash_index > 0) {
     const int num_args = argc - double_dash_index - 1;
     const char **args_start = argv + double_dash_index + 1;
@@ -357,12 +363,6 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     const int num_sources = double_dash_index - sources_index;
     const char **sources_start = argv + sources_index;
     _parse_sources(num_sources, sources_start, &store->src_files);
-  }
-
-  const bool version = argstore_lookup_bool(store, ArgKey__VERSION);
-  if (version) {
-    printf("%s@%s\n", version_string(), version_timestamp_string());
-    exit(EXIT_SUCCESS);
   }
 
   if (config->allow_compiler_args_and_sources && sources_index < 0) {

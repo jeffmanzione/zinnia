@@ -7,4 +7,6 @@
 
 #include <stdlib.h>
 
+#define PATH_ENV_VAR_NAME "JV_LIB_PATH"
+
 char *path_to_libs() { return getenv(PATH_ENV_VAR_NAME); }
