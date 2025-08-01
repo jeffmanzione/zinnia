@@ -144,14 +144,15 @@ int zinniap(int argc, const char *args[]) {
 
   _populate_native_modules(znmodules, &native_modules, &extra_hdrs);
 
-  fprintf(out, "#include <stdlib.h>\n\n"
-               "#include \"alloc/alloc.h\"\n"
-               "#include \"alloc/arena/intern.h\"\n"
-               "#include \"run/run.h\"\n"
-               "#include \"struct/alist.h\"\n"
-               "#include \"util/args/commandline.h\"\n"
-               "#include \"util/args/commandlines.h\"\n"
-               "#include \"vm/intern.h\"\n");
+  fprintf(out,
+          "#include <stdlib.h>\n\n"
+          "#include \"alloc/alloc.h\"\n"
+          "#include \"alloc/arena/intern.h\"\n"
+          "#include \"run/run.h\"\n"
+          "#include \"struct/alist.h\"\n"
+          "#include \"util/args/commandline.h\"\n"
+          "#include \"util/args/commandlines.h\"\n"
+          "#include \"vm/intern.h\"\n");
 
   M_iter extra_hdrs_it = set_iter(&extra_hdrs);
   for (; has(&extra_hdrs_it); inc(&extra_hdrs_it)) {
@@ -263,19 +264,20 @@ int zinniap(int argc, const char *args[]) {
     RELEASE(ext);
   }
 
-  fprintf(out, "  run_files(&srcs, &src_contents, &init_fns, store);\n"
-               "  alist_finalize(&srcs);\n"
-               "  alist_finalize(&src_contents);\n"
-               "  alist_finalize(&init_fns);\n"
-               "#ifdef DEBUG\n"
-               "  argstore_delete(store);\n"
-               "  argconfig_delete(config);\n"
-               "  token_finalize_all();\n"
-               "  strings_finalize();\n"
-               "  alloc_finalize();\n"
-               "#endif\n"
-               "  return EXIT_SUCCESS;\n"
-               "}\n");
+  fprintf(out,
+          "  run_files(&srcs, &src_contents, &init_fns, store);\n"
+          "#ifdef DEBUG\n"
+          "  alist_finalize(&srcs);\n"
+          "  alist_finalize(&src_contents);\n"
+          "  alist_finalize(&init_fns);\n"
+          "  argstore_delete(store);\n"
+          "  argconfig_delete(config);\n"
+          "  token_finalize_all();\n"
+          "  strings_finalize();\n"
+          "  alloc_finalize();\n"
+          "#endif\n"
+          "  return EXIT_SUCCESS;\n"
+          "}\n");
 
 #ifdef DEBUG
   M_iter iter = map_iter(&native_modules);

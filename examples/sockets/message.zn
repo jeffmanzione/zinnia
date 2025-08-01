@@ -3,7 +3,7 @@ import socket
 
 host = args.host | socket.lookup_local_address()
 port = Int(args.port) | 1453
-message = args.message | 'Hello, world!'
+message = args.message | i'Hello, world!'
 
 server = () async {
   server_socket = socket.create_server_socket(host, port)

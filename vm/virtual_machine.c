@@ -561,7 +561,10 @@ void _execute_RES(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = entity_primitive(ins->val);
       break;
     case INSTRUCTION_STRING:
-      str = string_new(task->parent_process->heap, ins->str, strlen(ins->str));
+      str = ins->type == IRES ? istring_new(task->parent_process->heap,
+                                            ins->str, strlen(ins->str))
+                              : string_new(task->parent_process->heap, ins->str,
+                                           strlen(ins->str));
       *task_mutable_resval(task) = entity_object(str);
       break;
     default:
@@ -616,7 +619,10 @@ void _execute_PUSH(VM *vm, Task *task, Context *context,
       break;
     case INSTRUCTION_STRING:
       // TODO: Maybe precompute the length of the string?
-      str = string_new(task->parent_process->heap, ins->str, strlen(ins->str));
+      str = ins->type == IPSH ? istring_new(task->parent_process->heap,
+                                            ins->str, strlen(ins->str))
+                              : string_new(task->parent_process->heap, ins->str,
+                                           strlen(ins->str));
       *task_pushstack(task) = entity_object(str);
       break;
     default:
@@ -1407,12 +1413,14 @@ TaskState vm_execute_task(VM *vm, Task *task) {
 #endif
     switch (ins->op) {
       case RES:
+      case IRES:
         _execute_RES(vm, task, context, ins);
         break;
       case RNIL:
         _execute_RNIL(vm, task, context, ins);
         break;
       case PUSH:
+      case IPSH:
         _execute_PUSH(vm, task, context, ins);
         break;
       case PNIL:

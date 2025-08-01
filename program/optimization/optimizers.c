@@ -22,11 +22,11 @@ Instruction _for_op(Op op) {
 
 bool _overwrites_res(Op op) {
   switch (op) {
-  case RES:
-    // case CLLN:
-    return true;
-  default:
-    return false;
+    case RES:
+      // case CLLN:
+      return true;
+    default:
+      return false;
   }
   return false;
 }
@@ -37,10 +37,11 @@ void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
   for (i = start + 1; i < end; i++) {
     const Instruction *first = tape_get(tape, i - 1);
     const Instruction *second = tape_get(tape, i);
-    if (RES == first->op && INSTRUCTION_NO_ARG != first->type &&
-        PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
+    if ((RES == first->op || IRES == first->op) &&
+        INSTRUCTION_NO_ARG != first->type && PUSH == second->op &&
+        INSTRUCTION_NO_ARG == second->type &&
         NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
-      o_SetOp(oh, i - 1, PUSH);
+      o_SetOp(oh, i - 1, RES == first->op ? PUSH : IPSH);
       o_Remove(oh, i);
       ++i;
     }
@@ -56,7 +57,7 @@ void optimizer_SetRes(OptimizeHelper *oh, const Tape *const tape, int start,
     if ((SET == first->op || LET == first->op) &&
         INSTRUCTION_ID == first->type && RES == second->op &&
         INSTRUCTION_ID == second->type &&
-        first->id == second->id // same pointer because string interning
+        first->id == second->id  // same pointer because string interning
         && NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Remove(oh, i);
     }
@@ -72,7 +73,7 @@ void optimizer_SetPush(OptimizeHelper *oh, const Tape *const tape, int start,
     if ((SET == first->op || LET == first->op) &&
         INSTRUCTION_ID == first->type && PUSH == second->op &&
         INSTRUCTION_ID == second->type &&
-        first->id == second->id // same pointer because string interning
+        first->id == second->id  // same pointer because string interning
         && NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
       o_Replace(oh, i, _for_op(PUSH));
     }
@@ -111,7 +112,7 @@ void optimizer_JmpRes(OptimizeHelper *oh, const Tape *const tape, int start,
     const Instruction *jump_to = tape_get(tape, i + jmp_val);
     if (SET != jump_to_parent->op || jump_to_parent->id != first->id ||
         RES != jump_to->op || INSTRUCTION_ID != jump_to->type ||
-        first->id != jump_to->id) { // same pointer because string interning
+        first->id != jump_to->id) {  // same pointer because string interning
       continue;
     }
     o_Remove(oh, i + jmp_val);
@@ -321,19 +322,19 @@ void optimizer_PushRes2(OptimizeHelper *oh, const Tape *const tape, int start,
 
 bool is_math_op(Op op) {
   switch (op) {
-  case ADD:
-  case SUB:
-  case DIV:
-  case MULT:
-  case MOD:
-  case LT:
-  case LTE:
-  case GTE:
-  case GT:
-  case EQ:
-    return true;
-  default:
-    return false;
+    case ADD:
+    case SUB:
+    case DIV:
+    case MULT:
+    case MOD:
+    case LT:
+    case LTE:
+    case GTE:
+    case GT:
+    case EQ:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -416,7 +417,6 @@ void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
         ADD == third->op && INSTRUCTION_NO_ARG == third->type &&
         NULL == map_lookup(&oh->i_gotos, as_ptr(i - 2)) &&
         NULL == map_lookup(&oh->i_gotos, as_ptr(i - 1))) {
-
       Q strs;
       Q_init(&strs);
       *Q_add_last(&strs) = (char *)first->str;

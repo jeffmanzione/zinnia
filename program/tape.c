@@ -114,9 +114,10 @@ void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
         (FunctionRef *)keyedlist_insert(&tape->func_refs, name, (void **)&ref);
   }
   if (NULL != old) {
-    FATALF("Attempting to add function %s, but a function by that name already "
-           "exists.",
-           name);
+    FATALF(
+        "Attempting to add function %s, but a function by that name already "
+        "exists.",
+        name);
   }
   ref->name = name;
   ref->index = index;
@@ -136,9 +137,10 @@ ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
   ClassRef *old =
       (ClassRef *)keyedlist_insert(&tape->class_refs, name, (void **)&ref);
   if (NULL != old) {
-    FATALF("Attempting to add class %s, but a function by that name already "
-           "exists.",
-           name);
+    FATALF(
+        "Attempting to add class %s, but a function by that name already "
+        "exists.",
+        name);
   }
   _classref_init(ref, name);
   ref->start_index = index;
@@ -172,9 +174,10 @@ void tape_field(Tape *tape, const char *field) {
   FieldRef *old =
       (FieldRef *)keyedlist_insert(&cls->field_refs, field, (void **)&ref);
   if (NULL != old) {
-    FATALF("Attempting to add field '%s', but a field by that name already "
-           "exists.",
-           field);
+    FATALF(
+        "Attempting to add field '%s', but a field by that name already "
+        "exists.",
+        field);
   }
   _field_ref_init(ref, field);
 }
@@ -218,7 +221,7 @@ uint32_t tape_class_count(const Tape *tape) {
 }
 
 KL_iter tape_classes(const Tape *tape) {
-  return keyedlist_iter((KeyedList *)&tape->class_refs); // bless
+  return keyedlist_iter((KeyedList *)&tape->class_refs);  // bless
 }
 
 const ClassRef *tape_get_class(const Tape *tape, const char class_name[]) {
@@ -230,7 +233,7 @@ uint32_t tape_func_count(const Tape *tape) {
 }
 
 KL_iter tape_functions(const Tape *tape) {
-  return keyedlist_iter((KeyedList *)&tape->func_refs); // bless
+  return keyedlist_iter((KeyedList *)&tape->func_refs);  // bless
 }
 
 const char *tape_module_name(const Tape *tape) { return tape->module_name; }
@@ -427,7 +430,7 @@ void _tape_read_body(Tape *const tape, Q *tokens) {
     if (NULL == tok) {
       break;
     }
-    ASSERT(TOKEN_STRING == tok->type);
+    ASSERT(token_type_is_string(tok->type));
     *(char **)alist_add(&tape->source_lines) = (char *)tok->text;
   }
 }
@@ -564,16 +567,16 @@ Primitive token_to_primitive(const Token *tok) {
   ASSERT_NOT_NULL(tok);
   Primitive val;
   switch (tok->type) {
-  case TOKEN_INTEGER:
-    val._type = PRIMITIVE_INT;
-    val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
-    break;
-  case TOKEN_FLOATING:
-    val._type = PRIMITIVE_FLOAT;
-    val._float_val = strtod(tok->text, NULL);
-    break;
-  default:
-    FATALF("Attempted to create a Value from '%s'.", tok->text);
+    case TOKEN_INTEGER:
+      val._type = PRIMITIVE_INT;
+      val._int_val = (int64_t)strtoll(tok->text, NULL, 10);
+      break;
+    case TOKEN_FLOATING:
+      val._type = PRIMITIVE_FLOAT;
+      val._float_val = strtod(tok->text, NULL);
+      break;
+    default:
+      FATALF("Attempted to create a Value from '%s'.", tok->text);
   }
   return val;
 }
@@ -590,22 +593,23 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
   sm->col = token->col;
 
   switch (token->type) {
-  case TOKEN_INTEGER:
-  case TOKEN_FLOATING:
-    ins->type = INSTRUCTION_PRIMITIVE;
-    ins->val = token_to_primitive(token);
-    break;
-  case TOKEN_STRING:
-    ins->type = INSTRUCTION_STRING;
-    unescape(token->text, &unescaped_str);
-    ins->str = intern(unescaped_str);
-    RELEASE(unescaped_str);
-    break;
-  case TOKEN_WORD:
-  default:
-    ins->type = INSTRUCTION_ID;
-    ins->id = token->text;
-    break;
+    case TOKEN_INTEGER:
+    case TOKEN_FLOATING:
+      ins->type = INSTRUCTION_PRIMITIVE;
+      ins->val = token_to_primitive(token);
+      break;
+    case STRING_IMMUTABLE:
+    case STRING_SINGLEQUOTE:
+      ins->type = INSTRUCTION_STRING;
+      unescape(token->text, &unescaped_str);
+      ins->str = intern(unescaped_str);
+      RELEASE(unescaped_str);
+      break;
+    case TOKEN_WORD:
+    default:
+      ins->type = INSTRUCTION_ID;
+      ins->id = token->text;
+      break;
   }
   return 1;
 }

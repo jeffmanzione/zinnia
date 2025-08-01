@@ -27,7 +27,6 @@ git_repository(
 
 git_repository(
     name = "language_tools",
-    commit = "6c4fc7c11e431bac3ff09a6a5b3c01e5b57002d5",
+    commit = "489be2e1c219878a8537419a6270e63bfbcbbc6a",
     remote = "https://github.com/jeffmanzione/language-tools.git",
-    shallow_since = "1712019318 -0700",
 )

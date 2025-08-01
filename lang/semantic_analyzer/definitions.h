@@ -33,7 +33,7 @@ DEFINE_EXPRESSION_WITH_PRODUCER(tuple_expression, Tape) {
 DEFINE_EXPRESSION_WITH_PRODUCER(array_declaration, Tape) {
   Token *token;
   bool is_empty;
-  ExpressionTree *exp; // A tuple expression.
+  ExpressionTree *exp;  // A tuple expression.
 };
 
 DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression, Tape) {
@@ -73,7 +73,7 @@ typedef struct {
   PostfixType type;
   union {
     const Token *id;
-    ExpressionTree *exp; // Can be NULL for empty fncall.
+    ExpressionTree *exp;  // Can be NULL for empty fncall.
   };
   Token *token;
 } Postfix;
@@ -141,10 +141,10 @@ typedef struct {
   ExpressionTree *exp;
 } BiSuffix;
 
-#define DEFINE_BI_EXPRESSION(expr)                                             \
-  DEFINE_EXPRESSION_WITH_PRODUCER(expr, Tape) {                                \
-    ExpressionTree *exp;                                                       \
-    AList *suffixes;                                                           \
+#define DEFINE_BI_EXPRESSION(expr)              \
+  DEFINE_EXPRESSION_WITH_PRODUCER(expr, Tape) { \
+    ExpressionTree *exp;                        \
+    AList *suffixes;                            \
   }
 
 DEFINE_BI_EXPRESSION(multiplicative_expression);
@@ -252,7 +252,7 @@ typedef struct {
     };
     struct {
       ExpressionTree *prefix_exp;
-      AList *suffixes; // Should be Posfixes.
+      AList *suffixes;  // Should be Posfixes.
     };
   };
 } SingleAssignment;
@@ -370,7 +370,7 @@ typedef struct {
   AList *statics;
   bool has_constructor;
   FunctionDef constructor;
-  AList *methods; // Function.
+  AList *methods;  // Function.
 } ClassDef;
 
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree);

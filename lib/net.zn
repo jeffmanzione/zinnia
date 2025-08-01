@@ -94,13 +94,13 @@ class HttpResponse {
   field _protocol, _version, _status_code, _status
   field _headers, _content, _set_cookies
   new() {
-    _protocol = 'HTTP'
+    _protocol = i'HTTP'
     _version = 1.1
     _status_code = 200
     _status = 'OK'
     _headers = {}
-    _headers['Content-Type'] = 'text/html'
-    _headers['Accept-Ranges'] = 'bytes'
+    _headers[i'Content-Type'] = i'text/html'
+    _headers[i'Accept-Ranges'] = i'bytes'
     _headers['Content-Length'] = 0
     _content = ''
     _set_cookies = {}
@@ -114,23 +114,23 @@ class HttpResponse {
     return self
   }
   method set_server(server) {
-    _headers['Server'] = server
+    _headers[i'Server'] = server
     return self
   }
   method set_date(date_text) {
-    _headers['Date'] = date_text
+    _headers[i'Date'] = date_text
     return self
   }
   method set_last_modified(date_text) {
-    _headers['Last-Modified'] = date_text
+    _headers[i'Last-Modified'] = date_text
     return self
   }
   method set_content_type(type) {
-    _headers['Content-Type'] = type
+    _headers[i'Content-Type'] = type
     return self
   }
   method set_accept_ranges(ranges) {
-    _headers['Accept-Ranges'] = ranges
+    _headers[i'Accept-Ranges'] = ranges
     return self
   }
   method set_cookie(name, value) {
@@ -138,7 +138,7 @@ class HttpResponse {
   }
   method add_content(text) {
     _content.extend(text)
-    _headers['Content-Length'] = _headers['Content-Length'] + text.len()
+    _headers[i'Content-Length'] = _headers[i'Content-Length'] + text.len()
     return self
   }
   method to_s() {
@@ -169,7 +169,7 @@ function redirect(request, response, target) {
     }
     location.extend('&'.join(param_arr))
   }
-  response._headers['Location'] = location
+  response._headers[i'Location'] = location
   return response
 }
 
@@ -367,15 +367,15 @@ class Application {
 }
 
 self._REQUEST_METHOD_TO_ANNOTATION = {
-  'GET': Get,
-  'HEAD': Head,
-  'POST': Post,
-  'PUT': Put,
-  'DELETE': Delete,
-  'CONNECT': Connect,
-  'OPTIONS': Options,
-  'TRACE': Trace,
-  'PATCH': Patch
+  i'GET': Get,
+  i'HEAD': Head,
+  i'POST': Post,
+  i'PUT': Put,
+  i'DELETE': Delete,
+  i'CONNECT': Connect,
+  i'OPTIONS': Options,
+  i'TRACE': Trace,
+  i'PATCH': Patch
 }
 
 function find_annotated_method(instance, annot) {
