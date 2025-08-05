@@ -1,9 +1,8 @@
-#include "lang/semantic_analyzer/definitions.h"
-
 #include "alloc/arena/intern.h"
 #include "debug/debug.h"
 #include "lang/lexer/lang_lexer.h"
 #include "lang/parser/lang_parser.h"
+#include "lang/semantic_analyzer/definitions.h"
 #include "vm/intern.h"
 
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
@@ -300,6 +299,7 @@ void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
   for (; al_has(&annots); al_inc(&annots)) {
     delete_annotation(analyzer, (Annotation *)al_value(&annots));
   }
+  alist_delete(class->annots);
 }
 
 int produce_constructor(SemanticAnalyzer *analyzer, ClassDef *class,
@@ -765,9 +765,9 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   for (i = 0; i < alist_len(module->imports); ++i) {
     Import *import = (Import *)alist_get(module->imports, i);
     num_ins += tape_ins(tape, LMDL, import->src_name);
-    num_ins += tape_ins(tape, MSET,
-                        (NULL == import->use_name) ? import->src_name
-                                                   : import->use_name);
+    num_ins += tape_ins(
+        tape, MSET,
+        (NULL == import->use_name) ? import->src_name : import->use_name);
   }
   // Superclasses
   for (i = 0; i < alist_len(module->classes); ++i) {

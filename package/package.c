@@ -92,7 +92,7 @@ void _populate_native_modules(FILE *file, Map *map, Set *hdrs) {
     }
     set_insert(hdrs, intern_range(prev_comma, 1, strlen(prev_comma)));
 
-    RELEASE(line);
+    free(line);
   }
   file_info_delete(fi);
 }
@@ -253,8 +253,10 @@ int zinniap(int argc, const char *args[]) {
     escape(dir_path, &escaped_dir_path);
     fprintf(out, "  *(char **)alist_add(&srcs) = \"%s%s.zna\";\n",
             escaped_dir_path, file_base);
-    fprintf(out, "  *(char **)alist_add(&src_contents) = (char*) LIB_%s;\n",
-            var_name);
+    fprintf(out,
+            "  *(FileParts *)alist_add(&src_contents) = (FileParts){ .parts = "
+            "LIB_%s, .num_parts = sizeof(LIB_%s) / sizeof(LIB_%s[0])};\n",
+            var_name, var_name, var_name);
     fprintf(out, "  *(void **)alist_add(&init_fns) =  %s;\n", m->init_fn);
 
     RELEASE(var_name);

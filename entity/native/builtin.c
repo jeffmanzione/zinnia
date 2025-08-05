@@ -1127,7 +1127,7 @@ Entity _class_set_method(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _get_member(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (!IS_CLASS(args, Class_String)) {
+  if (!IS_STRING(args)) {
     return raise_error(task, ctx, "$get() can only be called with a String.");
   }
   const char *key = intern_entity(args);

@@ -397,6 +397,7 @@ void tape_append(Tape *head, Tape *tail) {
   // Dealloc all of tail.
   alist_finalize(&tail->ins);
   alist_finalize(&tail->source_map);
+  alist_finalize(&tail->source_lines);
   keyedlist_finalize(&tail->class_refs);
   keyedlist_finalize(&tail->func_refs);
   RELEASE(tail);

@@ -337,6 +337,8 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              int num_inlined_file_segs,
                                              NativeCallback callback) {
   ASSERT(NOT_NULL(mm));
+  ASSERT(NOT_NULL(full_path));
+  ASSERT(NOT_NULL(relative_path));
 
   char *dir_path, *module_name_tmp, *ext;
   split_path_file(full_path, &dir_path, &module_name_tmp, &ext);

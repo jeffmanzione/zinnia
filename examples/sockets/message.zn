@@ -17,6 +17,7 @@ client = () async {
   client = socket.create_client_socket(host, port)
   handle = await client.connect()
   io.println(await handle.receive())
+  handle.close()
   client.close()
 }()
 

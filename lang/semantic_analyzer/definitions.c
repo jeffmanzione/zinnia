@@ -1083,6 +1083,7 @@ void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
   for (; al_has(&annots); al_inc(&annots)) {
     delete_annotation(analyzer, (Annotation *)al_value(&annots));
   }
+  alist_finalize(&func->annots);
   semantic_analyzer_delete(analyzer, func->body);
 }
 
