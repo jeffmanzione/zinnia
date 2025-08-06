@@ -415,9 +415,11 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
     return entity_int(1);
   }
-  const char *self = ((String *)obj->_internal_obj)->table, *other;
-  int self_len = String_size((String *)obj->_internal_obj), other_len;
+  const char *self, *other;
+  int self_len, other_len;
+  extract_string_obj(obj, &self, &self_len);
   extract_string(args, &other, &other_len);
+
   int min_len_cmp = strncmp(self, other, min(self_len, other_len));
   return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }
@@ -428,8 +430,13 @@ Entity _istring_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   const char *self, *other;
   int self_len, other_len;
-  extract_string(args, &self, &self_len);
+  extract_string_obj(obj, &self, &self_len);
   extract_string(args, &other, &other_len);
+
+  if (self == other) {
+    return entity_int(0);
+  }
+
   int min_len_cmp = strncmp(self, other, min(self_len, other_len));
   return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }

@@ -108,7 +108,7 @@ class RemoteClass {
       remote_class.add_method(method_name)
           .with_parameter('args')
           .with_statement(cat(
-              'return async.__remote_call(remote_object, \'',
+              'return async.__remote_call(remote_object, i\'',
               method_name,
               '\', args)'))
     })
