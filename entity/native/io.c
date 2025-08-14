@@ -61,7 +61,7 @@ typedef struct {
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
   char *out = MNEW_ARR(char, str_len + 1);
-  memmove(out, str->table, str_len);
+  memcpy(out, str->table, str_len);
   out[str_len] = 0;
   return out;
 }

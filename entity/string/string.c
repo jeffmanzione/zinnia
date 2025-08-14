@@ -19,7 +19,7 @@ IMPL_ARRAYLIKE(String, char);
 void String_append_raw(String *const head, const char *tail, uint32_t len) {
   ASSERT(NOT_NULL(head), NOT_NULL(tail), len >= 0);
   String_maybe_realloc(head, head->num_elts + len);
-  memmove(head->table + head->num_elts, tail, sizeof(char) * len);
+  memcpy(head->table + head->num_elts, tail, sizeof(char) * len);
   head->num_elts += len;
 }
 
