@@ -37,7 +37,7 @@ void module_finalize(Module *module) {
   }
   keyedlist_finalize(&module->_functions);
   if (module->_tape != NULL) {
-    tape_delete((Tape *)module->_tape); // Bless
+    tape_delete((Tape *)module->_tape);  // Bless
   }
   mutex_close(module->_write_mutex);
 }
@@ -74,7 +74,7 @@ Class *module_add_class(Module *module, const char name[], const Class *super) {
 }
 
 const Class *module_lookup_class(const Module *module, const char name[]) {
-  return keyedlist_lookup((KeyedList *)&module->_classes, name); // blessed.
+  return keyedlist_lookup((KeyedList *)&module->_classes, name);  // blessed.
 }
 
 Object *module_lookup(Module *module, const char name[]) {

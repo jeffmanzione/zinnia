@@ -33,6 +33,10 @@
 #define MAX_EVENTS 1024
 #define FILE_NAME_LENGTH_ESTIMATE 16
 
+#ifndef min
+#define min(x, y) ((x) > (y) ? (y) : (x))
+#endif
+
 static Class *Class_WatchDir;
 
 typedef struct {

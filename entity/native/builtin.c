@@ -415,7 +415,7 @@ Entity _string_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
     return entity_int(1);
   }
-  const char *self, *other;
+  char *self, *other;
   int self_len, other_len;
   extract_string_obj(obj, &self, &self_len);
   extract_string(args, &other, &other_len);
@@ -428,7 +428,7 @@ Entity _istring_cmp(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
     return entity_int(1);
   }
-  const char *self, *other;
+  char *self, *other;
   int self_len, other_len;
   extract_string_obj(obj, &self, &self_len);
   extract_string(args, &other, &other_len);

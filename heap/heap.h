@@ -38,8 +38,8 @@ uint32_t heap_collect_garbage(Heap *heap);
 void heap_print_debug_summary(Heap *heap);
 uint32_t heap_object_count(const Heap *const heap);
 uint32_t heap_max_object_count(const Heap *const heap);
-uint32_t
-heap_object_count_threshold_for_garbage_collection(const Heap *const heap);
+uint32_t heap_object_count_threshold_for_garbage_collection(
+    const Heap *const heap);
 void heap_set_object_count_threshold_for_garbage_collection(
     Heap *heap, uint32_t new_threshold);
 void heap_make_root(Heap *heap, Object *obj);
@@ -126,12 +126,12 @@ Entity entitycopier_copy(EntityCopier *copier, const Entity *e);
  */
 Entity entity_copy(const Entity *e, Heap *heap);
 
-#define BULK_COPY(copier_var_name, target_heap, exp)                           \
-  {                                                                            \
-    EntityCopier copier_var_name;                                              \
-    entitycopier_init(&copier_var_name, target_heap);                          \
-    exp;                                                                       \
-    entitycopier_finalize(&copier_var_name);                                   \
+#define BULK_COPY(copier_var_name, target_heap, exp)  \
+  {                                                   \
+    EntityCopier copier_var_name;                     \
+    entitycopier_init(&copier_var_name, target_heap); \
+    exp;                                              \
+    entitycopier_finalize(&copier_var_name);          \
   }
 
 #endif /* HEAP_HEAP_H_ */

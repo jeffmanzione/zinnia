@@ -80,53 +80,53 @@ Primitive primitive_float(double val) {
 
 bool bool_of(const Primitive *p) {
   switch (ptype(p)) {
-  case PRIMITIVE_BOOL:
-    return (bool)pbool(p);
-  case PRIMITIVE_CHAR:
-    return (bool)pchar(p);
-  case PRIMITIVE_INT:
-    return (bool)pint(p);
-  default:
-    return (bool)pfloat(p);
+    case PRIMITIVE_BOOL:
+      return (bool)pbool(p);
+    case PRIMITIVE_CHAR:
+      return (bool)pchar(p);
+    case PRIMITIVE_INT:
+      return (bool)pint(p);
+    default:
+      return (bool)pfloat(p);
   }
 }
 
 int8_t char_of(const Primitive *p) {
   switch (ptype(p)) {
-  case PRIMITIVE_BOOL:
-    return (int8_t)pbool(p);
-  case PRIMITIVE_CHAR:
-    return (int8_t)pchar(p);
-  case PRIMITIVE_INT:
-    return (int8_t)pint(p);
-  default:
-    return (int8_t)pfloat(p);
+    case PRIMITIVE_BOOL:
+      return (int8_t)pbool(p);
+    case PRIMITIVE_CHAR:
+      return (int8_t)pchar(p);
+    case PRIMITIVE_INT:
+      return (int8_t)pint(p);
+    default:
+      return (int8_t)pfloat(p);
   }
 }
 
 int64_t int_of(const Primitive *p) {
   switch (ptype(p)) {
-  case PRIMITIVE_BOOL:
-    return (int64_t)pbool(p);
-  case PRIMITIVE_CHAR:
-    return (int64_t)pchar(p);
-  case PRIMITIVE_INT:
-    return (int64_t)pint(p);
-  default:
-    return (int64_t)pfloat(p);
+    case PRIMITIVE_BOOL:
+      return (int64_t)pbool(p);
+    case PRIMITIVE_CHAR:
+      return (int64_t)pchar(p);
+    case PRIMITIVE_INT:
+      return (int64_t)pint(p);
+    default:
+      return (int64_t)pfloat(p);
   }
 }
 
 double float_of(const Primitive *p) {
   switch (ptype(p)) {
-  case PRIMITIVE_BOOL:
-    return (double)pbool(p);
-  case PRIMITIVE_CHAR:
-    return (double)pchar(p);
-  case PRIMITIVE_INT:
-    return (double)pint(p);
-  default:
-    return (double)pfloat(p);
+    case PRIMITIVE_BOOL:
+      return (double)pbool(p);
+    case PRIMITIVE_CHAR:
+      return (double)pchar(p);
+    case PRIMITIVE_INT:
+      return (double)pint(p);
+    default:
+      return (double)pfloat(p);
   }
 }
 

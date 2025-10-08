@@ -134,7 +134,7 @@ SocketHandle *socket_connect(Socket *socket) {
 
 AddressLookupStatus socket_address(Socket *socket, char *host_buf) {
   struct sockaddr_in sin;
-  int len = sizeof(sin);
+  uint32_t len = sizeof(sin);
 
   if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
     return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
@@ -147,7 +147,7 @@ AddressLookupStatus socket_address(Socket *socket, char *host_buf) {
 
 AddressLookupStatus socket_port(Socket *socket, int *port) {
   struct sockaddr_in sin;
-  int len = sizeof(sin);
+  uint32_t len = sizeof(sin);
 
   if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
     *port = -1;
@@ -242,7 +242,7 @@ AddressLookupStatus local_ip_address(char *buf) {
     return ADDRESS_LOOKUP_STATUS_FAILED_CONNECT;
   }
 
-  int addrlen = sizeof(loopback);
+  uint32_t addrlen = sizeof(loopback);
   if (getsockname(sock, (void *)(&loopback), &addrlen) == -1) {
     _close_socket(sock);
     return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;

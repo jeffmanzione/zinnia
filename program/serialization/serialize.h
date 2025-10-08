@@ -11,7 +11,7 @@
 #include "program/serialization/buffer.h"
 #include "struct/map.h"
 
-#define serialize_type(buffer, type, val)                                      \
+#define serialize_type(buffer, type, val) \
   serialize_bytes(buffer, ((char *)(&(val))), sizeof(type))
 
 // Returns number of chars written

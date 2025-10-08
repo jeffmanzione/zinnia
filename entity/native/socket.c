@@ -186,7 +186,7 @@ Entity _SocketHandle_send(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   char *msg;
   int msg_len;
-  const is_string = extract_string(args, &msg, &msg_len);
+  const bool is_string = extract_string(args, &msg, &msg_len);
 
   if (is_string) {
     sockethandle_send(sh, msg, msg_len);

@@ -20,7 +20,7 @@
 #include "struct/set.h"
 #include "struct/struct_defaults.h"
 
-#define is_goto(op)                                                            \
+#define is_goto(op) \
   (((op) == JMP) || ((op) == IFN) || ((op) == IF) || ((op) == CTCH))
 
 static AList *optimizers = NULL;

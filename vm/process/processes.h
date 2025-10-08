@@ -78,7 +78,6 @@ struct __Task {
 };
 
 struct __Process {
-
   VM *vm;
   Heap *heap;
 
@@ -101,7 +100,7 @@ struct __Process {
   Mutex heap_access_lock;
 
   Object *_reflection;
-  ThreadHandle thread; // Null if main thread.
+  ThreadHandle thread;  // Null if main thread.
 
   Q waiting_background_work;
 

@@ -36,8 +36,8 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  uint32_t start_index; // inclusive
-  uint32_t end_index;   // exclusive
+  uint32_t start_index;  // inclusive
+  uint32_t end_index;    // exclusive
   KeyedList func_refs;
   KeyedList field_refs;
   AList supers;
@@ -93,12 +93,12 @@ int tape_ins(Tape *tape, Op op, const Token *token);
 int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token);
 
 DEB_FN(int, tape_ins_int, Tape *tape, Op op, int val, const Token *token);
-#define tape_ins_int(tape, op, val, token)                                     \
+#define tape_ins_int(tape, op, val, token) \
   CALL_FN(tape_ins_int__, tape, op, val, token)
 
 // int tape_ins_int(Tape *tape, Op op, int val, const Token *token);
 DEB_FN(int, tape_ins_no_arg, Tape *tape, Op op, const Token *token);
-#define tape_ins_no_arg(tape, op, token)                                       \
+#define tape_ins_no_arg(tape, op, token) \
   CALL_FN(tape_ins_no_arg__, tape, op, token)
 
 int tape_ins_anon(Tape *tape, Op op, const Token *token);

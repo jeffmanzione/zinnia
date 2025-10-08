@@ -919,10 +919,12 @@ bool _execute_CALL(VM *vm, Task *task, Context *context,
     }
     Entity obj = task_popstack(task);
     if (OBJECT != obj.type) {
-      const char *type_str = NONE == obj.type                    ? "None"
-                             : ptype(&obj.pri) == PRIMITIVE_CHAR ? "Char"
-                             : ptype(&obj.pri) == PRIMITIVE_INT  ? "Int"
-                                                                 : "Float";
+      const char *type_str =
+          NONE == obj.type
+              ? "None"
+              : ptype(&obj.pri) == PRIMITIVE_CHAR
+                    ? "Char"
+                    : ptype(&obj.pri) == PRIMITIVE_INT ? "Int" : "Float";
       raise_error(task, context, "Calling function '%s' on type %s.", ins->id,
                   type_str);
       return false;
@@ -1363,7 +1365,8 @@ void _execute_RAIS(VM *vm, Task *task, Context *context) {
 }
 
 bool _attemp_catch_error(Task *task, Context *ctx) {
-  while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)));
+  while (ctx->catch_ins < 0 && NULL != (ctx = task_back_context(task)))
+    ;
   // There was no try/catch block.
   if (NULL == ctx) {
     task->state = TASK_ERROR;

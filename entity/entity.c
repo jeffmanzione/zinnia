@@ -57,20 +57,20 @@ Entity entity_primitive(Primitive p) {
 
 void _primitive_print(const Primitive *p, FILE *file) {
   switch (p->_type) {
-  case PRIMITIVE_BOOL:
-    fprintf(file, "%s", p->_bool_val ? "True" : "False");
-    break;
-  case PRIMITIVE_CHAR:
-    fprintf(file, "%c", (char)p->_char_val);
-    break;
-  case PRIMITIVE_INT:
-    fprintf(file, "%" PRId64, p->_int_val);
-    break;
-  case PRIMITIVE_FLOAT:
-    fprintf(file, "%f", p->_float_val);
-    break;
-  default:
-    FATALF("Unknwn primitive type.");
+    case PRIMITIVE_BOOL:
+      fprintf(file, "%s", p->_bool_val ? "True" : "False");
+      break;
+    case PRIMITIVE_CHAR:
+      fprintf(file, "%c", (char)p->_char_val);
+      break;
+    case PRIMITIVE_INT:
+      fprintf(file, "%" PRId64, p->_int_val);
+      break;
+    case PRIMITIVE_FLOAT:
+      fprintf(file, "%f", p->_float_val);
+      break;
+    default:
+      FATALF("Unknwn primitive type.");
   }
 }
 
@@ -86,17 +86,17 @@ void _object_print(const Object *obj, FILE *file) {
 void entity_print(const Entity *e, FILE *file) {
   ASSERT(NOT_NULL(e), NOT_NULL(file));
   switch (e->type) {
-  case NONE:
-    fprintf(file, "None");
-    break;
-  case PRIMITIVE:
-    _primitive_print(&e->pri, file);
-    break;
-  case OBJECT:
-    _object_print(e->obj, file);
-    break;
-  default:
-    FATALF("Unknown entity type: %d", e->type);
+    case NONE:
+      fprintf(file, "None");
+      break;
+    case PRIMITIVE:
+      _primitive_print(&e->pri, file);
+      break;
+    case OBJECT:
+      _object_print(e->obj, file);
+      break;
+    default:
+      FATALF("Unknown entity type: %d", e->type);
   }
 }
 

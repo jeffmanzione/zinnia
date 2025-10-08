@@ -21,11 +21,11 @@ typedef CRITICAL_SECTION *CriticalSection;
 typedef Mutex CriticalSection;
 #endif
 
-#define CRITICAL(cs, block)                                                    \
-  {                                                                            \
-    critical_section_enter(cs);                                                \
-    { block; }                                                                 \
-    critical_section_leave(cs);                                                \
+#define CRITICAL(cs, block)     \
+  {                             \
+    critical_section_enter(cs); \
+    { block; }                  \
+    critical_section_leave(cs); \
   }
 
 CriticalSection critical_section_create();

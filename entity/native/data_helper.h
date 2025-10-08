@@ -452,8 +452,7 @@
                                                                                \
   void _##class_name##_set_value(const class_name *mat, int dim1_index,        \
                                  int dim2_index, type_name val) {              \
-    array_class_name##_set(mat->arr, mat->dim2 * dim1_index + dim2_index,      \
-                           val);                                               \
+    array_class_name##_set(mat->arr, mat->dim2 *dim1_index + dim2_index, val); \
   }                                                                            \
                                                                                \
   size_t _##class_name##_range_size(const _Range *range) {                     \

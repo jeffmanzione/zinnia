@@ -20,11 +20,11 @@ typedef struct {
 typedef _Mutex *Mutex;
 #endif
 
-#define SYNCHRONIZED(mutex, block)                                             \
-  {                                                                            \
-    mutex_lock(mutex);                                                         \
-    { block; }                                                                 \
-    mutex_unlock(mutex);                                                       \
+#define SYNCHRONIZED(mutex, block) \
+  {                                \
+    mutex_lock(mutex);             \
+    { block; }                     \
+    mutex_unlock(mutex);           \
   }
 
 Mutex mutex_create();

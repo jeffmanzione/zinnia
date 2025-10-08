@@ -81,31 +81,31 @@ Arg arg_parse(ArgType type, const char val[]) {
   arg.used = true;
   arg.type = type;
   switch (type) {
-  case ArgType__string:
-    arg.string_val = val;
-    break;
-  case ArgType__bool:
-    if (!parse_bool(val, &arg.bool_val)) {
-      FATALF("Could not parse '%s' to BOOL.", val);
-    }
-    break;
-  case ArgType__int:
-    if (!parse_int(val, &arg.int_val)) {
-      FATALF("Could not parse '%s' to INT.", val);
-    }
-    break;
-  case ArgType__float:
-    if (!parse_float(val, &arg.float_val)) {
-      FATALF("Could not parse '%s' to FLOAT.", val);
-    }
-    break;
-  case ArgType__stringlist:
-    if (!parse_stringlist(val, &arg.stringlist_val, &arg.count)) {
-      FATALF("Could not parse '%s' to STRING LIST.", val);
-    }
-    break;
-  default:
-    FATALF("ArgType not specified.");
+    case ArgType__string:
+      arg.string_val = val;
+      break;
+    case ArgType__bool:
+      if (!parse_bool(val, &arg.bool_val)) {
+        FATALF("Could not parse '%s' to BOOL.", val);
+      }
+      break;
+    case ArgType__int:
+      if (!parse_int(val, &arg.int_val)) {
+        FATALF("Could not parse '%s' to INT.", val);
+      }
+      break;
+    case ArgType__float:
+      if (!parse_float(val, &arg.float_val)) {
+        FATALF("Could not parse '%s' to FLOAT.", val);
+      }
+      break;
+    case ArgType__stringlist:
+      if (!parse_stringlist(val, &arg.stringlist_val, &arg.count)) {
+        FATALF("Could not parse '%s' to STRING LIST.", val);
+      }
+      break;
+    default:
+      FATALF("ArgType not specified.");
   }
   return arg;
 }

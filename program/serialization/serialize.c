@@ -28,18 +28,18 @@ int serialize_primitive(WBuffer *buffer, Primitive val) {
   uint8_t val_type = (uint8_t)ptype(&val);
   i += serialize_type(buffer, uint8_t, val_type);
   switch (val_type) {
-  case PRIMITIVE_INT:
-    int_val = pint(&val);
-    i += serialize_type(buffer, int64_t, int_val);
-    break;
-  case PRIMITIVE_FLOAT:
-    float_val = pfloat(&val);
-    i += serialize_type(buffer, double, float_val);
-    break;
-  case PRIMITIVE_CHAR:
-  default:
-    char_val = pchar(&val);
-    i += serialize_type(buffer, int8_t, char_val);
+    case PRIMITIVE_INT:
+      int_val = pint(&val);
+      i += serialize_type(buffer, int64_t, int_val);
+      break;
+    case PRIMITIVE_FLOAT:
+      float_val = pfloat(&val);
+      i += serialize_type(buffer, double, float_val);
+      break;
+    case PRIMITIVE_CHAR:
+    default:
+      char_val = pchar(&val);
+      i += serialize_type(buffer, int8_t, char_val);
   }
   return i;
 }
@@ -60,32 +60,32 @@ int serialize_ins(WBuffer *const buffer, const Instruction *ins,
   //  i += serialize_type(buffer, uint16_t, ins->col);
   uint16_t ref;
   switch (ins->type) {
-  case INSTRUCTION_PRIMITIVE:
-    i += serialize_primitive(buffer, ins->val);
-    break;
-  case INSTRUCTION_STRING:
-    ref = (uint16_t)(uintptr_t)map_lookup(string_index, ins->str);
-    ASSERT(ref >= 0);
-    if (use_short) {
-      i += serialize_type(buffer, uint16_t, ref);
-    } else {
-      uint8_t ref_byte = (uint32_t)ref;
-      i += serialize_type(buffer, uint8_t, ref_byte);
-    }
-    break;
-  case INSTRUCTION_ID:
-    ref = (uint16_t)(uintptr_t)map_lookup(string_index, ins->id);
-    ASSERT(ref >= 0);
-    if (use_short) {
-      i += serialize_type(buffer, uint16_t, ref);
-    } else {
-      uint8_t ref_byte = (uint32_t)ref;
-      i += serialize_type(buffer, uint8_t, ref_byte);
-    }
-    break;
-  case INSTRUCTION_NO_ARG:
-  default:
-    break;
+    case INSTRUCTION_PRIMITIVE:
+      i += serialize_primitive(buffer, ins->val);
+      break;
+    case INSTRUCTION_STRING:
+      ref = (uint16_t)(uintptr_t)map_lookup(string_index, ins->str);
+      ASSERT(ref >= 0);
+      if (use_short) {
+        i += serialize_type(buffer, uint16_t, ref);
+      } else {
+        uint8_t ref_byte = (uint32_t)ref;
+        i += serialize_type(buffer, uint8_t, ref_byte);
+      }
+      break;
+    case INSTRUCTION_ID:
+      ref = (uint16_t)(uintptr_t)map_lookup(string_index, ins->id);
+      ASSERT(ref >= 0);
+      if (use_short) {
+        i += serialize_type(buffer, uint16_t, ref);
+      } else {
+        uint8_t ref_byte = (uint32_t)ref;
+        i += serialize_type(buffer, uint8_t, ref_byte);
+      }
+      break;
+    case INSTRUCTION_NO_ARG:
+    default:
+      break;
   }
   return i;
 }
