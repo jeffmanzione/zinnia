@@ -28,3 +28,8 @@ zinnia_binary(
     name = "webserver",
     main = "webserver.zn",
 )
+
+zinnia_binary(
+    name = "local",
+    main = "local.zn",
+)

@@ -1,4 +1,4 @@
-#include "lang/parser/parser.h"
+#include "lang/semantic_analyzer/semantic_analyzer.h"
 
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
@@ -6,9 +6,9 @@
 #include "lang/lexer/lang_lexer.h"
 #include "lang/lexer/token.h"
 #include "lang/parser/lang_parser.h"
+#include "lang/parser/parser.h"
 #include "lang/semantic_analyzer/definitions.h"
 #include "lang/semantic_analyzer/expression_tree.h"
-#include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/tape.h"
 #include "struct/q.h"
 #include "util/file/file_info.h"

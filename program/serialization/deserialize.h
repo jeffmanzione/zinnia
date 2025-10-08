@@ -12,7 +12,7 @@
 #include "program/instruction.h"
 #include "struct/alist.h"
 
-#define deserialize_type(file, type, p)                                        \
+#define deserialize_type(file, type, p) \
   deserialize_bytes(file, sizeof(type), ((char *)p), sizeof(type))
 
 int deserialize_bytes(FILE *file, uint32_t num_bytes, char *buffer,

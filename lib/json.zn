@@ -2,11 +2,11 @@ import struct
 
 function jsonify(value) {
   if value == None {
-    return 'null'
+    return i'null'
   } else if value == True {
-    return 'true'
+    return i'true'
   } else if value == False {
-    return 'false'
+    return i'false'
   } else if value is Object {
     return _jsonify_object(value)
   }
@@ -14,7 +14,7 @@ function jsonify(value) {
 }
 
 function _jsonify_object(obj) {
-  if obj is String {
+  if is_string(obj) {
     return '\"' + obj + '\"'
   } else if obj is Array {
     return _jsonify_array(obj)

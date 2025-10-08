@@ -35,5 +35,5 @@ void argconfig_run(ArgConfig *const config) {
 void argconfig_package(ArgConfig *const config) {
   ASSERT(NOT_NULL(config));
   argconfig_run(config);
-  argconfig_set_mandatory_sources(config, false);
+  argconfig_set_allow_compiler_args_and_sources(config, false);
 }

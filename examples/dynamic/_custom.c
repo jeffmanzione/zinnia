@@ -16,9 +16,8 @@
 #include "entity/object.h"
 #include "entity/primitive.h"
 #include "entity/tuple/tuple.h"
-#include "vm/intern.h"
-
 #include "util/platform.h"
+#include "vm/intern.h"
 
 Entity __sin_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {

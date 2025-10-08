@@ -7,15 +7,21 @@ self.SOCK_STREAM = 1
 
 __init()
 
+function lookup_local_address() {
+  return __lookup_local_address()
+}
+
 function create_server_socket(host, port) {
-  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, True)
+  return Socket(AF_INET, SOCK_STREAM, 0, host, port, True)
 }
 
 function create_client_socket(host, port) {
-  Socket(AF_INET, SOCK_STREAM, 0, host, port, 4, False)
+  return Socket(AF_INET, SOCK_STREAM, 0, host, port, False)
 }
 
-self.cleanup = () -> __cleanup()
+function cleanup() {
+  __cleanup()
+}
 
 ; class Socket { }
 ; class SocketHandle { }

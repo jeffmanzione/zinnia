@@ -1,0 +1,4 @@
+import io
+import socket
+
+io.println('Your local address is ' + socket.lookup_local_address())

@@ -11,7 +11,7 @@
 #include "entity/object.h"
 #include "entity/primitive.h"
 
-#define IS_CLASS(e, class)                                                     \
+#define IS_CLASS(e, class) \
   (NULL != (e) && OBJECT == (e)->type && ((class) == (e)->obj->_class))
 #define IS_NONE(e) ((NULL == (e)) || (NONE == (e)->type))
 #define IS_FALSE(e) (IS_NONE(e) || (IS_BOOL(e) && false == pbool(&(e)->pri)))
@@ -22,9 +22,9 @@
 #define IS_CHAR(e) (IS_PRIMITIVE(e) && (PRIMITIVE_CHAR == ptype(&(e)->pri)))
 #define IS_INT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_INT == ptype(&(e)->pri)))
 #define IS_FLOAT(e) (IS_PRIMITIVE(e) && (PRIMITIVE_FLOAT == ptype(&(e)->pri)))
-#define IS_TUPLE(e)                                                            \
+#define IS_TUPLE(e) \
   ((NULL != e) && (OBJECT == e->type) && (Class_Tuple == e->obj->_class))
-#define IS_ARRAY(e)                                                            \
+#define IS_ARRAY(e) \
   ((NULL != e) && (OBJECT == e->type) && (Class_Array == e->obj->_class))
 
 // Contains a primitive, Object, or represents nullptr.

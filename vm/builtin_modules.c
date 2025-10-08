@@ -30,16 +30,16 @@
 #define LIB_DIR "lib/"
 #define LIB_EXT ".zna"
 
-#define REGISTER_MODULE(mm, name, lib_location)                                \
-  {                                                                            \
-    if (NULL != lib_location) {                                                \
-      mm_register_module(mm, find_file_by_name(lib_location, #name),           \
-                         find_file_by_name(lib_location, #name), NULL, -1);    \
-    } else {                                                                   \
-      mm_register_module(mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT,     \
-                         LIB_##name,                                           \
-                         sizeof(LIB_##name) / sizeof(LIB_##name[0]));          \
-    }                                                                          \
+#define REGISTER_MODULE(mm, name, lib_location)                             \
+  {                                                                         \
+    if (NULL != lib_location) {                                             \
+      mm_register_module(mm, find_file_by_name(lib_location, #name),        \
+                         find_file_by_name(lib_location, #name), NULL, -1); \
+    } else {                                                                \
+      mm_register_module(mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT,  \
+                         LIB_##name,                                        \
+                         sizeof(LIB_##name) / sizeof(LIB_##name[0]));       \
+    }                                                                       \
   }
 
 #define REGISTER_MODULE_WITH_CALLBACK(mm, name, lib_location)                  \

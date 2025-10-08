@@ -1,9 +1,9 @@
 import io
 import socket
 
-host = args.host | '0.0.0.0'
+host = args.host | socket.lookup_local_address()
 port = Int(args.port) | 1453
-message = args.message | 'Hello, world!'
+message = args.message | i'Hello, world!'
 
 server = () async {
   server_socket = socket.create_server_socket(host, port)
@@ -17,6 +17,7 @@ client = () async {
   client = socket.create_client_socket(host, port)
   handle = await client.connect()
   io.println(await handle.receive())
+  handle.close()
   client.close()
 }()
 

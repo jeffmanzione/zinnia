@@ -9,7 +9,7 @@
 #include "entity/primitive.h"
 #include "program/instruction.h"
 
-#define deserialize_type(file, type, p)                                        \
+#define deserialize_type(file, type, p) \
   deserialize_bytes(file, sizeof(type), ((char *)p), sizeof(type))
 
 int deserialize_bytes(FILE *file, uint32_t num_bytes, char *buffer,
@@ -39,21 +39,25 @@ int deserialize_val(FILE *file, Primitive *val) {
   int32_t int_val;
   float float_val;
   int8_t char_val;
+  bool bool_val;
 
   i += deserialize_type(file, uint8_t, &val_type);
   switch (val_type) {
-  case PRIMITIVE_INT:
-    i += deserialize_type(file, int64_t, &int_val);
-    *val = primitive_int(int_val);
-    break;
-  case PRIMITIVE_FLOAT:
-    i += deserialize_type(file, double, &float_val);
-    *val = primitive_float(float_val);
-    break;
-  case PRIMITIVE_CHAR:
-  default:
-    i += deserialize_type(file, int8_t, &char_val);
-    *val = primitive_char(char_val);
+    case PRIMITIVE_INT:
+      i += deserialize_type(file, int64_t, &int_val);
+      *val = primitive_int(int_val);
+      break;
+    case PRIMITIVE_FLOAT:
+      i += deserialize_type(file, double, &float_val);
+      *val = primitive_float(float_val);
+      break;
+    case PRIMITIVE_CHAR:
+      i += deserialize_type(file, int8_t, &char_val);
+      *val = primitive_char(char_val);
+    case PRIMITIVE_BOOL:
+    default:
+      i += deserialize_type(file, bool, &bool_val);
+      *val = primitive_bool(bool_val);
   }
   return i;
 }
@@ -69,27 +73,27 @@ int deserialize_ins(FILE *file, const AList *const strings, Instruction *ins) {
   uint16_t ref16;
   uint8_t ref8;
   switch (param) {
-  case INSTRUCTION_PRIMITIVE:
-    i += deserialize_val(file, &ins->val);
-    break;
-  case INSTRUCTION_ID:
-  case INSTRUCTION_STRING:
-    if (alist_len(strings) > UINT8_MAX) {
-      i += deserialize_type(file, uint16_t, &ref16);
-    } else {
-      i += deserialize_type(file, uint8_t, &ref8);
-      ref16 = (uint16_t)ref8;
-    }
-    char *str = *((char **)alist_get(strings, (uint32_t)ref16));
-    if (INSTRUCTION_ID == param) {
-      ins->id = str;
-    } else {
-      ins->str = str;
-    }
-    break;
-  case INSTRUCTION_NO_ARG:
-  default:
-    break;
+    case INSTRUCTION_PRIMITIVE:
+      i += deserialize_val(file, &ins->val);
+      break;
+    case INSTRUCTION_ID:
+    case INSTRUCTION_STRING:
+      if (alist_len(strings) > UINT8_MAX) {
+        i += deserialize_type(file, uint16_t, &ref16);
+      } else {
+        i += deserialize_type(file, uint8_t, &ref8);
+        ref16 = (uint16_t)ref8;
+      }
+      char *str = *((char **)alist_get(strings, (uint32_t)ref16));
+      if (INSTRUCTION_ID == param) {
+        ins->id = str;
+      } else {
+        ins->str = str;
+      }
+      break;
+    case INSTRUCTION_NO_ARG:
+    default:
+      break;
   }
   return i;
 }

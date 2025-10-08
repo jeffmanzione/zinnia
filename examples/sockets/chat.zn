@@ -1,9 +1,9 @@
 ; Toy chat client.
 ;
 ; To start server:
-;   zinnia examples/socket/chat.zn -- --server
+;   zinnia examples/sockets/chat.zn -- --server
 ; To start client:
-;   zinnia examples/socket/chat.zn
+;   zinnia examples/sockets/chat.zn
 ;
 ; The client will prompt for a username and then allow clients to broadcast
 ; messages to the other clients.
@@ -13,7 +13,7 @@ import io
 import socket
 
 if __main {
-  ADDRESS = args.address | '0.0.0.0'
+  ADDRESS = args.address | socket.lookup_local_address()
   PORT = Int(args.port | 1453)
   app = None
   if Bool(args.server) {
@@ -28,7 +28,7 @@ class ChatServer {
   field clients, sock
   new({field address, field port}) {
     clients = {}
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, True)
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, True)
   }
   method start() {
     io.println('Started server at ' + str(address) + ':' + str(port))
@@ -82,7 +82,7 @@ class ChatServer {
 class ChatClient {
   field sock, connection
   new({address, port}) {
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, 4, False)
+    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, False)
     connection = await sock.connect()
   }
   method start() {

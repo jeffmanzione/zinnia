@@ -8,6 +8,9 @@
 
 #include "entity/class/class.h"
 
+#define IS_STRING(e_ptr) \
+  (IS_CLASS(e_ptr, Class_String) || IS_CLASS(e_ptr, Class_IString))
+
 extern Class *Class_Object;
 extern Class *Class_Class;
 extern Class *Class_Function;
@@ -15,6 +18,7 @@ extern Class *Class_FunctionRef;
 extern Class *Class_Module;
 extern Class *Class_Array;
 extern Class *Class_String;
+extern Class *Class_IString;
 extern Class *Class_Tuple;
 extern Class *Class_Error;
 extern Class *Class_Range;

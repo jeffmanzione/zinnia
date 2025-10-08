@@ -20,6 +20,7 @@
 #include "entity/class/classes_def.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/string/string.h"
 #include "entity/string/string_helper.h"
@@ -31,6 +32,10 @@
 
 #define MAX_EVENTS 1024
 #define FILE_NAME_LENGTH_ESTIMATE 16
+
+#ifndef min
+#define min(x, y) ((x) > (y) ? (y) : (x))
+#endif
 
 static Class *Class_WatchDir;
 
@@ -60,7 +65,7 @@ typedef struct {
 char *_String_nullterm(String *str) {
   uint32_t str_len = String_size(str);
   char *out = MNEW_ARR(char, str_len + 1);
-  memmove(out, str->table, str_len);
+  memcpy(out, str->table, str_len);
   out[str_len] = 0;
   return out;
 }
@@ -89,8 +94,8 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
 
   char *fn, *mode;
-  if (Class_String == args->obj->_class) {
-    fn = _String_nullterm((String *)args->obj->_internal_obj);
+  if (IS_STRING(args)) {
+    fn = entity_string_copy(args);
     mode = intern("r");
     f->fp = fopen(fn, mode);
     RELEASE(fn);
@@ -99,37 +104,24 @@ Entity _file_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
     if (tuple_size(tup) < 2) {
       return raise_error(task, ctx, "Too few arguments for File constructor.");
     }
-    const Entity *e_fn = tuple_get(tup, 0);
-    // entity_print(e_fn, stdout);
-    if (NULL == e_fn || OBJECT != e_fn->type ||
-        Class_String != e_fn->obj->_class) {
-      return raise_error(task, ctx, "File name must be a String.");
-    }
-    if (0 == strncmp("__STDOUT__", ((String *)e_fn->obj->_internal_obj)->table,
-                     10)) {
+
+    EXCTRACT_STRING_AT_INDEX_OR_THROW(fn, fn_len, tup, 0);
+
+    if (0 == strncmp("__STDOUT__", fn, min(fn_len, 10))) {
       f->fp = stdout;
-    } else if (0 == strncmp("__STDERR__",
-                            ((String *)e_fn->obj->_internal_obj)->table, 10)) {
+    } else if (0 == strncmp("__STDERR__", fn, min(fn_len, 10))) {
       f->fp = stderr;
-    } else if (0 == strncmp("__STDIN__",
-                            ((String *)e_fn->obj->_internal_obj)->table, 9)) {
+    } else if (0 == strncmp("__STDIN__", fn, min(fn_len, 9))) {
       f->fp = stdin;
     } else {
-      const Entity *e_mode = tuple_get(tup, 1);
-      if (NULL == e_mode || OBJECT != e_mode->type ||
-          Class_String != e_mode->obj->_class) {
-        return raise_error(task, ctx, "File mode must be a String.");
-      }
-      String *fn_string = (String *)e_fn->obj->_internal_obj;
-      fn = _String_nullterm(fn_string);
-      mode = _String_nullterm((String *)e_mode->obj->_internal_obj);
+      EXCTRACT_STRING_AT_INDEX_OR_THROW(mode, mode_len, tup, 1);
+      fn = ALLOC_STRNDUP(fn, fn_len);
+      mode = ALLOC_STRNDUP(mode, mode_len);
       f->fp = fopen(fn, mode);
       RELEASE(fn);
       RELEASE(mode);
       if (NULL == f->fp) {
-        return raise_error(task, ctx, "File '%*s' could not be opened.",
-                           String_size(fn_string),
-                           String_get_ref(fn_string, 0));
+        return raise_error(task, ctx, "File '%s' could not be opened.", fn);
       }
     }
   } else {
@@ -210,12 +202,13 @@ Entity _file_getall(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity _file_puts(Task *task, Context *ctx, Object *obj, Entity *args) {
   _File *f = (_File *)obj->_internal_obj;
   ASSERT(NOT_NULL(f));
-  if (NULL == args || NONE == args->type || OBJECT != args->type ||
-      Class_String != args->obj->_class) {
+  if (!IS_STRING(args)) {
     return NONE_ENTITY;
   }
-  String *string = (String *)args->obj->_internal_obj;
-  fprintf(f->fp, "%.*s", String_size(string), string->table);
+  char *string;
+  int len;
+  extract_string(args, &string, &len);
+  fprintf(f->fp, "%.*s", len, string);
   return NONE_ENTITY;
 }
 

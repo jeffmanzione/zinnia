@@ -13,7 +13,7 @@ new_expression -> token:KEYWORD_NEW;
 
 constant -> OR(token:TOKEN_INTEGER, token:TOKEN_FLOATING);
 
-string_literal -> token:TOKEN_STRING;
+string_literal -> OR(token:STRING_IMMUTABLE, token:STRING_SINGLEQUOTE);
 
 array_declaration ->
   OR(

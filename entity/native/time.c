@@ -10,6 +10,7 @@
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/tuple/tuple.h"
 #include "heap/heap.h"
@@ -40,20 +41,16 @@ Entity _now_timestamp(Task *task, Context *ctx, Object *obj, Entity *args) {
 
 Entity _timestamp_to_micros(Task *task, Context *ctx, Object *obj,
                             Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx, "Expected a argument tuple.");
-  }
-  Tuple *tuple = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(tuple) != 7) {
-    return raise_error(task, ctx, "Expected exactly 7 args.");
-  }
-  Timestamp ts = {.year = pint(&tuple_get(tuple, 0)->pri),
-                  .month = pint(&tuple_get(tuple, 1)->pri),
-                  .day_of_month = pint(&tuple_get(tuple, 2)->pri),
-                  .hour = pint(&tuple_get(tuple, 3)->pri),
-                  .minute = pint(&tuple_get(tuple, 4)->pri),
-                  .second = pint(&tuple_get(tuple, 5)->pri),
-                  .millisecond = pint(&tuple_get(tuple, 6)->pri)};
+  Timestamp ts;
+  EXTRACT_TUPLE_ARGS(tuple, args, 7, task, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.year, tuple, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.month, tuple, 1);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.day_of_month, tuple, 2);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.hour, tuple, 3);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.minute, tuple, 4);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.second, tuple, 5);
+  EXTRACT_INT_AT_INDEX_OR_THROW(ts.millisecond, tuple, 6);
+
   return entity_int(timestamp_to_micros(&ts));
 }
 

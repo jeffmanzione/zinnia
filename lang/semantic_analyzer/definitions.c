@@ -58,11 +58,11 @@ DELETE_IMPL(identifier, SemanticAnalyzer *analyzer) {}
 PRODUCE_IMPL(identifier, SemanticAnalyzer *analyzer, Tape *target) {
   return (identifier->id->text == TRUE_KEYWORD)
              ? tape_ins_no_arg(target, RTRU, identifier->id)
-         : (identifier->id->text == FALSE_KEYWORD)
-             ? tape_ins_no_arg(target, RFLS, identifier->id)
-         : (identifier->id->text == NIL_KEYWORD)
-             ? tape_ins_no_arg(target, RNIL, identifier->id)
-             : tape_ins(target, RES, identifier->id);
+             : (identifier->id->text == FALSE_KEYWORD)
+                   ? tape_ins_no_arg(target, RFLS, identifier->id)
+                   : (identifier->id->text == NIL_KEYWORD)
+                         ? tape_ins_no_arg(target, RNIL, identifier->id)
+                         : tape_ins(target, RES, identifier->id);
 }
 
 POPULATE_IMPL(constant, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
@@ -85,7 +85,9 @@ POPULATE_IMPL(string_literal, const SyntaxTree *stree,
 DELETE_IMPL(string_literal, SemanticAnalyzer *analyzer) {}
 
 PRODUCE_IMPL(string_literal, SemanticAnalyzer *analyzer, Tape *target) {
-  return tape_ins(target, RES, string_literal->token);
+  return tape_ins(
+      target, string_literal->token->type == STRING_SINGLEQUOTE ? RES : IRES,
+      string_literal->token);
 }
 
 POPULATE_IMPL(tuple_expression, const SyntaxTree *stree,
@@ -223,7 +225,6 @@ DELETE_IMPL(primary_expression_no_constants, SemanticAnalyzer *analyzer) {
 
 void _populate_named_argument(SemanticAnalyzer *analyzer,
                               const SyntaxTree *stree, NamedArgument *arg) {
-
   arg->id = CHILD_SYNTAX_AT(stree, 0)->token;
   arg->colon = CHILD_SYNTAX_AT(stree, 1)->token;
   arg->value = semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 2));
@@ -478,18 +479,18 @@ PRODUCE_IMPL(range_expression, SemanticAnalyzer *analyzer, Tape *target) {
 
 UnaryType unary_token_to_type(const Token *token) {
   switch (token->type) {
-  case SYMBOL_TILDE:
-    return Unary_not;
-  case SYMBOL_EXCLAIM:
-    return Unary_notc;
-  case SYMBOL_MINUS:
-    return Unary_negate;
-  case KEYWORD_CONST:
-    return Unary_const;
-  case KEYWORD_AWAIT:
-    return Unary_await;
-  default:
-    FATALF("Unknown unary: %s", token->text);
+    case SYMBOL_TILDE:
+      return Unary_not;
+    case SYMBOL_EXCLAIM:
+      return Unary_notc;
+    case SYMBOL_MINUS:
+      return Unary_negate;
+    case KEYWORD_CONST:
+      return Unary_const;
+    case KEYWORD_AWAIT:
+      return Unary_await;
+    default:
+      FATALF("Unknown unary: %s", token->text);
   }
   return Unary_unknown;
 }
@@ -517,175 +518,175 @@ PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Tape *target) {
   }
   num_ins += semantic_analyzer_produce(analyzer, unary_expression->exp, target);
   switch (unary_expression->type) {
-  case Unary_not:
-    num_ins += tape_ins_no_arg(target, NOT, unary_expression->token);
-    break;
-  case Unary_notc:
-    num_ins += tape_ins_no_arg(target, NOTC, unary_expression->token);
-    break;
-  case Unary_negate:
-    num_ins += tape_ins_no_arg(target, PUSH, unary_expression->token);
-    num_ins += tape_ins_int(target, PUSH, -1, unary_expression->token);
-    num_ins += tape_ins_no_arg(target, MULT, unary_expression->token);
-    break;
-  // TODO: Uncomment when const is implemented.
-  // case Unary_const:
-  //   num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
-  //   break;
-  case Unary_await:
-    num_ins += tape_ins_no_arg(target, WAIT, unary_expression->token);
-    break;
-  default:
-    FATALF("Unknown unary: %s", unary_expression->token);
+    case Unary_not:
+      num_ins += tape_ins_no_arg(target, NOT, unary_expression->token);
+      break;
+    case Unary_notc:
+      num_ins += tape_ins_no_arg(target, NOTC, unary_expression->token);
+      break;
+    case Unary_negate:
+      num_ins += tape_ins_no_arg(target, PUSH, unary_expression->token);
+      num_ins += tape_ins_int(target, PUSH, -1, unary_expression->token);
+      num_ins += tape_ins_no_arg(target, MULT, unary_expression->token);
+      break;
+    // TODO: Uncomment when const is implemented.
+    // case Unary_const:
+    //   num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
+    //   break;
+    case Unary_await:
+      num_ins += tape_ins_no_arg(target, WAIT, unary_expression->token);
+      break;
+    default:
+      FATALF("Unknown unary: %s", unary_expression->token);
   }
   return num_ins;
 }
 
 BiType relational_type_for_token(const Token *token) {
   switch (token->type) {
-  case SYMBOL_STAR:
-    return Mult_mult;
-  case SYMBOL_FSLASH:
-    return Mult_div;
-  case SYMBOL_PERCENT:
-    return Mult_mod;
-  case SYMBOL_PLUS:
-    return Add_add;
-  case SYMBOL_MINUS:
-    return Add_sub;
-  case SYMBOL_LTHAN:
-    return Rel_lt;
-  case SYMBOL_GTHAN:
-    return Rel_gt;
-  case SYMBOL_LTHANEQ:
-    return Rel_lte;
-  case SYMBOL_GTHANEQ:
-    return Rel_gte;
-  case SYMBOL_EQUIV:
-    return Rel_eq;
-  case SYMBOL_NEQUIV:
-    return Rel_neq;
-  case KEYWORD_AND:
-    return And_and;
-  case KEYWORD_OR:
-    return And_or;
-  case SYMBOL_AMPER:
-    return Bin_and;
-  case SYMBOL_CARET:
-    return Bin_xor;
-  case SYMBOL_PIPE:
-    return Bin_or;
-  default:
-    FATALF("Unknown type: %s", token->text);
+    case SYMBOL_STAR:
+      return Mult_mult;
+    case SYMBOL_FSLASH:
+      return Mult_div;
+    case SYMBOL_PERCENT:
+      return Mult_mod;
+    case SYMBOL_PLUS:
+      return Add_add;
+    case SYMBOL_MINUS:
+      return Add_sub;
+    case SYMBOL_LTHAN:
+      return Rel_lt;
+    case SYMBOL_GTHAN:
+      return Rel_gt;
+    case SYMBOL_LTHANEQ:
+      return Rel_lte;
+    case SYMBOL_GTHANEQ:
+      return Rel_gte;
+    case SYMBOL_EQUIV:
+      return Rel_eq;
+    case SYMBOL_NEQUIV:
+      return Rel_neq;
+    case KEYWORD_AND:
+      return And_and;
+    case KEYWORD_OR:
+      return And_or;
+    case SYMBOL_AMPER:
+      return Bin_and;
+    case SYMBOL_CARET:
+      return Bin_xor;
+    case SYMBOL_PIPE:
+      return Bin_or;
+    default:
+      FATALF("Unknown type: %s", token->text);
   }
   return BiType_unknown;
 }
 
 Op bi_to_ins(BiType type) {
   switch (type) {
-  case Mult_mult:
-    return MULT;
-  case Mult_div:
-    return DIV;
-  case Mult_mod:
-    return MOD;
-  case Add_add:
-    return ADD;
-  case Add_sub:
-    return SUB;
-  case Rel_lt:
-    return LT;
-  case Rel_gt:
-    return GT;
-  case Rel_lte:
-    return LTE;
-  case Rel_gte:
-    return GTE;
-  case Rel_eq:
-    return EQ;
-  case Rel_neq:
-    return NEQ;
-  case And_and:
-    return AND;
-  case And_or:
-    return OR;
-  case Bin_and:
-    return BAND;
-  case Bin_xor:
-    return BXOR;
-  case Bin_or:
-    return BOR;
-  default:
-    FATALF("Unknown type: %s", type);
+    case Mult_mult:
+      return MULT;
+    case Mult_div:
+      return DIV;
+    case Mult_mod:
+      return MOD;
+    case Add_add:
+      return ADD;
+    case Add_sub:
+      return SUB;
+    case Rel_lt:
+      return LT;
+    case Rel_gt:
+      return GT;
+    case Rel_lte:
+      return LTE;
+    case Rel_gte:
+      return GTE;
+    case Rel_eq:
+      return EQ;
+    case Rel_neq:
+      return NEQ;
+    case And_and:
+      return AND;
+    case And_or:
+      return OR;
+    case Bin_and:
+      return BAND;
+    case Bin_xor:
+      return BXOR;
+    case Bin_or:
+      return BOR;
+    default:
+      FATALF("Unknown type: %s", type);
   }
   return NOP;
 }
 
-#define POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer)                     \
-  {                                                                            \
-    expr->exp =                                                                \
-        semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 0));       \
-    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);                \
-    SyntaxTree *cur_suffix = CHILD_SYNTAX_AT(stree, 1);                        \
-    while (true) {                                                             \
-      EXPECT_TYPE(cur_suffix, rule_##expr##1);                                 \
-      BiSuffix suffix = {.token = CHILD_SYNTAX_AT(cur_suffix, 0)->token,       \
-                         .type = relational_type_for_token(                    \
-                             CHILD_SYNTAX_AT(cur_suffix, 0)->token)};          \
-      SyntaxTree *second_exp = CHILD_SYNTAX_AT(cur_suffix, 1);                 \
-      if (second_exp->rule_fn == stree->rule_fn) {                             \
-        suffix.exp = semantic_analyzer_populate(                               \
-            analyzer, CHILD_SYNTAX_AT(second_exp, 0));                         \
-        alist_append(suffixes, &suffix);                                       \
-        cur_suffix = CHILD_SYNTAX_AT(second_exp, 1);                           \
-      } else {                                                                 \
-        suffix.exp = semantic_analyzer_populate(analyzer, second_exp);         \
-        alist_append(suffixes, &suffix);                                       \
-        break;                                                                 \
-      }                                                                        \
-    }                                                                          \
-    expr->suffixes = suffixes;                                                 \
+#define POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer)               \
+  {                                                                      \
+    expr->exp =                                                          \
+        semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 0)); \
+    AList *suffixes = alist_create(BiSuffix, DEFAULT_ARRAY_SZ);          \
+    SyntaxTree *cur_suffix = CHILD_SYNTAX_AT(stree, 1);                  \
+    while (true) {                                                       \
+      EXPECT_TYPE(cur_suffix, rule_##expr##1);                           \
+      BiSuffix suffix = {.token = CHILD_SYNTAX_AT(cur_suffix, 0)->token, \
+                         .type = relational_type_for_token(              \
+                             CHILD_SYNTAX_AT(cur_suffix, 0)->token)};    \
+      SyntaxTree *second_exp = CHILD_SYNTAX_AT(cur_suffix, 1);           \
+      if (second_exp->rule_fn == stree->rule_fn) {                       \
+        suffix.exp = semantic_analyzer_populate(                         \
+            analyzer, CHILD_SYNTAX_AT(second_exp, 0));                   \
+        alist_append(suffixes, &suffix);                                 \
+        cur_suffix = CHILD_SYNTAX_AT(second_exp, 1);                     \
+      } else {                                                           \
+        suffix.exp = semantic_analyzer_populate(analyzer, second_exp);   \
+        alist_append(suffixes, &suffix);                                 \
+        break;                                                           \
+      }                                                                  \
+    }                                                                    \
+    expr->suffixes = suffixes;                                           \
   }
 
-#define DELETE_BI_EXPRESSION_IMPL(expr, analyzer)                              \
-  {                                                                            \
-    semantic_analyzer_delete(analyzer, expr->exp);                             \
-    AL_iter iter = alist_iter(expr->suffixes);                                 \
-    for (; al_has(&iter); al_inc(&iter)) {                                     \
-      BiSuffix *suffix = (BiSuffix *)al_value(&iter);                          \
-      semantic_analyzer_delete(analyzer, suffix->exp);                         \
-    }                                                                          \
-    alist_delete(expr->suffixes);                                              \
+#define DELETE_BI_EXPRESSION_IMPL(expr, analyzer)      \
+  {                                                    \
+    semantic_analyzer_delete(analyzer, expr->exp);     \
+    AL_iter iter = alist_iter(expr->suffixes);         \
+    for (; al_has(&iter); al_inc(&iter)) {             \
+      BiSuffix *suffix = (BiSuffix *)al_value(&iter);  \
+      semantic_analyzer_delete(analyzer, suffix->exp); \
+    }                                                  \
+    alist_delete(expr->suffixes);                      \
   }
 
-#define PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, tape)                       \
-  {                                                                            \
-    int num_ins = 0;                                                           \
-    num_ins += semantic_analyzer_produce(analyzer, expr->exp, tape);           \
-    AL_iter iter = alist_iter(expr->suffixes);                                 \
-    for (; al_has(&iter); al_inc(&iter)) {                                     \
-      BiSuffix *suffix = (BiSuffix *)al_value(&iter);                          \
-      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);                   \
-      num_ins += semantic_analyzer_produce(analyzer, suffix->exp, tape);       \
-      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);                   \
-      num_ins +=                                                               \
-          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token);       \
-    }                                                                          \
-    return num_ins;                                                            \
+#define PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, tape)                 \
+  {                                                                      \
+    int num_ins = 0;                                                     \
+    num_ins += semantic_analyzer_produce(analyzer, expr->exp, tape);     \
+    AL_iter iter = alist_iter(expr->suffixes);                           \
+    for (; al_has(&iter); al_inc(&iter)) {                               \
+      BiSuffix *suffix = (BiSuffix *)al_value(&iter);                    \
+      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);             \
+      num_ins += semantic_analyzer_produce(analyzer, suffix->exp, tape); \
+      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);             \
+      num_ins +=                                                         \
+          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token); \
+    }                                                                    \
+    return num_ins;                                                      \
   }
 
-#define BI_EXPRESSION_IMPL(expr)                                               \
-  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer)     \
-  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                          \
-  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                                \
-  DELETE_BI_EXPRESSION_IMPL(expr, analyzer);                                   \
-  PRODUCE_IMPL(expr, SemanticAnalyzer *analyzer, Tape *target)                 \
+#define BI_EXPRESSION_IMPL(expr)                                           \
+  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer) \
+  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                      \
+  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                            \
+  DELETE_BI_EXPRESSION_IMPL(expr, analyzer);                               \
+  PRODUCE_IMPL(expr, SemanticAnalyzer *analyzer, Tape *target)             \
   PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, target)
 
-#define BI_EXPRESSION_IMPL_NO_PRODUCE(expr)                                    \
-  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer)     \
-  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                          \
-  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                                \
+#define BI_EXPRESSION_IMPL_NO_PRODUCE(expr)                                \
+  POPULATE_IMPL(expr, const SyntaxTree *stree, SemanticAnalyzer *analyzer) \
+  POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                      \
+  DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                            \
   DELETE_BI_EXPRESSION_IMPL(expr, analyzer);
 
 BI_EXPRESSION_IMPL(multiplicative_expression);
@@ -915,10 +916,10 @@ int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else, Tape *tape) {
 
     tape_append(tape, condition);
     if (i == num_conds - 1) {
-      tape_ins_int(tape, IFN,
-                   num_body_ins + num_conds +
-                       (NULL == if_else->else_exp ? -1 : 0),
-                   cond->if_token);
+      tape_ins_int(
+          tape, IFN,
+          num_body_ins + num_conds + (NULL == if_else->else_exp ? -1 : 0),
+          cond->if_token);
     } else {
       tape_ins_int(tape, IF,
                    num_cond_ins + num_body_jump + 2 * (num_conds - i - 1),
@@ -1082,6 +1083,7 @@ void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
   for (; al_has(&annots); al_inc(&annots)) {
     delete_annotation(analyzer, (Annotation *)al_value(&annots));
   }
+  alist_finalize(&func->annots);
   semantic_analyzer_delete(analyzer, func->body);
 }
 
@@ -1212,23 +1214,23 @@ int produce_arguments(SemanticAnalyzer *analyzer, Arguments *args, Tape *tape) {
 
 int produce_function_name(FunctionDef *func, Tape *tape) {
   switch (func->special_method) {
-  case SpecialMethod__NONE:
-    return func->is_async ? tape_label_async(tape, func->fn_name)
-                          : tape_label(tape, func->fn_name);
-  case SpecialMethod__EQUIV:
-    return func->is_async ? tape_label_text_async(tape, EQ_FN_NAME)
-                          : tape_label_text(tape, EQ_FN_NAME);
-  case SpecialMethod__NEQUIV:
-    return func->is_async ? tape_label_text_async(tape, NEQ_FN_NAME)
-                          : tape_label_text(tape, NEQ_FN_NAME);
-  case SpecialMethod__ARRAY_INDEX:
-    return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_INDEX_KEY)
-                          : tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
-  case SpecialMethod__ARRAY_SET:
-    return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_SET_KEY)
-                          : tape_label_text(tape, ARRAYLIKE_SET_KEY);
-  default:
-    FATALF("Unknown SpecialMethod.");
+    case SpecialMethod__NONE:
+      return func->is_async ? tape_label_async(tape, func->fn_name)
+                            : tape_label(tape, func->fn_name);
+    case SpecialMethod__EQUIV:
+      return func->is_async ? tape_label_text_async(tape, EQ_FN_NAME)
+                            : tape_label_text(tape, EQ_FN_NAME);
+    case SpecialMethod__NEQUIV:
+      return func->is_async ? tape_label_text_async(tape, NEQ_FN_NAME)
+                            : tape_label_text(tape, NEQ_FN_NAME);
+    case SpecialMethod__ARRAY_INDEX:
+      return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_INDEX_KEY)
+                            : tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
+    case SpecialMethod__ARRAY_SET:
+      return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_SET_KEY)
+                            : tape_label_text(tape, ARRAYLIKE_SET_KEY);
+    default:
+      FATALF("Unknown SpecialMethod.");
   }
   return 0;
 }
@@ -1477,7 +1479,7 @@ void populate_single_complex(SemanticAnalyzer *analyzer,
         IS_SYNTAX(cur, rule_field_next)) {
       populate_single_postfixes(analyzer, CHILD_SYNTAX_AT(cur, 0), &postfix);
       alist_append(single->suffixes, &postfix);
-      cur = CHILD_SYNTAX_AT(cur, 1); // field_next
+      cur = CHILD_SYNTAX_AT(cur, 1);  // field_next
     } else {
       populate_single_postfixes(analyzer, cur, &postfix);
       alist_append(single->suffixes, &postfix);

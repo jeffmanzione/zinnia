@@ -27,7 +27,7 @@ class FileWatcher {
     is_started = False
   }
   method watch(dir) {
-    if ~(dir is String) {
+    if ~is_string(dir) {
       raise Error('FileWatcher.watch() only takes a String parameter.')
     }
     if ~_fw.__is_valid() {

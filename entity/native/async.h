@@ -11,7 +11,6 @@
 #include "vm/module_manager.h"
 #include "vm/process/processes.h"
 
-
 typedef struct _Future Future;
 
 Object *future_create(Task *task);

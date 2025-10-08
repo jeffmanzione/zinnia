@@ -38,9 +38,6 @@ zinnia_cc_library(
 
 zinnia_binary(
     name = "pid_test",
-    cc_deps = [
-        ":pid_cc_lib",
-    ],
     main = "pid_test.zn",
     modules = [
         ":pid",

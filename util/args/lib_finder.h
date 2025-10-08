@@ -6,8 +6,6 @@
 #ifndef UTIL_ARGS_LIB_FINDER_H_
 #define UTIL_ARGS_LIB_FINDER_H_
 
-#define PATH_ENV_VAR_NAME "JV_LIB_PATH"
-
 char *path_to_libs();
 
 #endif /* UTIL_ARGS_LIB_FINDER_H_ */

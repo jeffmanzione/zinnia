@@ -18,16 +18,16 @@
 
 #define _CONST_CHAR_POINTER(ptr) ((const char *)(ptr))
 
-#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                                  \
-  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {          \
-    const Arg *arg = argstore_get(store, key);                                 \
-    if (!arg->used) {                                                          \
-      FATALF("Store did not have key: %d", key);                               \
-    }                                                                          \
-    if (ArgType__##typet != arg->type) {                                       \
-      FATALF("Expected a " #typet " for key=%d. Was %d.", key, arg->type);     \
-    }                                                                          \
-    return (retval)arg->typet##_val;                                           \
+#define ARGSTORE_LOOKUP_RETVAL(typet, retval)                              \
+  retval argstore_lookup_##typet(const ArgStore *store, ArgKey key) {      \
+    const Arg *arg = argstore_get(store, key);                             \
+    if (!arg->used) {                                                      \
+      FATALF("Store did not have key: %d", key);                           \
+    }                                                                      \
+    if (ArgType__##typet != arg->type) {                                   \
+      FATALF("Expected a " #typet " for key=%d. Was %d.", key, arg->type); \
+    }                                                                      \
+    return (retval)arg->typet##_val;                                       \
   }
 
 #define ARGSTORE_LOOKUP(typet) ARGSTORE_LOOKUP_RETVAL(typet, typet)
@@ -42,13 +42,13 @@ struct __Argstore {
 struct __ArgConfig {
   Map arg_names;
   Arg *args;
-  bool mandatory_sources;
+  bool allow_compiler_args_and_sources;
 };
 
 ArgConfig *argconfig_create() {
   ArgConfig *config = MNEW(ArgConfig);
   config->args = CNEW_ARR(Arg, ArgKey__END);
-  config->mandatory_sources = true;
+  config->allow_compiler_args_and_sources = true;
   map_init_default(&config->arg_names);
   argconfig_add(config, ArgKey__VERSION, "version", 'v', arg_bool(false));
   return config;
@@ -134,8 +134,9 @@ void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
   config->args[key] = arg_default;
 }
 
-void argconfig_set_mandatory_sources(ArgConfig *config, bool enabled) {
-  config->mandatory_sources = enabled;
+void argconfig_set_allow_compiler_args_and_sources(ArgConfig *config,
+                                                   bool enabled) {
+  config->allow_compiler_args_and_sources = enabled;
 }
 
 bool _parse_argument(const char *arg, Pair *pair) {
@@ -192,8 +193,9 @@ void _parse_arguments(int argc, const char *const argv[], Map *args) {
     const char *arg = argv[i];
     Pair pair;
     if (!_parse_argument(arg, &pair)) {
-      FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
-             "--arg1 --noarg2 --arg3=5]");
+      FATALF(
+          "Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
     map_insert(args, pair.key, pair.value);
   }
@@ -243,8 +245,9 @@ void _parse_compiler_args(int argc, const char *const argv[], Map *args) {
   for (i = 0; i < argc; ++i) {
     const char *arg = argv[i];
     if (!_parse_compiler_argument(arg, args)) {
-      FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
-             "--arg1 --noarg2 --arg3=5]");
+      FATALF(
+          "Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
   }
 }
@@ -258,8 +261,9 @@ void _parse_sources(int argc, const char *const argv[], Set *sources) {
           stderr,
           "ERROR: Source '%s' is malformed. Sources must not start with '-'\n",
           arg);
-      FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
-             "--arg1 --noarg2 --arg3=5]");
+      FATALF(
+          "Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
+          "--arg1 --noarg2 --arg3=5]");
     }
     set_insert(sources, intern(arg));
   }
@@ -275,7 +279,7 @@ int _num_args(int argc, const char *argv[]) {
   return argc - 1;
 }
 
-int _index_of_sources(int argc, const char *argv[]) {
+int _find_index_of_sources(int argc, const char *argv[]) {
   int i;
   for (i = 1; i < argc; ++i) {
     const char *arg = argv[i];
@@ -291,7 +295,7 @@ int _index_of_sources(int argc, const char *argv[]) {
   return -1;
 }
 
-int _index_of_double_dash(int argc, const char *argv[]) {
+int _find_index_of_double_dash(int argc, const char *argv[]) {
   int i;
   for (i = 1; i < argc; ++i) {
     if (0 == strcmp(argv[i], "--")) {
@@ -305,45 +309,40 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
                                  const char *argv[]) {
   ASSERT(NOT_NULL(config));
   ArgStore *store = argstore_create(config);
-  Map args;
-  map_init_default(&args);
 
-  int num_args = _num_args(argc, argv);
-  int index_of_sources = _index_of_sources(argc, argv);
-  int index_of_dd = _index_of_double_dash(argc, argv);
+  const int num_args = _num_args(argc, argv);
+  const int sources_index = config->allow_compiler_args_and_sources
+                                ? _find_index_of_sources(argc, argv)
+                                : -1;
+  int double_dash_index = config->allow_compiler_args_and_sources
+                              ? _find_index_of_double_dash(argc, argv)
+                              : 0;
 
-  _parse_compiler_args(num_args, argv + 1, &args);
-  M_iter args_iter = map_iter(&args);
-  for (; has(&args_iter); inc(&args_iter)) {
-    const char *k = _CONST_CHAR_POINTER(key(&args_iter));
-    const char *v = _CONST_CHAR_POINTER(value(&args_iter));
-    ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, k);
-    if (ArgKey__NONE == arg_key) {
-      FATALF("Unknown Arg name: %s", k);
+  if (config->allow_compiler_args_and_sources) {
+    Map args;
+    map_init_default(&args);
+    _parse_compiler_args(num_args, argv + 1, &args);
+    M_iter args_iter = map_iter(&args);
+    for (; has(&args_iter); inc(&args_iter)) {
+      const char *k = _CONST_CHAR_POINTER(key(&args_iter));
+      const char *v = _CONST_CHAR_POINTER(value(&args_iter));
+      ArgKey arg_key = (ArgKey)map_lookup(&config->arg_names, k);
+      if (ArgKey__NONE == arg_key) {
+        FATALF("Unknown Arg name: %s", k);
+      }
+      Arg arg = config->args[arg_key];
+      if (ArgType__none == arg.type) {
+        FATALF("Unknown Arg type: %s", k);
+      }
+      store->args[arg_key] = arg_parse(arg.type, v);
+      if (store->args[arg_key].type != arg.type) {
+        FATALF(
+            "ArgType of input does not match preset type. Was: %d, Expected: "
+            "%d.",
+            store->args[arg_key].type, arg.type);
+      }
     }
-    Arg arg = config->args[arg_key];
-    if (ArgType__none == arg.type) {
-      FATALF("Unknown Arg type: %s", k);
-    }
-    store->args[arg_key] = arg_parse(arg.type, v);
-    if (store->args[arg_key].type != arg.type) {
-      FATALF(
-          "ArgType of input does not match preset type. Was: %d, Expected: %d.",
-          store->args[arg_key].type, arg.type);
-    }
-  }
-  map_finalize(&args);
-
-  if (index_of_dd > 0) {
-    _parse_arguments(argc - index_of_dd - 1, argv + index_of_dd + 1,
-                     &store->program_args);
-  } else {
-    index_of_dd = argc;
-  }
-
-  if (index_of_sources >= 0) {
-    _parse_sources(index_of_dd - index_of_sources, argv + index_of_sources,
-                   &store->src_files);
+    map_finalize(&args);
   }
 
   const bool version = argstore_lookup_bool(store, ArgKey__VERSION);
@@ -352,10 +351,25 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     exit(EXIT_SUCCESS);
   }
 
-  if (config->mandatory_sources && index_of_sources < 0) {
+  if (!config->allow_compiler_args_and_sources || double_dash_index > 0) {
+    const int num_args = argc - double_dash_index - 1;
+    const char **args_start = argv + double_dash_index + 1;
+    _parse_arguments(num_args, args_start, &store->program_args);
+  } else {
+    double_dash_index = argc;
+  }
+
+  if (config->allow_compiler_args_and_sources || sources_index >= 0) {
+    const int num_sources = double_dash_index - sources_index;
+    const char **sources_start = argv + sources_index;
+    _parse_sources(num_sources, sources_start, &store->src_files);
+  }
+
+  if (config->allow_compiler_args_and_sources && sources_index < 0) {
     fprintf(stderr, "ERROR: No sources.\n");
-    FATALF("Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
-           "--arg1 --noarg2 --arg3=5]");
+    FATALF(
+        "Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
+        "--arg1 --noarg2 --arg3=5]");
   }
 
   return store;

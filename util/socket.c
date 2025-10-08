@@ -20,7 +20,6 @@
 
 #include "alloc/alloc.h"
 #include "debug/debug.h"
-// #include "util/sync/mutex.h"
 
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET 0
@@ -34,16 +33,12 @@ struct __Socket {
   struct sockaddr_in in;
   SOCKET sock;
   bool is_closed;
-  // bool is_threadsafe;
-  // Mutex lock;
 };
 
 struct __SocketHandle {
   struct sockaddr_in client;
   SOCKET client_sock;
   bool is_closed;
-  // bool is_threadsafe;
-  // Mutex lock;
 };
 
 void sockets_init() {
@@ -59,15 +54,13 @@ void sockets_cleanup() {
 #endif
 }
 
-// void _init_socket_lock(Socket *sock) {
-//   sock->is_threadsafe = true;
-//   sock->lock = mutex_create();
-// }
-
-// void _init_sockethandle_lock(SocketHandle *handle) {
-//   handle->is_threadsafe = true;
-//   handle->lock = mutex_create();
-// }
+void _close_socket(int sock) {
+#ifdef OS_WINDOWS
+  closesocket(sock);
+#else
+  close(sock);
+#endif
+}
 
 Socket *socket_create(int domain, int type, int protocol, unsigned long host,
                       uint16_t port) {
@@ -75,9 +68,8 @@ Socket *socket_create(int domain, int type, int protocol, unsigned long host,
   sock->sock = socket(domain, type, protocol);
   sock->in.sin_family = domain;
   sock->in.sin_addr.s_addr = host;
-  sock->in.sin_port = htons(port);
+  sock->in.sin_port = port == 0 ? 0 : htons(port);
   sock->is_closed = false;
-  // _init_socket_lock(sock);
   return sock;
 }
 
@@ -101,11 +93,6 @@ SocketHandle *socket_accept(Socket *socket) {
   SocketHandle *sh = MNEW(SocketHandle);
   sh->is_closed = false;
   int addr_len = sizeof(sh->client);
-  // if (socket->is_threadsafe) {
-  //   _init_sockethandle_lock(sh);
-  //   mutex_lock(socket->lock);
-  // }
-
   sh->client_sock = accept(socket->sock, (struct sockaddr *)&sh->client,
 #ifdef OS_LINUX
                            (socklen_t *)
@@ -121,10 +108,6 @@ SocketHandle *socket_accept(Socket *socket) {
 #endif
     fflush(stdout);
   }
-
-  // if (socket->is_threadsafe) {
-  //   mutex_unlock(socket->lock);
-  // }
   return sh;
 }
 
@@ -132,42 +115,52 @@ SocketHandle *socket_connect(Socket *socket) {
   SocketHandle *sh = MNEW(SocketHandle);
   sh->is_closed = false;
 
-  // if (socket->is_threadsafe) {
-  //   _init_sockethandle_lock(sh);
-  //   mutex_lock(socket->lock);
-  // }
-
   const int result =
       connect(socket->sock, (struct sockaddr *)&socket->in, sizeof(socket->in));
 
   if (result == SOCKET_ERROR) {
 #ifdef OS_WINDOWS
     const int error_code = WSAGetLastError();
-    printf("[send] error_code=%d\n", error_code);
+    printf("[connect] error_code=%d\n", error_code);
 #else
-    printf("[send] errno=%d\n", errno);
+    printf("[connect] errno=%d\n", errno);
 #endif
     fflush(stdout);
   }
-
-  // if (socket->is_threadsafe) {
-  //   mutex_unlock(socket->lock);
-  // }
 
   sh->client_sock = socket->sock;
   return sh;
 }
 
+AddressLookupStatus socket_address(Socket *socket, char *host_buf) {
+  struct sockaddr_in sin;
+  uint32_t len = sizeof(sin);
+
+  if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
+  }
+  if (inet_ntop(AF_INET, &sin.sin_addr, host_buf, INET_ADDRSTRLEN) == 0x0) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP;
+  }
+  return ADDRESS_LOOKUP_STATUS_SUCCESS;
+}
+
+AddressLookupStatus socket_port(Socket *socket, int *port) {
+  struct sockaddr_in sin;
+  uint32_t len = sizeof(sin);
+
+  if (getsockname(socket->sock, (struct sockaddr *)&sin, &len) == -1) {
+    *port = -1;
+    return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
+  }
+
+  *port = ntohs(sin.sin_port);
+  return ADDRESS_LOOKUP_STATUS_SUCCESS;
+}
+
 void socket_close(Socket *socket) {
   socket->is_closed = true;
-#ifdef OS_WINDOWS
-  closesocket(socket->sock);
-#else
-  close(socket->sock);
-#endif
-  // if (socket->is_threadsafe) {
-  //   mutex_close(socket->lock);
-  // }
+  _close_socket(socket->sock);
 }
 
 void socket_delete(Socket *socket) {
@@ -183,9 +176,6 @@ bool sockethandle_is_valid(const SocketHandle *sh) {
 
 int32_t sockethandle_send(SocketHandle *sh, const char *const msg,
                           int msg_len) {
-  // if (sh->is_threadsafe) {
-  //   mutex_lock(sh->lock);
-  // }
   const int32_t result = send(sh->client_sock, msg, msg_len, 0);
 
   if (result == SOCKET_ERROR) {
@@ -197,17 +187,10 @@ int32_t sockethandle_send(SocketHandle *sh, const char *const msg,
 #endif
     fflush(stdout);
   }
-
-  // if (sh->is_threadsafe) {
-  //   mutex_unlock(sh->lock);
-  // }
   return result;
 }
 
 int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
-  // if (sh->is_threadsafe) {
-  //   mutex_lock(sh->lock);
-  // }
   const int32_t result = recv(sh->client_sock, buf, buf_len, 0);
 
   if (result == SOCKET_ERROR) {
@@ -219,23 +202,12 @@ int32_t sockethandle_receive(SocketHandle *sh, char *buf, int buf_len) {
 #endif
     fflush(stdout);
   }
-
-  // if (sh->is_threadsafe) {
-  //   mutex_unlock(sh->lock);
-  // }
   return result;
 }
 
 void sockethandle_close(SocketHandle *sh) {
   sh->is_closed = true;
-#ifdef OS_WINDOWS
-  closesocket(sh->client_sock);
-#else
-  close(sh->client_sock);
-#endif
-  // if (sh->is_threadsafe) {
-  //   mutex_close(sh->lock);
-  // }
+  _close_socket(sh->client_sock);
 }
 
 void sockethandle_delete(SocketHandle *sh) {
@@ -250,4 +222,36 @@ unsigned long socket_inet_address(const char *host, size_t host_len) {
   unsigned long addr = inet_addr(host_str);
   RELEASE(host_str);
   return addr;
+}
+
+AddressLookupStatus local_ip_address(char *buf) {
+  int sock = socket(PF_INET, SOCK_DGRAM, 0);
+  struct sockaddr_in loopback;
+
+  if (sock == -1) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_SOCKET;
+  }
+
+  memset(&loopback, 0, sizeof(loopback));
+  loopback.sin_family = AF_INET;
+  loopback.sin_addr.s_addr = 1337;  // can be any IP address
+  loopback.sin_port = htons(9);     // using debug port
+
+  if (connect(sock, (void *)(&loopback), sizeof(loopback)) == -1) {
+    _close_socket(sock);
+    return ADDRESS_LOOKUP_STATUS_FAILED_CONNECT;
+  }
+
+  uint32_t addrlen = sizeof(loopback);
+  if (getsockname(sock, (void *)(&loopback), &addrlen) == -1) {
+    _close_socket(sock);
+    return ADDRESS_LOOKUP_STATUS_FAILED_GET_SOCKET_NAME;
+  }
+
+  _close_socket(sock);
+  if (inet_ntop(AF_INET, &loopback.sin_addr, buf, INET_ADDRSTRLEN) == 0x0) {
+    return ADDRESS_LOOKUP_STATUS_FAILED_INET_NTOP;
+  }
+
+  return ADDRESS_LOOKUP_STATUS_SUCCESS;
 }

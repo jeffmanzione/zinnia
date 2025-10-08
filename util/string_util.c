@@ -13,29 +13,29 @@
 
 bool _should_escape(char c) {
   switch (c) {
-  case '\'':
-  case '\"':
-  case '\n':
-  case '\r':
-  case '\\':
-    return true;
-  default:
-    return false;
+    case '\'':
+    case '\"':
+    case '\n':
+    case '\r':
+    case '\\':
+      return true;
+    default:
+      return false;
   }
 }
 
 char _escape_char(char c) {
   switch (c) {
-  case '\n':
-    return 'n';
-  case '\t':
-    return 't';
-  case '\r':
-    return 'r';
-  case '\\':
-    return '\\';
-  default:
-    return c;
+    case '\n':
+      return 'n';
+    case '\t':
+      return 't';
+    case '\r':
+      return 'r';
+    case '\\':
+      return '\\';
+    default:
+      return c;
   }
 }
 
@@ -66,16 +66,16 @@ int escape(const char str[], char **target) {
 
 char _unescape_char(char c) {
   switch (c) {
-  case 'n':
-    return '\n';
-  case 't':
-    return '\t';
-  case 'r':
-    return '\r';
-  case '\\':
-    return '\\';
-  default:
-    return c;
+    case 'n':
+      return '\n';
+    case 't':
+      return '\t';
+    case 'r':
+      return '\r';
+    case '\\':
+      return '\\';
+    default:
+      return c;
   }
 }
 

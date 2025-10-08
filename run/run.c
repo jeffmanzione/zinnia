@@ -46,7 +46,8 @@ void _set_args(Heap *heap, ArgStore *store) {
   for (; has(&cl_args); inc(&cl_args)) {
     const char *k = key(&cl_args);
     const char *v = value(&cl_args);
-    object_set_member_obj(heap, args, k, string_new(heap, v, strlen(v)));
+    object_set_member_obj(heap, args, k,
+                          istring_new_no_intern(heap, v, strlen(v)));
   }
   object_set_member_obj(heap, Module_builtin->_reflection, intern("args"),
                         args);

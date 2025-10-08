@@ -147,8 +147,7 @@ Entity _stackline_source_linetext(Task *task, Context *ctx, Object *obj,
 }
 
 Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL == args || OBJECT != args->type ||
-      Class_String != args->obj->_class) {
+  if (!IS_STRING(args)) {
     return raise_error(task, ctx, "Error argument is not a String.");
   }
   object_set_member_obj(task->parent_process->heap, obj, intern("message"),
@@ -161,11 +160,11 @@ Entity _error_constructor(Task *task, Context *ctx, Object *obj, Entity *args) {
       Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
       _StackLine *sl = (_StackLine *)stackline->_internal_obj;
       sl->module = c->module;
-      sl->func = (Function *)c->func; // blessed
+      sl->func = (Function *)c->func;  // blessed
       const SourceMapping *sm =
           tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1));
-      sl->error_token = (Token *)sm->token;               // blessed
-      sl->source_error_token = (Token *)sm->source_token; // blessed
+      sl->error_token = (Token *)sm->token;                // blessed
+      sl->source_error_token = (Token *)sm->source_token;  // blessed
       if (NULL != sl->source_error_token) {
         sl->source_linetext =
             tape_get_sourceline(c->tape, sl->source_error_token->line);

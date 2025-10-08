@@ -14,9 +14,8 @@
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "util/file/file_util.h"
-#include "util/string.h"
-
 #include "util/platform.h"
+#include "util/string.h"
 
 #ifdef OS_WINDOWS
 

@@ -9,7 +9,7 @@
 #include "struct/set.h"
 #include "util/args/commandline_arg.h"
 
-#define ARGSTORE_TEMPLATE_RETVAL(type, retval)                                 \
+#define ARGSTORE_TEMPLATE_RETVAL(type, retval) \
   retval argstore_lookup_##type(const ArgStore *store, ArgKey key)
 
 #define ARGSTORE_TEMPLATE(type) ARGSTORE_TEMPLATE_RETVAL(type, type)
@@ -37,7 +37,8 @@ void argconfig_delete(ArgConfig *config);
 
 void argconfig_add(ArgConfig *config, ArgKey key, const char name[],
                    char short_name, Arg arg_default);
-void argconfig_set_mandatory_sources(ArgConfig *config, bool enabled);
+void argconfig_set_allow_compiler_args_and_sources(ArgConfig *config,
+                                                   bool enabled);
 
 ArgStore *commandline_parse_args(ArgConfig *config, int argc,
                                  const char *argv[]);

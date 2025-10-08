@@ -4,13 +4,16 @@
 //     Author: Jeff Manzione
 
 #include "entity/native/classes.h"
+
 #include "alloc/alloc.h"
 #include "alloc/arena/intern.h"
 #include "entity/class/classes_def.h"
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/string/string.h"
+#include "entity/string/string_helper.h"
 #include "entity/tuple/tuple.h"
 #include "lang/parser/lang_parser.h"
 #include "lang/parser/parser.h"
@@ -31,19 +34,7 @@
 
 Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
                              Entity *args) {
-  if (!IS_TUPLE(args)) {
-    return raise_error(task, ctx,
-                       "Invalid arguments for __load_class_from_text: Input is "
-                       "wrong type. Expected tuple(2).");
-  }
-  const Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (2 != tuple_size(t)) {
-    return raise_error(
-        task, ctx,
-        "Invalid number of arguments for "
-        "__load_class_from_text: Expected 2 arguments but got %d.",
-        tuple_size(t));
-  }
+  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
 
   const Entity *arg0 = tuple_get(t, 0);
   const Entity *arg1 = tuple_get(t, 1);
@@ -54,17 +45,16 @@ Entity _load_class_from_text(Task *task, Context *ctx, Object *obj,
   }
   Module *m = arg0->obj->_module_obj;
 
-  if (!IS_CLASS(arg1, Class_String)) {
+  if (!IS_STRING(arg1)) {
     return raise_error(task, ctx,
                        "Invalid argument(1) for "
                        "__load_class_from_text: Expected type String.");
   }
-  String *class_text = (String *)arg1->obj->_internal_obj;
 
-  char *c_str_text = ALLOC_STRNDUP(class_text->table, String_size(class_text));
+  char *c_str_text = entity_string_copy(arg1);
   SFILE *file = sfile_open(c_str_text);
 
-  Tape *tape = (Tape *)m->_tape; // bless
+  Tape *tape = (Tape *)m->_tape;  // bless
   FileInfo *fi = file_info_sfile(file);
   FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
       vm_module_manager(task->parent_process->vm), m);

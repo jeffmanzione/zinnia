@@ -41,3 +41,8 @@ void string_copy(EntityCopier *copier, const Object *src_obj,
   String *src = (String *)src_obj->_internal_obj;
   __string_init(target_obj, src->table, String_size(src));
 }
+
+void istring_copy(EntityCopier *copier, const Object *src_obj,
+                  Object *target_obj) {
+  *(IString *)target_obj->_internal_obj = *(IString *)src_obj->_internal_obj;
+}

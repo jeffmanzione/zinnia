@@ -166,6 +166,9 @@ void _print_object_summary(Object *object) {
     printf("\tString('%.*s', %p)",
            String_size(((String *)object->_internal_obj)),
            ((String *)object->_internal_obj)->table, object->_internal_obj);
+  } else if (object->_class == Class_IString) {
+    printf("\tIString('%.*s', %p)", ((IString *)object->_internal_obj)->len,
+           ((IString *)object->_internal_obj)->str, object->_internal_obj);
   } else {
     printf("\t%s", object->_class->_name);
   }

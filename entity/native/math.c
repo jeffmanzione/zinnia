@@ -13,6 +13,7 @@
 #include "entity/entity.h"
 #include "entity/native/error.h"
 #include "entity/native/native.h"
+#include "entity/native/native_helpers.h"
 #include "entity/object.h"
 #include "entity/primitive.h"
 #include "entity/tuple/tuple.h"
@@ -28,34 +29,19 @@
     body;                                                                      \
   }
 
-#define SingleFloatToCFn(name, cname)                                          \
+#define SingleFloatToCFn(name, cname) \
   SingleFloatFn(name, r, { return entity_float(cname(r)); });
 
 double _log_special(double base, double num) {
   return log10(num) / log10(base);
 }
 
-Entity _log_tuple(Task *task, Context *ctx, Tuple *tuple) {
-  if (tuple_size(tuple) != 2) {
-    return raise_error(task, ctx, "Invalid tuple arg to __log.");
-  }
-  const Entity *num = tuple_get(tuple, 0);
-  const Entity *base = tuple_get(tuple, 1);
-  if (base->type != PRIMITIVE) {
-    return raise_error(task, ctx,
-                       "Cannot perform __log with non-numeric base.");
-  }
-  if (num->type != PRIMITIVE) {
-    return raise_error(task, ctx,
-                       "Cannot perform __log with non-numeric input.");
-  }
-  return entity_float(_log_special(float_of(&base->pri), float_of(&num->pri)));
-}
-
 Entity _log(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL != args && OBJECT == args->type &&
-      Class_Tuple == args->obj->_class) {
-    return _log_tuple(task, ctx, (Tuple *)args->obj->_internal_obj);
+  if (IS_TUPLE(args)) {
+    EXTRACT_TUPLE_ARGS(tuple, args, 2, task, ctx);
+    EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, tuple, 0);
+    EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double base, tuple, 1);
+    return entity_float(_log_special(base, num));
   }
   if (args->type != PRIMITIVE) {
     return raise_error(task, ctx, "Cannot perform __log on a non-value.");
@@ -64,48 +50,19 @@ Entity _log(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity _pow(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL == args || OBJECT != args->type ||
-      Class_Tuple != args->obj->_class) {
-    return raise_error(task, ctx, "__pow expects multiple arguments.");
-  }
-  Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(t) != 2) {
-    return raise_error(task, ctx, "__pow expects exactly 2 arguments.");
-  }
-  const Entity *num = tuple_get(t, 0);
-  const Entity *power = tuple_get(t, 1);
+  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
+  EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, t, 0);
+  EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double power, t, 1);
 
-  if (num->type != PRIMITIVE) {
-    return raise_error(task, ctx,
-                       "Cannot perform __pow with non-numeric input.");
-  }
-  if (power->type != PRIMITIVE) {
-    return raise_error(task, ctx,
-                       "Cannot perform __pow with non-numeric power.");
-  }
-  return entity_float(pow(float_of(&num->pri), float_of(&num->pri)));
+  return entity_float(pow(num, power));
 }
 
 Entity _mod(Task *task, Context *ctx, Object *obj, Entity *args) {
-  if (NULL == args || OBJECT != args->type ||
-      Class_Tuple != args->obj->_class) {
-    return raise_error(task, ctx, "mod expects multiple arguments.");
-  }
-  Tuple *t = (Tuple *)args->obj->_internal_obj;
-  if (tuple_size(t) != 2) {
-    return raise_error(task, ctx, "mod expects exactly 2 arguments.");
-  }
-  const Entity *numerator = tuple_get(t, 0);
-  const Entity *denominator = tuple_get(t, 1);
+  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
+  EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double numerator, t, 0);
+  EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double denominator, t, 1);
 
-  if (numerator->type != PRIMITIVE) {
-    return raise_error(task, ctx, "Cannot perform mod with non-numeric input.");
-  }
-  if (denominator->type != PRIMITIVE) {
-    return raise_error(task, ctx, "Cannot perform mod with non-numeric power.");
-  }
-  return entity_float(
-      fmod(float_of(&numerator->pri), float_of(&denominator->pri)));
+  return entity_float(fmod(numerator, denominator));
 }
 
 SingleFloatToCFn(sin, sin);

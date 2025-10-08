@@ -69,24 +69,22 @@ class Tester {
   method test(module) {
     stats = []
     for (_, cls) in module.classes() {
-      test_class_annot = _extract_test_class(cls)
-      if ~test_class_annot {
+      if ~_is_test_class(cls) {
         continue
       }
       setups = _extract_methods(cls, SetUp)
       teardowns =  _extract_methods(cls, TearDown)
       for (_, meth) in cls.all_methods() {
-        test_annot = _extract_test(meth)
-        if ~test_annot {
+        if ~_method_is_test(meth) {
           continue
         }
         pass = True
         err = None
         try {
-          c = cls()
-          setups.each(s -> c.$get(s.name())())
-          c.$get(meth.name())()      
-          teardowns.each(t -> c.$get(t.name())())
+          instance = cls()
+          setups.each(setup -> instance.$get(setup.name())())
+          instance.$get(meth.name())()      
+          teardowns.each(teardown -> instance.$get(teardown.name())())
         } catch e {
           pass = False
           err = e
@@ -95,32 +93,32 @@ class Tester {
       }
     }
     failures = stats.where((_, _, pass, _) -> ~pass)
-    passes = stats.map((_, _, pass, _) -> pass).where(v -> v).len()
-    col = if passes == stats.len() then '32;1' else '31;1'
+    num_passes = stats.count((_, _, pass, _) -> pass)
+    col = if num_passes == stats.len() then '32;1' else '31;1'
     for (_, (cls, meth, _, err)) in failures {
       io.println('Test ' + cls.name() + '.' + meth.name() + '=' + FAIL + '\n')
       io.println(err)
     }
     io.println(
-      'Tests [' + color(col) + str(passes) + '/' + str(stats.len()) + color(0) + '] passed.')
+      'Tests [' + color(col) + str(num_passes) + '/' + str(stats.len()) + color(0) + '] passed.')
   }
 
-  method _extract_test_class(cls) {
+  method _is_test_class(cls) {
     for (_, annot) in cls.all_annotations() {
       if annot is TestClass {
-        return annot
+        return True
       }
     }
-    return None
+    return False
   }
 
-  method _extract_test(func) {
+  method _method_is_test(func) {
     for (_, annot) in func.annotations {
       if annot is Test {
-        return annot
+        return True
       }
     }
-    return None
+    return False
   }
 
   method _extract_methods(test_cls, cls) {

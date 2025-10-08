@@ -26,22 +26,24 @@ int instruction_write(const Instruction *ins, FILE *file, bool minimize) {
   char *tmp;
   int escaped_len = 0, num = 0;
   switch (ins->type) {
-  case INSTRUCTION_NO_ARG:
-    return chars_written + fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
-  case INSTRUCTION_ID:
-    return chars_written + fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
-           fprintf(file, ID_FMT, ins->id);
-  case INSTRUCTION_STRING:
-    escaped_len = escape(ins->str, &tmp);
-    num = chars_written + fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
-          fprintf(file, STR_FMT, escaped_len, tmp);
-    RELEASE(tmp);
-    return num;
-  case INSTRUCTION_PRIMITIVE:
-    return chars_written + _instruction_write_primitive(ins, file, minimize);
-  default:
-    FATALF("Unknown instruction type.");
-    return -1;
+    case INSTRUCTION_NO_ARG:
+      return chars_written + fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
+    case INSTRUCTION_ID:
+      return chars_written +
+             fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
+             fprintf(file, ID_FMT, ins->id);
+    case INSTRUCTION_STRING:
+      escaped_len = escape(ins->str, &tmp);
+      num = chars_written +
+            fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
+            fprintf(file, STR_FMT, escaped_len, tmp);
+      RELEASE(tmp);
+      return num;
+    case INSTRUCTION_PRIMITIVE:
+      return chars_written + _instruction_write_primitive(ins, file, minimize);
+    default:
+      FATALF("Unknown instruction type.");
+      return -1;
   }
 }
 
@@ -49,12 +51,12 @@ int _instruction_write_primitive(const Instruction *ins, FILE *file,
                                  bool minimize) {
   int chars_written = fprintf(file, OP_FMT(minimize), op_to_str(ins->op));
   switch (ptype(&ins->val)) {
-  case PRIMITIVE_INT:
-    return chars_written + fprintf(file, INT_FMT, pint(&ins->val));
-  case PRIMITIVE_FLOAT:
-    return chars_written + fprintf(file, FLT_FMT, pfloat(&ins->val));
-  default:
-    FATALF("Unkown primitive instruction.");
-    return -1;
+    case PRIMITIVE_INT:
+      return chars_written + fprintf(file, INT_FMT, pint(&ins->val));
+    case PRIMITIVE_FLOAT:
+      return chars_written + fprintf(file, FLT_FMT, pfloat(&ins->val));
+    default:
+      FATALF("Unkown primitive instruction.");
+      return -1;
   }
 }

@@ -1,9 +1,9 @@
 import io_ext
 import struct
 
-self.IN = FileReader('__STDIN__', True)
-self.OUT = FileWriter('__STDOUT__', True)
-self.ERROR = FileWriter('__STDERR__', True)
+self.IN = FileReader(i'__STDIN__', True)
+self.OUT = FileWriter(i'__STDOUT__', True)
+self.ERROR = FileWriter(i'__STDERR__', True)
 
 class _FileInternal {
   field file
@@ -13,7 +13,7 @@ class _FileInternal {
       mode.extend('b')
     }
     if a {
-      mode.extend('+')
+      mode.extend(i'+')
     }
     file = __File(fn, mode)
   }
@@ -27,7 +27,7 @@ class _FileInternal {
 class FileReader {
   field fi
   new(fn, binary=False) {
-    fi = _FileInternal(fn, 'r', False, binary)
+    fi = _FileInternal(fn, i'r', False, binary)
   }
   method close() fi.close()
   method gets(n) fi.gets(n)
@@ -39,7 +39,7 @@ class FileReader {
 class FileWriter {
   field fi
   new(fn, append=False, binary=False) {
-    fi = _FileInternal(fn, 'w', append, binary)
+    fi = _FileInternal(fn, i'w', append, binary)
   }
   method write(s) fi.puts(s)
   method writeln(s) {
