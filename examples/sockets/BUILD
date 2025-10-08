@@ -31,5 +31,5 @@ zinnia_binary(
 
 zinnia_binary(
     name = "local",
-    main = "LOCAL.zn",
+    main = "local.zn",
 )
