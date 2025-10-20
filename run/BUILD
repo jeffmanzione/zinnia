@@ -11,6 +11,7 @@ cc_library(
     deps = [
         "//compile",
         "//program/optimization:optimize",
+        "//seed",
         "//util:file",
         "//util/args:commandline",
         "//util/args:commandlines",
