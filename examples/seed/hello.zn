@@ -1,3 +1,4 @@
+_ = None
 
 function greet(name) {
   return __greet(name)

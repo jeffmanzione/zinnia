@@ -1,5 +1,5 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//:zinnia_lang.bzl", "zinnia_binary", "zinnia_cc_library", "zinnia_library", "zinnia_seed")
+# load("//:zinnia_lang.bzl", "zinnia_binary", "zinnia_cc_library", "zinnia_library", "zinnia_seed")
 
 cc_library(
     name = "hello_c",
@@ -19,28 +19,28 @@ cc_library(
     ],
 )
 
-zinnia_cc_library(
-    name = "hello_lib",
-    cc_deps = [":hello_c"],
-    cc_init_fn = "init_hello",
-    src_module = "hello.zn",
-)
+# zinnia_cc_library(
+#     name = "hello_lib",
+#     cc_deps = [":hello_c"],
+#     cc_init_fn = "init_hello",
+#     src_module = "hello.zn",
+# )
 
-zinnia_library(
-    name = "greeter_lib",
-    srcs = ["greeter.zn"],
-)
+# zinnia_library(
+#     name = "greeter_lib",
+#     srcs = ["greeter.zn"],
+# )
 
-zinnia_seed(
-    name = "hello",
-    deps = [
-        ":greeter_lib",
-        ":hello_lib",
-    ],
-)
+# zinnia_seed(
+#     name = "hello",
+#     deps = [
+#         ":greeter_lib",
+#         ":hello_lib",
+#     ],
+# )
 
-zinnia_binary(
-    name = "run_hello",
-    main = "run_hello.zn",
-    deps = [":hello"],
-)
+# zinnia_binary(
+#     name = "run_hello",
+#     main = "run_hello.zn",
+#     deps = [":hello"],
+# )
