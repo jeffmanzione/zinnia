@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <zip.h>
 
-#include "util/file/file_util.h"
-#include "util/string_util.h"
+#include "file-utils/file_utils.h"
+#include "file-utils/string_utils.h"
 
 typedef void dll_handle;
 typedef zip_t znseed_t;

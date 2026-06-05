@@ -13,9 +13,9 @@ cc_library(
         "-rdynamic",
     ],
     deps = [
-        "//util:string_util",
         "//vm",
-        "@file_utils//util/file:file_util",
+        "@jeffmanzione_file_utils//file-utils:file_utils",
+        "@jeffmanzione_file_utils//file-utils:string_utils",
         "@libzip",
     ],
 )
