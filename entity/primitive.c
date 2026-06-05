@@ -5,55 +5,59 @@
 
 #include "entity/primitive.h"
 
+#include <assert.h>
 #include <stdint.h>
-
-#include "debug/debug.h"
+#include <stdlib.h>
 
 PrimitiveType ptype(const Primitive *p) {
-  ASSERT(NOT_NULL(p));
+  assert(p != NULL);
   return p->_type;
 }
 
 bool pbool(const Primitive *p) {
-  ASSERT(NOT_NULL(p), p->_type == PRIMITIVE_BOOL);
+  assert(p != NULL);
+  assert(p->_type == PRIMITIVE_BOOL);
   return p->_bool_val;
 }
 
 int8_t pchar(const Primitive *p) {
-  ASSERT(NOT_NULL(p), p->_type == PRIMITIVE_CHAR);
+  assert(p != NULL);
+  assert(p->_type == PRIMITIVE_CHAR);
   return p->_char_val;
 }
 
 int64_t pint(const Primitive *p) {
-  ASSERT(NOT_NULL(p), p->_type == PRIMITIVE_INT);
+  assert(p != NULL);
+  assert(p->_type == PRIMITIVE_INT);
   return p->_int_val;
 }
 
 double pfloat(const Primitive *p) {
-  ASSERT(NOT_NULL(p), p->_type == PRIMITIVE_FLOAT);
+  assert(p != NULL);
+  assert(p->_type == PRIMITIVE_FLOAT);
   return p->_float_val;
 }
 
 void pset_bool(Primitive *p, bool val) {
-  ASSERT(NOT_NULL(p));
+  assert(p != NULL);
   p->_type = PRIMITIVE_BOOL;
   p->_bool_val = val;
 }
 
 void pset_char(Primitive *p, int8_t val) {
-  ASSERT(NOT_NULL(p));
+  assert(p != NULL);
   p->_type = PRIMITIVE_CHAR;
   p->_char_val = val;
 }
 
 void pset_int(Primitive *p, int64_t val) {
-  ASSERT(NOT_NULL(p));
+  assert(p != NULL);
   p->_type = PRIMITIVE_INT;
   p->_int_val = val;
 }
 
 void pset_float(Primitive *p, double val) {
-  ASSERT(NOT_NULL(p));
+  assert(p != NULL);
   p->_type = PRIMITIVE_FLOAT;
   p->_float_val = val;
 }
@@ -81,7 +85,7 @@ Primitive primitive_float(double val) {
 bool bool_of(const Primitive *p) {
   switch (ptype(p)) {
     case PRIMITIVE_BOOL:
-      return (bool)pbool(p);
+      return pbool(p);
     case PRIMITIVE_CHAR:
       return (bool)pchar(p);
     case PRIMITIVE_INT:
@@ -96,7 +100,7 @@ int8_t char_of(const Primitive *p) {
     case PRIMITIVE_BOOL:
       return (int8_t)pbool(p);
     case PRIMITIVE_CHAR:
-      return (int8_t)pchar(p);
+      return pchar(p);
     case PRIMITIVE_INT:
       return (int8_t)pint(p);
     default:
@@ -111,7 +115,7 @@ int64_t int_of(const Primitive *p) {
     case PRIMITIVE_CHAR:
       return (int64_t)pchar(p);
     case PRIMITIVE_INT:
-      return (int64_t)pint(p);
+      return pint(p);
     default:
       return (int64_t)pfloat(p);
   }
@@ -126,7 +130,7 @@ double float_of(const Primitive *p) {
     case PRIMITIVE_INT:
       return (double)pint(p);
     default:
-      return (double)pfloat(p);
+      return pfloat(p);
   }
 }
 

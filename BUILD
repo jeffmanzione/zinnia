@@ -21,3 +21,9 @@ cc_binary(
     srcs = ["zinniap.c"],
     deps = ["//package"],
 )
+
+cc_binary(
+    name = "zinnias",
+    srcs = ["zinnias.c"],
+    deps = ["//seed"],
+)

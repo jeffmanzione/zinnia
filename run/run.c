@@ -22,6 +22,7 @@
 #include "lang/semantic_analyzer/semantic_analyzer.h"
 #include "program/optimization/optimize.h"
 #include "program/tape.h"
+#include "seed/seed.h"
 #include "struct/alist.h"
 #include "struct/map.h"
 #include "struct/set.h"
@@ -111,18 +112,32 @@ void run(const Set *source_files, ArgStore *store) {
       FileLoc_iter iter = file_locs_iter(locs);
       for (; fl_has(&iter); fl_inc(&iter)) {
         FileLoc *loc = fl_value(&iter);
-        mm_register_module(mm, file_loc_full_path(loc),
-                           file_loc_relative_path(loc), NULL, -1);
+        const char *full_path = file_loc_full_path(loc);
+        if (ends_with(full_path, ZNSEED_EXTENSION)) {
+          char error_buf[255];
+          if (!load_znseed_file(vm, full_path, error_buf)) {
+            FATALF("%s", error_buf);
+          }
+        } else {
+          mm_register_module(mm, full_path, file_loc_relative_path(loc), NULL,
+                             -1);
+        }
       }
       file_locs_delete(locs);
-
     } else {
-      ModuleInfo *module_info = mm_register_module(mm, src, src, NULL, -1);
-      if (NULL == main_module) {
-        main_module = modulemanager_load(mm, module_info);
-        main_module->_is_initialized = true;
-        object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                          MAIN_KEY, &TRUE_ENTITY);
+      if (ends_with(src, ZNSEED_EXTENSION)) {
+        char error_buf[255];
+        if (!load_znseed_file(vm, src, error_buf)) {
+          FATALF("%s", error_buf);
+        }
+      } else {
+        ModuleInfo *module_info = mm_register_module(mm, src, src, NULL, -1);
+        if (NULL == main_module) {
+          main_module = modulemanager_load(mm, module_info);
+          main_module->_is_initialized = true;
+          object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
+                            MAIN_KEY, &TRUE_ENTITY);
+        }
       }
     }
   }

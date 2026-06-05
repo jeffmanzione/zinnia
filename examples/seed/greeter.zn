@@ -1,0 +1,9 @@
+import io
+
+import 'examples/seed/hello'
+
+class Greeter {
+  method greet(name) {
+    io.print(hello.greet(name))
+  }
+}

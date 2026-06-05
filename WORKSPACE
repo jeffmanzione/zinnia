@@ -1,8 +1,8 @@
 # Legacy file for dependencies that can be deleted once all dependencies are migrated to bzlmod.
 
-workspace(name = "com_github_jeffmanzione_zinnia")
-
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+workspace(name = "com_github_jeffmanzione_zinnia")
 
 git_repository(
     name = "c_data_structures",

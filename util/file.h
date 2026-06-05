@@ -7,6 +7,7 @@
 #define UTIL_FILE_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "struct/alist.h"
 
