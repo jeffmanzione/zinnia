@@ -1,3 +1,2 @@
-common --enable_workspace
 common --registry=https://bcr.bazel.build
 common --registry=https://raw.githubusercontent.com/jeffmanzione/bazel-registry/refs/heads/main/

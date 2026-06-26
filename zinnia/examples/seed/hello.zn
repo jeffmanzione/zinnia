@@ -1,0 +1,5 @@
+_ = None
+
+function produce_greeting(name) {
+  return __greet(name)
+}

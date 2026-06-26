@@ -1,3 +1,0 @@
-import 'examples/seed/greeter'
-
-greeter.Greeter().greet('Jeff')

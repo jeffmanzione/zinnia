@@ -1,0 +1,3 @@
+import 'zinnia/examples/seed/greeter'
+
+greeter.Greeter().greet('Jeff')

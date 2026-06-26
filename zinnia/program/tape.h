@@ -1,0 +1,128 @@
+// instruction.h
+//
+// Created on: Jun 6, 2020
+//     Author: Jeff Manzione
+
+#ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_PROGRAM_TAPE_H_
+#define COM_GITHUB_JEFFMANZIONE_ZINNIA_PROGRAM_TAPE_H_
+
+#include <stdbool.h>
+
+#include "c-data-structures/arraylike.h"
+#include "c-data-structures/stable_maplike.h"
+#include "file-utils/file_info.h"
+#include "language-tools/lexer/token.h"
+#include "zinnia/program/instruction.h"
+#include "zinnia/util/error.h"
+#include "zinnia/util/void_array.h"
+
+typedef struct {
+  // TODO: Something that points to the file, func, etc...
+  int32_t line, col;
+  const Token *token;
+  // Only set if there is another source file that generated the file read.
+  int32_t source_line, source_col;
+  const Token *source_token;
+} SourceMapping;
+
+DEFINE_ARRAYLIKE(SourceMappingArray, SourceMapping);
+
+typedef struct {
+  const char *name;
+  uint32_t index;
+  bool is_const, is_async;
+} FunctionRef;
+
+DEFINE_STABLE_MAPLIKE(FunctionRefMap, char *, FunctionRef);
+
+typedef struct {
+  const char *name;
+} FieldRef;
+
+DEFINE_STABLE_MAPLIKE(FieldRefMap, char *, FieldRef);
+
+typedef struct {
+  const char *name;
+  uint32_t start_index;  // inclusive
+  uint32_t end_index;    // exclusive
+  FunctionRefMap func_refs;
+  FieldRefMap field_refs;
+  CharPtrArray supers;
+} ClassRef;
+
+DEFINE_STABLE_MAPLIKE(ClassRefMap, char *, ClassRef);
+DEFINE_ARRAYLIKE(ClassRefPtrArray, ClassRef *);
+
+typedef struct Tape_ Tape;
+
+// Access-related functions.
+const Instruction *tape_get(const Tape *tape, uint32_t index);
+Instruction *tape_get_mutable(Tape *tape, uint32_t index);
+const SourceMapping *tape_get_source(const Tape *tape, uint32_t index);
+size_t tape_size(const Tape *tape);
+
+uint32_t tape_class_count(const Tape *tape);
+ClassRefMapIOIterator tape_classes(const Tape *tape);
+
+uint32_t tape_func_count(const Tape *tape);
+FunctionRefMapIOIterator tape_functions(const Tape *tape);
+
+const char *tape_module_name(const Tape *tape);
+
+// Build-related functions.
+Tape *tape_create();
+void tape_delete(Tape *tape);
+Instruction *tape_add(Tape *tape);
+SourceMapping *tape_add_source(Tape *tape, Instruction *ins);
+
+void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
+                              bool is_async);
+void tape_start_class(Tape *tape, const char name[]);
+void tape_end_class(Tape *tape);
+void tape_field(Tape *tape, const char *field);
+ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
+                                    uint32_t index);
+void tape_end_class_at_index(Tape *tape, uint32_t index);
+
+void tape_append(Tape *head, Tape *tail);
+
+void tape_write(const Tape *tape, FILE *file, bool minimize);
+void tape_read(Tape *const tape, TokenArray *tokens);
+
+void tape_set_external_source(Tape *const tape, const char file_name[]);
+const char *tape_get_external_source(const Tape *const tape);
+
+void tape_set_body(Tape *const tape, FileInfo *fi);
+const char *tape_get_sourceline(const Tape *const tape, int line);
+
+// **********************
+// Specialized functions.
+// **********************
+int tape_ins_raw(Tape *tape, Instruction *ins);
+int tape_ins(Tape *tape, Op op, const Token *token);
+int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token);
+
+int tape_ins_int(Tape *tape, Op op, int val, const Token *token);
+
+// int tape_ins_int(Tape *tape, Op op, int val, const Token *token);
+int tape_ins_no_arg(Tape *tape, Op op, const Token *token);
+int tape_ins_anon(Tape *tape, Op op, const Token *token);
+int tape_ins_neg(Tape *tape, Op op, const Token *token);
+
+int tape_label(Tape *tape, const Token *token);
+int tape_label_async(Tape *tape, const Token *token);
+int tape_label_text(Tape *tape, const char text[]);
+int tape_label_text_async(Tape *tape, const char text[]);
+int tape_anon_label(Tape *tape, const Token *token);
+int tape_anon_label_async(Tape *tape, const Token *token);
+
+int tape_module(Tape *tape, const Token *token);
+int tape_class(Tape *tape, const Token *token);
+const ClassRef *tape_get_class(const Tape *tape, const char class_name[]);
+int tape_class_with_parents(Tape *tape, const Token *token,
+                            CharPtrArray *tokens);
+int tape_endclass(Tape *tape, const Token *token);
+
+Primitive token_to_primitive(const Token *tok);
+
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_PROGRAM_TAPE_H_ */

@@ -1,0 +1,45 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//zinnia:zinnia_lang.bzl", "zinnia_binary", "zinnia_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "_custom",
+    srcs = ["_custom.c"],
+    hdrs = ["_custom.h"],
+    linkstatic = False,
+    deps = [
+        "//zinnia/entity",
+        "//zinnia/entity:object",
+        "//zinnia/entity:primitive",
+        "//zinnia/entity/native",
+        "//zinnia/entity/native:error",
+        "//zinnia/util:error",
+        "//zinnia/vm:module_manager",
+        "//zinnia/vm/process:processes",
+    ],
+    alwayslink = True,
+)
+
+cc_binary(
+    name = "_custom.dll",
+    linkshared = 1,
+    deps = [":_custom"],
+)
+
+zinnia_library(
+    name = "custom",
+    srcs = ["custom.zn"],
+)
+
+zinnia_binary(
+    name = "dynamic",
+    cc_deps = [
+        ":_custom.dll",
+    ],
+    main = "dynamic.zn",
+    deps = [":custom"],
+)
