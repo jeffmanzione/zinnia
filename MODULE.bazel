@@ -2,7 +2,7 @@
 
 module(
     name = "zinnia",
-    version = "0.0.7",
+    version = "0.0.0",
     compatibility_level = 1,
 )
 
