@@ -57,7 +57,7 @@ void modulemanager_init(ModuleManager *mm, Heap *heap) {
   ModuleInfoMap_init(mm->_modules, hash_interned_string,
                      compare_interned_strings);
   // set_init_default(&mm->_files_processed);
-  mm->global_intern = global_intern;
+  mm->intern = global_intern;
 }
 
 void modulemanager_finalize(ModuleManager *mm) {
@@ -118,14 +118,13 @@ ModuleInfo *create_moduleinfo_(ModuleManager *mm, const char module_name[],
                                const char relative_path[]) {
   ASSERT(mm != NULL);
   ModuleInfo *module_info;
-  if (!ModuleInfoMap_insert(mm->_modules, mm->global_intern(module_key),
+  if (!ModuleInfoMap_insert(mm->_modules, mm->intern(module_key),
                             sizeof(char *), &module_info)) {
     FATALF("Module by name '%s' already exists.", module_name);
   }
-  module_info->file_path =
-      (NULL != full_path) ? mm->global_intern(full_path) : NULL;
+  module_info->file_path = (NULL != full_path) ? mm->intern(full_path) : NULL;
   module_info->relative_file_path =
-      (NULL != relative_path) ? mm->global_intern(relative_path) : NULL;
+      (NULL != relative_path) ? mm->intern(relative_path) : NULL;
   module_info->key = module_key;
   module_info->module_name_from_file = module_name;
   module_info->is_inlined_file = false;
@@ -362,7 +361,7 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
   char *dir_path, *module_name_tmp, *ext;
   split_path_file(full_path, &dir_path, &module_name_tmp, &ext);
 
-  const char *module_name = mm->global_intern(module_name_tmp);
+  const char *module_name = mm->intern(module_name_tmp);
 
   const char *module_key;
 
@@ -379,7 +378,7 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
       path_no_ext[strlen(path_no_ext) - 4] = '\0';
     }
     int offset = starts_with(path_no_ext, "./") ? 2 : 0;
-    module_key = mm->global_intern(path_no_ext + offset);
+    module_key = mm->intern(path_no_ext + offset);
     free(path_no_ext);
   }
 
@@ -419,10 +418,10 @@ ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
                                        NativeModuleInitFn init_fn) {
   ModuleInfo *module_info = create_and_init_moduleinfo_(
-      mm, mm->global_intern(module_name), mm->global_intern(module_name), NULL,
-      NULL, NULL, init_fn,
+      mm, mm->intern(module_name), mm->intern(module_name), NULL, NULL, NULL,
+      init_fn,
       /*is_dynamic*/ true);
-  module_init(&module_info->module, mm->global_intern(module_name), NULL, NULL,
+  module_init(&module_info->module, mm->intern(module_name), NULL, NULL,
               module_name, NULL);
   return module_info;
 }
@@ -455,7 +454,7 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]) {
   ModuleInfo *module_info = ModuleInfoMap_find_ref(
-      mm->_modules, mm->global_intern(module_key), sizeof(char *));
+      mm->_modules, mm->intern(module_key), sizeof(char *));
   if (NULL == module_info) {
     return NULL;
   }

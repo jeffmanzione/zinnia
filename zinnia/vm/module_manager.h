@@ -22,7 +22,7 @@ typedef struct {
   Heap *_heap;
   ModuleInfoMap *_modules;  // ModuleInfo
   // Used to intern method names in dynamically-loaded modules.
-  InternFn global_intern;
+  InternFn intern;
 } ModuleManager;
 
 typedef struct ModuleInfo_ ModuleInfo;

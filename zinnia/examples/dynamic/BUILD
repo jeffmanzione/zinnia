@@ -1,6 +1,6 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//zinnia:zinnia_lang.bzl", "zinnia_binary", "zinnia_library")
+load("//zinnia:zinnia.bzl", "zinnia_binary", "zinnia_library")
 
 package(
     default_visibility = ["//visibility:public"],

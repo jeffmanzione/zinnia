@@ -70,7 +70,7 @@ void print_data_as_char_array_var(const char var_name[], const char content[],
                                   uint32_t content_size, FILE *target) {
   fprintf(target, "const unsigned char %s[] = {\n  ", var_name);
   for (int i = 0; i < content_size; ++i) {
-    fprintf(target, "0x%02x, ", content[i]);
+    fprintf(target, "0x%02hhX, ", content[i]);
   }
   fprintf(target, "};\n\n");
 }

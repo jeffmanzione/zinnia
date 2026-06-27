@@ -32,5 +32,5 @@ Entity greet_(Task *task, Context *ctx, Object *obj, Entity *args) {
 void init_hello(ModuleManager *mm, Module *hello) {
   verify_init_fn_signature(init_hello);
 
-  native_function(hello, mm->global_intern("__greet"), greet_);
+  native_function(hello, mm->intern("__greet"), greet_);
 }

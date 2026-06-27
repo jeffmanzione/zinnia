@@ -20,8 +20,8 @@ Download the latest binaries released on GitHub.
 
 ## Building this project from source
 
-| :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install). I promise it is very easy to install! |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install) |
+| --------------------------------------------------------------------------------------------------------------------------------------------- |
 
 To build zinnia:
 

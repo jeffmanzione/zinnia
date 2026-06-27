@@ -49,7 +49,7 @@ Entity __tan_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
 void _init_custom(ModuleManager *mm, Module *custom) {
   verify_init_fn_signature(_init_custom);
 
-  native_function(custom, mm->global_intern("sin"), __sin_impl);
-  native_function(custom, mm->global_intern("cos"), __cos_impl);
-  native_function(custom, mm->global_intern("tan"), __tan_impl);
+  native_function(custom, mm->intern("sin"), __sin_impl);
+  native_function(custom, mm->intern("cos"), __cos_impl);
+  native_function(custom, mm->intern("tan"), __tan_impl);
 }

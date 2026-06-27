@@ -22,6 +22,5 @@ Entity _current_process_id(Task *task, Context *ctx, Object *obj,
 void init_pid(ModuleManager *mm, Module *pid) {
   verify_init_fn_signature(init_pid);
 
-  native_function(pid, mm->global_intern("__current_process_id"),
-                  _current_process_id);
+  native_function(pid, mm->intern("__current_process_id"), _current_process_id);
 }
