@@ -29,48 +29,6 @@ struct manifest_row {
     exit(-1);                            \
   }
 
-// int main(int argc, char *argv[]) {
-//   // const char *seed_name = argv[1];
-//   // const char *seed_filepath = argv[2];
-//   // const char *source_file = argv[3];
-//   // const char *dll_file = argv[4];
-//   // const char *dll_init_fn = argv[5];
-
-//   // const char seed_name[] = "dynamic";
-//   // const char seed_filepath[] ="dynamic.znseed";
-//   const char *seed_filepath = argv[1];
-
-//   // struct zinnia_module_info infos[] = {
-//   //     {
-//   //         .module_name = "zinnia/examples/dynamic/custom",
-//   //         .source_input_filepath = "zinnia/examples/dynamic/custom.zn",
-//   //         .source_output_filepath = "zinnia/examples/dynamic/custom.zn",
-//   //         .dll_input_filepath = "bazel-bin/examples/dynamic/_custom.dll",
-//   //         .dll_output_filepath = "zinnia/examples/dynamic/custom.dll",
-//   //         .dll_init_fn = "_init_custom",
-//   //     },
-//   //     {
-//   //         .module_name = "zinnia/examples/dynamic/dynamic",
-//   //         .source_input_filepath = "zinnia/examples/dynamic/dynamic.zn",
-//   //         .source_output_filepath = "zinnia/examples/dynamic/dynamic.zn",
-//   //         .dll_input_filepath = NULL,
-//   //         .dll_output_filepath = NULL,
-//   //         .dll_init_fn = NULL,
-//   //     },
-//   // };
-
-//   // create_znseed_file(seed_name, sizeof(infos) / sizeof(infos[0]), infos,
-//   //                    seed_filepath);
-
-//   char error_buf[255];
-//   if (!load_znseed_file(NULL, seed_filepath, error_buf)) {
-//     fprintf(stderr, "%s\n", error_buf);
-//     return EXIT_FAILURE;
-//   }
-
-//   return EXIT_SUCCESS;
-// }
-
 void write_file_to_seed_(const char input_filepath[],
                          const char output_filepath[], znseed_t *seed) {
   zip_source_t *src = zip_source_file(seed,

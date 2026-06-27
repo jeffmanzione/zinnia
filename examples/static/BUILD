@@ -1,0 +1,42 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//zinnia:zinnia.bzl", "zinnia_binary", "zinnia_cc_library")
+
+cc_library(
+    name = "pid_cc_lib",
+    srcs = ["pid.c"],
+    hdrs = ["pid.h"],
+    deps = [
+        "//zinnia/entity",
+        "//zinnia/entity:object",
+        "//zinnia/entity/native",
+        "//zinnia/vm:module_manager",
+        "//zinnia/vm/process:processes",
+    ],
+)
+
+zinnia_cc_library(
+    name = "pid",
+    cc_deps = [
+        ":pid_cc_lib",
+    ],
+    cc_init_fn = "init_pid",
+    src_module = "pid.zn",
+)
+
+zinnia_cc_library(
+    name = "custom_math",
+    cc_deps = [
+        "//examples/dynamic:_custom",
+    ],
+    cc_init_fn = "_init_custom",
+    src_module = "custom_math.zn",
+)
+
+zinnia_binary(
+    name = "pid_test",
+    main = "pid_test.zn",
+    modules = [
+        ":pid",
+        ":custom_math",
+    ],
+)

@@ -1,0 +1,8 @@
+; To run: bazel run //examples/dynamic
+
+import io
+import 'examples/dynamic/custom'
+
+io.println(custom.sin(1.5))
+io.println(custom.cos(1.5))
+io.println(custom.tan(1.5))

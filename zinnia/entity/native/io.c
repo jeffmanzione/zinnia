@@ -116,11 +116,15 @@ Entity file_constructor_(Task *task, Context *ctx, Object *obj, Entity *args) {
       fn = ALLOC_STRNDUP(fn, fn_len);
       mode = ALLOC_STRNDUP(mode, mode_len);
       f->fp = fopen(fn, mode);
+      if (NULL == f->fp) {
+        Entity error =
+            raise_error(task, ctx, "File '%s' could not be opened.", fn);
+        RELEASE(fn);
+        RELEASE(mode);
+        return error;
+      }
       RELEASE(fn);
       RELEASE(mode);
-      if (NULL == f->fp) {
-        return raise_error(task, ctx, "File '%s' could not be opened.", fn);
-      }
     }
   } else {
     return raise_error(task, ctx, "Unknown input.");

@@ -1,6 +1,0 @@
-import io
-import 'zinnia/examples/static/custom_math'
-import 'zinnia/examples/static/pid'
-
-io.println('current_process_id = ' + str(pid.current_process_id()))
-io.println(custom_math.sin(1.5))

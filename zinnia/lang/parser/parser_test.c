@@ -38,11 +38,10 @@ int main(int argc, const char *args[]) {
     }
   }
 
-  // parser_finalize(&parser);
-
-  // TokenArray_finalize(&tokens);
+  parser_finalize(&parser);
+  TokenArray_finalize(&tokens);
   // // }
 
-  // global_string_intern_pool_finalize();
+  global_string_intern_pool_finalize();
   return 0;
 }
