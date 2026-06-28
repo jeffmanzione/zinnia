@@ -8,6 +8,7 @@ cc_library(
     name = "compile",
     srcs = ["compile.c"],
     hdrs = ["compile.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "//zinnia/alloc",
         "//zinnia/lang/parser:lang_parser",

@@ -4,21 +4,8 @@
 #include <math.h>
 
 #include "c-data-structures/arraylike.h"
-#include "language-tools/intern.h"
-#include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/array/array.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/builtin.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/util/error.h"
-#include "zinnia/vm/intern.h"
-#include "zinnia/vm/process/context.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/process/task.h"
+#include "zinnia/entity/native/native_hdrs.h"
 
 #define ARRAY_INITIAL_SIZE 16
 

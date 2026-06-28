@@ -6,15 +6,7 @@ cc_library(
     srcs = ["hello.c"],
     hdrs = ["hello.h"],
     deps = [
-        "//zinnia/entity",
-        "//zinnia/entity:object",
-        "//zinnia/entity/native",
-        "//zinnia/entity/native:error",
-        "//zinnia/entity/string:string_helper",
-        "//zinnia/vm",
-        "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:task",
+        "//zinnia/entity/native:native_hdrs",
     ],
 )
 

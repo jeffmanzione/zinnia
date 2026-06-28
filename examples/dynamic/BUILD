@@ -12,14 +12,7 @@ cc_library(
     hdrs = ["_custom.h"],
     linkstatic = False,
     deps = [
-        "//zinnia/entity",
-        "//zinnia/entity:object",
-        "//zinnia/entity:primitive",
-        "//zinnia/entity/native",
-        "//zinnia/entity/native:error",
-        "//zinnia/util:error",
-        "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
+        "//zinnia/entity/native:native_hdrs",
     ],
     alwayslink = True,
 )

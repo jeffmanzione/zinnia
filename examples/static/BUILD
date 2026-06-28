@@ -6,11 +6,7 @@ cc_library(
     srcs = ["pid.c"],
     hdrs = ["pid.h"],
     deps = [
-        "//zinnia/entity",
-        "//zinnia/entity:object",
-        "//zinnia/entity/native",
-        "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
+        "//zinnia/entity/native:native_hdrs",
     ],
 )
 

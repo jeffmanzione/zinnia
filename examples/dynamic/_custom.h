@@ -6,8 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_
 
-#include "zinnia/entity/object.h"
-#include "zinnia/vm/module_manager.h"
+#include "zinnia/entity/native/native_hdrs.h"
 
 #ifdef OS_WINDOWS
 __declspec(dllexport)

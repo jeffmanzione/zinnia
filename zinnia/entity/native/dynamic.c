@@ -13,21 +13,6 @@
 #include <dlfcn.h>
 #endif
 
-#include "language-tools/intern.h"
-#include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/native/native_helpers.h"
-#include "zinnia/entity/string/string.h"
-#include "zinnia/entity/string/string_helper.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/vm/module_manager.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/vm.h"
-
-
 Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
   EXTRACT_TUPLE_ARGS(t, args, 3, task, ctx);
 
@@ -73,7 +58,8 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
   NativeModuleInitFn init_fn =
       (NativeModuleInitFn)GetProcAddress(dl_handle, init_fn_name);
 #else
-  NativeModuleInitFn init_fn = (NativeModuleInitFn)dlsym(dl_handle, init_fn_name);
+  NativeModuleInitFn init_fn =
+      (NativeModuleInitFn)dlsym(dl_handle, init_fn_name);
 #endif
 
   if (NULL == init_fn) {

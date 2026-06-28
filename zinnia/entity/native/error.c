@@ -22,7 +22,6 @@
 #include "zinnia/vm/process/processes.h"
 #include "zinnia/vm/process/task.h"
 
-
 Class *Class_StackLine;
 
 typedef struct {

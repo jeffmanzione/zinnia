@@ -5,17 +5,7 @@
 
 #include "zinnia/entity/native/time.h"
 
-#include "language-tools/intern.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/native/native_helpers.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/heap/heap.h"
 #include "zinnia/util/time.h"
-
 
 #define USEC_PER_SEC 1000 * 1000;
 

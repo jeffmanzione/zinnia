@@ -3,7 +3,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//zinnia:zinnia.bzl", "zinnia_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//zinnia:internal"],
 )
 
 filegroup(

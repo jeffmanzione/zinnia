@@ -7,19 +7,6 @@
 
 #include <math.h>
 
-#include "language-tools/intern.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/native/native_helpers.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/primitive.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/util/error.h"
-#include "zinnia/vm/intern.h"
-
-
 #define SingleFloatFn(name, val_var, body)                                     \
   Entity name##_(Task *task, Context *ctx, Object *obj, Entity *args) {        \
     if (NULL == args || PRIMITIVE != args->type) {                             \

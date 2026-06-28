@@ -2,7 +2,7 @@ load("@jeffmanzione_language_tools//language-tools/parser:parser_builder.bzl", "
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//zinnia:internal"],
 )
 
 parser_builder(

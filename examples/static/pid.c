@@ -1,9 +1,6 @@
 
 #include "examples/static/pid.h"
 
-#include "zinnia/entity/native/native.h"
-#include "zinnia/util/platform.h"
-
 #ifndef OS_WINDOWS
 #include <unistd.h>
 #endif

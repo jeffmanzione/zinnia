@@ -1,11 +1,4 @@
-#include "zinnia/examples/seed/hello.h"
-
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/string/string_helper.h"
+#include "examples/seed/hello.h"
 
 #define GREET_PREFIX "Hello, "
 #define GREET_SUFFIX "!\n"

@@ -15,18 +15,6 @@
 #endif
 
 #include "file-utils/file_utils.h"
-#include "language-tools/intern.h"
-#include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/native/native_helpers.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/string/string.h"
-#include "zinnia/entity/string/string_helper.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/util/error.h"
-#include "zinnia/vm/intern.h"
 
 #define MAX_EVENTS 1024
 #define FILE_NAME_LENGTH_ESTIMATE 16

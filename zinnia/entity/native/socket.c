@@ -3,22 +3,9 @@
 // Created on: Jan 27, 2019
 //     Author: Jeff Manzione
 
-#include "zinnia/util/socket.h"
+#include "zinnia/entity/native/socket.h"
 
-#include "language-tools/intern.h"
-#include "zinnia/entity/array/array.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/native/native_helpers.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/string/string.h"
-#include "zinnia/entity/string/string_helper.h"
-#include "zinnia/entity/tuple/tuple.h"
 #include "zinnia/util/socket.h"
-#include "zinnia/vm/process/processes.h"
-
 
 #define BUFFER_SIZE 4096
 #define SOCKET_ERROR (-1)

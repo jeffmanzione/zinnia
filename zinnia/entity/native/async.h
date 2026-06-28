@@ -6,10 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_ASYNC_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_ASYNC_H_
 
-#include "zinnia/entity/object.h"
-#include "zinnia/heap/heap.h"
-#include "zinnia/vm/module_manager.h"
-#include "zinnia/vm/process/processes.h"
+#include "zinnia/entity/native/native_hdrs.h"
 
 typedef struct Future_ Future;
 

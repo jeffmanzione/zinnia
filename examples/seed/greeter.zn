@@ -1,6 +1,6 @@
 import io
 
-import 'zinnia/examples/seed/hello'
+import 'examples/seed/hello'
 
 class Greeter {
   method greet(name) {

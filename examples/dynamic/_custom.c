@@ -7,18 +7,6 @@
 
 #include <math.h>
 
-#include "language-tools/intern.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
-#include "zinnia/entity/native/error.h"
-#include "zinnia/entity/native/native.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/primitive.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/util/error.h"
-#include "zinnia/util/platform.h"
-#include "zinnia/vm/intern.h"
-
 Entity __sin_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (NULL == args || PRIMITIVE != args->type) {
     return raise_error(task, ctx,

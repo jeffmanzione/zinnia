@@ -6,8 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_TIME_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_TIME_H_
 
-#include "zinnia/entity/object.h"
-#include "zinnia/vm/module_manager.h"
+#include "zinnia/entity/native/native_hdrs.h"
 
 void time_add_native(ModuleManager *mm, Module *math);
 

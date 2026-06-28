@@ -1,7 +1,7 @@
 load("@jeffmanzione_language_tools//language-tools/lexer:lexer_builder.bzl", "lexer_builder")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//zinnia:internal"],
 )
 
 lexer_builder(

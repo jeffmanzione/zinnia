@@ -1,7 +1,7 @@
 load("//zinnia:zinnia.bzl", "zinnia_binary")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//visibility:private"],
 )
 
 zinnia_binary(
