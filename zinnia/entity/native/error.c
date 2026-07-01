@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/entity.h"

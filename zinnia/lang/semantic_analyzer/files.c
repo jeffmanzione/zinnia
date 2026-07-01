@@ -1,10 +1,8 @@
-#include "language-tools/intern.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
-
 
 void set_function_def(const SyntaxTree *fn_identifier, FunctionDef *func);
 FunctionDef populate_function_variant(

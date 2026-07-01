@@ -11,7 +11,6 @@
 #include "file-utils/file_info.h"
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
-#include "language-tools/intern.h"
 #include "language-tools/lexer/token.h"
 #include "language-tools/parser/parser.h"
 #include "language-tools/semantic_analyzer/expression_tree.h"

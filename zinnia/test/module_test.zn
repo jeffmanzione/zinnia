@@ -1,0 +1,27 @@
+import test
+
+import 'examples/module/one/one'
+import 'examples/module/one/two/two'
+import 'examples/module/one/two/three/three'
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class ModuleTest {
+  @test.Test
+  method test_module1() {
+    expect(one.ONE, 1)
+  }
+
+  @test.Test
+  method test_module2() {
+    expect(two.TWO, 2)
+  }
+  
+  @test.Test
+  method test_module3() {
+    expect(three.THREE, 3)
+  }
+}

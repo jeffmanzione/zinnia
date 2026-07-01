@@ -9,12 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/util/error.h"
 #include "zinnia/util/void_array.h"
 #include "zinnia/version/version.h"
-
+#include "zinnia/vm/intern.h"
 
 IMPL_SETLIKE(SourceNameSet, char *);
 IMPL_MAPLIKE(ArgKeyMap, char *, ArgKey);

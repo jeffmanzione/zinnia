@@ -33,7 +33,6 @@ cc_library(
         "//zinnia/vm/process:processes",
         "//zinnia/vm/process:remote",
         "//zinnia/vm/process:task",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -90,12 +89,12 @@ cc_library(
         "//zinnia/util:error",
         "//zinnia/util:void_array",
         "//zinnia/vm",
+        "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
         "//zinnia/vm/process:processes",
         "//zinnia/vm/process:remote",
         "//zinnia/vm/process:task",
         "@jeffmanzione_file_utils//file-utils:file_info",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -154,10 +153,10 @@ cc_library(
         "//zinnia/entity/string:string_helper",
         "//zinnia/entity/tuple",
         "//zinnia/util:error",
+        "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
         "//zinnia/vm/process:processes",
         "//zinnia/vm/process:task",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 

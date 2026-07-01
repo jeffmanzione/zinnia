@@ -46,6 +46,5 @@ cc_library(
         "//zinnia/program:instruction",
         "//zinnia/program:tape",
         "//zinnia/vm:intern",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )

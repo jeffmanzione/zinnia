@@ -13,8 +13,8 @@ cc_library(
         "//zinnia/entity",
         "//zinnia/entity:object",
         "//zinnia/util:error",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -29,6 +29,6 @@ cc_library(
         "//zinnia/entity/class:classes",
         "//zinnia/heap",
         "//zinnia/util:error",
-        "@jeffmanzione_language_tools//language-tools:intern",
+        "//zinnia/vm:intern",
     ],
 )

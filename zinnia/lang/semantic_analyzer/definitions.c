@@ -1,6 +1,5 @@
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 
-#include "language-tools/intern.h"
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"

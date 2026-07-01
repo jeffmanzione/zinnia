@@ -24,6 +24,5 @@ cc_library(
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
         "@jeffmanzione_file_utils//file-utils:file_utils",
         "@jeffmanzione_file_utils//file-utils:string_utils",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )

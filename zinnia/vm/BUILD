@@ -47,11 +47,11 @@ cc_library(
         "//zinnia/entity/tuple",
         "//zinnia/util/sync:mutex",
         "//zinnia/util/sync:thread",
+        "//zinnia/vm:intern",
         "//zinnia/vm/process",
         "//zinnia/vm/process:context",
         "//zinnia/vm/process:processes",
         "//zinnia/vm/process:task",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -73,11 +73,11 @@ cc_library(
         "//zinnia/program:tape_binary",
         "//zinnia/program/optimization:optimize",
         "//zinnia/util:file",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
         "@jeffmanzione_file_utils//file-utils:file_info",
         "@jeffmanzione_file_utils//file-utils:string_utils",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -102,8 +102,8 @@ cc_library(
         "//zinnia/entity/native:time",
         "//zinnia/lib",
         "//zinnia/util:file",
+        "//zinnia/vm:intern",
         "@jeffmanzione_file_utils//file-utils:file_utils",
         "@jeffmanzione_file_utils//file-utils:string_utils",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )

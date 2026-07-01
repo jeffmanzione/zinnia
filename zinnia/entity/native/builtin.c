@@ -9,7 +9,6 @@
 
 #include "file-utils/file_info.h"
 #include "file-utils/string_utils.h"
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/array/array.h"
 #include "zinnia/entity/class/classes.h"

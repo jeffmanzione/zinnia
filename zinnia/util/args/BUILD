@@ -14,9 +14,9 @@ cc_library(
         "//zinnia/util:error",
         "//zinnia/util:void_array",
         "//zinnia/version",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
         "@jeffmanzione_c_data_structures//c-data-structures:setlike",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 
@@ -39,7 +39,7 @@ cc_library(
     deps = [
         "//zinnia/alloc",
         "//zinnia/util:error",
-        "@jeffmanzione_language_tools//language-tools:intern",
+        "//zinnia/vm:intern",
     ],
 )
 

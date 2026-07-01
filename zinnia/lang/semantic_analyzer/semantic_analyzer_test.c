@@ -2,8 +2,6 @@
 
 #include "file-utils/file_info.h"
 #include "file-utils/sfile.h"
-#include "language-tools/intern.h"
-#include "language-tools/lexer/token.h"
 #include "language-tools/parser/parser.h"
 #include "language-tools/semantic_analyzer/expression_tree.h"
 #include "zinnia/alloc/alloc.h"
@@ -13,8 +11,10 @@
 #include "zinnia/program/tape.h"
 #include "zinnia/util/error.h"
 #include "zinnia/util/void_array.h"
+#include "zinnia/vm/intern.h" #include "language-tools/lexer/token.h"
 #include "zinnia/vm/intern.h"
 #include "zinnia/vm/module_manager.h"
+
 
 int main(int argc, const char *args[]) {
   global_string_intern_pool_init();

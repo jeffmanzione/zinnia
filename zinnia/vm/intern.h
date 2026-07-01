@@ -6,6 +6,8 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_INTERN_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_INTERN_H_
 
+#include "language-tools/intern.h"
+
 extern const char *ADDRESS_INT_KEY;
 extern const char *ADDRESS_HEX_KEY;
 extern const char *ANNOTATE_KEY;

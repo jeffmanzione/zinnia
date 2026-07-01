@@ -5,11 +5,10 @@
 
 #include "zinnia/entity/string/string_helper.h"
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/string/string.h"
-
+#include "zinnia/vm/intern.h"
 
 Object *string_new(Heap *heap, const char src[], size_t len) {
   Object *str = heap_new(heap, Class_String);

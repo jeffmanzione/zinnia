@@ -7,12 +7,11 @@
 
 #include <stdio.h>
 
-#include "language-tools/intern.h"
-#include "stdio.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/util/error.h"
+#include "zinnia/vm/intern.h"
 
 IMPL_ARRAYLIKE(String, char);
 

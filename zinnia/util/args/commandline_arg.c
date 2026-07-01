@@ -12,9 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/util/error.h"
+#include "zinnia/vm/intern.h"
 
 bool string_is_true(const char str[]) {
   if (0 == strcmp("True", str) || 0 == strcmp("true", str) ||

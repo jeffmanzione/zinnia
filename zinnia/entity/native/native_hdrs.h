@@ -1,7 +1,6 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_NATIVE_HDRS_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_NATIVE_HDRS_H_
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/array/array.h"
 #include "zinnia/entity/class/class.h"

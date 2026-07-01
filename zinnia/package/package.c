@@ -7,7 +7,6 @@
 #include "file-utils/file_info.h"
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/program/optimization/optimize.h"
@@ -314,7 +313,7 @@ int zinniap(int argc, const char *argv[]) {
 
   fprintf(out,
           "  run_files(&srcs, &src_contents, &init_fns, store);\n"
-          "#ifdef DEBUG\n"
+          "#ifdef DEBUG\n "
           "  CharPtrArray_finalize(&srcs);\n"
           "  FilePartsArray_finalize(&src_contents);\n"
           "  VoidPtrArray_finalize(&init_fns);\n"
@@ -322,7 +321,7 @@ int zinniap(int argc, const char *argv[]) {
           "  argconfig_delete(config);\n"
           "  token_finalize_all();\n"
           "  strings_finalize();\n"
-          "#endif\n"
+          "#endif \n "
           "  return EXIT_SUCCESS;\n"
           "}\n");
 

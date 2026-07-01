@@ -363,3 +363,93 @@ def zinnia_seed(name, deps = []):
         name = name,
         deps = deps,
     )
+
+def _zinnia_test_impl(ctx):
+    runner_executable = ctx.attr.runner.files_to_run.executable
+    main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
+
+    test_output_file = ctx.actions.declare_file(ctx.label.name + ".out")
+    test_script_file = ctx.actions.declare_file(ctx.label.name + ".sh")
+
+    dep_files = []
+    for dep in ctx.attr.deps:
+        if ZinniaLibraryInfo in dep:
+            for src in dep[ZinniaLibraryInfo].srcs.to_list():
+                dep_files.append(src)
+        if ZinniaSeedInfo in dep:
+            dep_files.append(dep[ZinniaSeedInfo].seed_file)
+
+    src_files = [main_file] + dep_files
+
+    zinnia_args = [file.path for file in src_files]
+    input_files = src_files
+
+    ctx.actions.run_shell(
+        outputs = [test_output_file],
+        inputs = input_files + [runner_executable],
+        command = "{} {} > {}".format(runner_executable.path, " ".join(zinnia_args), test_output_file.path),
+        mnemonic = "zinnia",
+        progress_message = "Running command: %s %s" %
+                           (runner_executable.path, " ".join(zinnia_args)),
+    )
+
+    ctx.actions.write(
+        output = test_script_file,
+        content = "#!/bin/bash\nsed -e 's/\\x1b\\[[0-9;]*m//g' {} | grep -q \"ExpectError\" && exit -1 || exit 0".format(test_output_file.short_path),
+        is_executable = True,
+    )
+
+    return [
+        DefaultInfo(
+            executable = test_script_file,
+            runfiles = ctx.runfiles(files = [test_output_file]),
+        ),
+    ]
+
+_zinnia_test = rule(
+    implementation = _zinnia_test_impl,
+    attrs = {
+        "main": attr.label(
+            doc = "Main file",
+            allow_single_file = True,
+            mandatory = True,
+        ),
+        "deps": attr.label_list(),
+        "modules": attr.label_list(),
+        "runner": attr.label(
+            default = Label("//zinnia:zinnia"),
+            executable = True,
+            allow_single_file = True,
+            cfg = "target",
+        ),
+        "builtins": attr.label_list(),
+    },
+    test = True,
+)
+
+def zinnia_test(name, main, srcs = [], deps = [], modules = [], data = []):
+    """Runs a Zinnia test.
+
+    Args:
+        name: Name of the test.
+        main: The zinnia file to serve as main().
+        srcs: Additional sources to the main program.
+        deps: Zinnia libraries that should be included in the binary.
+        modules: Modules (zinnia_cc_library) targets that should be included in the binary.
+        data: Data needed by the program.
+    """
+    if main in srcs:
+        srcs.remove(main)
+    deps = deps + [mdep + "_lib" for mdep in modules]
+    if len(srcs) > 0:
+        zinnia_library(
+            name = "%s_srcs" % name,
+            srcs = srcs,
+        )
+        deps = [":%s_srcs" % name] + deps
+    return _zinnia_test(
+        name = name,
+        main = main,
+        deps = deps,
+        modules = modules,
+    )

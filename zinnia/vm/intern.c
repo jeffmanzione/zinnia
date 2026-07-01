@@ -5,8 +5,6 @@
 
 #include "zinnia/vm/intern.h"
 
-#include "language-tools/intern.h"
-
 const char *ADDRESS_INT_KEY;
 const char *ADDRESS_HEX_KEY;
 const char *ANNOTATE_KEY;

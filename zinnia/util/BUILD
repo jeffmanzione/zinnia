@@ -27,9 +27,9 @@ cc_library(
     deps = [
         ":platform",
         "//zinnia/alloc",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_file_utils//file-utils:file_utils",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )
 

@@ -5,7 +5,6 @@
 
 #include "zinnia/program/tape.h"
 
-#include "language-tools/intern.h"
 #include "language-tools/lexer/token.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
@@ -13,6 +12,7 @@
 #include "zinnia/util/error.h"
 #include "zinnia/util/string_util.h"
 #include "zinnia/util/void_array.h"
+#include "zinnia/vm/intern.h"
 
 #define DEFAULT_TAPE_SZ 64
 

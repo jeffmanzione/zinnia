@@ -2,12 +2,12 @@
 
 #include "file-utils/file_info.h"
 #include "file-utils/sfile.h"
-#include "language-tools/intern.h"
-#include "language-tools/lexer/token.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/util/void_array.h"
+#include "zinnia/vm/intern.h" #include "language-tools/lexer/token.h"
+
 
 int main(int argc, const char *args[]) {
   global_string_intern_pool_init();

@@ -1,12 +1,10 @@
 #include <limits.h>
 
-#include "language-tools/intern.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
-
 
 POPULATE_IMPL(foreach_statement, const SyntaxTree *stree,
               SemanticAnalyzer *analyzer) {

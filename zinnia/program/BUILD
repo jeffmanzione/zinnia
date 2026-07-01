@@ -36,10 +36,10 @@ cc_library(
         "//zinnia/util:error",
         "//zinnia/util:string_util",
         "//zinnia/util:void_array",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
-        "@jeffmanzione_language_tools//language-tools:intern",
         "@jeffmanzione_language_tools//language-tools/lexer:token",
     ],
 )
@@ -54,7 +54,7 @@ cc_library(
         "//zinnia/program/serialization:deserialize",
         "//zinnia/program/serialization:serialize",
         "//zinnia/util:void_array",
+        "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
-        "@jeffmanzione_language_tools//language-tools:intern",
     ],
 )

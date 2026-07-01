@@ -7,7 +7,6 @@
 
 #include <stdarg.h>
 
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/array/array.h"
 #include "zinnia/entity/class/classes_def.h"
@@ -31,7 +30,6 @@
 #include "zinnia/vm/process/processes.h"
 #include "zinnia/vm/process/remote.h"
 #include "zinnia/vm/process/task.h"
-
 
 #define DEFAULT_THREADPOOL_SIZE 6
 

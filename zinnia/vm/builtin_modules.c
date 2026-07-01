@@ -9,7 +9,6 @@
 
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
-#include "language-tools/intern.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/module/module.h"
 #include "zinnia/entity/module/modules.h"
@@ -26,6 +25,7 @@
 #include "zinnia/lib/lib.h"
 #include "zinnia/util/file.h"
 #include "zinnia/util/platform.h"
+#include "zinnia/vm/intern.h"
 
 #define LIB_DIR "zinnia/lib/"
 #define LIB_EXT ".zna"

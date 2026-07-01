@@ -5,10 +5,10 @@
 
 #include "zinnia/program/tape_binary.h"
 
-#include "language-tools/intern.h"
 #include "zinnia/program/serialization/deserialize.h"
 #include "zinnia/program/serialization/serialize.h"
 #include "zinnia/util/void_array.h"
+#include "zinnia/vm/intern.h"
 
 #define MAX_STIRNG_SZ 1024
 

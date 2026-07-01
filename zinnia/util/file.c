@@ -14,9 +14,9 @@
 #include "c-data-structures/arraylike.h"
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
-#include "language-tools/intern.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/util/platform.h"
+#include "zinnia/vm/intern.h"
 
 #ifdef OS_WINDOWS
 
