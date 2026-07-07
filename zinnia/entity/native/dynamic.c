@@ -5,13 +5,7 @@
 
 #include "zinnia/entity/native/dynamic.h"
 
-#include "zinnia/util/platform.h"
-
-#ifdef OS_WINDOWS
-#include <windows.h>
-#else
-#include <dlfcn.h>
-#endif
+#include "zinnia/util/dll.h"
 
 Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
   EXTRACT_TUPLE_ARGS(t, args, 3, task, ctx);
@@ -38,39 +32,14 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
   char *module_name = entity_string_copy(arg1);
   char *init_fn_name = entity_string_copy(arg2);
 
-#ifdef OS_WINDOWS
-  HMODULE dl_handle = LoadLibrary(TEXT(file_name));
-#else
-  void *dl_handle = dlopen(file_name, RTLD_LAZY | RTLD_GLOBAL);
-#endif
-  if (NULL == dl_handle) {
-#ifdef OS_WINDOWS
-    return raise_error(task, ctx, "Invalid file_name for library: %s",
-                       file_name);
-#else
-    return raise_error(task, ctx, "Invalid file_name for library: %s",
-                       dlerror());
-#endif
-  }
-
-#ifdef OS_WINDOWS
-  void *init_fn = GetProcAddress(dl_handle, init_fn_name);
-#else
-  void *init_fn = dlsym(dl_handle, init_fn_name);
-#endif
-
-  if (NULL == init_fn) {
+  void *init_fn;
+  char error_buf[255];
+  if (!load_dynamic_library_function(file_name, init_fn_name, &init_fn,
+                                     error_buf)) {
     RELEASE(file_name);
     RELEASE(module_name);
     RELEASE(init_fn_name);
-#ifdef OS_WINDOWS
-    return raise_error(task, ctx, "'%s' not found in library: %s.",
-                       init_fn_name, file_name);
-#else
-    return raise_error(task, ctx, "'%s' not found in library: %s", init_fn_name,
-                       dlerror());
-
-#endif
+    return raise_error(task, ctx, error_buf);
   }
 
   ModuleManager *mm = vm_module_manager(task->parent_process->vm);

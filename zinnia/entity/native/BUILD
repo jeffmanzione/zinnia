@@ -197,15 +197,9 @@ cc_library(
     name = "dynamic",
     srcs = ["dynamic.c"],
     hdrs = ["dynamic.h"],
-    linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "//conditions:default": [
-            "-ldl",
-            "-rdynamic",
-        ],
-    }),
     deps = [
         ":native_hdrs",
+        "//zinnia/util:dll",
     ],
 )
 

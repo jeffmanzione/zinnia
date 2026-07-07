@@ -7,7 +7,7 @@
 
 #include <math.h>
 
-void sin_impl_(NativeFunctionContext *fn_ctx) {
+static void sin_impl_(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(
@@ -18,7 +18,7 @@ void sin_impl_(NativeFunctionContext *fn_ctx) {
   *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(sin(r));
 }
 
-void cos_impl_(NativeFunctionContext *fn_ctx) {
+static void cos_impl_(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(
@@ -29,7 +29,7 @@ void cos_impl_(NativeFunctionContext *fn_ctx) {
   *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(cos(r));
 }
 
-void tan_impl_(NativeFunctionContext *fn_ctx) {
+static void tan_impl_(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(

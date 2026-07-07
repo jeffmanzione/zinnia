@@ -17,6 +17,7 @@ cc_library(
     deps = [
         "//zinnia/entity/native/builder",
         "//zinnia/entity/native/builder:function_context",
+        "//zinnia/util:platform",
     ],
 )
 

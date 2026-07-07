@@ -5,7 +5,7 @@
 #include <unistd.h>
 #endif
 
-void current_process_id_(NativeFunctionContext *fn_ctx) {
+static void current_process_id_(NativeFunctionContext *fn_ctx) {
   long pid;
 #ifdef OS_WINDOWS
   pid = GetCurrentProcessId();

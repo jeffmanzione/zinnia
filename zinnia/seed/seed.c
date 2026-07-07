@@ -1,6 +1,5 @@
 #include "zinnia/seed/seed.h"
 
-#include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,6 +7,7 @@
 
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
+#include "zinnia/util/dll.h"
 #include "zinnia/util/string_util.h"
 
 typedef void dll_handle;
@@ -218,7 +218,12 @@ dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
   // Flush written data and close.
   fclose(tmp_ddl_file);
 
-  dll_handle *dll_handle = dlopen(tmp_filename, RTLD_LAZY | RTLD_GLOBAL);
+  dll_handle *dll_handle;
+  if (!load_dynamic_library(tmp_filename, &dll_handle, error_buf)) {
+    close(tmp_fd);
+    free(tmp_filename);
+    return NULL;
+  }
 
   // Must occur after dlopen() because if closed before, the file can be
   // tampered.
@@ -368,22 +373,23 @@ bool load_znseed_file(VM *vm, const char seed_filepath[], char *error_buf) {
 
     void *dll = NULL;
     if (line.dll_filepath != NULL && line.dll_init_fn != NULL) {
-      char error_buf[255];  // TODO: Set a resonable size.
-      error_buf[0] = '\0';
+      error_buf[0] = 0x0;
       dll = open_dll_from_seed_(seed, line.dll_filepath, error_buf);
       if (strlen(error_buf) > 0) {
         FATALF("Error loading znseed: %s", error_buf);
       }
     }
 
-    NativeModuleBuilderInitFn init_fn_handle = NULL;
-    if (dll) {
-      init_fn_handle = (NativeModuleBuilderInitFn)dlsym(dll, line.dll_init_fn);
+    void *init_fn_handle = NULL;
+    if (dll && !load_dynamic_function(dll, line.dll_init_fn, &init_fn_handle,
+                                      error_buf)) {
+      // Should do something probably.
+      FATALF("Error loading znseed: %s", error_buf);
     }
 
-    mm_register_module_with_callback2(mm, line.source_filepath,
-                                      line.source_filepath, source_segs, 1,
-                                      init_fn_handle);
+    mm_register_module_with_callback2(
+        mm, line.source_filepath, line.source_filepath, source_segs, 1,
+        (NativeModuleBuilderInitFn)init_fn_handle);
     // Forces module to be loaded eagerly.
     modulemanager_lookup(mm, line.module_name);
 

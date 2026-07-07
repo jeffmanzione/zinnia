@@ -83,3 +83,19 @@ cc_library(
         "@jeffmanzione_c_data_structures//c-data-structures:setlike",
     ],
 )
+
+cc_library(
+    name = "dll",
+    srcs = ["dll.c"],
+    hdrs = ["dll.h"],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": [
+            "-ldl",
+            "-rdynamic",
+        ],
+    }),
+    deps = [
+        "//zinnia/util:platform",
+    ],
+)
