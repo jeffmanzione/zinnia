@@ -5,8 +5,6 @@
 #include <unistd.h>
 #endif
 
-#include "zinnia/entity/native/builder/function_context.h"
-
 void current_process_id_(NativeFunctionContext *fn_ctx) {
   long pid;
 #ifdef OS_WINDOWS

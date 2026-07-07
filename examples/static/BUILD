@@ -6,8 +6,7 @@ cc_library(
     srcs = ["pid.c"],
     hdrs = ["pid.h"],
     deps = [
-        "//zinnia/entity/native/builder",
-        "//zinnia/entity/native/builder:function_context",
+        "//zinnia:native",
     ],
 )
 

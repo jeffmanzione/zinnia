@@ -1,7 +1,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLES_STATIC_PID_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLES_STATIC_PID_H_
 
-#include "zinnia/entity/native/builder/builder.h"
+#include "zinnia/native.h"
 
 #ifdef OS_WINDOWS
 __declspec(dllexport)

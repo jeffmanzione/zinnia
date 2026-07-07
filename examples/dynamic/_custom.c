@@ -7,8 +7,6 @@
 
 #include <math.h>
 
-#include "zinnia/entity/native/builder/function_context.h"
-
 void sin_impl_(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {

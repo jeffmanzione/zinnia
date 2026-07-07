@@ -1,4 +1,5 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 package(
     default_visibility = ["//visibility:private"],
@@ -7,6 +8,16 @@ package(
 package_group(
     name = "internal",
     packages = ["//zinnia/..."],
+)
+
+cc_library(
+    name = "native",
+    hdrs = ["native.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//zinnia/entity/native/builder",
+        "//zinnia/entity/native/builder:function_context",
+    ],
 )
 
 cc_binary(

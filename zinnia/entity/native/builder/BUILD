@@ -8,7 +8,6 @@ cc_library(
     name = "builder",
     srcs = ["builder.c"],
     hdrs = ["builder.h"],
-    visibility = ["//visibility:public"],
     deps = [
         ":function_context",
         "//zinnia/entity/module",
@@ -21,7 +20,6 @@ cc_library(
     name = "function_context",
     srcs = ["function_context.c"],
     hdrs = ["function_context.h"],
-    visibility = ["//visibility:public"],
     deps = [
         "//zinnia/entity",
         "//zinnia/entity:object",

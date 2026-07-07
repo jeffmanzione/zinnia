@@ -11,8 +11,7 @@ cc_library(
     srcs = ["_custom.c"],
     hdrs = ["_custom.h"],
     deps = [
-        "//zinnia/entity/native/builder",
-        "//zinnia/entity/native/builder:function_context",
+        "//zinnia:native",
     ],
     alwayslink = True,
 )

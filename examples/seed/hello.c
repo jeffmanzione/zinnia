@@ -1,7 +1,5 @@
 #include "examples/seed/hello.h"
 
-#include "zinnia/entity/native/builder/function_context.h"
-
 #define GREET_PREFIX "Hello, "
 #define GREET_SUFFIX "!\n"
 
