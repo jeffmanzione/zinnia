@@ -42,6 +42,8 @@ cc_library(
         "//zinnia/entity/native:async",
         "//zinnia/entity/native:builtin",
         "//zinnia/entity/native:error",
+        "//zinnia/entity/native/builder",  # Force link
+        "//zinnia/entity/native/builder:function_context",
         "//zinnia/entity/string",
         "//zinnia/entity/string:string_helper",
         "//zinnia/entity/tuple",

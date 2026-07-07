@@ -39,8 +39,10 @@ struct ModuleInfo_ {
   FileInfo *fi;
   const char *file_path, *relative_file_path, *module_name_from_file,
       *inlined_file, *key;
-  bool is_inlined_file, is_loaded, has_native_callback, is_dynamic;
+  bool is_inlined_file, is_loaded, has_native_callback, has_native_callback2,
+      is_dynamic;
   NativeModuleInitFn native_callback;
+  NativeModuleBuilderInitFn native_callback2;
 };
 
 IMPL_STABLE_MAPLIKE(ModuleInfoMap, char *, ModuleInfo);
@@ -243,7 +245,7 @@ FileInfo *module_info_get_file_(ModuleInfo *module_info) {
   return file_info(module_info->file_path);
 }
 
-Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
+Module *read_zn_(ModuleManager *mm, ModuleInfo *module_info) {
   FileInfo *fi = module_info_get_file_(module_info);
 
   TokenArray tokens;
@@ -295,7 +297,7 @@ Module *_read_zn(ModuleManager *mm, ModuleInfo *module_info) {
   }
 }
 
-Module *_read_zna(ModuleManager *mm, ModuleInfo *module_info) {
+Module *read_zna_(ModuleManager *mm, ModuleInfo *module_info) {
   FileInfo *fi = module_info_get_file_(module_info);
   TokenArray tokens;
   TokenArray_init(&tokens);
@@ -310,7 +312,7 @@ Module *_read_zna(ModuleManager *mm, ModuleInfo *module_info) {
   return &module_info->module;
 }
 
-Module *_read_znb(ModuleManager *mm, ModuleInfo *module_info) {
+Module *read_znb_(ModuleManager *mm, ModuleInfo *module_info) {
   FILE *file = FILE_FN(module_info->file_path, "rb");
   if (NULL == file) {
     FATALF("Cannot open file '%s'. Exiting...", module_info->file_path);
@@ -333,11 +335,14 @@ ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
 ModuleInfo *create_and_init_moduleinfo_(
     ModuleManager *mm, const char *module_name, const char *module_key,
     const char *full_path, const char *relative_path, const char *inlined_file,
-    NativeModuleInitFn native_callback, bool is_dynamic) {
+    NativeModuleInitFn native_callback, bool is_dynamic,
+    NativeModuleBuilderInitFn native_callback2) {
   ModuleInfo *module_info =
       create_moduleinfo_(mm, module_name, module_key, full_path, relative_path);
   module_info->has_native_callback = native_callback != NULL;
   module_info->native_callback = native_callback;
+  module_info->has_native_callback2 = native_callback2 != NULL;
+  module_info->native_callback2 = native_callback2;
   module_info->is_loaded = false;
   module_info->is_dynamic = is_dynamic;
   if (NULL != inlined_file) {
@@ -347,12 +352,10 @@ ModuleInfo *create_and_init_moduleinfo_(
   return module_info;
 }
 
-ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
-                                             const char full_path[],
-                                             const char relative_path[],
-                                             const char *inlined_file_segs[],
-                                             int num_inlined_file_segs,
-                                             NativeModuleInitFn callback) {
+ModuleInfo *mm_register_module_with_callback_impl_(
+    ModuleManager *mm, const char full_path[], const char relative_path[],
+    const char *inlined_file_segs[], int num_inlined_file_segs,
+    NativeModuleInitFn callback, NativeModuleBuilderInitFn callback2) {
   ASSERT(mm != NULL);
   ASSERT(full_path != NULL);
   ASSERT(relative_path != NULL);
@@ -406,22 +409,49 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
   module_info =
       create_and_init_moduleinfo_(mm, module_name, module_key, full_path,
                                   relative_path, inlined_file, callback,
-                                  /*is_dynamic=*/false);
+                                  /*is_dynamic=*/false, callback2);
   RELEASE(dir_path);
   RELEASE(ext);
 
   return module_info;
 }
 
+ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
+                                             const char full_path[],
+                                             const char relative_path[],
+                                             const char *inlined_file_segs[],
+                                             int num_inlined_file_segs,
+                                             NativeModuleInitFn callback) {
+  return mm_register_module_with_callback_impl_(
+      mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
+      callback, NULL);
+}
+
+ModuleInfo *mm_register_module_with_callback2(
+    ModuleManager *mm, const char full_path[], const char relative_path[],
+    const char *inlined_file_segs[], int num_inlined_file_segs,
+    NativeModuleBuilderInitFn callback) {
+  return mm_register_module_with_callback_impl_(
+      mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
+      NULL, callback);
+}
+
+void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *mm,
+                              Module *module) {
+  builder->mm = mm;
+  builder->module = module;
+  builder->is_verified = false;
+}
+
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
-                                       NativeModuleInitFn init_fn) {
+                                       NativeModuleBuilderInitFn init_fn) {
+  const char *interned_name = mm->intern(module_name);
   ModuleInfo *module_info = create_and_init_moduleinfo_(
-      mm, mm->intern(module_name), mm->intern(module_name), NULL, NULL, NULL,
-      init_fn,
-      /*is_dynamic*/ true);
-  module_init(&module_info->module, mm->intern(module_name), NULL, NULL,
-              module_name, NULL);
+      mm, interned_name, interned_name, NULL, NULL, NULL, NULL,
+      /*is_dynamic=*/true, init_fn);
+  module_init(&module_info->module, interned_name, NULL, NULL, module_name,
+              NULL);
   return module_info;
 }
 
@@ -430,11 +460,11 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
   if (!module_info->is_loaded) {
     if (!module_info->is_dynamic) {
       if (ends_with(module_info->file_path, ".znb")) {
-        module = _read_znb(mm, module_info);
+        module = read_znb_(mm, module_info);
       } else if (ends_with(module_info->file_path, ".zna")) {
-        module = _read_zna(mm, module_info);
+        module = read_zna_(mm, module_info);
       } else if (ends_with(module_info->file_path, ".zn")) {
-        module = _read_zn(mm, module_info);
+        module = read_zn_(mm, module_info);
       } else {
         FATALF("Unknown file type.");
       }
@@ -444,6 +474,10 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
     module_info->is_loaded = true;
     if (module_info->has_native_callback) {
       module_info->native_callback(mm, module);
+    } else if (module_info->has_native_callback2) {
+      NativeModuleBuilder builder;
+      NativeModuleBuilder_init(&builder, mm, module);
+      module_info->native_callback2(&builder);
     }
     add_reflection_to_module(mm, module);
     heap_make_root(mm->_heap, module->_reflection);

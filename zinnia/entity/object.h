@@ -91,13 +91,15 @@ struct Function_ {
   const Class *_parent_class;
 
   bool _is_native;
+  bool _is_native2;
   bool _is_anon;
   bool _is_async;
   bool _is_const;
   bool _is_background;
   union {
     uint32_t _ins_pos;
-    void *_native_fn;  // NativeFn
+    void *_native_fn;   // NativeFn
+    void *_native_fn2;  // NativeFunctionContext
   };
 };
 

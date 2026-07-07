@@ -34,7 +34,6 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
                        "Invalid argument(2) for "
                        "__open_c_lib: Expected type String.");
   }
-
   char *file_name = entity_string_copy(arg0);
   char *module_name = entity_string_copy(arg1);
   char *init_fn_name = entity_string_copy(arg2);
@@ -42,7 +41,7 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
 #ifdef OS_WINDOWS
   HMODULE dl_handle = LoadLibrary(TEXT(file_name));
 #else
-  void *dl_handle = dlopen(file_name, RTLD_LAZY);
+  void *dl_handle = dlopen(file_name, RTLD_LAZY | RTLD_GLOBAL);
 #endif
   if (NULL == dl_handle) {
 #ifdef OS_WINDOWS
@@ -55,11 +54,9 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
 
 #ifdef OS_WINDOWS
-  NativeModuleInitFn init_fn =
-      (NativeModuleInitFn)GetProcAddress(dl_handle, init_fn_name);
+  void *init_fn = GetProcAddress(dl_handle, init_fn_name);
 #else
-  NativeModuleInitFn init_fn =
-      (NativeModuleInitFn)dlsym(dl_handle, init_fn_name);
+  void *init_fn = dlsym(dl_handle, init_fn_name);
 #endif
 
   if (NULL == init_fn) {

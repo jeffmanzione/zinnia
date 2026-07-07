@@ -7,37 +7,44 @@
 
 #include <math.h>
 
-Entity __sin_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
+#include "zinnia/entity/native/builder/function_context.h"
+
+void sin_impl_(NativeFunctionContext *fn_ctx) {
+  const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
-    return raise_error(task, ctx,
-                       "sin() takes exactly 1 primitive type argument.");
+    NativeFunctionContext_raise_error(
+        fn_ctx, "sin() takes exactly 1 primitive type argument.");
+    return;
   }
   const double r = float_of(&args->pri);
-  return entity_float(sin(r));
+  *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(sin(r));
 }
 
-Entity __cos_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
+void cos_impl_(NativeFunctionContext *fn_ctx) {
+  const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
-    return raise_error(task, ctx,
-                       "cos() takes exactly 1 primitive type argument.");
+    NativeFunctionContext_raise_error(
+        fn_ctx, "cos() takes exactly 1 primitive type argument.");
+    return;
   }
   const double r = float_of(&args->pri);
-  return entity_float(cos(r));
+  *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(cos(r));
 }
 
-Entity __tan_impl(Task *task, Context *ctx, Object *obj, Entity *args) {
+void tan_impl_(NativeFunctionContext *fn_ctx) {
+  const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
-    return raise_error(task, ctx,
-                       "tan() takes exactly 1 primitive type argument.");
+    NativeFunctionContext_raise_error(
+        fn_ctx, "tan() takes exactly 1 primitive type argument.");
+    return;
   }
   const double r = float_of(&args->pri);
-  return entity_float(tan(r));
+  *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(tan(r));
 }
 
-void _init_custom(ModuleManager *mm, Module *custom) {
-  verify_init_fn_signature(_init_custom);
-
-  native_function(custom, mm->intern("sin"), __sin_impl);
-  native_function(custom, mm->intern("cos"), __cos_impl);
-  native_function(custom, mm->intern("tan"), __tan_impl);
+void init_custom(NativeModuleBuilder *builder) {
+  NativeModuleBuilder_verify_signature(builder, init_custom);
+  NativeModuleBuilder_add_function(builder, "sin", sin_impl_);
+  NativeModuleBuilder_add_function(builder, "cos", cos_impl_);
+  NativeModuleBuilder_add_function(builder, "tan", tan_impl_);
 }

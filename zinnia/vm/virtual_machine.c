@@ -13,6 +13,7 @@
 #include "zinnia/entity/entity.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/native/async.h"
+#include "zinnia/entity/native/builder/function_context.h"
 #include "zinnia/entity/native/builtin.h"
 #include "zinnia/entity/native/error.h"
 #include "zinnia/entity/native/native.h"
@@ -851,6 +852,14 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
     *task_mutable_resval(task) =
         native_fn(task, context, self, (Entity *)task_get_resval(task));
     return false;
+  } else if (func->_is_native2) {
+    NativeFunctionHandlerFn native_fn =
+        (NativeFunctionHandlerFn)func->_native_fn2;
+    NativeFunctionContext fn_ctx;
+    NativeFunctionContext_init(&fn_ctx, task, context, task_get_resval(task));
+    native_fn(&fn_ctx);
+    *task_mutable_resval(task) = *NativeFunctionContext_get_retval(&fn_ctx);
+    return false;
   }
   Context *fn_ctx =
       _execute_as_new_task(task, self, (Module *)func->_module, func->_ins_pos);
@@ -920,10 +929,12 @@ bool _execute_CALL(VM *vm, Task *task, Context *context,
     }
     Entity obj = task_popstack(task);
     if (OBJECT != obj.type) {
-      const char *type_str = NONE == obj.type                    ? "None"
-                             : ptype(&obj.pri) == PRIMITIVE_CHAR ? "Char"
-                             : ptype(&obj.pri) == PRIMITIVE_INT  ? "Int"
-                                                                 : "Float";
+      const char *type_str =
+          NONE == obj.type
+              ? "None"
+              : ptype(&obj.pri) == PRIMITIVE_CHAR
+                    ? "Char"
+                    : ptype(&obj.pri) == PRIMITIVE_INT ? "Int" : "Float";
       raise_error(task, context, "Calling function '%s' on type %s.", ins->id,
                   type_str);
       return false;

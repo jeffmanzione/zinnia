@@ -10,9 +10,9 @@ cc_library(
     name = "_custom",
     srcs = ["_custom.c"],
     hdrs = ["_custom.h"],
-    linkstatic = False,
     deps = [
-        "//zinnia/entity/native:native_hdrs",
+        "//zinnia/entity/native/builder",
+        "//zinnia/entity/native/builder:function_context",
     ],
     alwayslink = True,
 )

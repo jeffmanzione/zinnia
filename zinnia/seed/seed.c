@@ -190,7 +190,6 @@ dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
   split_path_file(seed_dll_filepath, &path, &filename, &ext);
 
   char *tmp_filename = combine_path_file("/tmp", "tmp_XXXXXX", ext);
-
   int tmp_fd = mkstemps(tmp_filename, strlen(ext));
 
   free(path);
@@ -204,7 +203,7 @@ dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
     return NULL;
   }
 
-  FILE *tmp_ddl_file = fdopen(tmp_fd, "wb+");
+  FILE *tmp_ddl_file = fdopen(tmp_fd, "wb");
 
   if (!copy_zip_file_to_stream_(seed, seed_dll_filepath, tmp_ddl_file,
                                 error_buf)) {
@@ -219,7 +218,7 @@ dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
   // Flush written data and close.
   fclose(tmp_ddl_file);
 
-  dll_handle *dll_handle = dlopen(tmp_filename, RTLD_LAZY);
+  dll_handle *dll_handle = dlopen(tmp_filename, RTLD_LAZY | RTLD_GLOBAL);
 
   // Must occur after dlopen() because if closed before, the file can be
   // tampered.
@@ -256,10 +255,6 @@ char *parse_manifest_line_(char *seg_start, struct manifest_row *row) {
     row->dll_filepath = NULL;
     row->dll_init_fn = NULL;
   }
-
-  // printf("%s:%s:%s:%s\n", row->module_name, row->source_filepath,
-  //        row->dll_filepath == NULL ? "(none)" : row->dll_filepath,
-  //        row->dll_init_fn == NULL ? "(none)" : row->dll_init_fn);
 
   // Skip over newline.
   return seg_end + 1;
@@ -381,9 +376,14 @@ bool load_znseed_file(VM *vm, const char seed_filepath[], char *error_buf) {
       }
     }
 
-    mm_register_module_with_callback(
-        mm, line.source_filepath, line.source_filepath, source_segs, 1,
-        dll ? (NativeModuleInitFn)dlsym(dll, line.dll_init_fn) : NULL);
+    NativeModuleBuilderInitFn init_fn_handle = NULL;
+    if (dll) {
+      init_fn_handle = (NativeModuleBuilderInitFn)dlsym(dll, line.dll_init_fn);
+    }
+
+    mm_register_module_with_callback2(mm, line.source_filepath,
+                                      line.source_filepath, source_segs, 1,
+                                      init_fn_handle);
     // Forces module to be loaded eagerly.
     modulemanager_lookup(mm, line.module_name);
 

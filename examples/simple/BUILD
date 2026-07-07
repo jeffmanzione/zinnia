@@ -34,3 +34,8 @@ zinnia_binary(
     name = "static",
     main = "static.zn",
 )
+
+zinnia_binary(
+    name = "strfmt",
+    main = "strfmt.zn",
+)

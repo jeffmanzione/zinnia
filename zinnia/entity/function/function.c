@@ -24,6 +24,7 @@ void function_init(Function *f, const char name[], const Module *module,
   f->_parent_class = NULL;
   f->_ins_pos = ins_pos;
   f->_is_native = false;
+  f->_is_native2 = false;
   f->_is_anon = is_anon;
   f->_is_const = is_const;
   f->_is_async = is_async;

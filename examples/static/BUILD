@@ -6,7 +6,8 @@ cc_library(
     srcs = ["pid.c"],
     hdrs = ["pid.h"],
     deps = [
-        "//zinnia/entity/native:native_hdrs",
+        "//zinnia/entity/native/builder",
+        "//zinnia/entity/native/builder:function_context",
     ],
 )
 
@@ -24,7 +25,7 @@ zinnia_cc_library(
     cc_deps = [
         "//examples/dynamic:_custom",
     ],
-    cc_init_fn = "_init_custom",
+    cc_init_fn = "init_custom",
     src_module = "custom_math.zn",
 )
 

@@ -6,8 +6,10 @@ cc_library(
     srcs = ["hello.c"],
     hdrs = ["hello.h"],
     deps = [
-        "//zinnia/entity/native:native_hdrs",
+        "//zinnia/entity/native/builder",
+        "//zinnia/entity/native/builder:function_context",
     ],
+    alwayslink = True,
 )
 
 zinnia_cc_library(

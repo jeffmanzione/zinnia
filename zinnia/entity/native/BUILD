@@ -6,8 +6,7 @@ package(
 
 cc_library(
     name = "native_hdrs",
-    srcs = ["native_hdrs.h"],
-    visibility = ["//visibility:public"],
+    hdrs = ["native_hdrs.h"],
     deps = [
         ":error",
         ":native",

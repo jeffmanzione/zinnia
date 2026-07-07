@@ -59,7 +59,7 @@ void free_arg_(struct zinnia_module_info *module_info) {
 //   seed_name
 //   out/path/to/seed_name
 //   mod1:path/to/mod1/mod1.zn:zip_path/to/mod1/mod1.zn
-//   mod2:path/to/mod2/mod2.zn:zip_path/to/mod2.mod2.zn:path/to/mod2/mod2.dll:zip_path/to/mod2/mod2.dll
+//   mod2:path/to/mod2/mod2.zn:zip_path/to/mod2.mod2.zn:path/to/mod2/mod2.dll:init_mod2
 int main(int argc, const char *argv[]) {
   if (argc <= NUM_NON_MODULE_ARGS) {
     fprintf(stderr, "Too few arguments (were %d).\n", argc - 1);

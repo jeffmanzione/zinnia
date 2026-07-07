@@ -20,13 +20,22 @@ typedef struct ModuleInfoMap_ ModuleInfoMap;
 typedef struct {
   // Set _files_processed;
   Heap *_heap;
-  ModuleInfoMap *_modules;  // ModuleInfo
+  ModuleInfoMap *_modules;
   // Used to intern method names in dynamically-loaded modules.
   InternFn intern;
 } ModuleManager;
 
 typedef struct ModuleInfo_ ModuleInfo;
 typedef void (*NativeModuleInitFn)(ModuleManager *, Module *);
+
+typedef struct {
+  ModuleManager *mm;
+  Module *module;
+  bool is_verified;
+} NativeModuleBuilder;
+typedef void (*NativeModuleBuilderInitFn)(NativeModuleBuilder *);
+void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *,
+                              Module *);
 
 // Compile-time/runtime check of init function conformance.
 bool verify_init_fn_signature(NativeModuleInitFn fn);
@@ -48,9 +57,14 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              const char *inlined_file_segs[],
                                              int num_inlined_file_segs,
                                              NativeModuleInitFn callback);
+
+ModuleInfo *mm_register_module_with_callback2(
+    ModuleManager *mm, const char full_path[], const char relative_path[],
+    const char *inlined_file_segs[], int num_inlined_file_segs,
+    NativeModuleBuilderInitFn callback);
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[],
-                                       NativeModuleInitFn init_fn);
+                                       NativeModuleBuilderInitFn init_fn);
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]);
 Module *modulemanager_lookup_without_reading(ModuleManager *mm,

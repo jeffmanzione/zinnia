@@ -6,11 +6,11 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_
 
-#include "zinnia/entity/native/native_hdrs.h"
+#include "zinnia/entity/native/builder/builder.h"
 
 #ifdef OS_WINDOWS
 __declspec(dllexport)
 #endif
-    void _init_custom(ModuleManager *mm, Module *custom);
+    void init_custom(NativeModuleBuilder *builder);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_ */

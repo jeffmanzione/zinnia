@@ -42,15 +42,21 @@ Entity raise_error_with_object(Task *task, Context *context, Object *err) {
   return entity_object(err);
 }
 
-Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
-  va_list args;
-  va_start(args, fmt);
+Entity raise_errorv(Task *task, Context *context, const char fmt[],
+                    va_list args) {
   char buffer[1024];
   int num_chars = vsprintf(buffer, fmt, args);
-  va_end(args);
   Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
   Object *err = error_new(task, context, error_msg);
   return raise_error_with_object(task, context, err);
+}
+
+Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
+  va_list args;
+  va_start(args, fmt);
+  Entity retval = raise_errorv(task, context, fmt, args);
+  va_end(args);
+  return retval;
 }
 
 Entity native_background_raise_error(Task *task, Context *context,

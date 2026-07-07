@@ -28,7 +28,7 @@ class ChatServer {
   field clients, sock
   new({field address, field port}) {
     clients = {}
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, True)
+    sock = socket.create_server_socket(address, port)
   }
   method start() {
     io.println('Started server at ' + str(address) + ':' + str(port))
@@ -42,6 +42,7 @@ class ChatServer {
       }
     }
   }
+
   method _accept_connection() {
     conn = await sock.accept()
     (login, leftovers) = _receive_login(conn)
@@ -59,17 +60,17 @@ class ChatServer {
   method _receive_login(conn) {
     msg = (await conn.receive()).split('\n\n')
     if msg.len() == 0 {
-      raise error.Error('Received too-short message.')
+      raise error.Error(i'Received too-short message.')
     }
     login_info = msg.remove(0).split(':')
     if login_info[0].trim() != 'login' {
-      raise error.Error('Missing login.')
+      raise error.Error(i'Missing login.')
     }
     return (_Login(login_info[1].trim()), msg)
   }
 
   method _handle_message(type, source_connection, message) {
-    if type == 'message' {
+    if type == i'message' {
       for (username, client) in clients {
         client.send_message(source_connection, message)
       }
@@ -82,7 +83,7 @@ class ChatServer {
 class ChatClient {
   field sock, connection
   new({address, port}) {
-    sock = socket.Socket(socket.AF_INET, socket.SOCK_STREAM, 0, address, port, False)
+    sock = socket.create_client_socket(address, port)
     connection = await sock.connect()
   }
   method start() {
@@ -123,7 +124,7 @@ class _ClientConnection {
     connection = aconnection
   }
   method close() {
-    connection.send('END_OF_COMMUNICATION\n\n')
+    connection.send(i'END_OF_COMMUNICATION\n\n')
     connection.close()
   }
   method handle(message) async {

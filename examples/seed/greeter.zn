@@ -1,6 +1,6 @@
 import io
 
-import 'examples/seed/hello'
+import 'examples/seed/hello' as hello
 
 class Greeter {
   method greet(name) {
