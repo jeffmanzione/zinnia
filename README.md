@@ -1,8 +1,7 @@
-# zinnia
-
-## A process virtual machine programming language that melds my favorite features features of JavaScript and Java.
 
 ![ZInnia Logo](https://repository-images.githubusercontent.com/266423086/01b55ccc-4cd2-4d80-a260-24ffc896c6f4)
+
+## A process virtual machine programming language that melds my favorite features features of JavaScript and Java.
 
 ## Why use Zinnia?
 
