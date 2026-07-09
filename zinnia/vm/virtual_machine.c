@@ -855,10 +855,10 @@ bool _call_function_base(Task *task, Context *context, const Function *func,
   } else if (func->_is_native2) {
     NativeFunctionHandlerFn native_fn =
         (NativeFunctionHandlerFn)func->_native_fn2;
-    NativeFunctionContext fn_ctx;
-    NativeFunctionContext_init(&fn_ctx, task, context, task_get_resval(task));
+    FunctionContext fn_ctx;
+    FunctionContext_init(&fn_ctx, task, context, task_get_resval(task));
     native_fn(&fn_ctx);
-    *task_mutable_resval(task) = *NativeFunctionContext_get_retval(&fn_ctx);
+    *task_mutable_resval(task) = *FunctionContext_get_retval(&fn_ctx);
     return false;
   }
   Context *fn_ctx =

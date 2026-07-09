@@ -42,7 +42,7 @@ struct ModuleInfo_ {
   bool is_inlined_file, is_loaded, has_native_callback, has_dl, is_dynamic;
   NativeModuleInitFn native_callback;
   DlHandle dl;
-  NativeModuleBuilderInitFn dl_init;
+  ModuleBuilderInitFn dl_init;
 };
 
 IMPL_STABLE_MAPLIKE(ModuleInfoMap, char *, ModuleInfo);
@@ -341,7 +341,7 @@ ModuleInfo *create_and_init_moduleinfo_(
     ModuleManager *mm, const char *module_name, const char *module_key,
     const char *full_path, const char *relative_path, const char *inlined_file,
     NativeModuleInitFn native_callback, bool is_dynamic, DlHandle dl,
-    NativeModuleBuilderInitFn dl_init) {
+    ModuleBuilderInitFn dl_init) {
   ModuleInfo *module_info =
       create_moduleinfo_(mm, module_name, module_key, full_path, relative_path);
   module_info->has_native_callback = native_callback != NULL;
@@ -362,7 +362,7 @@ ModuleInfo *mm_register_module_with_callback_impl_(
     ModuleManager *mm, const char full_path[], const char relative_path[],
     const char *inlined_file_segs[], int num_inlined_file_segs,
     NativeModuleInitFn callback, DlHandle *dl,
-    NativeModuleBuilderInitFn dl_init) {
+    ModuleBuilderInitFn dl_init) {
   ASSERT(mm != NULL);
   ASSERT(full_path != NULL);
   ASSERT(relative_path != NULL);
@@ -439,13 +439,13 @@ ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
                                        const char relative_path[],
                                        const char *inlined_file_segs[],
                                        int num_inlined_file_segs, DlHandle dl,
-                                       NativeModuleBuilderInitFn callback) {
+                                       ModuleBuilderInitFn callback) {
   return mm_register_module_with_callback_impl_(
       mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
       NULL, dl, callback);
 }
 
-void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *mm,
+void ModuleBuilder_init(ModuleBuilder *builder, ModuleManager *mm,
                               Module *module) {
   builder->mm = mm;
   builder->module = module;
@@ -454,7 +454,7 @@ void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *mm,
 
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[], DlHandle dl,
-                                       NativeModuleBuilderInitFn init_fn) {
+                                       ModuleBuilderInitFn init_fn) {
   const char *interned_name = mm->intern(module_name);
   ModuleInfo *module_info = create_and_init_moduleinfo_(
       mm, interned_name, interned_name, NULL, NULL, NULL, NULL,
@@ -484,8 +484,8 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
     if (module_info->has_native_callback) {
       module_info->native_callback(mm, module);
     } else if (module_info->has_dl && module_info->dl_init != NULL) {
-      NativeModuleBuilder builder;
-      NativeModuleBuilder_init(&builder, mm, module);
+      ModuleBuilder builder;
+      ModuleBuilder_init(&builder, mm, module);
       module_info->dl_init(&builder);
     }
     add_reflection_to_module(mm, module);

@@ -103,7 +103,7 @@ struct Function_ {
   union {
     uint32_t _ins_pos;
     void *_native_fn;   // NativeFn
-    void *_native_fn2;  // NativeFunctionContext
+    void *_native_fn2;  // FunctionContext
   };
 };
 

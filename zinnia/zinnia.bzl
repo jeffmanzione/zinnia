@@ -417,14 +417,14 @@ def _zinnia_test_impl(ctx):
 
     ctx.actions.write(
         output = test_script_file,
-        content = "#!/bin/bash\nsed -e 's/\\x1b\\[[0-9;]*m//g' {} | grep -q \"ExpectError\" && exit -1 || exit 0".format(test_output_file.short_path),
+        content = "#!/bin/bash\nsed -e 's/\\x1b\\[[0-9;]*m//g' {} | grep -q \"Error\" && exit -1 || exit 0".format(test_output_file.short_path),
         is_executable = True,
     )
 
     return [
         DefaultInfo(
             executable = test_script_file,
-            runfiles = ctx.runfiles(files = [test_output_file] + ctx.files.data),
+            runfiles = ctx.runfiles(files = [test_output_file] + input_files + ctx.files.data),
         ),
     ]
 
@@ -441,14 +441,12 @@ _zinnia_test = rule(
             allow_files = True,
             doc = "Data",
         ),
-        "modules": attr.label_list(),
         "runner": attr.label(
             default = Label("//zinnia:zinnia"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
         ),
-        "builtins": attr.label_list(),
     },
     test = True,
 )
@@ -478,5 +476,4 @@ def zinnia_test(name, main, srcs = [], deps = [], modules = [], data = []):
         name = name,
         main = main,
         deps = deps,
-        modules = modules,
     )

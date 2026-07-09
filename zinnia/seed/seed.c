@@ -388,7 +388,7 @@ bool load_znseed_file(VM *vm, const char seed_filepath[], char *error_buf) {
 
     mm_register_module_with_dl(mm, line.source_filepath, line.source_filepath,
                                source_segs, 1, dll,
-                               (NativeModuleBuilderInitFn)init_fn_handle);
+                               (ModuleBuilderInitFn)init_fn_handle);
     // Forces module to be loaded eagerly.
     modulemanager_lookup(mm, line.module_name);
 

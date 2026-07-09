@@ -33,10 +33,9 @@ typedef struct {
   ModuleManager *mm;
   Module *module;
   bool is_verified;
-} NativeModuleBuilder;
-typedef void (*NativeModuleBuilderInitFn)(NativeModuleBuilder *);
-void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *,
-                              Module *);
+} ModuleBuilder;
+typedef void (*ModuleBuilderInitFn)(ModuleBuilder *);
+void ModuleBuilder_init(ModuleBuilder *builder, ModuleManager *, Module *);
 
 // Compile-time/runtime check of init function conformance.
 bool verify_init_fn_signature(NativeModuleInitFn fn);
@@ -64,10 +63,10 @@ ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
                                        const char relative_path[],
                                        const char *inlined_file_segs[],
                                        int num_inlined_file_segs, DlHandle dl,
-                                       NativeModuleBuilderInitFn callback);
+                                       ModuleBuilderInitFn callback);
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
                                        const char module_name[], DlHandle dl,
-                                       NativeModuleBuilderInitFn init_fn);
+                                       ModuleBuilderInitFn init_fn);
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]);
 Module *modulemanager_lookup_without_reading(ModuleManager *mm,

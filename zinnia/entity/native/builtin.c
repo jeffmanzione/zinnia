@@ -112,6 +112,8 @@ Entity Int_(Task *task, Context *ctx, Object *obj, Entity *args) {
       return entity_int(result);
     case PRIMITIVE:
       switch (ptype(&args->pri)) {
+        case PRIMITIVE_BOOL:
+          return entity_int(pbool(&args->pri) ? 1 : 0);
         case PRIMITIVE_CHAR:
           return entity_int((int64_t)pchar(&args->pri));
         case PRIMITIVE_INT:
@@ -182,6 +184,8 @@ Entity Float_(Task *task, Context *ctx, Object *obj, Entity *args) {
       return entity_float(result);
     case PRIMITIVE:
       switch (ptype(&args->pri)) {
+        case PRIMITIVE_BOOL:
+          return entity_float(pbool(&args->pri) ? 1 : 0);
         case PRIMITIVE_CHAR:
           return entity_float((double)pchar(&args->pri));
         case PRIMITIVE_INT:
@@ -1032,11 +1036,11 @@ Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
         "Attempted dlcall on module which did not have function by name '%s'.",
         fn_name);
   }
-  NativeFunctionContext fn_ctx;
-  NativeFunctionContext_init(&fn_ctx, task, ctx, &args_to_pass);
+  FunctionContext fn_ctx;
+  FunctionContext_init(&fn_ctx, task, ctx, &args_to_pass);
   fn(&fn_ctx);
   RELEASE(fn_name);
-  return *NativeFunctionContext_get_retval(&fn_ctx);
+  return *FunctionContext_get_retval(&fn_ctx);
 }
 
 Entity function_ref_name_(Task *task, Context *ctx, Object *obj, Entity *args) {

@@ -34,3 +34,8 @@ zinnia_test(
     name = "time_test",
     main = "time_test.zn",
 )
+
+zinnia_test(
+    name = "strfmt_test",
+    main = "strfmt_test.zn",
+)

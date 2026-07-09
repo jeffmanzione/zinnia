@@ -13,22 +13,20 @@ typedef struct {
   Context *ctx_;
   const Entity *args_;
   Entity retval_;
-} NativeFunctionContext;
+} FunctionContext;
 
-typedef void (*NativeFunctionHandlerFn)(NativeFunctionContext *);
+typedef void (*NativeFunctionHandlerFn)(FunctionContext *);
 
-void NativeFunctionContext_init(NativeFunctionContext *fn_ctx, Task *task,
-                                Context *ctx, const Entity *args);
-const Entity *NativeFunctionContext_args(NativeFunctionContext *fn_ctx);
-void NativeFunctionContext_raise_error(NativeFunctionContext *,
-                                       const char fmt[], ...);
-const Entity *NativeFunctionContext_get_retval(NativeFunctionContext *fn_ctx);
-Entity *NativeFunctionContext_mutable_retval(NativeFunctionContext *);
-void NativeFunctionContext_set_retval(NativeFunctionContext *, Entity *retval);
-void NativeFunctionContext_set_retval_obj(NativeFunctionContext *,
-                                          Object *retval);
-Object *NativeFunctionContext_create_string(NativeFunctionContext *fn_ctx,
-                                            const char src[], size_t len);
+void FunctionContext_init(FunctionContext *fn_ctx, Task *task, Context *ctx,
+                          const Entity *args);
+const Entity *FunctionContext_args(FunctionContext *fn_ctx);
+void FunctionContext_raise_error(FunctionContext *, const char fmt[], ...);
+const Entity *FunctionContext_get_retval(FunctionContext *fn_ctx);
+Entity *FunctionContext_mutable_retval(FunctionContext *);
+void FunctionContext_set_retval(FunctionContext *, Entity *retval);
+void FunctionContext_set_retval_obj(FunctionContext *, Object *retval);
+Object *FunctionContext_create_string(FunctionContext *fn_ctx, const char src[],
+                                      size_t len);
 
 /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_BUILDER_FUNCTION_CONTEXT_H_ */
 #endif

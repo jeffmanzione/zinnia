@@ -3,9 +3,6 @@
 
 #include "zinnia/native.h"
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void init_hello(NativeModuleBuilder *builder);
+NATIVE_FN void init_hello(ModuleBuilder *builder);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLES_SEED_HELLO_H_ */

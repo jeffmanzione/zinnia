@@ -1,0 +1,42 @@
+import io
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class StrfmtTest {
+  @test.Test
+  method test_empty_string() {
+    expect(strfmt('', 'a'), '')
+  }
+  @test.Test
+  method test_no_formats() {
+    expect(strfmt('text', 'a'), 'text')
+  }
+  @test.Test
+  method test_value() {
+    expect(strfmt('text%v', 'a'), 'texta')
+    expect(strfmt('text-%v-%v-%v', 'a', 'b', 'c'), 'text-a-b-c')
+  }
+  @test.Test
+  method test_digits() {
+    expect(strfmt('text-%d-%d-%d', 1, 2, 3), 'text-1-2-3')
+  }
+  @test.Test
+  method test_floats() {
+    expect(strfmt('text-%f-%f-%f', 1.1, 2.2, 3.3), 'text-1.1-2.2-3.3')
+  }
+  @test.Test
+  method test_bools() {
+    expect(strfmt('text-%b-%b', True, False), 'text-True-False')
+  }
+  @test.Test
+  method test_type_conversion() {
+    expect(strfmt('text-%v-%f-%d-%b', 1.5, 1.5, 1.5, 1.5), 'text-1.5-1.5-1-True')
+    expect(strfmt('text-%v-%f-%d-%b', 1, 1, 1, 1), 'text-1-1-1-True')
+    expect(strfmt('text-%v-%f-%d-%b', True, True, True, True), 'text-True-1-1-True')
+    expect(strfmt('text-%v-%f-%d-%b', False, False, False, False), 'text-False-0-0-False')
+  }
+}

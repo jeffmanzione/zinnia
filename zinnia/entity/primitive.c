@@ -5,59 +5,60 @@
 
 #include "zinnia/entity/primitive.h"
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "zinnia/util/error.h"
+
 PrimitiveType ptype(const Primitive *p) {
-  assert(p != NULL);
+  ASSERT(p != NULL);
   return p->_type;
 }
 
 bool pbool(const Primitive *p) {
-  assert(p != NULL);
-  assert(p->_type == PRIMITIVE_BOOL);
+  ASSERT(p != NULL);
+  ASSERT(p->_type == PRIMITIVE_BOOL);
   return p->_bool_val;
 }
 
 int8_t pchar(const Primitive *p) {
-  assert(p != NULL);
-  assert(p->_type == PRIMITIVE_CHAR);
+  ASSERT(p != NULL);
+  ASSERT(p->_type == PRIMITIVE_CHAR);
   return p->_char_val;
 }
 
 int64_t pint(const Primitive *p) {
-  assert(p != NULL);
-  assert(p->_type == PRIMITIVE_INT);
+  ASSERT(p != NULL);
+  ASSERT(p->_type == PRIMITIVE_INT);
   return p->_int_val;
 }
 
 double pfloat(const Primitive *p) {
-  assert(p != NULL);
-  assert(p->_type == PRIMITIVE_FLOAT);
+  ASSERT(p != NULL);
+  ASSERT(p->_type == PRIMITIVE_FLOAT);
   return p->_float_val;
 }
 
 void pset_bool(Primitive *p, bool val) {
-  assert(p != NULL);
+  ASSERT(p != NULL);
   p->_type = PRIMITIVE_BOOL;
   p->_bool_val = val;
 }
 
 void pset_char(Primitive *p, int8_t val) {
-  assert(p != NULL);
+  ASSERT(p != NULL);
   p->_type = PRIMITIVE_CHAR;
   p->_char_val = val;
 }
 
 void pset_int(Primitive *p, int64_t val) {
-  assert(p != NULL);
+  ASSERT(p != NULL);
   p->_type = PRIMITIVE_INT;
   p->_int_val = val;
 }
 
 void pset_float(Primitive *p, double val) {
-  assert(p != NULL);
+  ASSERT(p != NULL);
   p->_type = PRIMITIVE_FLOAT;
   p->_float_val = val;
 }

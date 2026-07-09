@@ -43,7 +43,7 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, error_buf);
   }
 
-  NativeModuleBuilderInitFn init_fn = NULL;
+  ModuleBuilderInitFn init_fn = NULL;
   if (has_init &&
       !open_dl_sym(dl, init_fn_name, (DlFnHandle *)&init_fn, error_buf)) {
     RELEASE(file_name);

@@ -84,8 +84,8 @@ void run_files(const CharPtrArray *source_file_names,
       }
       znseed_tmp_finalize(&tmp_file);
     } else {
-      NativeModuleBuilderInitFn init_fn =
-          (NativeModuleBuilderInitFn)VoidPtrArray_get_unchecked(init_fns, i);
+      ModuleBuilderInitFn init_fn =
+          (ModuleBuilderInitFn)VoidPtrArray_get_unchecked(init_fns, i);
       ModuleInfo *module_info = mm_register_module_with_dl(
           mm, src, src, src_content->source.parts,
           src_content->source.num_parts, NULL, (DlFnHandle)init_fn);

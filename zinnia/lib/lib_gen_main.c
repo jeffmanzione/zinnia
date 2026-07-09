@@ -42,10 +42,12 @@ int main(int argc, const char *args[]) {
 
     print_string_as_var_default(var_name, input, out);
 
+#ifdef DEBUG
     RELEASE(dir_path);
     RELEASE(file_base);
     RELEASE(ext);
     RELEASE(input);
+#endif
 
     // fclose(input_file);
   }

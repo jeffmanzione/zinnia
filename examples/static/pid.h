@@ -3,9 +3,6 @@
 
 #include "zinnia/native.h"
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void init_pid(NativeModuleBuilder *builder);
+NATIVE_FN void init_pid(ModuleBuilder *builder);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLES_STATIC_PID_H_ */

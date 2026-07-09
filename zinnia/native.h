@@ -5,4 +5,10 @@
 #include "zinnia/entity/native/builder/function_context.h"
 #include "zinnia/util/platform.h"
 
+#ifdef OS_WINDOWS
+#define NATIVE_FN __declspec(dllexport)
+#else
+#define NATIVE_FN
+#endif
+
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_NATIVE_H_ */

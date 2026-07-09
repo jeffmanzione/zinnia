@@ -35,4 +35,5 @@ cc_library(
     name = "primitive",
     srcs = ["primitive.c"],
     hdrs = ["primitive.h"],
+    deps = ["//zinnia/util:error"],
 )

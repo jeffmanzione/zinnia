@@ -8,24 +8,12 @@
 
 #include "zinnia/native.h"
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void init_custom(NativeModuleBuilder *builder);
+NATIVE_FN void init_custom(ModuleBuilder *builder);
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void sin_impl(NativeFunctionContext *fn_ctx);
+NATIVE_FN void sin_impl(FunctionContext *fn_ctx);
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void cos_impl(NativeFunctionContext *fn_ctx);
+NATIVE_FN void cos_impl(FunctionContext *fn_ctx);
 
-#ifdef OS_WINDOWS
-__declspec(dllexport)
-#endif
-    void tan_impl(NativeFunctionContext *fn_ctx);
+NATIVE_FN void tan_impl(FunctionContext *fn_ctx);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_EXAMPLE_CUSTOM_H_ */
