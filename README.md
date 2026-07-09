@@ -78,4 +78,4 @@ zinnia my_program.znb
 
 ## Examples
 
-Check out the [examples](https://github.com/jeffmanzione/zinnia/tree/master/zinnia/examples).
+Check out the [examples](https://github.com/jeffmanzione/zinnia/tree/master/examples).
