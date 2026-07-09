@@ -15,6 +15,7 @@ cc_library(
         "//zinnia/entity/function",
         "//zinnia/heap",
         "//zinnia/program:tape",
+        "//zinnia/util:dll",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
     ],
 )

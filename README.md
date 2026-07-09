@@ -1,8 +1,19 @@
 # zinnia
 
-A process virtual machine that I've created in my spare time.
+## A process virtual machine programming language that melds my favorite features features of JavaScript and Java.
 
-The VM is written from scratch by me in C and meets the C90 standard. It compiles on Linux (via gcc) and Windows (via MSVC). I've heavily leveraged [Bazel](https://bazel.build/) to take advantage of incremental and fast builds.
+## Why use Zinnia?
+
+I don't recommend it... yet. It's still an exploration.
+
+It supports compilation of programs to the following outputs:
+
+- **Executable** (.exe): A native executable file for the program that can be run without Zinnia.
+- **Intermediate language** (.zna): An intermediate program representation of the source that is optimized.
+- **Bytecode** (.znb): A bytecode representation of the program.
+- **Archive** (.znseed): Archives that can be unpacked by Zinnia at runtime.
+
+.zna, .znb, and .znseed files can be run by the `zinnia` executable.
 
 ## Dependencies
 
@@ -11,35 +22,32 @@ The VM is written from scratch by me in C and meets the C90 standard. It compile
 - [file-utils](https://github.com/jeffmanzione/file-utils) - Basic C file wrapper for reading files.
 - [intern](https://github.com/jeffmanzione/intern) - String intern.
 - [language-tools](https://github.com/jeffmanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
+- [libzip](https://github.com/nih-at/libzip) - For .zip creation.
 - [memory-wrapper](https://github.com/jeffmanzione/memory-wrapper) - Heap-based memory storage.
 - [rzalloc](https://github.com/jeffmanzione/rzalloc) - Bulk memory allocation.
 
 ## Downloading this project
 
-Download the latest binaries released on GitHub.
+Download the latest binary from the [Releases](https://github.com/jeffmanzione/zinnia/releases) page.
 
 ## Building this project from source
 
-| :exclamation: You will need to install Bazel to build the binaries. Follow the [Bazel installation instructions](https://bazel.build/install) |
-| --------------------------------------------------------------------------------------------------------------------------------------------- |
+**Note**: Requires Bazel 8+. Follow the [Bazel installation instructions](https://bazel.build/install) to install Bazel.
 
-To build zinnia:
+To build zinnia binaries from source:
 
 ```shell
-# Clones this git repository
-git clone https://github.com/jeffmanzione/zinnia.git
+# Clone this git repository
+git clone https://github.com/jeffmanzione/zinnia.git && cd zinnia
 
-# Bazel requires building within the workspace
-cd zinnia
-
-# To build runner
-bazel build -c opt //zinnia
-# To build compiler
-bazel build -c opt //zinnia:zinniac
-# To build the packager
-bazel build -c opt //zinnia:zinniap
-# To build the seed bundler
-bazel build -c opt //zinnia:zinnias
+args=(
+    //zinnia          # Runner
+    //zinnia:zinniac  # Compiler
+    //zinnia:zinniap  # Packager
+    //zinnia:zinnias  # Seed bundler
+)
+# Build above binaries
+bazel build -c opt "${args[@]}"
 ```
 
 ## Compiling your program to assembly and bytecode

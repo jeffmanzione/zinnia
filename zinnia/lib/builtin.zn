@@ -13,6 +13,45 @@ function str(input) {
   }
 }
 
+function strfmt(args) {
+  if ~args or ~(args is Tuple) or (args.len() == 0) or ~(args[0] is String) {
+    raise error.Error(i'Expected fmt argument.')
+  }
+  out = ''
+  fmt = args[0]
+  args_i = 1
+  for fmt_i = 0, fmt_i < fmt.len(), fmt_i = fmt_i + 1 {
+    c = str(fmt[fmt_i])
+    if c != i'%' {
+      out.extend(c)
+      continue
+    }
+    fmt_i = fmt_i + 1
+    arg = args[args_i]
+    c = str(fmt[fmt_i])
+    if c == i'%' {
+      out.extend(i'%')
+      continue
+    }
+    if c == i'v' {
+      out.extend(str(arg))
+    } else if c == i'd' {
+      out.extend(str(Int(arg)))
+    } else if c == i'f' {
+      out.extend(str(Float(arg)))
+    } else if c == i'b' {
+      out.extend(str(Bool(arg)))
+    } else if c == i'p' {
+      adr = if arg is Object then arg.$hex_addr() else i'0x000000000000'
+      out.extend(adr)
+    } else {
+      raise error.Error(strfmt(i'Unknown fmt specifier \'%v\'', c))
+    }
+    args_i = args_i + 1
+  }
+  return out
+}
+
 function cat(args) {
   result = ''
   if ~(args is Tuple) {

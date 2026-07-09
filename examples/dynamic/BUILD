@@ -29,9 +29,18 @@ zinnia_library(
 
 zinnia_binary(
     name = "dynamic",
-    cc_deps = [
+    data = [
         ":_custom.dll",
     ],
     main = "dynamic.zn",
+    deps = [":custom"],
+)
+
+zinnia_binary(
+    name = "dynamic2",
+    data = [
+        ":_custom.dll",
+    ],
+    main = "dynamic2.zn",
     deps = [":custom"],
 )

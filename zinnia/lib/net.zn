@@ -53,19 +53,19 @@ class HttpRequest {
       return _headers[key]
     }
     method get_host() {
-      return _headers['Host']
+      return _headers[i'Host']
     }
     method get_connection() {
-      return _headers['Connection']
+      return _headers[i'Connection']
     }
     method get_user_agent() {
-      return _headers['User-Agent']
+      return _headers[i'User-Agent']
     }
     method get_accept() {
-      return _headers['Accept'].split(',')
+      return _headers[i'Accept'].split(',')
     }
     method get_cookie() {
-      return _headers['Cookie']
+      return _headers[i'Cookie']
     }
     method to_s() {
       ret = cat(type, ' ', path)
@@ -97,11 +97,11 @@ class HttpResponse {
     _protocol = i'HTTP'
     _version = 1.1
     _status_code = 200
-    _status = 'OK'
+    _status = i'OK'
     _headers = {}
     _headers[i'Content-Type'] = i'text/html'
     _headers[i'Accept-Ranges'] = i'bytes'
-    _headers['Content-Length'] = 0
+    _headers[i'Content-Length'] = 0
     _content = ''
     _set_cookies = {}
   }
@@ -186,7 +186,7 @@ function parse_params(path) {
         (a, part) {
           eq_index = part.find('=')
           if ~eq_index {
-            a[part] ='1'
+            a[part] = '1'
           } else {
             a[part.substr(0, eq_index)] = part.substr(eq_index + 1)
           }
@@ -266,7 +266,7 @@ class HttpSocketHandle {
   }
   method send(http_response) async {
     if ~(http_response is HttpResponse) {
-      raise Error('HttpSocketHandle.send() expects an HttpResponse argument.')
+      raise Error(i'HttpSocketHandle.send() expects an HttpResponse argument.')
     }
     await raw_handle.send(http_response.to_s())
   }

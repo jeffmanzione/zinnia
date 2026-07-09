@@ -1,0 +1,15 @@
+; To run: bazel run //examples/dynamic:dynamic2
+
+import dynamic
+import io
+
+self.custom = dynamic.import_c_library(
+  file_name: i'./examples/dynamic/_custom.dll',
+  module_name: i'custom'
+)
+
+io.println(strfmt(i'custom.has_dl()=%v', custom.has_dl()))
+io.println(strfmt(i'sin(1.5)=%v', custom.dlcall(i'sin_impl', 1.5)))
+io.println(strfmt(i'cos(1.5)=%v', custom.dlcall(i'cos_impl', 1.5)))
+io.println(strfmt(i'tan(1.5)=%v', custom.dlcall(i'tan_impl', 1.5)))
+

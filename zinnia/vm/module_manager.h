@@ -12,6 +12,7 @@
 #include "zinnia/entity/module/module.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/program/tape.h"
+#include "zinnia/util/dll.h"
 
 typedef const char *(*InternFn)(const char *);
 
@@ -58,12 +59,14 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              int num_inlined_file_segs,
                                              NativeModuleInitFn callback);
 
-ModuleInfo *mm_register_module_with_callback2(
-    ModuleManager *mm, const char full_path[], const char relative_path[],
-    const char *inlined_file_segs[], int num_inlined_file_segs,
-    NativeModuleBuilderInitFn callback);
+ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
+                                       const char full_path[],
+                                       const char relative_path[],
+                                       const char *inlined_file_segs[],
+                                       int num_inlined_file_segs, DlHandle dl,
+                                       NativeModuleBuilderInitFn callback);
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
-                                       const char module_name[],
+                                       const char module_name[], DlHandle dl,
                                        NativeModuleBuilderInitFn init_fn);
 
 Module *modulemanager_lookup(ModuleManager *mm, const char module_key[]);

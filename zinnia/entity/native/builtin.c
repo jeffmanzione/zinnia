@@ -15,6 +15,7 @@
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/async.h"
+#include "zinnia/entity/native/builder/function_context.h"
 #include "zinnia/entity/native/error.h"
 #include "zinnia/entity/native/native.h"
 #include "zinnia/entity/native/native_helpers.h"
@@ -980,6 +981,64 @@ Entity module_classes_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(array_obj);
 }
 
+Entity module_has_dl_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Module);
+  Module *m = obj->_module_obj;
+  return m->dl != NULL ? TRUE_ENTITY : FALSE_ENTITY;
+}
+
+Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  ASSERT(obj->_class == Class_Module);
+  Module *m = obj->_module_obj;
+  if (!m->dl) {
+    return raise_error(
+        task, ctx,
+        "Attempted dlcall on module without dynamically-linked library.");
+  }
+  if (!IS_STRING(args) && !IS_TUPLE(args)) {
+    return raise_error(task, ctx,
+                       "Attempted dlcall on module with invalid arguments.");
+  }
+  const char *fn_name;
+  Entity args_to_pass = NONE_ENTITY;
+  if (IS_STRING(args)) {
+    fn_name = entity_string_copy(args);
+  } else {
+    Tuple *tuple = (Tuple *)args->obj->_internal_obj;
+    if (tuple_size(tuple) == 0) {
+      return raise_error(task, ctx,
+                         "Attempted dlcall on module with invalid arguments.");
+    }
+    fn_name = entity_string_copy(tuple_get(tuple, 0));
+
+    if (tuple_size(tuple) == 2) {
+      args_to_pass = *tuple_get(tuple, 1);
+    } else {
+      Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
+      tuple_obj->_internal_obj = tuple_create(tuple_size(tuple) - 1);
+      args_to_pass = entity_object(tuple_obj);
+      for (int i = 0; i < tuple_size(tuple) - 1; ++i) {
+        tuple_set(task->parent_process->heap, tuple_obj, i,
+                  tuple_get(tuple, i + 1));
+      }
+    }
+  }
+  char error_buf[255];
+  NativeFunctionHandlerFn fn;
+  if (!open_dl_sym(m->dl, fn_name, (DlFnHandle *)&fn, error_buf)) {
+    RELEASE(fn_name);
+    return raise_error(
+        task, ctx,
+        "Attempted dlcall on module which did not have function by name '%s'.",
+        fn_name);
+  }
+  NativeFunctionContext fn_ctx;
+  NativeFunctionContext_init(&fn_ctx, task, ctx, &args_to_pass);
+  fn(&fn_ctx);
+  RELEASE(fn_name);
+  return *NativeFunctionContext_get_retval(&fn_ctx);
+}
+
 Entity function_ref_name_(Task *task, Context *ctx, Object *obj, Entity *args) {
   const char *name = function_ref_get_func(obj)->_name;
   return entity_object(
@@ -1318,4 +1377,6 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Module, NAME_KEY, module_name_);
   native_method(Class_Module, global_intern("functions"), module_functions_);
   native_method(Class_Module, global_intern("classes"), module_classes_);
+  native_method(Class_Module, global_intern("has_dl"), module_has_dl_);
+  native_method(Class_Module, global_intern("dlcall"), module_dlcall_);
 }

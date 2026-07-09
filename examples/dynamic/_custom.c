@@ -6,8 +6,9 @@
 #include "examples/dynamic/_custom.h"
 
 #include <math.h>
+#include <stdio.h>
 
-static void sin_impl_(NativeFunctionContext *fn_ctx) {
+void sin_impl(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(
@@ -18,7 +19,7 @@ static void sin_impl_(NativeFunctionContext *fn_ctx) {
   *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(sin(r));
 }
 
-static void cos_impl_(NativeFunctionContext *fn_ctx) {
+void cos_impl(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(
@@ -29,7 +30,7 @@ static void cos_impl_(NativeFunctionContext *fn_ctx) {
   *NativeFunctionContext_mutable_retval(fn_ctx) = entity_float(cos(r));
 }
 
-static void tan_impl_(NativeFunctionContext *fn_ctx) {
+void tan_impl(NativeFunctionContext *fn_ctx) {
   const Entity *args = NativeFunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     NativeFunctionContext_raise_error(
@@ -42,7 +43,7 @@ static void tan_impl_(NativeFunctionContext *fn_ctx) {
 
 void init_custom(NativeModuleBuilder *builder) {
   NativeModuleBuilder_verify_signature(builder, init_custom);
-  NativeModuleBuilder_add_function(builder, "sin", sin_impl_);
-  NativeModuleBuilder_add_function(builder, "cos", cos_impl_);
-  NativeModuleBuilder_add_function(builder, "tan", tan_impl_);
+  NativeModuleBuilder_add_function(builder, "sin", sin_impl);
+  NativeModuleBuilder_add_function(builder, "cos", cos_impl);
+  NativeModuleBuilder_add_function(builder, "tan", tan_impl);
 }

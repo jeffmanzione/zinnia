@@ -68,6 +68,7 @@ def _zinnia_library_impl(ctx):
     return [
         DefaultInfo(
             files = depset(out_files),
+            runfiles = ctx.runfiles(files = ctx.files.data),
         ),
         ZinniaLibraryInfo(
             srcs = depset(src_files),
@@ -100,6 +101,10 @@ _zinnia_library = rule(
             default = False,
             doc = "Whether the .zna output should be minimzed.",
         ),
+        "data": attr.label_list(
+            allow_files = True,
+            doc = "Data",
+        ),
     },
 )
 
@@ -109,7 +114,7 @@ def _prioritize_bin(file):
     else:
         return 1
 
-def zinnia_library(name, srcs, deps = [], bin = True, assembly = True, minimize = False):
+def zinnia_library(name, srcs, deps = [], bin = True, assembly = True, minimize = False, data = []):
     """Generates compiled files for the zinnia programming langyage.
 
     Args:
@@ -120,7 +125,7 @@ def zinnia_library(name, srcs, deps = [], bin = True, assembly = True, minimize 
         assembly: Whether assembly (.zna) files should be generated.
         minimize: Whether asembly should be minimized.
     """
-    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = assembly, minimize = minimize)
+    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = assembly, minimize = minimize, data = [])
 
 def _zinnia_binary_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
@@ -168,6 +173,7 @@ def _zinnia_binary_impl(ctx):
     return [
         DefaultInfo(
             files = depset([out_file]),
+            runfiles = ctx.runfiles(files = ctx.files.data),
         ),
     ]
 
@@ -180,6 +186,10 @@ _zinnia_binary = rule(
             mandatory = True,
         ),
         "deps": attr.label_list(),
+        "data": attr.label_list(
+            allow_files = True,
+            doc = "Data",
+        ),
         "modules": attr.label_list(),
         "compiler": attr.label(
             default = Label("//zinnia:zinniap"),
@@ -211,12 +221,14 @@ def zinnia_binary(name, main, srcs = [], deps = [], cc_deps = [], modules = [], 
         zinnia_library(
             name = "%s_srcs" % name,
             srcs = srcs,
+            data = data,
         )
         deps = [":%s_srcs" % name] + deps
     _zinnia_binary(
         name = "%s_bin" % name,
         main = main,
         deps = deps,
+        data = data,
         modules = modules,
     )
     cc_binary(
@@ -241,7 +253,10 @@ def _zinnia_cc_library_impl(ctx):
         command = "echo \"%s:%s:%s\" > %s" % (src_module.path, ctx.attr.cc_init_fn, ",".join([hdr.path for hdr in cc_headers]), out_file.path),
     )
     return [
-        DefaultInfo(files = depset([out_file])),
+        DefaultInfo(
+            files = depset([out_file]),
+            runfiles = ctx.runfiles(files = ctx.files.data),
+        ),
         ZinniaLibraryInfo(
             srcs = depset([src_module]),
         ),
@@ -264,10 +279,14 @@ _zinnia_cc_library = rule(
         "cc_init_fn": attr.string(
             doc = "The function to call to initialize the module.",
         ),
+        "data": attr.label_list(
+            allow_files = True,
+            doc = "Data",
+        ),
     },
 )
 
-def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = None):
+def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = None, data = []):
     """Generates the files necessary to statically link C used with zinnia code into a zinna_binary() as a module.
 
     Args:
@@ -281,16 +300,19 @@ def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = No
         name = "%s_lib" % name,
         srcs = [src_module],
         deps = deps,
+        data = data,
     )
     cc_library(
         name = "%s_lib_cc_deps" % name,
         deps = cc_deps,
+        data = data,
     )
     return _zinnia_cc_library(
         name = name,
         src_module = src_module,
         cc_deps = cc_deps,
         cc_init_fn = cc_init_fn,
+        data = data,
     )
 
 def _zinnia_seed_impl(ctx):
@@ -402,7 +424,7 @@ def _zinnia_test_impl(ctx):
     return [
         DefaultInfo(
             executable = test_script_file,
-            runfiles = ctx.runfiles(files = [test_output_file]),
+            runfiles = ctx.runfiles(files = [test_output_file] + ctx.files.data),
         ),
     ]
 
@@ -415,6 +437,10 @@ _zinnia_test = rule(
             mandatory = True,
         ),
         "deps": attr.label_list(),
+        "data": attr.label_list(
+            allow_files = True,
+            doc = "Data",
+        ),
         "modules": attr.label_list(),
         "runner": attr.label(
             default = Label("//zinnia:zinnia"),
@@ -445,6 +471,7 @@ def zinnia_test(name, main, srcs = [], deps = [], modules = [], data = []):
         zinnia_library(
             name = "%s_srcs" % name,
             srcs = srcs,
+            data = data,
         )
         deps = [":%s_srcs" % name] + deps
     return _zinnia_test(

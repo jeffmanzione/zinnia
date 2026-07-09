@@ -74,6 +74,7 @@ cc_library(
         "//zinnia/program:tape",
         "//zinnia/program:tape_binary",
         "//zinnia/program/optimization:optimize",
+        "//zinnia/util:dll",
         "//zinnia/util:file",
         "//zinnia/vm:intern",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",

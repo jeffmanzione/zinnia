@@ -3,6 +3,7 @@
 import io
 import 'examples/dynamic/custom'
 
-io.println(custom.sin(1.5))
-io.println(custom.cos(1.5))
-io.println(custom.tan(1.5))
+io.println(strfmt(i'custom.has_dl()=%v', custom.has_dl()))
+io.println(strfmt(i'sin(1.5)=%v', custom.sin(1.5)))
+io.println(strfmt(i'cos(1.5)=%v', custom.cos(1.5)))
+io.println(strfmt(i'tan(1.5)=%v', custom.tan(1.5)))

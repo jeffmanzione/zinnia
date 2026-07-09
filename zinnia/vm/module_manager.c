@@ -39,10 +39,10 @@ struct ModuleInfo_ {
   FileInfo *fi;
   const char *file_path, *relative_file_path, *module_name_from_file,
       *inlined_file, *key;
-  bool is_inlined_file, is_loaded, has_native_callback, has_native_callback2,
-      is_dynamic;
+  bool is_inlined_file, is_loaded, has_native_callback, has_dl, is_dynamic;
   NativeModuleInitFn native_callback;
-  NativeModuleBuilderInitFn native_callback2;
+  DlHandle dl;
+  NativeModuleBuilderInitFn dl_init;
 };
 
 IMPL_STABLE_MAPLIKE(ModuleInfoMap, char *, ModuleInfo);
@@ -67,6 +67,10 @@ void modulemanager_finalize(ModuleManager *mm) {
   ModuleInfoMap_iterator(&iter, mm->_modules);
   for (; ModuleInfoMap_has_entry(&iter); ModuleInfoMap_next_entry(&iter)) {
     ModuleInfo *module_info = ModuleInfoMap_mutable_value(&iter);
+    if (module_info->has_dl && module_info->dl != NULL) {
+      char error_buf[255];
+      close_dl(module_info->dl, error_buf);
+    }
     if (!module_info->is_loaded) {
       continue;
     }
@@ -143,7 +147,8 @@ ModuleInfo *modulemanager_hydrate_(ModuleManager *mm, Tape *tape,
 
   Module *module = &module_info->module;
   module_init(module, tape_module_name(tape), module_info->file_path,
-              module_info->relative_file_path, module_info->key, tape);
+              module_info->relative_file_path, module_info->key, tape,
+              module_info->dl);
 
   FunctionRefMapIOIterator funcs = tape_functions(tape);
   for (; FunctionRefMap_io_has_next(&funcs); FunctionRefMap_io_next(&funcs)) {
@@ -335,14 +340,15 @@ ModuleInfo *mm_register_module(ModuleManager *mm, const char full_path[],
 ModuleInfo *create_and_init_moduleinfo_(
     ModuleManager *mm, const char *module_name, const char *module_key,
     const char *full_path, const char *relative_path, const char *inlined_file,
-    NativeModuleInitFn native_callback, bool is_dynamic,
-    NativeModuleBuilderInitFn native_callback2) {
+    NativeModuleInitFn native_callback, bool is_dynamic, DlHandle dl,
+    NativeModuleBuilderInitFn dl_init) {
   ModuleInfo *module_info =
       create_moduleinfo_(mm, module_name, module_key, full_path, relative_path);
   module_info->has_native_callback = native_callback != NULL;
   module_info->native_callback = native_callback;
-  module_info->has_native_callback2 = native_callback2 != NULL;
-  module_info->native_callback2 = native_callback2;
+  module_info->has_dl = dl != NULL || dl_init != NULL;
+  module_info->dl = dl;
+  module_info->dl_init = dl_init;
   module_info->is_loaded = false;
   module_info->is_dynamic = is_dynamic;
   if (NULL != inlined_file) {
@@ -355,7 +361,8 @@ ModuleInfo *create_and_init_moduleinfo_(
 ModuleInfo *mm_register_module_with_callback_impl_(
     ModuleManager *mm, const char full_path[], const char relative_path[],
     const char *inlined_file_segs[], int num_inlined_file_segs,
-    NativeModuleInitFn callback, NativeModuleBuilderInitFn callback2) {
+    NativeModuleInitFn callback, DlHandle *dl,
+    NativeModuleBuilderInitFn dl_init) {
   ASSERT(mm != NULL);
   ASSERT(full_path != NULL);
   ASSERT(relative_path != NULL);
@@ -409,7 +416,7 @@ ModuleInfo *mm_register_module_with_callback_impl_(
   module_info =
       create_and_init_moduleinfo_(mm, module_name, module_key, full_path,
                                   relative_path, inlined_file, callback,
-                                  /*is_dynamic=*/false, callback2);
+                                  /*is_dynamic=*/false, dl, dl_init);
   RELEASE(dir_path);
   RELEASE(ext);
 
@@ -424,16 +431,18 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
                                              NativeModuleInitFn callback) {
   return mm_register_module_with_callback_impl_(
       mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
-      callback, NULL);
+      callback, NULL, NULL);
 }
 
-ModuleInfo *mm_register_module_with_callback2(
-    ModuleManager *mm, const char full_path[], const char relative_path[],
-    const char *inlined_file_segs[], int num_inlined_file_segs,
-    NativeModuleBuilderInitFn callback) {
+ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
+                                       const char full_path[],
+                                       const char relative_path[],
+                                       const char *inlined_file_segs[],
+                                       int num_inlined_file_segs, DlHandle dl,
+                                       NativeModuleBuilderInitFn callback) {
   return mm_register_module_with_callback_impl_(
       mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
-      NULL, callback);
+      NULL, dl, callback);
 }
 
 void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *mm,
@@ -444,14 +453,14 @@ void NativeModuleBuilder_init(NativeModuleBuilder *builder, ModuleManager *mm,
 }
 
 ModuleInfo *mm_register_dynamic_module(ModuleManager *mm,
-                                       const char module_name[],
+                                       const char module_name[], DlHandle dl,
                                        NativeModuleBuilderInitFn init_fn) {
   const char *interned_name = mm->intern(module_name);
   ModuleInfo *module_info = create_and_init_moduleinfo_(
       mm, interned_name, interned_name, NULL, NULL, NULL, NULL,
-      /*is_dynamic=*/true, init_fn);
+      /*is_dynamic=*/true, dl, init_fn);
   module_init(&module_info->module, interned_name, NULL, NULL, module_name,
-              NULL);
+              NULL, dl);
   return module_info;
 }
 
@@ -474,10 +483,10 @@ Module *modulemanager_load(ModuleManager *mm, ModuleInfo *module_info) {
     module_info->is_loaded = true;
     if (module_info->has_native_callback) {
       module_info->native_callback(mm, module);
-    } else if (module_info->has_native_callback2) {
+    } else if (module_info->has_dl && module_info->dl_init != NULL) {
       NativeModuleBuilder builder;
       NativeModuleBuilder_init(&builder, mm, module);
-      module_info->native_callback2(&builder);
+      module_info->dl_init(&builder);
     }
     add_reflection_to_module(mm, module);
     heap_make_root(mm->_heap, module->_reflection);

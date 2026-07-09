@@ -10,44 +10,43 @@
 
 #include "zinnia/util/platform.h"
 
-bool load_dynamic_library(const char file_name[], void **dl_library_ptr,
-                          char *error_buf) {
+bool open_dl(const char file_name[], DlHandle *handle_ptr, char *error_buf) {
 #ifdef OS_WINDOWS
-  HMODULE dl_handle = LoadLibrary(TEXT(file_name));
-  if (!dl_handle) {
+  HMODULE handle = LoadLibrary(TEXT(file_name));
+  if (!handle) {
     const int error_code = GetLastError();
     sprintf(error_buf,
-            "Error opening dynamically-loaded library '%s'. Code: %d",
+            "Error opening dynamically-loaded library '%s'. Error code: %d",
             file_name, error_code);
     return false;
   }
 #else
-  void *dl_handle = dlopen(file_name, RTLD_LAZY | RTLD_GLOBAL);
-  if (!dl_handle) {
+  void *handle = dlopen(file_name, RTLD_LAZY | RTLD_GLOBAL);
+  if (!handle) {
     sprintf(error_buf,
             "Error opening dynamically-loaded library '%s'. Message: %s",
             file_name, dlerror());
     return false;
   }
 #endif
-  *dl_library_ptr = dl_handle;
+  *handle_ptr = handle;
   return true;
 }
 
-bool load_dynamic_function(void *dl_handle, const char fn_name[],
-                           void **dynamic_fn_ptr, char *error_buf) {
+bool open_dl_sym(DlHandle handle, const char fn_name[],
+                 DlFnHandle *fn_handle_ptr, char *error_buf) {
 #ifdef OS_WINDOWS
-  void *fn_ptr = GetProcAddress(dl_handle, fn_name);
+  void *fn_ptr = GetProcAddress(handle, fn_name);
   if (!fn_ptr) {
     const int error_code = GetLastError();
-    sprintf(
-        error_buf,
-        "Error opening dynamically-loaded function '%s' from library. Code: %d",
-        fn_name, error_code);
+    sprintf(error_buf,
+            "Error opening dynamically-loaded function '%s' from library. "
+            "Error code: %d",
+            fn_name, error_code);
     return false;
   }
 #else
-  void *fn_ptr = dlsym(dl_handle, fn_name);
+  void *fn_ptr = dlsym(handle, fn_name);
   if (!fn_ptr) {
     sprintf(error_buf,
             "Error opening dynamically-loaded function '%s' from library. "
@@ -56,17 +55,39 @@ bool load_dynamic_function(void *dl_handle, const char fn_name[],
     return false;
   }
 #endif
-  *dynamic_fn_ptr = fn_ptr;
+  *fn_handle_ptr = fn_ptr;
   return true;
 }
 
-bool load_dynamic_library_function(const char file_name[], const char fn_name[],
-                                   void **dynamic_fn_ptr, char *error_buf) {
-  void *dl_handle;
-  const bool loaded_lib =
-      load_dynamic_library(file_name, &dl_handle, error_buf);
+bool open_dl_sym_fn(const char file_name[], const char fn_name[],
+                    DlFnHandle *fn_handle_ptr, char *error_buf) {
+  void *handle;
+  const bool loaded_lib = open_dl(file_name, &handle, error_buf);
   if (!loaded_lib) {
     return false;
   }
-  return load_dynamic_function(dl_handle, fn_name, dynamic_fn_ptr, error_buf);
+  return open_dl_sym(handle, fn_name, fn_handle_ptr, error_buf);
+}
+
+bool close_dl(DlHandle handle, char *error_buf) {
+  if (!handle) {
+    // Should this be an error?
+    return true;
+  }
+#ifdef OS_WINDOWS
+  if (!FreeLibrary(handle)) {
+    const int error_code = GetLastError();
+    sprintf(error_buf, "Failed to close dynamic library. Error code: %d",
+            error_code);
+    return false;
+  }
+  return true;
+#else
+  if (dlclose(handle) != 0) {
+    sprintf(error_buf, "Failed to close dynamic library. Message: %s",
+            dlerror());
+    return false;
+  }
+  return true;
+#endif
 }

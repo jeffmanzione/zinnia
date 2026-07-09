@@ -10,7 +10,6 @@
 #include "zinnia/util/dll.h"
 #include "zinnia/util/string_util.h"
 
-typedef void dll_handle;
 typedef zip_t znseed_t;
 
 struct manifest_row {
@@ -184,8 +183,8 @@ bool copy_zip_file_to_file_(znseed_t *seed, const char seed_filepath[],
   return result;
 }
 
-dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
-                                char *error_buf) {
+void *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
+                          char *error_buf) {
   char *path, *filename, *ext;
   split_path_file(seed_dll_filepath, &path, &filename, &ext);
 
@@ -218,8 +217,8 @@ dll_handle *open_dll_from_seed_(znseed_t *seed, const char seed_dll_filepath[],
   // Flush written data and close.
   fclose(tmp_ddl_file);
 
-  dll_handle *dll_handle;
-  if (!load_dynamic_library(tmp_filename, &dll_handle, error_buf)) {
+  void *dll_handle;
+  if (!open_dl(tmp_filename, &dll_handle, error_buf)) {
     close(tmp_fd);
     free(tmp_filename);
     return NULL;
@@ -381,15 +380,15 @@ bool load_znseed_file(VM *vm, const char seed_filepath[], char *error_buf) {
     }
 
     void *init_fn_handle = NULL;
-    if (dll && !load_dynamic_function(dll, line.dll_init_fn, &init_fn_handle,
-                                      error_buf)) {
+    if (dll &&
+        !open_dl_sym(dll, line.dll_init_fn, &init_fn_handle, error_buf)) {
       // Should do something probably.
       FATALF("Error loading znseed: %s", error_buf);
     }
 
-    mm_register_module_with_callback2(
-        mm, line.source_filepath, line.source_filepath, source_segs, 1,
-        (NativeModuleBuilderInitFn)init_fn_handle);
+    mm_register_module_with_dl(mm, line.source_filepath, line.source_filepath,
+                               source_segs, 1, dll,
+                               (NativeModuleBuilderInitFn)init_fn_handle);
     // Forces module to be loaded eagerly.
     modulemanager_lookup(mm, line.module_name);
 

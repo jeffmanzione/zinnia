@@ -81,6 +81,7 @@ cc_library(
         "//zinnia/entity/class:classes",
         "//zinnia/entity/function",
         "//zinnia/entity/native:native_helpers",
+        "//zinnia/entity/native/builder:function_context",
         "//zinnia/entity/string",
         "//zinnia/entity/string:string_helper",
         "//zinnia/entity/tuple",

@@ -4,9 +4,11 @@
 #include "c-data-structures/stable_maplike.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/program/tape.h"
+#include "zinnia/util/dll.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], const char key[], Tape *tape);
+                 const char relative_path[], const char key[], Tape *tape,
+                 DlHandle dl);
 void module_finalize(Module *module);
 const char *module_name(const Module *const module);
 const Tape *module_tape(const Module *const module);

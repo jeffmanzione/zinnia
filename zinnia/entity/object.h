@@ -14,7 +14,9 @@
 #include "c-data-structures/stable_maplike.h"
 #include "memory-wrapper/memory_graph.h"
 #include "zinnia/program/tape.h"
+#include "zinnia/util/dll.h"
 #include "zinnia/util/sync/mutex.h"
+
 
 typedef struct Object_ Object;
 typedef struct Class_ Class;
@@ -81,6 +83,8 @@ struct Module_ {
   const char *_full_path;
   const char *_relative_path;
   const char *_key;
+
+  DlHandle dl;
 };
 
 struct Function_ {

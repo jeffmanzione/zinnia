@@ -3,11 +3,14 @@
 
 #include <stdbool.h>
 
-bool load_dynamic_library(const char file_name[], void **dl_library_ptr,
-                          char *error_buf);
-bool load_dynamic_function(void *dl_handle, const char fn_name[],
-                           void **dynamic_fn_ptr, char *error_buf);
-bool load_dynamic_library_function(const char file_name[], const char fn_name[],
-                                   void **dynamic_fn_ptr, char *error_buf);
+typedef void *DlHandle;
+typedef void *DlFnHandle;
+
+bool open_dl(const char file_name[], DlHandle *handle_ptr, char *error_buf);
+bool open_dl_sym(DlHandle handle, const char fn_name[],
+                 DlFnHandle *fn_handle_ptr, char *error_buf);
+bool open_dl_sym_fn(const char file_name[], const char fn_name[],
+                    DlFnHandle *fn_handle_ptr, char *error_buf);
+bool close_dl(DlHandle handle, char *error_buf);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_UTIL_DLL_H_ */

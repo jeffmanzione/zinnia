@@ -7,7 +7,8 @@
 #include "zinnia/util/error.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], const char key[], Tape *tape) {
+                 const char relative_path[], const char key[], Tape *tape,
+                 DlHandle dl) {
   module->_name = name;
   module->_full_path = full_path;
   module->_relative_path = relative_path;
@@ -15,6 +16,7 @@ void module_init(Module *module, const char name[], const char full_path[],
   module->_tape = tape;
   module->_reflection = NULL;
   module->_is_initialized = false;
+  module->dl = dl;
 
   ClassMap_init(&module->_classes, hash_interned_string,
                 compare_interned_strings);

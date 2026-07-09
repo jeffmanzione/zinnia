@@ -1,5 +1,11 @@
 load("//zinnia:zinnia.bzl", "zinnia_binary")
 
+filegroup(
+    name = "web",
+    srcs = glob(["web/**/*"]),
+    visibility = ["//visibility:public"],
+)
+
 zinnia_binary(
     name = "chat",
     main = "chat.zn",
@@ -22,6 +28,7 @@ zinnia_binary(
 
 zinnia_binary(
     name = "webserver",
+    data = [":web"],
     main = "webserver.zn",
 )
 

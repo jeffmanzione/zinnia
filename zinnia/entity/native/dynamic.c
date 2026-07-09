@@ -23,32 +23,42 @@ Entity open_c_lib_(Task *task, Context *ctx, Object *obj, Entity *args) {
                        "Invalid argument(1) for "
                        "__open_c_lib: Expected type String.");
   }
-  if (!IS_STRING(arg2)) {
+  if (!IS_NONE(arg2) && !IS_STRING(arg2)) {
     return raise_error(task, ctx,
                        "Invalid argument(2) for "
-                       "__open_c_lib: Expected type String.");
+                       "__open_c_lib: Expected None or String.");
   }
   char *file_name = entity_string_copy(arg0);
   char *module_name = entity_string_copy(arg1);
-  char *init_fn_name = entity_string_copy(arg2);
 
-  void *init_fn;
+  const bool has_init = !IS_NONE(arg2);
+  char *init_fn_name = has_init ? entity_string_copy(arg2) : NULL;
+
+  DlHandle dl = NULL;
   char error_buf[255];
-  if (!load_dynamic_library_function(file_name, init_fn_name, &init_fn,
-                                     error_buf)) {
+  if (!open_dl(file_name, &dl, error_buf)) {
     RELEASE(file_name);
     RELEASE(module_name);
-    RELEASE(init_fn_name);
+    if (has_init) RELEASE(init_fn_name);
+    return raise_error(task, ctx, error_buf);
+  }
+
+  NativeModuleBuilderInitFn init_fn = NULL;
+  if (has_init &&
+      !open_dl_sym(dl, init_fn_name, (DlFnHandle *)&init_fn, error_buf)) {
+    RELEASE(file_name);
+    RELEASE(module_name);
+    if (has_init) RELEASE(init_fn_name);
     return raise_error(task, ctx, error_buf);
   }
 
   ModuleManager *mm = vm_module_manager(task->parent_process->vm);
-  mm_register_dynamic_module(mm, module_name, init_fn);
+  mm_register_dynamic_module(mm, module_name, dl, init_fn);
   // Forces module to be loaded eagerly.
   Module *module = modulemanager_lookup(mm, module_name);
   RELEASE(file_name);
   RELEASE(module_name);
-  RELEASE(init_fn_name);
+  if (has_init) RELEASE(init_fn_name);
   return entity_object(module->_reflection);
 }
 

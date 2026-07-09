@@ -22,6 +22,7 @@ cc_library(
     hdrs = ["object.h"],
     deps = [
         "//zinnia/program:tape",
+        "//zinnia/util:dll",
         "//zinnia/util/sync:mutex",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
