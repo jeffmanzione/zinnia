@@ -27,6 +27,7 @@ void FunctionContext_set_retval(FunctionContext *, Entity *retval);
 void FunctionContext_set_retval_obj(FunctionContext *, Object *retval);
 Object *FunctionContext_create_string(FunctionContext *fn_ctx, const char src[],
                                       size_t len);
+Object *FunctionContext_create_tuple(FunctionContext *fn_ctx, size_t size, ...);
 
 /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_BUILDER_FUNCTION_CONTEXT_H_ */
 #endif

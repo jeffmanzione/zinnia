@@ -998,8 +998,7 @@ bool _execute_WAIT(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   const Entity *resval = task_get_resval(task);
   // Only wait for futures.
-  if (NULL == resval || OBJECT != resval->type ||
-      Class_Future != resval->obj->_class) {
+  if (!IS_CLASS(resval, Class_Future)) {
     return false;
   }
   Future *future = (Future *)resval->obj->_internal_obj;
@@ -1419,7 +1418,8 @@ TaskState vm_execute_task(VM *vm, Task *task) {
     const Instruction *ins = context_ins(context);
 #ifdef DEBUG
     SYNCHRONIZED(vm->process_create_lock, {
-      fprintf(stdout, "(p=%p, t=%p) ", task->parent_process, task);
+      fprintf(stdout, "(p=%p, t=%p, c=%p) ", task->parent_process, task,
+              task->current);
       instruction_write(ins, stdout, /* minimize */ false);
       fprintf(stdout, "\n");
       fflush(stdout);
@@ -1781,8 +1781,8 @@ top_of_fn:
       fprintf(stdout, "<-- ");
       entity_print(task_get_resval(task), stdout);
       fprintf(stdout, "\n");
-      DEBUGF("TaskState=%s p=%p t=%p", task_state_str(task_state), process,
-             task);
+      DEBUGF("TaskState=%s p=%p t=%p c=%p", task_state_str(task_state), process,
+             task, task->current);
     });
 #endif
     switch (task_state) {

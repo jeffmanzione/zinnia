@@ -56,6 +56,20 @@
     }                                                                          \
   }
 
+#define REGISTER_MODULE_WITH_CALLBACK2(mm, name, lib_location)            \
+  {                                                                       \
+    if (NULL != lib_location) {                                           \
+      mm_register_module_with_callback2(                                  \
+          mm, find_file_by_name(lib_location, #name),                     \
+          find_file_by_name(lib_location, #name), NULL, -1,               \
+          name##_add_native);                                             \
+    } else {                                                              \
+      mm_register_module_with_callback2(                                  \
+          mm, LIB_DIR #name LIB_EXT, LIB_DIR #name LIB_EXT, LIB_##name,   \
+          sizeof(LIB_##name) / sizeof(LIB_##name[0]), name##_add_native); \
+    }                                                                     \
+  }
+
 void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE_WITH_CALLBACK(mm, builtin, lib_location);
   Module_builtin = modulemanager_lookup(mm, global_intern("builtin"));
@@ -73,7 +87,7 @@ void register_builtin(ModuleManager *mm, Heap *heap, const char *lib_location) {
   REGISTER_MODULE_WITH_CALLBACK(mm, socket, lib_location);
   REGISTER_MODULE(mm, net, lib_location);
   REGISTER_MODULE_WITH_CALLBACK(mm, dynamic, lib_location);
-  REGISTER_MODULE_WITH_CALLBACK(mm, time, lib_location);
+  REGISTER_MODULE_WITH_CALLBACK2(mm, time, lib_location);
   REGISTER_MODULE(mm, builtin_ext, lib_location);
   REGISTER_MODULE(mm, io_ext, lib_location);
   REGISTER_MODULE(mm, memory, lib_location);

@@ -15,8 +15,10 @@ cc_library(
     hdrs = ["native.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//zinnia/entity/class:classes_def",
         "//zinnia/entity/native/builder",
         "//zinnia/entity/native/builder:function_context",
+        "//zinnia/entity/tuple",
         "//zinnia/util:platform",
     ],
 )
@@ -24,6 +26,9 @@ cc_library(
 cc_binary(
     name = "zinnia",
     srcs = ["zinnia.c"],
+    defines = [
+        "NDEBUG",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//zinnia/run"],
 )
@@ -31,6 +36,9 @@ cc_binary(
 cc_binary(
     name = "zinniac",
     srcs = ["zinniac.c"],
+    defines = [
+        "NDEBUG",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//zinnia/compile"],
 )
@@ -38,6 +46,9 @@ cc_binary(
 cc_binary(
     name = "zinniap",
     srcs = ["zinniap.c"],
+    defines = [
+        "NDEBUG",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//zinnia/package"],
 )
@@ -45,6 +56,9 @@ cc_binary(
 cc_binary(
     name = "zinnias",
     srcs = ["zinnias.c"],
+    defines = [
+        "NDEBUG",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//zinnia/seed"],
 )

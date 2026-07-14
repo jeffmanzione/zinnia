@@ -124,8 +124,9 @@ def zinnia_library(name, srcs, deps = [], bin = True, assembly = True, minimize 
         bin: Whether binary (.znb) files should be generated.
         assembly: Whether assembly (.zna) files should be generated.
         minimize: Whether asembly should be minimized.
+        data: The data needed at runtime.
     """
-    return _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = assembly, minimize = minimize, data = [])
+    _zinnia_library(name = name, srcs = srcs, deps = deps, bin = bin, assembly = assembly, minimize = minimize, data = data)
 
 def _zinnia_binary_impl(ctx):
     compiler_executable = ctx.attr.compiler.files_to_run.executable
@@ -295,6 +296,7 @@ def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = No
         deps: zinnia_library() deps needed by src_module.
         cc_deps: C (cc_library) targets that should be included in the binary.
         cc_init_fn: The C function name that should be called to initiate the library.
+        data: Data needed at runtime.
     """
     zinnia_library(
         name = "%s_lib" % name,
@@ -307,7 +309,7 @@ def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = No
         deps = cc_deps,
         data = data,
     )
-    return _zinnia_cc_library(
+    _zinnia_cc_library(
         name = name,
         src_module = src_module,
         cc_deps = cc_deps,
@@ -472,7 +474,7 @@ def zinnia_test(name, main, srcs = [], deps = [], modules = [], data = []):
             data = data,
         )
         deps = [":%s_srcs" % name] + deps
-    return _zinnia_test(
+    _zinnia_test(
         name = name,
         main = main,
         deps = deps,

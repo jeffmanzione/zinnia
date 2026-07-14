@@ -74,16 +74,15 @@ Entity Socket_close_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return NONE_ENTITY;
 }
 
-// To ease finding sockethandle class.
 Entity Socket_accept_(Task *task, Context *ctx, Object *obj, Entity *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
     return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
+  SocketHandle *sh = socket_accept(socket);
   Object *socket_handle =
       native_background_new(task->parent_process, Class_SocketHandle);
-  Entity arg = entity_object(obj);
-  SocketHandle_constructor_(task, ctx, socket_handle, &arg);
+  socket_handle->_internal_obj = sh;
   return entity_object(socket_handle);
 }
 
@@ -122,38 +121,16 @@ Entity Socket_port_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(port);
 }
 
-Entity SocketHandle_connect_constructor_(Task *task, Context *ctx, Object *obj,
-                                         Entity *args) {
-  Socket *socket = (Socket *)args->obj->_internal_obj;
-  if (NULL == socket) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
-  }
-  SocketHandle *sh = socket_connect(socket);
-  obj->_internal_obj = sh;
-  return entity_object(obj);
-}
-
 Entity Socket_connect_(Task *task, Context *ctx, Object *obj, Entity *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
     return native_background_raise_error(task, ctx, "Weird Socket error.");
   }
+  SocketHandle *sh = socket_connect(socket);
   Object *socket_handle =
       native_background_new(task->parent_process, Class_SocketHandle);
-  Entity arg = entity_object(obj);
-  SocketHandle_connect_constructor_(task, ctx, socket_handle, &arg);
+  socket_handle->_internal_obj = sh;
   return entity_object(socket_handle);
-}
-
-Entity SocketHandle_constructor_(Task *task, Context *ctx, Object *obj,
-                                 Entity *args) {
-  Socket *socket = (Socket *)args->obj->_internal_obj;
-  if (NULL == socket) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
-  }
-  SocketHandle *sh = socket_accept(socket);
-  obj->_internal_obj = sh;
-  return entity_object(obj);
 }
 
 Entity SocketHandle_close_(Task *task, Context *ctx, Object *obj,
@@ -250,8 +227,6 @@ void socket_add_native(ModuleManager *mm, Module *socket) {
                   lookup_local_address_);
   Class_SocketHandle = native_class(socket, global_intern("SocketHandle"),
                                     SocketHandle_init_, SocketHandle_delete_);
-  native_method(Class_SocketHandle, global_intern("new"),
-                SocketHandle_constructor_);
   native_background_method(Class_SocketHandle, global_intern("send"),
                            SocketHandle_send_);
   native_background_method(Class_SocketHandle, global_intern("receive"),

@@ -1104,6 +1104,17 @@ Entity class_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
              : entity_object(obj->_class_obj->_super->_reflection);
 }
 
+Entity class_is_subclass_of_(Task *task, Context *ctx, Object *obj,
+                             Entity *args) {
+  if (!IS_CLASS(args, Class_Class)) {
+    return raise_error(task, ctx,
+                       "is_subclass_of() requires a Class as an argument.");
+  }
+  const bool is_subclass_of =
+      inherits_from(obj->_class_obj, args->obj->_class_obj);
+  return is_subclass_of ? TRUE_ENTITY : FALSE_ENTITY;
+}
+
 Entity object_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Class)) {
     return raise_error(task, ctx, "super() requires a Class as an argument.");
@@ -1357,6 +1368,8 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_method(Class_Class, MODULE_KEY, class_module_);
   native_method(Class_Class, NAME_KEY, class_name_);
   native_method(Class_Class, SUPER_KEY, class_super_);
+  native_method(Class_Class, global_intern("is_subclass_of"),
+                class_is_subclass_of_);
   native_method(Class_Class, global_intern("methods"), class_methods_);
 
   native_method(Class_Class, global_intern("$__set_super"), class_set_super_);

@@ -209,7 +209,7 @@ cc_library(
     srcs = ["time.c"],
     hdrs = ["time.h"],
     deps = [
-        ":native_hdrs",
+        "//zinnia:native",
         "//zinnia/util:time",
     ],
 )

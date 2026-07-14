@@ -61,6 +61,8 @@ void array_set(Heap *heap, Object *array, int32_t index, const Entity *child);
 Object *array_create(Heap *heap);
 
 void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+
+Object *tuple_create_empty(Heap *heap, size_t size);
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2);
 Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3);
 Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,

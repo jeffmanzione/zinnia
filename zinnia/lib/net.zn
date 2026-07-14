@@ -1,4 +1,4 @@
-import async
+;import async
 import error
 import inject
 import io
@@ -221,11 +221,11 @@ function parse_request(req) {
   }
 }
 
-@inject.Inject(keys: [HttpRequest, HttpResponse])
+@inject.Inject(keys: [HttpRequest, inject.Provider(HttpResponse)])
 class Cookies {
   field cookies_map
 
-  new(field req, field resp) {
+  new(field req, field resp_provider) {
     cookies_map = _parse_cookie_map(req.get_cookie())
   }
   method [](name) {
@@ -233,7 +233,7 @@ class Cookies {
   }
   method []=(name, value) {
     cookies_map[name] = value
-    resp.set_cookie(name, value)
+    resp_provider().set_cookie(name, value)
   }
   method to_s() {
     return cookies_map.to_s()
@@ -286,6 +286,52 @@ class HttpSocket {
   }
 }
 
+; Marker for the raw request string.
+class RawRequest {}
+class RawResponse {}
+
+class BaseHttpProviderSet: inject.ProviderSet {
+  field req, resp, http_resp
+
+  new() {
+    super(inject.ProviderSet)()
+  }
+
+  @inject.Provides(key: HttpResponse)
+  method base_response() {
+    if ~http_resp {
+      http_resp = HttpResponse()
+    }
+    return http_resp
+  }
+
+  @inject.Provides(key: HttpRequest, params: [RawRequest])
+  method marshall(raw_req) {
+    if ~raw_req {
+      return None
+    }
+    if ~req {
+      req = parse_request(raw_req)  
+      io.println('HTTP/' + req.version + ' ' + req.path)
+      resp = None
+      http_resp = None
+    }
+    return req
+  }
+
+  @inject.Provides(key: RawResponse, params: [HttpResponse])
+  method unmarshall(http_resp) {
+    if ~http_resp {
+      return None
+    }
+    if ~resp {
+      resp = http_resp.to_s()
+      req = None
+    }
+    return resp
+  }
+}
+
 class Rpc { method annotate(_) {} }
 
 class Get { method annotate(_) {} }
@@ -303,38 +349,23 @@ function always_true() {
 }
 
 class RequestController {
-  new(field matcher_fn=always_true) {}
-  method marshall(req) { req }
-  method unmarshall(resp) { resp }
-  method preinject(injector, req) {}
-  method process(controller, req, injector) {
-    return find_annotated_method(controller, Rpc)(req)
+  new(field matcher_fn=always_true, field request_key = RawRequest, field response_key = RawResponse) {}
+  method process(controller) {
+    return find_annotated_method(controller, Rpc)()
   }
+}
+
+class RequestMatcher {
+  method matches(raw_request) { False }
 }
 
 class HttpRequestController : RequestController {
   new(http_matcher_fn=always_true) {
-    super(RequestController)(http_matcher_fn)
+    super(RequestController)(http_matcher_fn, HttpRequest, HttpResponse)
   }
 
-  method marshall(req) { 
-    http_req = parse_request(req)
-    io.println('HTTP/' + http_req.version + ' ' + http_req.path)
-    return http_req
-  }
-
-  method unmarshall(resp) { resp.to_s() }
-
-  method preinject(injector, req) {
-    resp = net.HttpResponse()
-    injector.install(HttpRequest, () -> req)
-    injector.install(HttpResponse, () -> resp)
-  }
-
-  method process(controller, req, injector) {
-    resp = injector.get(HttpResponse)
-    find_annotated_method(controller, _get_label(req))(req, resp)
-    return resp
+  method process(controller, req) {
+    find_annotated_method(controller, _get_label(req))(req)
   }
 
   method _get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
@@ -360,9 +391,10 @@ class Application {
 
   method start() {
     io.println('Starting app at ' + str(host) + ':' +  str(port))
-    async.create_remote(
-        ApplicationRunner,
-        (host, port, controller_classes, provider_sets))
+    ; async.create_remote(
+    ;     ApplicationRunner,
+    ;     (host, port, controller_classes, provider_sets))
+    return ApplicationRunner(host, port, controller_classes, provider_sets)
   }
 }
 
@@ -389,7 +421,7 @@ function find_annotated_method(instance, annot) {
   return instance.$get(methods[0].name())
 }
 
-@async.RemoteClass
+;@async.RemoteClass
 class ApplicationRunner {
   field injector
   new(field host, field port, field controller_classes, field provider_sets=[]) {
@@ -403,7 +435,11 @@ class ApplicationRunner {
   method _select_controller(request) {
     for (_, ctrlr_cls) in controller_classes {
       req_ctrlr = _get_request_controller(ctrlr_cls)
-      if req_ctrlr.matcher_fn(request) {
+      matcher_fn = req_ctrlr.matcher_fn
+      if (matcher_fn is Class) and matcher_fn.is_subclass_of(RequestMatcher) {
+        matcher_fn = injector.get(matcher_fn).matches
+      }
+      if matcher_fn(request) {
         return (req_ctrlr, ctrlr_cls)
       }
     }
@@ -411,15 +447,15 @@ class ApplicationRunner {
   }
 
   method process(request, timer) {
+    injector.install(RawRequest, () -> request)
     (req_ctrlr, ctrlr_cls) = _select_controller(request)
     if ~req_ctrlr or ~ctrlr_cls {
       raise error.Error('No controller found for request: ' + str(request))
     }
-    request = req_ctrlr.marshall(request)
-    req_ctrlr.preinject(injector, request)
     ctrlr = injector.get(ctrlr_cls)
-    resp = req_ctrlr.process(ctrlr, request, injector)
-    resp = req_ctrlr.unmarshall(resp)
+    request2 = injector.get(req_ctrlr.request_key)
+    req_ctrlr.process(ctrlr, request2)
+    resp = injector.get(RawResponse)
     return resp
   }
 
@@ -462,6 +498,10 @@ class Server {
   }
 
   method run() {
-    await async.all(apps.map(app -> app.start().run()))
+    ; await async.all(
+    ;  apps.map(app -> app.start().run())
+    ;)
+    runners = apps.map(app -> app.start())
+    runners.each(r -> r.run())
   }
 }

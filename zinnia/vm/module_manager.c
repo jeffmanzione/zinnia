@@ -361,8 +361,7 @@ ModuleInfo *create_and_init_moduleinfo_(
 ModuleInfo *mm_register_module_with_callback_impl_(
     ModuleManager *mm, const char full_path[], const char relative_path[],
     const char *inlined_file_segs[], int num_inlined_file_segs,
-    NativeModuleInitFn callback, DlHandle *dl,
-    ModuleBuilderInitFn dl_init) {
+    NativeModuleInitFn callback, DlHandle *dl, ModuleBuilderInitFn dl_init) {
   ASSERT(mm != NULL);
   ASSERT(full_path != NULL);
   ASSERT(relative_path != NULL);
@@ -434,6 +433,16 @@ ModuleInfo *mm_register_module_with_callback(ModuleManager *mm,
       callback, NULL, NULL);
 }
 
+ModuleInfo *mm_register_module_with_callback2(ModuleManager *mm,
+                                              const char full_path[],
+                                              const char relative_path[],
+                                              const char *inlined_file_segs[],
+                                              int num_inlined_file_segs,
+                                              ModuleBuilderInitFn callback) {
+  return mm_register_module_with_callback_impl_(
+      mm, full_path, relative_path, inlined_file_segs, num_inlined_file_segs,
+      NULL, NULL, callback);
+}
 ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
                                        const char full_path[],
                                        const char relative_path[],
@@ -446,7 +455,7 @@ ModuleInfo *mm_register_module_with_dl(ModuleManager *mm,
 }
 
 void ModuleBuilder_init(ModuleBuilder *builder, ModuleManager *mm,
-                              Module *module) {
+                        Module *module) {
   builder->mm = mm;
   builder->module = module;
   builder->is_verified = false;

@@ -12,68 +12,82 @@ class Favicon {}
 class IndexHtml {}
 class NotFoundHtml {}
 
-function is_favicon(req) {
-  net.parse_request(req).path == '/favicon.ico'
+@inject.Inject(keys: net.HttpRequest)
+class FaviconRequestMatcher : net.RequestMatcher {
+  new(field http_req) {}
+  method matches() {
+    return ~~http_req and (http_req.path  == '/favicon.ico')
+  }
 }
 
-function is_not_found(req) {
-  net.parse_request(req).path == '/not_found.html'
+@inject.Inject(keys: net.HttpRequest)
+class NotFoundRequestMatcher : net.RequestMatcher {
+  new(field http_req) {}
+  method matches() {
+    return ~~http_req and (http_req.path  == '/not_found.html')
+  }
 }
 
-function is_base_path(req) {
-  net.parse_request(req).path == '/'
+@inject.Inject(keys: net.HttpRequest)
+class BasePathRequestMatcher : net.RequestMatcher {
+  new(field http_req) {}
+  method matches() {
+    return ~~http_req and (http_req.path  == '/')
+  }
 }
 
-@net.HttpRequestController(is_favicon)
-@inject.Inject(keys: Favicon)
+
+@net.HttpRequestController(FaviconRequestMatcher)
+@inject.Inject(keys: [Favicon, net.HttpResponse])
 class FaviconController {
-  new(field favicon) {}
-
+  new(field favicon, field http_response) {}
   @net.Get
-  method get(http_request, http_response) {
+  method get() {
     http_response
         .set_content_type('image/x-icon')
         .add_content(favicon)
   }
 }
 
-@net.HttpRequestController(is_base_path)
-@inject.Inject(keys: [IndexHtml, inject.Provider(net.Cookies)])
+@net.HttpRequestController(BasePathRequestMatcher)
+@inject.Inject(keys: [IndexHtml, inject.Provider(net.Cookies), net.HttpRequest, net.HttpResponse])
 class IndexController {
-  new(field index_html, field cookies_provider) {}
-
+  new(field index_html, field cookies_provider, field http_request, field http_response) {}
   @net.Get
-  method get(http_request, http_response) {
+  method get() {
     cookies = cookies_provider()
     cookies['poop'] = 'big'
     http_response.add_content(index_html)
   }
 }
 
-@net.HttpRequestController(is_not_found)
-@inject.Inject(keys: NotFoundHtml)
+@net.HttpRequestController(NotFoundRequestMatcher)
+@inject.Inject(keys: [NotFoundHtml, net.HttpResponse])
 class NotFoundController {
-  new(field not_found) {}
-
+  new(field not_found, field http_response) {}
   @net.Get
-  method get(http_request, http_response) {
+  method get() {
     http_response.add_content(not_found)
   }
 }
 
 @net.HttpRequestController
+@inject.Inject(keys: [net.HttpRequest, net.HttpResponse])
 class RedirectController {
+  new(field http_request, field http_response) {}
   @net.Get
-  method get(http_request, http_response) {
+  method get() {
     target = if (http_request.path == '/index.html') then '/' else '/not_found.html'
     net.redirect(http_request, http_response, target)
   }
 }
 
 @net.RequestController
+@inject.Inject(keys: net.RawRequest)
 class RpcController {
+  new(field request) {}
   @net.Rpc
-  method process(request) {
+  method process() {
     io.println('Ping')
     ; For now, just ping back the request.
     json.jsonify({'request': request, 'response': 'pong'})
@@ -81,6 +95,11 @@ class RpcController {
 }
 
 class WebProviders : inject.ProviderSet {
+
+  method init() {
+    install(net.BaseHttpProviderSet())
+  }
+
   @inject.Singleton
   @inject.Provides(key: Favicon)
   method provide_favicon() {
@@ -108,7 +127,7 @@ net.Server()
             .add_controller(NotFoundController)
             .add_controller(RedirectController)
             .add_provider_set(WebProviders))
-    .add_application(
-        net.Application(host, api_port)
-            .add_controller(RpcController))
+    ; .add_application(
+    ;     net.Application(host, api_port)
+    ;         .add_controller(RpcController))
     .run()

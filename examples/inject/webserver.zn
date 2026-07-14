@@ -19,8 +19,9 @@ class Favicon {}
 class Index {}
 class NotFound {}
 
-class ServerProviders : inject.ProviderSet {
+class ServerProviders : net.BaseHttpProviderSet {
   method init() {
+    super(net.BaseHttpProviderSet).init()
     bind(Host, () -> HOST)
     bind(Port, () -> PORT)
   }
@@ -54,38 +55,39 @@ class RequestHandler {
   method handle(request) { raise error.Error('Not implemented') }
 }
 
-@inject.Inject(keys: Favicon)
+@inject.Inject(keys: [Favicon, net.HttpResponse])
 class FaviconHandler : RequestHandler {
-  new(field favicon) {}
+  new(field favicon, field resp) {}
   method handle(_) {
-    return net.HttpResponse()
+      return resp
         .set_content_type('image/x-icon')
         .add_content(favicon)
   }
 }
 
-@inject.Inject(keys: Index)
+@inject.Inject(keys: [Index, net.HttpResponse])
 class IndexHandler : RequestHandler {
-  new(field index) {}
+  new(field index, field resp) {}
   method handle(_) {
-    return net.HttpResponse().add_content(index)
+    return resp.add_content(index)
   }
 }
 
-@inject.Inject(keys: NotFound)
+@inject.Inject(keys: [NotFound, net.HttpResponse])
 class NotFoundHandler : RequestHandler {
-  new(field not_found) {}
+  new(field not_found, field resp) {}
   method handle(_) {
-    return net.HttpResponse().set_status_code(404)
+    return resp.set_status_code(404)
         .set_status('NOT FOUND')
         .add_content(not_found)
   }
 }
 
+@inject.Inject(keys: net.HttpResponse)
 class RedirectHandler : RequestHandler {
-  new() {}
+  new(field resp) {}
   method handle(request) {
-    return net.redirect(request,  net.HttpResponse(), '/')
+    return net.redirect(request,  resp, '/')
   }
 }
 

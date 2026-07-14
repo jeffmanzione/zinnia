@@ -15,7 +15,6 @@
 #include "zinnia/entity/string/string.h"
 #include "zinnia/entity/tuple/tuple.h"
 
-
 IMPL_MAPLIKE(ObjectTypeCountMap, Class *, int);
 IMPL_MAPLIKE(ObjectCopyMap, Object *, Object *);
 
@@ -170,20 +169,19 @@ Object *object_create_(Heap *heap, const Class *class) {
 void print_object_summary_(Object *object) {
   ASSERT(object != NULL);
   if (object->_class == Class_Class) {
-    printf("\tClass('%s')", object->_class_obj->_name);
+    printf("\tClass(%s)", object->_class_obj->_name);
   } else if (object->_class == Class_Module) {
-    printf("\tModule('%s')", object->_module_obj->_name);
+    printf("\tModule(%s)", object->_module_obj->_name);
   } else if (object->_class == Class_Function) {
     const Function *func = object->_function_obj;
     if (NULL != func->_parent_class) {
-      printf("\tMethod('%s.%s')", func->_parent_class->_name, func->_name);
+      printf("\tMethod(%s.%s)", func->_parent_class->_name, func->_name);
     } else {
-      printf("\tFunction('%s')", func->_name);
+      printf("\tFunction(%s)", func->_name);
     }
   } else if (object->_class == Class_FunctionRef) {
     const _FunctionRef *fref = (_FunctionRef *)object->_internal_obj;
-    printf("\tFunctionRef('%s.%s')", fref->obj->_class->_name,
-           fref->func->_name);
+    printf("\tFunctionRef(%s.%s)", fref->obj->_class->_name, fref->func->_name);
   } else if (object->_class == Class_String) {
     printf("\tString('%.*s', %p)",
            (int)String_size(((String *)object->_internal_obj)),
@@ -191,6 +189,12 @@ void print_object_summary_(Object *object) {
   } else if (object->_class == Class_IString) {
     printf("\tIString('%.*s', %p)", ((IString *)object->_internal_obj)->len,
            ((IString *)object->_internal_obj)->str, object->_internal_obj);
+  } else if (object->_class == Class_Context) {
+    printf("\tContext(%p)", object->_internal_obj);
+  } else if (object->_class == Class_Task) {
+    printf("\tTask(%p)", object->_internal_obj);
+  } else if (object->_class == Class_Process) {
+    printf("\tProcess(%p)", object->_internal_obj);
   } else {
     printf("\t%s", object->_class->_name);
   }
@@ -220,7 +224,12 @@ void heap_print_debug_summary(Heap *heap) {
 void object_delete_(Object *object, Heap *heap) {
   ASSERT(heap != NULL);
   ASSERT(object != NULL);
+  // if (object->_class != Class_String && object->_class != Class_IString &&
+  //     object->_class != Class_FunctionRef && object->_class != Class_Context
+  //     && object->_class != Class_Task && object->_class != Class_Tuple &&
+  //     object->_class != Class_Array) {
   // print_object_summary_(object);
+  // }
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
@@ -300,6 +309,12 @@ void tuple_set(Heap *heap, Object *tuple, int32_t index, const Entity *child) {
   heap_inc_edge(heap, tuple, child->obj);
 }
 
+Object *tuple_create_empty(Heap *heap, size_t size) {
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(size);
+  return tuple_obj;
+}
+
 Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(2);
@@ -371,7 +386,6 @@ void entitycopier_init(EntityCopier *copier, Heap *target) {
   ASSERT(copier != NULL);
   ASSERT(target != NULL);
   copier->target = target;
-  DEBUGF("=)");
   ObjectCopyMap_init(&copier->copy_map, hash_object_, compare_objects_);
 }
 

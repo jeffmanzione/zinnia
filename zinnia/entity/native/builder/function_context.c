@@ -44,3 +44,20 @@ Object *FunctionContext_create_string(FunctionContext *fn_ctx, const char src[],
                                       size_t len) {
   return string_new(fn_ctx->task_->parent_process->heap, src, len);
 }
+
+Object *FunctionContext_create_tuple(FunctionContext *fn_ctx, size_t size,
+                                     ...) {
+  Heap *heap = fn_ctx->task_->parent_process->heap;
+  Object *t = tuple_create_empty(heap, size);
+
+  va_list args;
+  va_start(args, size);
+
+  for (int i = 0; i < size; i++) {
+    Entity e = va_arg(args, Entity);
+    tuple_set(heap, t, i, &e);
+  }
+
+  va_end(args);
+  return t;
+}
