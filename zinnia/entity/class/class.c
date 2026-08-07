@@ -11,7 +11,6 @@
 #include "zinnia/entity/object.h"
 #include "zinnia/util/error.h"
 
-
 Class *class_init(Class *cls, const char name[], const Class *super,
                   const Module *module) {
   ASSERT(cls != NULL);

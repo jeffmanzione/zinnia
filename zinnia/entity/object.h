@@ -17,7 +17,6 @@
 #include "zinnia/util/dll.h"
 #include "zinnia/util/sync/mutex.h"
 
-
 typedef struct Object_ Object;
 typedef struct Class_ Class;
 typedef struct Module_ Module;

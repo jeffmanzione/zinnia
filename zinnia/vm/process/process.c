@@ -11,7 +11,6 @@
 #include "zinnia/vm/process/processes.h"
 #include "zinnia/vm/process/task.h"
 
-
 void process_init(Process *process, HeapConf *conf) {
   process->heap = heap_create(conf);
   arena_init(&process->task_arena, sizeof(Task));
