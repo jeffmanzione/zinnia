@@ -501,8 +501,10 @@ Entity string_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity istring_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  // Must hash by contents to match String.hash() so that String and IString
+  // with the same contents are interchangeable as map keys.
   IString *str = (IString *)obj->_internal_obj;
-  return entity_int((int32_t)(intptr_t)str->str);
+  return entity_int(hash_string(str->str, str->len));
 }
 
 Entity string_len_(Task *task, Context *ctx, Object *obj, Entity *args) {

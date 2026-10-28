@@ -1,0 +1,59 @@
+import io
+import test
+
+self.expect = test.expect
+self.expect_is = test.expect_is
+
+test.Tester().test(self)
+
+@test.TestClass
+class IStringTest {
+  @test.Test
+  method test_literal_types() {
+    expect_is(i'abc', IString)
+    expect_is('abc', String)
+  }
+  @test.Test
+  method test_equality() {
+    expect('abc' == i'abc', True)
+    expect(i'abc' == 'abc', True)
+    expect(i'abc' == i'abc', True)
+    expect('abc' != i'abd', True)
+  }
+  @test.Test
+  method test_hash() {
+    expect(hash('ab'), hash(i'ab'))
+    expect(hash(i'ab'), hash(cat('a', 'b')))
+  }
+  @test.Test
+  method test_map_string_key_istring_lookup() {
+    m = {}
+    m['Host'] = 1
+    expect(m[i'Host'], 1)
+    expect(m['Host'], 1)
+  }
+  @test.Test
+  method test_map_istring_key_string_lookup() {
+    m = {}
+    m[i'Host'] = 2
+    expect(m['Host'], 2)
+    expect(m[cat('Ho', 'st')], 2)
+  }
+  @test.Test
+  method test_map_overwrite_across_types() {
+    m = {}
+    m['Host'] = 1
+    m[i'Host'] = 2
+    expect(m['Host'], 2)
+    expect(m.keys.len(), 1)
+  }
+  @test.Test
+  method test_strfmt_istring_fmt() {
+    expect(strfmt(i'text-%v-%d', 'a', 1), 'text-a-1')
+  }
+  @test.Test
+  method test_to_s_quotes_istring() {
+    expect(str([i'a', 'b']), '[\'a\', \'b\']')
+    expect(str((i'a', 'b')), '(\'a\', \'b\')')
+  }
+}

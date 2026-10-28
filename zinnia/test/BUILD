@@ -20,6 +20,11 @@ zinnia_test(
 )
 
 zinnia_test(
+    name = "istring_test",
+    main = "istring_test.zn",
+)
+
+zinnia_test(
     name = "json_test",
     main = "json_test.zn",
 )

@@ -561,7 +561,7 @@ void _execute_RES(VM *vm, Task *task, Context *context,
       *task_mutable_resval(task) = entity_primitive(ins->val);
       break;
     case INSTRUCTION_STRING:
-      str = ins->type == IRES ? istring_new(task->parent_process->heap,
+      str = ins->op == IRES ? istring_new(task->parent_process->heap,
                                             ins->str, strlen(ins->str))
                               : string_new(task->parent_process->heap, ins->str,
                                            strlen(ins->str));
@@ -619,7 +619,7 @@ void _execute_PUSH(VM *vm, Task *task, Context *context,
       break;
     case INSTRUCTION_STRING:
       // TODO: Maybe precompute the length of the string?
-      str = ins->type == IPSH ? istring_new(task->parent_process->heap,
+      str = ins->op == IPSH ? istring_new(task->parent_process->heap,
                                             ins->str, strlen(ins->str))
                               : string_new(task->parent_process->heap, ins->str,
                                            strlen(ins->str));
