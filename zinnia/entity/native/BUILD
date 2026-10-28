@@ -27,11 +27,11 @@ cc_library(
         "//zinnia/vm",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process",
-        "//zinnia/vm/process:context",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:remote",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate",
+        "//zinnia/vm/isolate:scope",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:actor_ref",
+        "//zinnia/vm/isolate:frame",
     ],
 )
 
@@ -48,7 +48,7 @@ cc_library(
         "//zinnia/entity/function",
         "//zinnia/entity/string",
         "//zinnia/util:error",
-        "//zinnia/vm/process:processes",
+        "//zinnia/vm/isolate:isolates",
     ],
 )
 
@@ -91,9 +91,9 @@ cc_library(
         "//zinnia/vm",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:remote",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:actor_ref",
+        "//zinnia/vm/isolate:frame",
         "@jeffmanzione_file_utils//file-utils:file_info",
     ],
 )
@@ -155,8 +155,8 @@ cc_library(
         "//zinnia/util:error",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:frame",
     ],
 )
 

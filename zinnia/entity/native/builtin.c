@@ -28,15 +28,15 @@
 #include "zinnia/util/string_util.h"
 #include "zinnia/util/void_array.h"
 #include "zinnia/vm/intern.h"
-#include "zinnia/vm/process/context.h"
-#include "zinnia/vm/process/process.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/process/remote.h"
-#include "zinnia/vm/process/task.h"
+#include "zinnia/vm/isolate/actor_ref.h"
+#include "zinnia/vm/isolate/frame.h"
+#include "zinnia/vm/isolate/isolate.h"
+#include "zinnia/vm/isolate/isolates.h"
+#include "zinnia/vm/isolate/scope.h"
 #include "zinnia/vm/vm.h"
 
 // From vm/virtual_machine.h
-ThreadHandle process_run_in_new_thread(Process *process);
+ThreadHandle isolate_run_in_new_thread(Isolate *isolate);
 
 #ifndef min
 #define min(x, y) ((x) > (y) ? (y) : (x))
@@ -91,7 +91,7 @@ bool entity_to_int64_(const Entity *e, int64_t *result) {
   return false;
 }
 
-Entity Int_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity Int_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   int64_t result;
   int len;
   char *raw_str;
@@ -103,11 +103,11 @@ Entity Int_(Task *task, Context *ctx, Object *obj, Entity *args) {
       return entity_int(0);
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
-        return raise_error(task, ctx, "Cannot convert input to Int.");
+        return raise_error(frame, ctx, "Cannot convert input to Int.");
       }
       if (!entity_to_int64_(args, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Int.", len,
-                           raw_str);
+        return raise_error(frame, ctx, "Cannot convert input '%*s' to Int.",
+                           len, raw_str);
       }
       return entity_int(result);
     case PRIMITIVE:
@@ -121,10 +121,10 @@ Entity Int_(Task *task, Context *ctx, Object *obj, Entity *args) {
         case PRIMITIVE_FLOAT:
           return entity_int((int64_t)pfloat(&args->pri));
         default:
-          return raise_error(task, ctx, "Unknown primitive type.");
+          return raise_error(frame, ctx, "Unknown primitive type.");
       }
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(frame, ctx, "Unknown type.");
   }
   return entity_int(0);
 }
@@ -163,7 +163,7 @@ bool entity_to_float_(const Entity *e, double *result) {
   return false;
 }
 
-Entity Float_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity Float_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   double result;
   int len;
   char *raw_str;
@@ -175,10 +175,10 @@ Entity Float_(Task *task, Context *ctx, Object *obj, Entity *args) {
       return entity_float(0.f);
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
-        return raise_error(task, ctx, "Cannot convert input to Float.");
+        return raise_error(frame, ctx, "Cannot convert input to Float.");
       }
       if (!entity_to_float_(args, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to Float.",
+        return raise_error(frame, ctx, "Cannot convert input '%*s' to Float.",
                            len, raw_str);
       }
       return entity_float(result);
@@ -193,10 +193,10 @@ Entity Float_(Task *task, Context *ctx, Object *obj, Entity *args) {
         case PRIMITIVE_FLOAT:
           return *args;
         default:
-          return raise_error(task, ctx, "Unknown primitive type.");
+          return raise_error(frame, ctx, "Unknown primitive type.");
       }
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(frame, ctx, "Unknown type.");
   }
   return entity_float(0.f);
 }
@@ -244,7 +244,7 @@ bool entity_to_bool_(const Entity *e, bool *result) {
   return false;
 }
 
-Entity _Bool_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity _Bool_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   bool result;
   int len;
   char *raw_str;
@@ -256,35 +256,36 @@ Entity _Bool_(Task *task, Context *ctx, Object *obj, Entity *args) {
       return FALSE_ENTITY;
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
-        return raise_error(task, ctx, "Cannot convert input to bool Int.");
+        return raise_error(frame, ctx, "Cannot convert input to bool Int.");
       }
       if (!entity_to_bool_(args, &result)) {
-        return raise_error(task, ctx, "Cannot convert input '%*s' to bool Int.",
-                           len, raw_str);
+        return raise_error(frame, ctx,
+                           "Cannot convert input '%*s' to bool Int.", len,
+                           raw_str);
       }
       return result ? TRUE_ENTITY : FALSE_ENTITY;
     case PRIMITIVE:
       return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
     default:
-      return raise_error(task, ctx, "Unknown type.");
+      return raise_error(frame, ctx, "Unknown type.");
   }
   return FALSE_ENTITY;
 }
 
-Object *wrap_function_in_ref2_(const Function *f, Object *obj, Task *task,
-                               Context *ctx) {
-  Object *fn_ref = heap_new(task->parent_process->heap, Class_FunctionRef);
+Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
+                               Scope *ctx) {
+  Object *fn_ref = heap_new(frame->parent_isolate->heap, Class_FunctionRef);
   function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL,
-                      task->parent_process->heap);
+                      frame->parent_isolate->heap);
   return fn_ref;
 }
 
 // volatile int tmp = 0;
 
-Entity collect_garbage_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Process *process = task->parent_process;
-  Heap *heap = process->heap;
-  uint32_t deleted_nodes_count = process_collect_garbage(process);
+Entity collect_garbage_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  Isolate *isolate = frame->parent_isolate;
+  Heap *heap = isolate->heap;
+  uint32_t deleted_nodes_count = isolate_collect_garbage(isolate);
 
   // printf("Tasks:\n\titem_size=%u\n\tcapacity=%u\n\titem_count=%u\n\tsubarena_"
   //        "capacity=%u\n\tsubarena_count=%u\n",
@@ -331,12 +332,12 @@ Entity collect_garbage_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(result_tuple);
 }
 
-Entity stringify_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity stringify_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(args != NULL);
   ASSERT(PRIMITIVE == args->type || NONE == args->type);
   if (IS_NONE(args)) {
     return entity_object(
-        string_new(task->parent_process->heap, "None", strlen("None")));
+        string_new(frame->parent_isolate->heap, "None", strlen("None")));
   }
 
   char buffer[BUFFER_SIZE];
@@ -360,48 +361,48 @@ Entity stringify_(Task *task, Context *ctx, Object *obj, Entity *args) {
   }
   ASSERT(num_written > 0);
   return entity_object(
-      string_new(task->parent_process->heap, buffer, num_written));
+      string_new(frame->parent_isolate->heap, buffer, num_written));
 }
 
-Entity tuple_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity tuple_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(args != NULL);
   Array *arr = (Array *)args->obj->_internal_obj;
-  Object *tup = heap_new(task->parent_process->heap, Class_Tuple);
+  Object *tup = heap_new(frame->parent_isolate->heap, Class_Tuple);
   tup->_internal_obj = tuple_create(Array_size(arr));
   for (int i = 0; i < Array_size(arr); ++i) {
     const Entity *e = Array_get_ref_unchecked(arr, i);
-    tuple_set(task->parent_process->heap, tup, i, e);
+    tuple_set(frame->parent_isolate->heap, tup, i, e);
   }
   return entity_object(tup);
 }
 
-Entity color_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity color_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_NONE(args) && !IS_STRING(args) && !IS_INT(args)) {
     return raise_error(
-        task, ctx, "Function 'color' expect Int, String, or None argument.");
+        frame, ctx, "Function 'color' expect Int, String, or None argument.");
   }
   Object *ret;
   if (IS_NONE(args)) {
-    ret = string_new(task->parent_process->heap, "\x1b[m", strlen("\x1b[m"));
+    ret = string_new(frame->parent_isolate->heap, "\x1b[m", strlen("\x1b[m"));
   } else if (IS_CLASS(args, Class_String)) {
     String *str = (String *)args->obj->_internal_obj;
     char buf[16];
     sprintf(buf, "\x1b[%*sm", (int)String_size(str), str->table);
-    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+    ret = string_new(frame->parent_isolate->heap, buf, strlen(buf));
   } else if (IS_CLASS(args, Class_IString)) {
     IString *istr = (IString *)args->obj->_internal_obj;
     char buf[16];
     sprintf(buf, "\x1b[%*sm", istr->len, istr->str);
-    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+    ret = string_new(frame->parent_isolate->heap, buf, strlen(buf));
   } else {
     char buf[16];
     sprintf(buf, "\x1b[%" PRId64 "m", pint(&args->pri));
-    ret = string_new(task->parent_process->heap, buf, strlen(buf));
+    ret = string_new(frame->parent_isolate->heap, buf, strlen(buf));
   }
   return entity_object(ret);
 }
 
-Entity string_extend_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_extend_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (IS_CLASS(args, Class_String)) {
     String_append((String *)obj->_internal_obj,
                   (String *)args->obj->_internal_obj);
@@ -409,13 +410,13 @@ Entity string_extend_(Task *task, Context *ctx, Object *obj, Entity *args) {
     const IString *istr = (IString *)args->obj->_internal_obj;
     String_append_raw((String *)obj->_internal_obj, istr->str, istr->len);
   } else {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Cannot extend a string with something not a string.");
   }
   return entity_object(obj);
 }
 
-Entity string_cmp_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
     return entity_int(1);
   }
@@ -428,7 +429,7 @@ Entity string_cmp_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }
 
-Entity istring_cmp_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
     return entity_int(1);
   }
@@ -445,43 +446,43 @@ Entity istring_cmp_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }
 
-Entity string_eq_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Primitive p = string_cmp_(task, ctx, obj, args).pri;
+Entity string_eq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  Primitive p = string_cmp_(frame, ctx, obj, args).pri;
   return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity istring_eq_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Primitive p = istring_cmp_(task, ctx, obj, args).pri;
+Entity istring_eq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  Primitive p = istring_cmp_(frame, ctx, obj, args).pri;
   return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity string_neq_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Primitive p = string_cmp_(task, ctx, obj, args).pri;
+Entity string_neq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  Primitive p = string_cmp_(frame, ctx, obj, args).pri;
   return pint(&p) != 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity istring_neq_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Primitive p = istring_cmp_(task, ctx, obj, args).pri;
+Entity istring_neq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  Primitive p = istring_cmp_(frame, ctx, obj, args).pri;
   return pint(&p) != 0 ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity string_index_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(args != NULL);
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
-    return raise_error(task, ctx, "Bad string index input");
+    return raise_error(frame, ctx, "Bad string index input");
   }
   String *self = (String *)obj->_internal_obj;
   int32_t index = pint(&args->pri);
   if (index < 0 || index >= String_size(self)) {
-    return raise_error(task, ctx, "Index out of bounds.");
+    return raise_error(frame, ctx, "Index out of bounds.");
   }
   return entity_char(String_get_unchecked(self, index));
 }
 
-Entity istring_index_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(args != NULL);
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
-    return raise_error(task, ctx, "Bad string index input");
+    return raise_error(frame, ctx, "Bad string index input");
   }
 
   char *self;
@@ -490,36 +491,36 @@ Entity istring_index_(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   int32_t index = pint(&args->pri);
   if (index < 0 || index >= self_len) {
-    return raise_error(task, ctx, "Index out of bounds.");
+    return raise_error(frame, ctx, "Index out of bounds.");
   }
   return entity_char(self[index]);
 }
 
-Entity string_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   return entity_int(hash_string(str->table, String_size(str)));
 }
 
-Entity istring_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   // Must match string_hash_() so equal String and IString keys hash the same.
   IString *str = (IString *)obj->_internal_obj;
   return entity_int(hash_string(str->str, str->len));
 }
 
-Entity string_len_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   return entity_int(String_size(str));
 }
 
-Entity istring_len_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   IString *istr = (IString *)obj->_internal_obj;
   return entity_int(istr->len);
 }
 
-Entity string_set_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_set_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXTRACT_INT_AT_INDEX_OR_THROW(const uint64_t index, tupl_args, 0);
   const Entity *val = tuple_get(tupl_args, 1);
 
@@ -531,7 +532,7 @@ Entity string_set_(Task *task, Context *ctx, Object *obj, Entity *args) {
   } else if (IS_CLASS(val, Class_IString)) {
     String_set(str, index, ((IString *)val->obj->_internal_obj)->str[0]);
   } else {
-    return raise_error(task, ctx, "Bad string index.");
+    return raise_error(frame, ctx, "Bad string index.");
   }
   return NONE_ENTITY;
 }
@@ -542,14 +543,14 @@ Entity string_set_(Task *task, Context *ctx, Object *obj, Entity *args) {
 #define IS_VALUE_TYPE(e, valtype) \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
-Entity string_find_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
   if (index < 0) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
                        index, String_size(str));
   }
@@ -567,17 +568,17 @@ Entity string_find_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(found_index - start_index);
 }
 
-Entity istring_find_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
   if (index < 0) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
                        index, substr_len);
   }
@@ -595,19 +596,19 @@ Entity istring_find_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_int(found_index - start_index);
 }
 
-Entity string_find_all_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
   if (index < 0) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
                        index, String_size(str));
   }
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   if ((index + substr_len) > String_size(str)) {
     return entity_object(array_obj);
   }
@@ -619,28 +620,28 @@ Entity string_find_all_(Task *task, Context *ctx, Object *obj, Entity *args) {
                       find_str(i_index, chars_remaining, substr, substr_len))) {
     int index = i_index - str->table;
     Entity index_e = entity_int(index);
-    array_add(task->parent_process->heap, array_obj, &index_e);
+    array_add(frame->parent_isolate->heap, array_obj, &index_e);
     i_index++;
     chars_remaining = String_size(str) - index - 1;
   }
   return entity_object(array_obj);
 }
 
-Entity istring_find_all_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t index, tupl_args, 1);
 
   if (index < 0) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Index out of bounds. Was %d, array length is %d.",
                        index, str_len);
   }
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   if ((index + substr_len) > str_len) {
     return entity_object(array_obj);
   }
@@ -652,66 +653,66 @@ Entity istring_find_all_(Task *task, Context *ctx, Object *obj, Entity *args) {
                       find_str(i_index, chars_remaining, substr, substr_len))) {
     int index = i_index - str;
     Entity index_e = entity_int(index);
-    array_add(task->parent_process->heap, array_obj, &index_e);
+    array_add(frame->parent_isolate->heap, array_obj, &index_e);
     i_index++;
     chars_remaining = str_len - index - 1;
   }
   return entity_object(array_obj);
 }
 
-Entity string_substr_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t start, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t end, tupl_args, 1);
 
   if (start < 0 || start > String_size(str)) {
-    return raise_error(task, ctx, "start_index out of bounds.");
+    return raise_error(frame, ctx, "start_index out of bounds.");
   }
   if (end < 0 || end > String_size(str)) {
-    return raise_error(task, ctx, "end_index out of bounds.");
+    return raise_error(frame, ctx, "end_index out of bounds.");
   }
   if (end < start) {
-    return raise_error(task, ctx, "start_index > end_index.");
+    return raise_error(frame, ctx, "start_index > end_index.");
   }
   return entity_object(
-      string_new(task->parent_process->heap, str->table + start, end - start));
+      string_new(frame->parent_isolate->heap, str->table + start, end - start));
 }
 
-Entity istring_substr_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
 
-  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, task, ctx);
+  EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t start, tupl_args, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t end, tupl_args, 1);
 
   if (start < 0 || start > str_len) {
-    return raise_error(task, ctx, "start_index out of bounds.");
+    return raise_error(frame, ctx, "start_index out of bounds.");
   }
   if (end < 0 || end > str_len) {
-    return raise_error(task, ctx, "end_index out of bounds.");
+    return raise_error(frame, ctx, "end_index out of bounds.");
   }
   if (end < start) {
-    return raise_error(task, ctx, "start_index > end_index.");
+    return raise_error(frame, ctx, "start_index > end_index.");
   }
   return entity_object(
-      string_new(task->parent_process->heap, str + start, end - start));
+      string_new(frame->parent_isolate->heap, str + start, end - start));
 }
 
-Entity string_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   return entity_object(
-      string_new(task->parent_process->heap, str->table, String_size(str)));
+      string_new(frame->parent_isolate->heap, str->table, String_size(str)));
 }
 
 // Returns a mutable String with the same contents.
-Entity istring_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   IString *istr = (IString *)obj->_internal_obj;
   return entity_object(
-      string_new(task->parent_process->heap, istr->str, istr->len));
+      string_new(frame->parent_isolate->heap, istr->str, istr->len));
 }
 
 // Sets [*start, *end) to the range of str without leading and/or trailing
@@ -747,55 +748,56 @@ static void trim_(String *str, bool left, bool right) {
   }
 }
 
-Entity string_ltrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_ltrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/false);
   return entity_object(obj);
 }
 
-Entity string_rtrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_rtrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   trim_((String *)obj->_internal_obj, /*left=*/false, /*right=*/true);
   return entity_object(obj);
 }
 
-Entity string_trim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_trim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/true);
   return entity_object(obj);
 }
 
 // IStrings are immutable, so trimming one returns a new String.
-static Entity istring_trim_impl_(Task *task, Object *obj, bool left,
+static Entity istring_trim_impl_(Frame *frame, Object *obj, bool left,
                                  bool right) {
   IString *istr = (IString *)obj->_internal_obj;
   int start, end;
   trim_bounds_(istr->str, istr->len, left, right, &start, &end);
   return entity_object(
-      string_new(task->parent_process->heap, istr->str + start, end - start));
+      string_new(frame->parent_isolate->heap, istr->str + start, end - start));
 }
 
-Entity istring_ltrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return istring_trim_impl_(task, obj, /*left=*/true, /*right=*/false);
+Entity istring_ltrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(frame, obj, /*left=*/true, /*right=*/false);
 }
 
-Entity istring_rtrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return istring_trim_impl_(task, obj, /*left=*/false, /*right=*/true);
+Entity istring_rtrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(frame, obj, /*left=*/false, /*right=*/true);
 }
 
-Entity istring_trim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return istring_trim_impl_(task, obj, /*left=*/true, /*right=*/true);
+Entity istring_trim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(frame, obj, /*left=*/true, /*right=*/true);
 }
 
-Entity string_lshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_lshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   if (NULL == args || PRIMITIVE != args->type ||
       PRIMITIVE_INT != ptype(&args->pri)) {
-    return raise_error(task, ctx, "Trimming String with something not an Int.");
+    return raise_error(frame, ctx,
+                       "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
   if (index < 0) {
-    return raise_error(task, ctx, "Cannot shrink by a negative amount.");
+    return raise_error(frame, ctx, "Cannot shrink by a negative amount.");
   }
   if (index > String_size(str)) {
-    return raise_error(task, ctx, "Cannot shrink more than the entire size.");
+    return raise_error(frame, ctx, "Cannot shrink more than the entire size.");
   }
   if (index > 0) {
     String_lshrink(str, index);
@@ -803,18 +805,19 @@ Entity string_lshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
-Entity string_rshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_rshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   if (NULL == args || PRIMITIVE != args->type ||
       PRIMITIVE_INT != ptype(&args->pri)) {
-    return raise_error(task, ctx, "Trimming String with something not an Int.");
+    return raise_error(frame, ctx,
+                       "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
   if (index < 0) {
-    return raise_error(task, ctx, "Cannot shrink by a negative amount.");
+    return raise_error(frame, ctx, "Cannot shrink by a negative amount.");
   }
   if (index > String_size(str)) {
-    return raise_error(task, ctx, "Cannot shrink more than the entire size.");
+    return raise_error(frame, ctx, "Cannot shrink more than the entire size.");
   }
   if (index > 0) {
     String_rshrink(str, index);
@@ -822,7 +825,7 @@ Entity string_rshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
-Entity string_clear_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_clear_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   String_clear(str);
   return entity_object(obj);
@@ -858,16 +861,16 @@ static bool splitter_next_(Splitter_ *s, int *start, int *len) {
 
 // Splits str around each occurrence of the delimiter in args. Empty parts are
 // kept, except trailing ones (so a trailing delimiter adds no part).
-static Entity split_(Task *task, Context *ctx, const char *str, int len,
+static Entity split_(Frame *frame, Scope *ctx, const char *str, int len,
                      const Entity *args) {
   if (!IS_STRING(args)) {
-    return raise_error(task, ctx, "Argument to split() must be a String.");
+    return raise_error(frame, ctx, "Argument to split() must be a String.");
   }
   char *delim;
   int delim_len;
   extract_string(args, &delim, &delim_len);
   if (delim_len == 0) {
-    return raise_error(task, ctx, "Argument to split() must not be empty.");
+    return raise_error(frame, ctx, "Argument to split() must not be empty.");
   }
   // Count the parts to keep, which excludes trailing empty parts.
   Splitter_ splitter = {str, len, delim, delim_len, 0, false};
@@ -878,28 +881,28 @@ static Entity split_(Task *task, Context *ctx, const char *str, int len,
       num_parts_to_keep = num_parts;
     }
   }
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   splitter = (Splitter_){str, len, delim, delim_len, 0, false};
   for (int i = 0; i < num_parts_to_keep; ++i) {
     splitter_next_(&splitter, &start, &part_len);
     Entity part = entity_object(
-        string_new(task->parent_process->heap, str + start, part_len));
-    array_add(task->parent_process->heap, array_obj, &part);
+        string_new(frame->parent_isolate->heap, str + start, part_len));
+    array_add(frame->parent_isolate->heap, array_obj, &part);
   }
   return entity_object(array_obj);
 }
 
-Entity string_split_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_split_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
-  return split_(task, ctx, str->table, String_size(str), args);
+  return split_(frame, ctx, str->table, String_size(str), args);
 }
 
-Entity istring_split_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_split_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   IString *istr = (IString *)obj->_internal_obj;
-  return split_(task, ctx, istr->str, istr->len, args);
+  return split_(frame, ctx, istr->str, istr->len, args);
 }
 
-Entity string_starts_with_(Task *task, Context *ctx, Object *obj,
+Entity string_starts_with_(Frame *frame, Scope *ctx, Object *obj,
                            Entity *args) {
   String *str = (String *)obj->_internal_obj;
   size_t lenstr = String_size(str);
@@ -915,7 +918,7 @@ Entity string_starts_with_(Task *task, Context *ctx, Object *obj,
                                                      : FALSE_ENTITY;
 }
 
-Entity istring_starts_with_(Task *task, Context *ctx, Object *obj,
+Entity istring_starts_with_(Frame *frame, Scope *ctx, Object *obj,
                             Entity *args) {
   char *str;
   int lenstr;
@@ -931,7 +934,7 @@ Entity istring_starts_with_(Task *task, Context *ctx, Object *obj,
   return 0 == strncmp(str, prefix, lenprefix) ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity string_ends_with_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity string_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   String *str = (String *)obj->_internal_obj;
   size_t lenstr = String_size(str);
 
@@ -947,7 +950,7 @@ Entity string_ends_with_(Task *task, Context *ctx, Object *obj, Entity *args) {
              : FALSE_ENTITY;
 }
 
-Entity istring_ends_with_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *str;
   int lenstr;
   extract_string_obj(obj, &str, &lenstr);
@@ -964,134 +967,134 @@ Entity istring_ends_with_(Task *task, Context *ctx, Object *obj, Entity *args) {
              : FALSE_ENTITY;
 }
 
-Entity istring_to_s_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity istring_to_s_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *str;
   int len;
   extract_string_obj(obj, &str, &len);
-  return entity_object(string_new(task->parent_process->heap, str, len));
+  return entity_object(string_new(frame->parent_isolate->heap, str, len));
 }
 
-Entity array_len_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity array_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   Array *arr = (Array *)obj->_internal_obj;
   return entity_int(Array_size(arr));
 }
 
-Entity array_append_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  array_add(task->parent_process->heap, obj, args);
+Entity array_append_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  array_add(frame->parent_isolate->heap, obj, args);
   return entity_object(obj);
 }
 
-Entity array_remove_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return array_remove(task->parent_process->heap, obj, pint(&args->pri));
+Entity array_remove_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return array_remove(frame->parent_isolate->heap, obj, pint(&args->pri));
 }
 
-Entity tuple_len_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity tuple_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   Tuple *t = (Tuple *)obj->_internal_obj;
   return entity_int(tuple_size(t));
 }
 
-Entity object_class_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity object_class_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_object(obj->_class->_reflection);
 }
 
-Entity object_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity object_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_int((int32_t)(intptr_t)obj);
 }
 
-Entity object_address_int_(Task *task, Context *ctx, Object *obj,
+Entity object_address_int_(Frame *frame, Scope *ctx, Object *obj,
                            Entity *args) {
   return entity_int((int32_t)(intptr_t)obj);
 }
 
-Entity object_address_hex_(Task *task, Context *ctx, Object *obj,
+Entity object_address_hex_(Frame *frame, Scope *ctx, Object *obj,
                            Entity *args) {
   char buffer[BUFFER_SIZE];
   int num_written = snprintf(buffer, BUFFER_SIZE, "%p", obj);
   ASSERT(num_written > 0);
   return entity_object(
-      string_new(task->parent_process->heap, buffer, num_written));
+      string_new(frame->parent_isolate->heap, buffer, num_written));
 }
 
-Entity class_module_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity class_module_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_object(obj->_class_obj->_module->_reflection);
 }
 
-Entity function_name_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity function_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_object(istring_new_no_intern(
-      task->parent_process->heap, obj->_function_obj->_name,
+      frame->parent_isolate->heap, obj->_function_obj->_name,
       strlen(obj->_function_obj->_name)));
 }
 
-Entity function_module_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity function_module_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_object(obj->_function_obj->_module->_reflection);
 }
 
-Entity function_is_method_(Task *task, Context *ctx, Object *obj,
+Entity function_is_method_(Frame *frame, Scope *ctx, Object *obj,
                            Entity *args) {
   return (NULL == obj->_function_obj->_parent_class) ? FALSE_ENTITY
                                                      : TRUE_ENTITY;
 }
-Entity function_parent_class_(Task *task, Context *ctx, Object *obj,
+Entity function_parent_class_(Frame *frame, Scope *ctx, Object *obj,
                               Entity *args) {
   return (NULL == obj->_function_obj->_parent_class)
              ? NONE_ENTITY
              : entity_object(obj->_function_obj->_parent_class->_reflection);
 }
 
-Entity class_name_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_object(istring_new_no_intern(task->parent_process->heap,
+Entity class_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return entity_object(istring_new_no_intern(frame->parent_isolate->heap,
                                              obj->_class_obj->_name,
                                              strlen(obj->_class_obj->_name)));
 }
 
-Entity module_name_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  return entity_object(istring_new_no_intern(task->parent_process->heap,
+Entity module_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  return entity_object(istring_new_no_intern(frame->parent_isolate->heap,
                                              obj->_module_obj->_name,
                                              strlen(obj->_module_obj->_name)));
 }
 
-Entity module_functions_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity module_functions_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Module);
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   Module *m = obj->_module_obj;
   FunctionMapIterator funcs = module_functions(m);
   for (; FunctionMap_has_entry(&funcs); FunctionMap_next_entry(&funcs)) {
     const Function *f = FunctionMap_value(&funcs);
     Entity func = entity_object(f->_reflection);
-    array_add(task->parent_process->heap, array_obj, &func);
+    array_add(frame->parent_isolate->heap, array_obj, &func);
   }
   return entity_object(array_obj);
 }
 
-Entity module_classes_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity module_classes_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Module);
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   Module *m = obj->_module_obj;
   ClassMapIterator classes = module_classes(m);
   for (; ClassMap_has_entry(&classes); ClassMap_next_entry(&classes)) {
     const Class *c = ClassMap_value(&classes);
     Entity class = entity_object(c->_reflection);
-    array_add(task->parent_process->heap, array_obj, &class);
+    array_add(frame->parent_isolate->heap, array_obj, &class);
   }
   return entity_object(array_obj);
 }
 
-Entity module_has_dl_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity module_has_dl_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Module);
   Module *m = obj->_module_obj;
   return m->dl != NULL ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Module);
   Module *m = obj->_module_obj;
   if (!m->dl) {
     return raise_error(
-        task, ctx,
+        frame, ctx,
         "Attempted dlcall on module without dynamically-linked library.");
   }
   if (!IS_STRING(args) && !IS_TUPLE(args)) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Attempted dlcall on module with invalid arguments.");
   }
   const char *fn_name;
@@ -1101,7 +1104,7 @@ Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
   } else {
     Tuple *tuple = (Tuple *)args->obj->_internal_obj;
     if (tuple_size(tuple) == 0) {
-      return raise_error(task, ctx,
+      return raise_error(frame, ctx,
                          "Attempted dlcall on module with invalid arguments.");
     }
     fn_name = entity_string_copy(tuple_get(tuple, 0));
@@ -1109,11 +1112,11 @@ Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
     if (tuple_size(tuple) == 2) {
       args_to_pass = *tuple_get(tuple, 1);
     } else {
-      Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
+      Object *tuple_obj = heap_new(frame->parent_isolate->heap, Class_Tuple);
       tuple_obj->_internal_obj = tuple_create(tuple_size(tuple) - 1);
       args_to_pass = entity_object(tuple_obj);
       for (int i = 0; i < tuple_size(tuple) - 1; ++i) {
-        tuple_set(task->parent_process->heap, tuple_obj, i,
+        tuple_set(frame->parent_isolate->heap, tuple_obj, i,
                   tuple_get(tuple, i + 1));
       }
     }
@@ -1122,37 +1125,37 @@ Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
   NativeFunctionHandlerFn fn;
   if (!open_dl_sym(m->dl, fn_name, (DlFnHandle *)&fn, error_buf)) {
     Entity error = raise_error(
-        task, ctx,
+        frame, ctx,
         "Attempted dlcall on module which did not have function by name '%s'.",
         fn_name);
     RELEASE(fn_name);
     return error;
   }
   FunctionContext fn_ctx;
-  FunctionContext_init(&fn_ctx, task, ctx, &args_to_pass);
+  FunctionContext_init(&fn_ctx, frame, ctx, &args_to_pass);
   fn(&fn_ctx);
   RELEASE(fn_name);
   return *FunctionContext_get_retval(&fn_ctx);
 }
 
-Entity function_ref_name_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity function_ref_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   const char *name = function_ref_get_func(obj)->_name;
   return entity_object(
-      istring_new_no_intern(task->parent_process->heap, name, strlen(name)));
+      istring_new_no_intern(frame->parent_isolate->heap, name, strlen(name)));
 }
 
-Entity function_ref_module_(Task *task, Context *ctx, Object *obj,
+Entity function_ref_module_(Frame *frame, Scope *ctx, Object *obj,
                             Entity *args) {
   const Function *f = function_ref_get_func(obj);
   return entity_object(f->_module->_reflection);
 }
 
-Entity function_ref_func_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity function_ref_func_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   const Function *f = function_ref_get_func(obj);
   return entity_object(f->_reflection);
 }
 
-Entity function_ref_obj_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity function_ref_obj_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   Object *f_obj = function_ref_get_object(obj);
   return entity_object(f_obj);
 }
@@ -1166,8 +1169,8 @@ void range_copy_(EntityCopier *copier, Object *src_obj, Object *target_obj) {
   *target = *src;
 }
 
-Entity range_constructor_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  EXTRACT_TUPLE_ARGS(t, args, 3, task, ctx);
+Entity range_constructor_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  EXTRACT_TUPLE_ARGS(t, args, 3, frame, ctx);
 
   Range_ *range = (Range_ *)obj->_internal_obj;
 
@@ -1178,28 +1181,28 @@ Entity range_constructor_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
-Entity range_start_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity range_start_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_int(((Range_ *)obj->_internal_obj)->start);
 }
 
-Entity range_inc_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity range_inc_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_int(((Range_ *)obj->_internal_obj)->inc);
 }
 
-Entity range_end_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity range_end_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return entity_int(((Range_ *)obj->_internal_obj)->end);
 }
 
-Entity class_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity class_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return (NULL == obj->_class_obj->_super)
              ? NONE_ENTITY
              : entity_object(obj->_class_obj->_super->_reflection);
 }
 
-Entity class_is_subclass_of_(Task *task, Context *ctx, Object *obj,
+Entity class_is_subclass_of_(Frame *frame, Scope *ctx, Object *obj,
                              Entity *args) {
   if (!IS_CLASS(args, Class_Class)) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "is_subclass_of() requires a Class as an argument.");
   }
   const bool is_subclass_of =
@@ -1207,9 +1210,9 @@ Entity class_is_subclass_of_(Task *task, Context *ctx, Object *obj,
   return is_subclass_of ? TRUE_ENTITY : FALSE_ENTITY;
 }
 
-Entity object_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity object_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Class)) {
-    return raise_error(task, ctx, "super() requires a Class as an argument.");
+    return raise_error(frame, ctx, "super() requires a Class as an argument.");
   }
   const Class *target_super = args->obj->_class_obj;
 
@@ -1223,32 +1226,32 @@ Entity object_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
     super = super->_super;
   }
   if (NULL != constructor) {
-    return entity_object(wrap_function_in_ref2_(constructor, obj, task, ctx));
+    return entity_object(wrap_function_in_ref2_(constructor, obj, frame, ctx));
   }
   return NONE_ENTITY;
 }
 
-Entity object_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity object_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   Entity e = entity_object(obj);
-  return entity_copy(&e, task->parent_process->heap);
+  return entity_copy(&e, frame->parent_isolate->heap);
 }
 
-Entity class_methods_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity class_methods_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Class);
-  Object *array_obj = array_create(task->parent_process->heap);
+  Object *array_obj = array_create(frame->parent_isolate->heap);
   Class *c = obj->_class_obj;
   FunctionMapIterator funcs = class_functions(c);
   for (; FunctionMap_has_entry(&funcs); FunctionMap_next_entry(&funcs)) {
     const Function *f = FunctionMap_value(&funcs);
     Entity func = entity_object(f->_reflection);
-    array_add(task->parent_process->heap, array_obj, &func);
+    array_add(frame->parent_isolate->heap, array_obj, &func);
   }
   return entity_object(array_obj);
 }
 
-Entity class_set_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity class_set_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_CLASS(args, Class_Class)) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Argument 1 of $_set_super_ must be of type Class.");
   }
   Class *class = obj->_class_obj;
@@ -1257,27 +1260,29 @@ Entity class_set_super_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
-Entity class_fields_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity class_fields_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ASSERT(obj->_class == Class_Class);
   return *object_get(obj, FIELDS_PRIVATE_KEY);
 }
 
-Entity set_member_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  EXTRACT_TUPLE_ARGS(t_args, args, 2, task, ctx);
+Entity set_member_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  EXTRACT_TUPLE_ARGS(t_args, args, 2, frame, ctx);
 
   if (!IS_STRING(tuple_get(t_args, 0))) {
-    return raise_error(task, ctx, "First argument to $set() must be a String.");
+    return raise_error(frame, ctx,
+                       "First argument to $set() must be a String.");
   }
   const char *key = intern_entity(tuple_get(t_args, 0));
-  object_set_member(task->parent_process->heap, obj, key, tuple_get(t_args, 1));
+  object_set_member(frame->parent_isolate->heap, obj, key,
+                    tuple_get(t_args, 1));
   return entity_object(obj);
 }
 
-Entity class_set_method_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  EXTRACT_TUPLE_ARGS(t_args, args, 2, task, ctx);
+Entity class_set_method_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  EXTRACT_TUPLE_ARGS(t_args, args, 2, frame, ctx);
 
   if (!IS_STRING(tuple_get(t_args, 0))) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "First argument to $set_method() must be a String.");
   }
   const char *key = intern_entity(tuple_get(t_args, 0));
@@ -1293,67 +1298,65 @@ Entity class_set_method_(Task *task, Context *ctx, Object *obj, Entity *args) {
   //       task, ctx, "Second argument to $set_method() must be a
   //       FunctionRef.");
   // }
-  object_set_member(task->parent_process->heap, obj, key, arg1);
+  object_set_member(frame->parent_isolate->heap, obj, key, arg1);
 
   return entity_object(obj);
 }
 
-Entity get_member_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity get_member_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (!IS_STRING(args)) {
-    return raise_error(task, ctx, "$get() can only be called with a String.");
+    return raise_error(frame, ctx, "$get() can only be called with a String.");
   }
   const char *key = intern_entity(args);
-  return object_get_maybe_wrap(obj, key, task->parent_process->heap, ctx);
+  return object_get_maybe_wrap(obj, key, frame->parent_isolate->heap, ctx);
 }
 
-void process_init_(Object *obj) {}
-void process_delete_(Object *obj) {}
+void isolate_init_(Object *obj) {}
+void isolate_delete_(Object *obj) {}
 
 // Not safe after new process is started.
-Entity create_future_for_process_(Process *process, Process *new_process,
-                                  Task *task) {
-  Task *new_task = process_create_unqueued_task(process);
-  new_task->parent_task = task;
+Entity create_future_for_isolate_(Isolate *isolate, Isolate *new_isolate,
+                                  Frame *frame) {
+  Frame *new_frame = isolate_create_unqueued_frame(isolate);
+  new_frame->parent_frame = frame;
 
-  Object *future_obj = future_create(new_task);
-  new_process->future = (Future *)future_obj->_internal_obj;
+  Object *future_obj = future_create(new_frame);
+  new_isolate->future = (Future *)future_obj->_internal_obj;
 
-  process_insert_waiting_task(process, new_task);
+  isolate_insert_waiting_frame(isolate, new_frame);
 
   return entity_object(future_obj);
 }
 
-Entity process_start_(Task *current_task, Context *current_ctx, Object *obj,
+Entity isolate_start_(Frame *current_frame, Scope *current_ctx, Object *obj,
                       Entity *args) {
-  Process *process = (Process *)obj->_internal_obj;
-  Entity future = create_future_for_process_(current_task->parent_process,
-                                             process, current_task);
-  process_run_in_new_thread(process);
+  Isolate *isolate = (Isolate *)obj->_internal_obj;
+  Entity future = create_future_for_isolate_(current_frame->parent_isolate,
+                                             isolate, current_frame);
+  isolate_run_in_new_thread(isolate);
   return future;
 }
 
-void task_init_(Object *obj) {}
-void task_delete_(Object *obj) {}
+void frame_init_(Object *obj) {}
+void frame_delete_(Object *obj) {}
 
-void context_init_(Object *obj) {}
-void context_delete_(Object *obj) {
-  Context *ctx = (Context *)obj->_internal_obj;
-  context_finalize(ctx);
+void scope_init_(Object *obj) {}
+void scope_delete_(Object *obj) {
+  Scope *ctx = (Scope *)obj->_internal_obj;
+  scope_finalize(ctx);
   // This can segfault if the process is cleaned up before the context.
   // This segfault should only occur during DEBUG mode.
-  arena_free(&ctx->parent_task->parent_process->context_arena, ctx);
+  arena_free(&ctx->parent_frame->parent_isolate->scope_arena, ctx);
 }
 
-void remote_init_(Object *obj) { create_remote_on_object(obj); }
+void actor_init_(Object *obj) { create_actor_on_object(obj); }
 
-void remote_delete_(Object *obj) {
-  remote_delete(extract_remote_from_obj(obj));
-}
+void actor_delete_(Object *obj) { actor_delete(extract_actor_from_obj(obj)); }
 
-Entity remote_process_(Task *current_task, Context *current_ctx, Object *obj,
-                       Entity *args) {
-  Remote *remote = extract_remote_from_obj(obj);
-  return entity_object(remote_get_process(remote)->_reflection);
+Entity actor_isolate_(Frame *current_frame, Scope *current_ctx, Object *obj,
+                      Entity *args) {
+  ActorRef *actor = extract_actor_from_obj(obj);
+  return entity_object(actor_get_isolate(actor)->_reflection);
 }
 
 void builtin_add_string_(Module *builtin) {
@@ -1424,22 +1427,21 @@ void builtin_add_range_(Module *builtin) {
   Class_Range->_copy_fn = (ObjCopyFn)range_copy_;
 }
 
-void builtin_add_process_(Module *builtin) {
-  Class_Process =
-      native_class(builtin, PROCESS_NAME, process_init_, process_delete_);
-  native_method(Class_Process, global_intern("start"), process_start_);
-  Class_Task = native_class(builtin, TASK_NAME, task_init_, task_delete_);
-  Class_Context =
-      native_class(builtin, CONTEXT_NAME, context_init_, context_delete_);
-  Class_Remote =
-      native_class(builtin, REMOTE_CLASS_NAME, remote_init_, remote_delete_);
-  native_method(Class_Remote, global_intern("process"), remote_process_);
+void builtin_add_isolate_(Module *builtin) {
+  Class_Isolate =
+      native_class(builtin, ISOLATE_NAME, isolate_init_, isolate_delete_);
+  native_method(Class_Isolate, global_intern("start"), isolate_start_);
+  Class_Frame = native_class(builtin, FRAME_NAME, frame_init_, frame_delete_);
+  Class_Scope = native_class(builtin, SCOPE_NAME, scope_init_, scope_delete_);
+  Class_ActorRef =
+      native_class(builtin, ACTOR_REF_CLASS_NAME, actor_init_, actor_delete_);
+  native_method(Class_ActorRef, global_intern("isolate"), actor_isolate_);
 }
 
 void builtin_add_native(ModuleManager *mm, Module *builtin) {
   builtin_classes(mm->_heap, builtin);
 
-  builtin_add_process_(builtin);
+  builtin_add_isolate_(builtin);
 
   native_function(builtin, global_intern("__collect_garbage"),
                   collect_garbage_);

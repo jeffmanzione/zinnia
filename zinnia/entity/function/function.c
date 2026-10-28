@@ -28,7 +28,7 @@ void function_init(Function *f, const char name[], const Module *module,
   f->_is_anon = is_anon;
   f->_is_const = is_const;
   f->_is_async = is_async;
-  f->_is_background = false;
+  f->_is_blocking = false;
   f->_reflection = NULL;
 }
 
@@ -37,12 +37,12 @@ void function_finalize(Function *f) { ASSERT(f != NULL); }
 void function_ref_create__(Object *obj) { obj->_internal_obj = NULL; }
 
 void function_ref_init__(Object *fn_ref_obj, Object *obj, const Function *func,
-                         void *parent_context, Heap *heap) {
+                         void *parent_scope, Heap *heap) {
   _FunctionRef *func_ref =
       (_FunctionRef *)(fn_ref_obj->_internal_obj = MNEW(_FunctionRef));
   func_ref->obj = obj;
   func_ref->func = func;
-  func_ref->parent_context = parent_context;
+  func_ref->parent_scope = parent_scope;
   // To prevent the base object from being collected if there is a reference to
   // its method.
   heap_inc_edge(heap, fn_ref_obj, obj);
@@ -69,9 +69,9 @@ const Function *function_ref_get_func(Object *fn_ref_obj) {
   return func_ref->func;
 }
 
-void *function_ref_get_parent_context(Object *fn_ref_obj) {
+void *function_ref_get_parent_scope(Object *fn_ref_obj) {
   _FunctionRef *func_ref = (_FunctionRef *)fn_ref_obj->_internal_obj;
-  return func_ref->parent_context;
+  return func_ref->parent_scope;
 }
 
 void function_ref_copy(EntityCopier *copier, const Object *src_obj,
@@ -81,5 +81,5 @@ void function_ref_copy(EntityCopier *copier, const Object *src_obj,
   Entity cpy_obj = entitycopier_copy(copier, &e);
   // TODO: Deep copy parent context?
   function_ref_init__(target_obj, cpy_obj.obj, func_ref->func,
-                      func_ref->parent_context, copier->target);
+                      func_ref->parent_scope, copier->target);
 }

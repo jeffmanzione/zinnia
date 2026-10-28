@@ -5,6 +5,11 @@ package(
 )
 
 zinnia_test(
+    name = "async_test",
+    main = "async_test.zn",
+)
+
+zinnia_test(
     name = "annotations_test",
     main = "annotations_test.zn",
 )

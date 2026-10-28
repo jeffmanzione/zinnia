@@ -21,8 +21,8 @@ cc_library(
         ":module_manager",
         "//zinnia/util/sync:mutex",
         "//zinnia/util/sync:threadpool",
-        "//zinnia/vm/process",
-        "//zinnia/vm/process:processes",
+        "//zinnia/vm/isolate",
+        "//zinnia/vm/isolate:isolates",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
     ],
 )
@@ -50,10 +50,10 @@ cc_library(
         "//zinnia/util/sync:mutex",
         "//zinnia/util/sync:thread",
         "//zinnia/vm:intern",
-        "//zinnia/vm/process",
-        "//zinnia/vm/process:context",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate",
+        "//zinnia/vm/isolate:scope",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:frame",
     ],
 )
 

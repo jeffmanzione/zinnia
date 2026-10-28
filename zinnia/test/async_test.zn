@@ -1,0 +1,76 @@
+import async
+import error
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@async.Actor
+class Counter {
+  field count
+  new() {
+    count = 0
+  }
+  method inc() {
+    count = count + 1
+    return count
+  }
+  method fail() {
+    raise error.Error('intentional')
+  }
+}
+
+@async.RemoteClass
+class OldCounter {
+  field count
+  new() {
+    count = 0
+  }
+  method inc() {
+    count = count + 1
+    return count
+  }
+}
+
+@test.TestClass
+class IsolateTest {
+  @test.Test
+  method test_spawn_isolate() {
+    isolate = async.spawn_isolate(fn: (x) -> x * 2, args: 21)
+    expect(await isolate.start(), 42)
+  }
+
+  @test.Test
+  method test_create_process_alias() {
+    process = async.create_process(fn: (x) -> x + 1, args: 1)
+    expect(await process.start(), 2)
+  }
+}
+
+@test.TestClass
+class ActorTest {
+  @test.Test
+  method test_spawn_actor() {
+    counter = async.spawn_actor(Counter)
+    test.expect_is(counter, CounterProxy)
+    expect(await counter.inc(), 1)
+    expect(await counter.inc(), 2)
+    test.expect_is(counter.target(), ActorRef)
+  }
+
+  @test.Test
+  method test_actor_errors_propagate() {
+    counter = async.spawn_actor(Counter)
+    test.expect_raises(() -> await counter.fail())
+  }
+
+  @test.Test
+  method test_deprecated_aliases() {
+    counter = async.create_remote(OldCounter)
+    test.expect_is(counter, OldCounterProxy)
+    test.expect_is(counter, RemoteOldCounter)
+    expect(await counter.inc(), 1)
+    test.expect_is(counter.remote(), ActorRef)
+  }
+}

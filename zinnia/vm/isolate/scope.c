@@ -1,9 +1,9 @@
-// context.c
+// scope.c
 //
 // Created on: Jun 13, 2020
 //     Author: Jeff Manzione
 
-#include "zinnia/vm/process/context.h"
+#include "zinnia/vm/isolate/scope.h"
 
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/function/function.h"
@@ -11,17 +11,17 @@
 #include "zinnia/entity/object.h"
 #include "zinnia/program/tape.h"
 #include "zinnia/vm/intern.h"
-#include "zinnia/vm/process/processes.h"
+#include "zinnia/vm/isolate/isolates.h"
 
-Heap *context_heap_(Context *ctx);
+Heap *scope_heap_(Scope *ctx);
 
-void context_add_reflection_(Context *context) {
-  context->_reflection = heap_new(context_heap_(context), Class_Context);
-  context->_reflection->_internal_obj = context;
+void scope_add_reflection_(Scope *scope) {
+  scope->_reflection = heap_new(scope_heap_(scope), Class_Scope);
+  scope->_reflection->_internal_obj = scope;
 }
 
-void context_init(Context *ctx, Object *self, Module *module,
-                  uint32_t instruction_pos) {
+void scope_init(Scope *ctx, Object *self, Module *module,
+                uint32_t instruction_pos) {
   ctx->self = entity_object(self);
   ctx->module = module;
   ctx->tape = module->_tape;
@@ -29,39 +29,39 @@ void context_init(Context *ctx, Object *self, Module *module,
   ctx->func = NULL;
   ctx->error = NULL;
   ctx->catch_ins = -1;
-  ctx->previous_context = NULL;
-  context_add_reflection_(ctx);
+  ctx->previous_scope = NULL;
+  scope_add_reflection_(ctx);
 }
 
-void context_finalize(Context *ctx) { ASSERT(ctx != NULL); }
+void scope_finalize(Scope *ctx) { ASSERT(ctx != NULL); }
 
-const Instruction *context_ins(Context *ctx) {
+const Instruction *scope_ins(Scope *ctx) {
   ASSERT(ctx != NULL);
   return tape_get(ctx->tape, ctx->ins);
 }
 
-Heap *context_heap_(Context *ctx) {
-  return ctx->parent_task->parent_process->heap;
+Heap *scope_heap_(Scope *ctx) {
+  return ctx->parent_frame->parent_isolate->heap;
 }
 
-Object *context_self(Context *ctx) {
+Object *scope_self(Scope *ctx) {
   ASSERT(ctx != NULL);
   return ctx->self.obj;
 }
 
-Module *context_module(Context *ctx) {
+Module *scope_module(Scope *ctx) {
   ASSERT(ctx != NULL);
   return ctx->module;
 }
 
 Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
-                             Context *ctx) {
+                             Scope *ctx) {
   Object *fn_ref = heap_new(heap, Class_FunctionRef);
   function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL, heap);
   return fn_ref;
 }
 
-Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
+Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   if (SELF == id) {
@@ -71,11 +71,11 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   if (NULL != member) {
     return member;
   }
-  Task *task = ctx->parent_task;
-  Context *parent_context = ctx->previous_context;
-  while (NULL != parent_context &&
-         NULL == (member = object_get(parent_context->_reflection, id))) {
-    parent_context = parent_context->previous_context;
+  Frame *frame = ctx->parent_frame;
+  Scope *parent_scope = ctx->previous_scope;
+  while (NULL != parent_scope &&
+         NULL == (member = object_get(parent_scope->_reflection, id))) {
+    parent_scope = parent_scope->previous_scope;
   }
   if (NULL != member) {
     return member;
@@ -86,15 +86,15 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
         member->obj->_function_obj->_is_anon) {
       *tmp = entity_object(
           wrap_function_in_ref(member->obj->_function_obj, ctx->self.obj,
-                               task->parent_process->heap, ctx));
+                               frame->parent_isolate->heap, ctx));
       return tmp;
     }
     return member;
   }
   const Function *f = class_get_function(ctx->self.obj->_class, id);
   if (NULL != f) {
-    Object *f_ref =
-        wrap_function_in_ref(f, ctx->self.obj, task->parent_process->heap, ctx);
+    Object *f_ref = wrap_function_in_ref(f, ctx->self.obj,
+                                         frame->parent_isolate->heap, ctx);
 
     // TODO: With this uncommented code, the function ref can be collected when
     // allocated by a different heap from the object. This needs to be resolved.
@@ -119,7 +119,7 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   if (NULL != obj) {
     if (Class_Function == obj->_class && obj->_function_obj->_is_anon) {
       *tmp = entity_object(wrap_function_in_ref(
-          obj->_function_obj, ctx->self.obj, task->parent_process->heap, ctx));
+          obj->_function_obj, ctx->self.obj, frame->parent_isolate->heap, ctx));
       return tmp;
     }
     *tmp = entity_object(obj);
@@ -139,39 +139,37 @@ Entity *context_lookup(Context *ctx, const char id[], Entity *tmp) {
   return NULL;
 }
 
-void context_let(Context *ctx, const char id[], const Entity *e) {
+void scope_let(Scope *ctx, const char id[], const Entity *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
-  object_set_member(context_heap_(ctx), ctx->_reflection, id, e);
+  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
 }
 
-void context_set(Context *ctx, const char id[], const Entity *e) {
+void scope_set(Scope *ctx, const char id[], const Entity *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
   Entity *member = NULL;
   if (NULL != object_get(ctx->_reflection, id)) {
-    object_set_member(context_heap_(ctx), ctx->_reflection, id, e);
+    object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
     return;
   }
-  Context *parent_context = ctx->previous_context;
-  while (NULL != parent_context &&
-         NULL == (member = object_get(parent_context->_reflection, id))) {
-    parent_context = parent_context->previous_context;
+  Scope *parent_scope = ctx->previous_scope;
+  while (NULL != parent_scope &&
+         NULL == (member = object_get(parent_scope->_reflection, id))) {
+    parent_scope = parent_scope->previous_scope;
   }
   if (NULL != member) {
-    object_set_member(context_heap_(parent_context),
-                      parent_context->_reflection, id, e);
+    object_set_member(scope_heap_(parent_scope), parent_scope->_reflection, id,
+                      e);
     return;
   }
   if (NULL != object_get(ctx->self.obj, id)) {
-    object_set_member(context_heap_(ctx), ctx->self.obj, id, e);
+    object_set_member(scope_heap_(ctx), ctx->self.obj, id, e);
     return;
   }
-  object_set_member(context_heap_(ctx), ctx->_reflection, id, e);
+  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
 }
 
-void context_set_function(Context *ctx, const Function *func) {
-  ctx->func = func;
-}
+void scope_set_function(Scope *ctx, const Function *func) { ctx->func = func; }

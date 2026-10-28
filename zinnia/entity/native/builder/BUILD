@@ -25,7 +25,7 @@ cc_library(
         "//zinnia/entity:object",
         "//zinnia/entity/native:error",
         "//zinnia/entity/string:string_helper",
-        "//zinnia/vm/process:processes",
+        "//zinnia/vm/isolate:isolates",
     ],
     alwayslink = True,
 )

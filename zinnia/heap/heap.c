@@ -189,11 +189,11 @@ void print_object_summary_(Object *object) {
   } else if (object->_class == Class_IString) {
     printf("\tIString('%.*s', %p)", ((IString *)object->_internal_obj)->len,
            ((IString *)object->_internal_obj)->str, object->_internal_obj);
-  } else if (object->_class == Class_Context) {
+  } else if (object->_class == Class_Scope) {
     printf("\tContext(%p)", object->_internal_obj);
-  } else if (object->_class == Class_Task) {
+  } else if (object->_class == Class_Frame) {
     printf("\tTask(%p)", object->_internal_obj);
-  } else if (object->_class == Class_Process) {
+  } else if (object->_class == Class_Isolate) {
     printf("\tProcess(%p)", object->_internal_obj);
   } else {
     printf("\t%s", object->_class->_name);

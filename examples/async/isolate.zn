@@ -9,20 +9,20 @@ class Test {
     c = (a, b)
   }
   method to_s() {
-    str('Spawned process ', a, b, c)
+    str('Spawned isolate ', a, b, c)
   }
 }
 
-; Test object is copied to the new process.
-p = async.create_process(
+; Test object is copied to the new isolate.
+isolate = async.spawn_isolate(
     fn: (t) {
       io.println(t)
       return t
     },
     args: Test())
 
-f = p.start()
+f = isolate.start()
 
-io.println('Original process.')
+io.println('Original isolate.')
 
 await f

@@ -21,13 +21,13 @@ void function_finalize(Function *f);
 
 void function_ref_create__(Object *obj);
 void function_ref_init__(Object *fn_ref_obj, Object *obj, const Function *func,
-                         void *parent_context, Heap *heap);
+                         void *parent_scope, Heap *heap);
 void function_ref_delete__(Object *obj);
 void function_ref_print__(const Object *obj, FILE *out);
 
 Object *function_ref_get_object(Object *fn_ref_obj);
 const Function *function_ref_get_func(Object *fn_ref_obj);
-void *function_ref_get_parent_context(Object *fn_ref_obj);
+void *function_ref_get_parent_scope(Object *fn_ref_obj);
 
 void function_ref_copy(EntityCopier *copier, const Object *src_obj,
                        Object *target_obj);

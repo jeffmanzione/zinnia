@@ -395,7 +395,7 @@ class Application {
 
   method start() {
     io.println('Starting app at ' + str(host) + ':' +  str(port))
-    ; async.create_remote(
+    ; async.spawn_actor(
     ;     ApplicationRunner,
     ;     (host, port, controller_classes, provider_sets))
     return ApplicationRunner(host, port, controller_classes, provider_sets)
@@ -425,7 +425,7 @@ function find_annotated_method(instance, annot) {
   return instance.$get(methods[0].name())
 }
 
-;@async.RemoteClass
+;@async.Actor
 class ApplicationRunner {
   field injector
   new(field host, field port, field controller_classes, field provider_sets=[]) {

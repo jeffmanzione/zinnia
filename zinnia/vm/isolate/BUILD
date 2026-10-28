@@ -5,11 +5,11 @@ package(
 )
 
 cc_library(
-    name = "context",
-    srcs = ["context.c"],
-    hdrs = ["context.h"],
+    name = "scope",
+    srcs = ["scope.c"],
+    hdrs = ["scope.h"],
     deps = [
-        ":processes",
+        ":isolates",
         "//zinnia/entity:object",
         "//zinnia/entity/class:classes",
         "//zinnia/entity/function",
@@ -22,12 +22,12 @@ cc_library(
 )
 
 cc_library(
-    name = "process",
-    srcs = ["process.c"],
-    hdrs = ["process.h"],
+    name = "isolate",
+    srcs = ["isolate.c"],
+    hdrs = ["isolate.h"],
     deps = [
-        ":processes",
-        ":task",
+        ":isolates",
+        ":frame",
         "//zinnia/util/sync:critical_section",
         "//zinnia/util/sync:mutex",
         "@jeffmanzione_rzalloc//rzalloc",
@@ -35,9 +35,9 @@ cc_library(
 )
 
 cc_library(
-    name = "processes",
-    srcs = ["processes.c"],
-    hdrs = ["processes.h"],
+    name = "isolates",
+    srcs = ["isolates.c"],
+    hdrs = ["isolates.h"],
     deps = [
         "//zinnia/entity:object",
         "//zinnia/entity/module",
@@ -54,12 +54,12 @@ cc_library(
 )
 
 cc_library(
-    name = "task",
-    srcs = ["task.c"],
-    hdrs = ["task.h"],
+    name = "frame",
+    srcs = ["frame.c"],
+    hdrs = ["frame.h"],
     deps = [
-        ":context",
-        ":processes",
+        ":scope",
+        ":isolates",
         "//zinnia/entity/class:classes",
         "//zinnia/heap",
         "//zinnia/util:error",
@@ -67,11 +67,11 @@ cc_library(
 )
 
 cc_library(
-    name = "remote",
-    srcs = ["remote.c"],
-    hdrs = ["remote.h"],
+    name = "actor_ref",
+    srcs = ["actor_ref.c"],
+    hdrs = ["actor_ref.h"],
     deps = [
-        ":processes",
+        ":isolates",
         "//zinnia/alloc",
         "//zinnia/entity",
         "//zinnia/entity/class:classes",

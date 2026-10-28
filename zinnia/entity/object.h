@@ -98,7 +98,7 @@ struct Function_ {
   bool _is_anon;
   bool _is_async;
   bool _is_const;
-  bool _is_background;
+  bool _is_blocking;
   union {
     uint32_t _ins_pos;
     void *_native_fn;   // NativeFn
@@ -109,7 +109,7 @@ struct Function_ {
 typedef struct {
   Object *obj;
   const Function *func;
-  void *parent_context;  // To avoid circular dependency.
+  void *parent_scope;  // To avoid circular dependency.
 } _FunctionRef;
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_OBJECT_H_ */

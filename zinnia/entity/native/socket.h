@@ -8,6 +8,6 @@
 
 #include "zinnia/entity/native/native_hdrs.h"
 
-void socket_add_native(ModuleManager *mm, Module *process);
+void socket_add_native(ModuleManager *mm, Module *isolate);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_SOCKET_H_ */

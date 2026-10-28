@@ -2,7 +2,7 @@ import io
 import async
 import error
 
-@async.RemoteClass
+@async.Actor
 class Test {
   field count
   
@@ -24,21 +24,21 @@ class Test {
   }
 }
 
-remote_test = async.create_remote(Test)
+test = async.spawn_actor(Test)
 
 io.println(await async.all([
-    remote_test.inc_count(),
-    remote_test.inc_count(),
-    remote_test.inc_count(),
-    remote_test.inc_count(),
-    remote_test.inc_count(),
-    remote_test.inc_count(),
-    remote_test.inc_count()]))
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count()]))
 
 try {
-  await remote_test.cause_error()
+  await test.cause_error()
 } catch e {
   io.errorln(e)
 }
 
-io.println(await remote_test.to_s())
+io.println(await test.to_s())

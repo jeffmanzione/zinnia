@@ -9,23 +9,22 @@
 #include <stdarg.h>
 
 #include "zinnia/entity/object.h"
+#include "zinnia/vm/isolate/isolates.h"
 #include "zinnia/vm/module_manager.h"
-#include "zinnia/vm/process/processes.h"
 
 extern Class *Class_StackLine;
 
-Object *error_new(Task *task, Context *ctx, Object *error_msg);
+Object *error_new(Frame *frame, Scope *ctx, Object *error_msg);
 void error_add_native(ModuleManager *mm, Module *error);
 
 uint32_t stackline_linenum(Object *stackline);
 Module *stackline_module(Object *stackline);
 
-Entity raise_error(Task *task, Context *context, const char fmt[], ...);
-Entity raise_errorv(Task *task, Context *context, const char fmt[],
-                    va_list args);
-Entity raise_error_with_object(Task *task, Context *context, Object *err);
+Entity raise_error(Frame *frame, Scope *scope, const char fmt[], ...);
+Entity raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args);
+Entity raise_error_with_object(Frame *frame, Scope *scope, Object *err);
 
-Entity native_background_raise_error(Task *task, Context *context,
-                                     const char fmt[], ...);
+Entity native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
+                                   ...);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_ERROR_H_ */

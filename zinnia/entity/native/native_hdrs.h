@@ -18,12 +18,12 @@
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
+#include "zinnia/vm/isolate/actor_ref.h"
+#include "zinnia/vm/isolate/frame.h"
+#include "zinnia/vm/isolate/isolate.h"
+#include "zinnia/vm/isolate/isolates.h"
+#include "zinnia/vm/isolate/scope.h"
 #include "zinnia/vm/module_manager.h"
-#include "zinnia/vm/process/context.h"
-#include "zinnia/vm/process/process.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/process/remote.h"
-#include "zinnia/vm/process/task.h"
 #include "zinnia/vm/vm.h"
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_NATIVE_HDRS_H_ */

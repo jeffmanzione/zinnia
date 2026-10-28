@@ -23,10 +23,10 @@ extern Class *Class_Tuple;
 extern Class *Class_Error;
 extern Class *Class_Range;
 
-extern Class *Class_Process;
-extern Class *Class_Task;
-extern Class *Class_Context;
+extern Class *Class_Isolate;
+extern Class *Class_Frame;
+extern Class *Class_Scope;
 extern Class *Class_Future;
-extern Class *Class_Remote;
+extern Class *Class_ActorRef;
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ENTITY_CLASS_CLASSES_DEF_ */

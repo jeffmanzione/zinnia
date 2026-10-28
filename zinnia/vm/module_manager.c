@@ -158,24 +158,24 @@ ModuleInfo *modulemanager_hydrate_(ModuleManager *mm, Tape *tape,
   }
 
   ClassRefMapIOIterator classes = tape_classes(tape);
-  VoidPtrArray classes_to_process;
-  VoidPtrArray_init(&classes_to_process);
+  VoidPtrArray classes_to_isolate;
+  VoidPtrArray_init(&classes_to_isolate);
   // Map waiting_for_class;
   // map_init_default(&waiting_for_class);
   for (; ClassRefMap_io_has_next(&classes); ClassRefMap_io_next(&classes)) {
     ClassRef *cref = ClassRefMap_io_mutable_value(&classes);
     if (!hydrate_class_(module, cref)) {
-      *VoidPtrArray_push_back_ref(&classes_to_process) = cref;
+      *VoidPtrArray_push_back_ref(&classes_to_isolate) = cref;
     }
   }
-  while (VoidPtrArray_size(&classes_to_process) > 0) {
+  while (VoidPtrArray_size(&classes_to_isolate) > 0) {
     ClassRef *cref =
-        (ClassRef *)VoidPtrArray_pop_front_unchecked(&classes_to_process);
+        (ClassRef *)VoidPtrArray_pop_front_unchecked(&classes_to_isolate);
     if (!hydrate_class_(module, cref)) {
-      *VoidPtrArray_push_back_ref(&classes_to_process) = cref;
+      *VoidPtrArray_push_back_ref(&classes_to_isolate) = cref;
     }
   }
-  VoidPtrArray_finalize(&classes_to_process);
+  VoidPtrArray_finalize(&classes_to_isolate);
   // map_finalize(&waiting_for_class);
   return module_info;
 }
@@ -533,8 +533,8 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   Tape *tape = (Tape *)m->_tape;  // bless
 
   ClassRefMapIOIterator classes = tape_classes(tape);
-  ClassRefPtrArray classes_to_process;
-  ClassRefPtrArray_init(&classes_to_process);
+  ClassRefPtrArray classes_to_isolate;
+  ClassRefPtrArray_init(&classes_to_isolate);
 
   for (; ClassRefMap_io_has_next(&classes); ClassRefMap_io_next(&classes)) {
     ClassRef *cref = ClassRefMap_io_mutable_value(&classes);
@@ -547,18 +547,18 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
       ClassPtrMap_insert(new_classes, cref->name, sizeof(char *), c);
       add_reflection_to_class_(mm->_heap, m, c);
     } else {
-      ClassRefPtrArray_push_back(&classes_to_process, cref);
+      ClassRefPtrArray_push_back(&classes_to_isolate, cref);
     }
   }
-  while (ClassRefPtrArray_size(&classes_to_process) > 0) {
-    ClassRef *cref = ClassRefPtrArray_pop_front_unchecked(&classes_to_process);
+  while (ClassRefPtrArray_size(&classes_to_isolate) > 0) {
+    ClassRef *cref = ClassRefPtrArray_pop_front_unchecked(&classes_to_isolate);
     Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (hydrate_class_(m, cref)) {
       c = (Class *)module_lookup_class(m, cref->name);  // bless
       ClassPtrMap_insert(new_classes, cref->name, sizeof(char *), c);
       add_reflection_to_class_(mm->_heap, m, c);
     } else {
-      ClassRefPtrArray_push_back(&classes_to_process, cref);
+      ClassRefPtrArray_push_back(&classes_to_isolate, cref);
     }
   }
 }

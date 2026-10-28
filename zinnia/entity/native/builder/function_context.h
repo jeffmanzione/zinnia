@@ -3,21 +3,21 @@
 
 #include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
-#include "zinnia/vm/process/processes.h"
+#include "zinnia/vm/isolate/isolates.h"
 
 // Extra
 #include "zinnia/entity/string/string_helper.h"
 
 typedef struct {
-  Task *task_;
-  Context *ctx_;
+  Frame *frame_;
+  Scope *ctx_;
   const Entity *args_;
   Entity retval_;
 } FunctionContext;
 
 typedef void (*NativeFunctionHandlerFn)(FunctionContext *);
 
-void FunctionContext_init(FunctionContext *fn_ctx, Task *task, Context *ctx,
+void FunctionContext_init(FunctionContext *fn_ctx, Frame *frame, Scope *ctx,
                           const Entity *args);
 const Entity *FunctionContext_args(FunctionContext *fn_ctx);
 void FunctionContext_raise_error(FunctionContext *, const char fmt[], ...);

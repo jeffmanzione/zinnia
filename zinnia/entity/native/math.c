@@ -8,9 +8,9 @@
 #include <math.h>
 
 #define SingleFloatFn(name, val_var, body)                                     \
-  Entity name##_(Task *task, Context *ctx, Object *obj, Entity *args) {        \
+  Entity name##_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {        \
     if (NULL == args || PRIMITIVE != args->type) {                             \
-      return raise_error(task, ctx,                                            \
+      return raise_error(frame, ctx,                                           \
                          #name "() takes exactly 1 primitive type argument."); \
     }                                                                          \
     const double val_var = float_of(&args->pri);                               \
@@ -24,29 +24,29 @@ double log_special_(double base, double num) {
   return log10(num) / log10(base);
 }
 
-Entity log_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Entity log_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (IS_TUPLE(args)) {
-    EXTRACT_TUPLE_ARGS(tuple, args, 2, task, ctx);
+    EXTRACT_TUPLE_ARGS(tuple, args, 2, frame, ctx);
     EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, tuple, 0);
     EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double base, tuple, 1);
     return entity_float(log_special_(base, num));
   }
   if (args->type != PRIMITIVE) {
-    return raise_error(task, ctx, "Cannot perform _log_ on a non-value.");
+    return raise_error(frame, ctx, "Cannot perform _log_ on a non-value.");
   }
   return entity_float(log(float_of(&args->pri)));
 }
 
-Entity pow_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
+Entity pow_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, t, 0);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double power, t, 1);
 
   return entity_float(pow(num, power));
 }
 
-Entity mod_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
+Entity mod_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+  EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double numerator, t, 0);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double denominator, t, 1);
 
