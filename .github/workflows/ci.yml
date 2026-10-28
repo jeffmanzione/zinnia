@@ -27,13 +27,11 @@ jobs:
             bazel-${{ runner.os }}-
 
       # Bazelisk is preinstalled as `bazel` and uses the version in .bazelversion.
-      # -c opt is required until c-data-structures provides definitions for its
-      # non-static inline functions.
       - name: Build
-        run: bazel build -c opt //...
+        run: bazel build //...
 
       - name: Test
-        run: bazel test -c opt --test_output=errors //...
+        run: bazel test --test_output=errors //...
 
   docker:
     name: Build dev image
