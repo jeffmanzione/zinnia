@@ -14,7 +14,7 @@ function str(input) {
 }
 
 function strfmt(args) {
-  if ~args or ~(args is Tuple) or (args.len() == 0) or ~(args[0] is String) {
+  if ~args or ~(args is Tuple) or (args.len() == 0) or ~is_string(args[0]) {
     raise error.Error(i'Expected fmt argument.')
   }
   out = ''
@@ -279,7 +279,7 @@ class Tuple {
     return IndexIterator(self, 0, len())
   }
   method _maybe_wrap_in_quotes(elt) {
-    if (elt is String) {
+    if is_string(elt) {
       return '\''.extend(elt).extend('\'')
     } else {
       return str(elt)
@@ -325,7 +325,7 @@ class Array {
   method to_s() {
     result = '['
     result.extend(', '.join(map((elt) {
-      if (elt is String) {
+      if is_string(elt) {
         return '\''.extend(elt).extend('\'')
       } else {
         return str(elt)
