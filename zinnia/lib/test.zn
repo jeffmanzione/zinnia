@@ -34,11 +34,11 @@ function expect(actual, expected) {
 
 function expect_not(actual, not_expected) {
   try {
-    if actual != expected {
+    if actual != not_expected {
       return
     }
   } catch e {}
-  raise ExpectError('Expected not \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
+  raise ExpectError('Expected not \'' + str(not_expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
 function expect_raises(exp, error_class=None) {
@@ -101,6 +101,12 @@ class Tester {
     }
     io.println(
       'Tests [' + color(col) + str(num_passes) + '/' + str(stats.len()) + color(0) + '] passed.')
+    if stats.len() == 0 {
+      raise error.Error('No tests found.')
+    }
+    if num_passes != stats.len() {
+      raise error.Error(str(stats.len() - num_passes) + ' test(s) failed.')
+    }
   }
 
   method _is_test_class(cls) {

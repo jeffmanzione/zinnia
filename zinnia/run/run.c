@@ -53,9 +53,9 @@ void set_args_(Heap *heap, ArgStore *store) {
                         global_intern("args"), args);
 }
 
-void run_files(const CharPtrArray *source_file_names,
-               const FilePartsArray *source_contents,
-               const VoidPtrArray *init_fns, ArgStore *store) {
+int run_files(const CharPtrArray *source_file_names,
+              const FilePartsArray *source_contents,
+              const VoidPtrArray *init_fns, ArgStore *store) {
   optimize_init();
 
   const char *lib_location =
@@ -103,14 +103,16 @@ void run_files(const CharPtrArray *source_file_names,
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
   process_run(vm_main_process(vm));
+  const int exit_code = vm->exit_code;
 
 #ifdef DEBUG
   vm_delete(vm);
   optimize_finalize();
 #endif
+  return exit_code;
 }
 
-void run(const SourceNameSet *source_files, ArgStore *store) {
+int run(const SourceNameSet *source_files, ArgStore *store) {
   optimize_init();
 
   const char *lib_location =
@@ -165,11 +167,13 @@ void run(const SourceNameSet *source_files, ArgStore *store) {
   Task *task = process_create_task(vm_main_process(vm));
   task_create_context(task, main_module->_reflection, main_module, 0);
   process_run(vm_main_process(vm));
+  const int exit_code = vm->exit_code;
 
 #ifdef DEBUG
   vm_delete(vm);
   optimize_finalize();
 #endif
+  return exit_code;
 }
 
 int zinnia(int argc, const char *argv[]) {
@@ -179,7 +183,7 @@ int zinnia(int argc, const char *argv[]) {
   argconfig_run(config);
   ArgStore *store = commandline_parse_args(config, argc, argv);
 
-  run(argstore_sources(store), store);
+  const int exit_code = run(argstore_sources(store), store);
 
 #ifdef DEBUG
   argstore_delete(store);
@@ -189,5 +193,5 @@ int zinnia(int argc, const char *argv[]) {
   token_finalize_all();
 #endif
 
-  return EXIT_SUCCESS;
-}
+  return exit_code;
+}

@@ -1,7 +1,3 @@
-; TODO: Update test so that it isn't affected by system time zone.
-;
-; This issue was discovered while traveling.
-
 import io
 import test
 import time
@@ -19,7 +15,7 @@ class TimeTest {
     tmp_clock = time.clock
     time.clock = time.Clock(
       () -> time.Timestamp(2023, 5, 28, 13, 45, 22, 666),
-      () -> 1685306722666000)
+      () -> 1685281522666000)
   }
 
   @test.TearDown
@@ -38,7 +34,7 @@ class TimeTest {
   @test.Test
   method test_timestamp_from_micros() {
     expect(
-      time.timestamp_from_micros(1685306722666000),
+      time.timestamp_from_micros(1685281522666000),
       time.Timestamp(2023, 5, 28, 13, 45, 22, 666))
   }
   
@@ -73,9 +69,15 @@ class TimestampTest {
   }
 
   @test.Test
+  method test_Timetamp_to_s_pads() {
+    ts = time.Timestamp(2023, 5, 8, 3, 4, 5, 6)
+    expect(ts.to_s(), '2023-05-08T03:04:05.006Z')
+  }
+
+  @test.Test
   method test_Timetamp_to_micros() {
     ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    expect(ts.to_micros(), 1685306722666000)
+    expect(ts.to_micros(), 1685281522666000)
   }
 
   @test.Test
@@ -87,7 +89,7 @@ class TimestampTest {
   @test.Test
   method test_Timestamp_to_micros() {
     ts = time.Timestamp(2023, 5, 28, 13, 45, 22, 666)
-    expect(ts.to_micros(), 1685306722666000)
+    expect(ts.to_micros(), 1685281522666000)
   }
 
   @test.Test
@@ -158,7 +160,7 @@ class TimerTest {
     tmp_clock = time.clock
     time.clock = time.Clock(
       () -> time.Timestamp(2023, 5, 28, 13, 45, 22, 666),
-      () -> 1685306722666000)
+      () -> 1685281522666000)
   }
 
   @test.TearDown
@@ -182,4 +184,4 @@ class TimerTest {
     t.reset()
     expect(t.elapsed_usec(), [])
   }
-}
+}

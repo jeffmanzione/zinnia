@@ -1030,11 +1030,12 @@ Entity module_dlcall_(Task *task, Context *ctx, Object *obj, Entity *args) {
   char error_buf[255];
   NativeFunctionHandlerFn fn;
   if (!open_dl_sym(m->dl, fn_name, (DlFnHandle *)&fn, error_buf)) {
-    RELEASE(fn_name);
-    return raise_error(
+    Entity error = raise_error(
         task, ctx,
         "Attempted dlcall on module which did not have function by name '%s'.",
         fn_name);
+    RELEASE(fn_name);
+    return error;
   }
   FunctionContext fn_ctx;
   FunctionContext_init(&fn_ctx, task, ctx, &args_to_pass);

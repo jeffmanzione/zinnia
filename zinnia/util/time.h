@@ -26,10 +26,13 @@ typedef struct {
   int8_t minutes;
 } TimezoneOffset;
 
+// Microseconds since the Unix epoch.
 int64_t current_usec_since_epoch();
 Timestamp current_local_timestamp();
 Timestamp current_gmt_timestamp();
+// Interprets ts as UTC.
 int64_t timestamp_to_micros(const Timestamp *ts);
+// Returns the UTC timestamp for micros_since_epoch.
 Timestamp micros_to_timestamp(int64_t micros_since_epoch);
 
 TimezoneOffset create_timezone_offset(int8_t hours, int8_t minutes);
@@ -37,4 +40,4 @@ TimezoneOffset create_timezone_offset(int8_t hours, int8_t minutes);
 void timestamp_to_iso8601(const Timestamp *ts, const TimezoneOffset *tz_offset,
                           char *buffer);
 
-#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_UTIL_TIME_H_ */
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_UTIL_TIME_H_ */

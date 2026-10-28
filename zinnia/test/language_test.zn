@@ -1,0 +1,71 @@
+import classes as class_lib
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+class Defaults {
+  new(field a = 1, field b = 2) {}
+}
+
+function defaults(p = 10, q = 20, r = 30) {
+  return (p, q, r)
+}
+
+; Generates class GeneratedBase in the annotated class's module.
+class GenerateBase {
+  method annotate(cls) {
+    builder = class_lib.factory.create_class('GeneratedBase', cls.module())
+    builder.add_method('base_value').with_statement('return 42')
+    builder.build()
+  }
+}
+
+@GenerateBase
+class Generator {}
+
+; Extends a class that only exists after annotations have run.
+class ExtendsGenerated : GeneratedBase {}
+
+@test.TestClass
+class DefaultArgumentsTest {
+  @test.Test
+  method test_constructor_defaults() {
+    d = Defaults()
+    expect(d.a, 1)
+    expect(d.b, 2)
+  }
+
+  @test.Test
+  method test_constructor_partial_defaults() {
+    d = Defaults(5)
+    expect(d.a, 5)
+    expect(d.b, 2)
+  }
+
+  @test.Test
+  method test_function_defaults() {
+    expect(defaults(), (10, 20, 30))
+    expect(defaults(1), (1, 20, 30))
+    expect(defaults(1, 2), (1, 2, 30))
+    expect(defaults(1, 2, 3), (1, 2, 3))
+  }
+}
+
+@test.TestClass
+class ExpectTest {
+  @test.Test
+  method test_expect_not() {
+    test.expect_not(1, 2)
+    test.expect_raises(() -> test.expect_not(1, 1), test.ExpectError)
+  }
+}
+
+@test.TestClass
+class GeneratedSuperclassTest {
+  @test.Test
+  method test_extends_generated_class() {
+    expect(ExtendsGenerated().base_value(), 42)
+  }
+}

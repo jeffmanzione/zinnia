@@ -409,6 +409,7 @@ VM *vm_create(const char *lib_location, uint32_t max_process_object_count,
               bool async_enabled) {
   VM *vm = MNEW(VM);
   vm->async_enabled = async_enabled;
+  vm->exit_code = EXIT_SUCCESS;
   ProcessArray_init(&vm->processes);
   HeapConf heap_conf = {
       .mgraph_config = {.eager_delete_edges = true, .eager_delete_nodes = true},
@@ -1076,7 +1077,14 @@ void _execute_IF(VM *vm, Task *task, Context *context, const Instruction *ins) {
 void _execute_EXIT(VM *vm, Task *task, Context *context,
                    const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE == ins->type) {
+    // Implicit exit at the end of a module, which does not set the exit code.
     *task_mutable_resval(task) = entity_primitive(ins->val);
+  } else {
+    // Explicit `exit` statement.
+    const Entity *exit_val = task_get_resval(task);
+    if (IS_INT(exit_val)) {
+      vm->exit_code = (int)pint(&exit_val->pri);
+    }
   }
   task->state = TASK_COMPLETE;
   context->ins++;
@@ -1438,6 +1446,10 @@ TaskState vm_execute_task(VM *vm, Task *task) {
       case PNIL:
         _execute_PNIL(vm, task, context, ins);
         break;
+      case PSRS:
+        _execute_PUSH(vm, task, context, ins);
+        *task_mutable_resval(task) = *task_peekstack(task);
+        break;
       case PEEK:
         _execute_PEEK(vm, task, context, ins);
         break;
@@ -1745,6 +1757,7 @@ void _process_handle_error(Process *process, Task *task) {
       _mark_task_complete(process, task, /*should_push=*/true);
       return;
     }
+    process->vm->exit_code = EXIT_FAILURE;
     Object *errorln = module_lookup(Module_io, global_intern("errorln"));
     ASSERT(errorln != NULL);
     ASSERT(Class_Function == errorln->_class);

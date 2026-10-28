@@ -1,5 +1,6 @@
 """Rules for the zinnia programming language."""
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
@@ -37,21 +38,28 @@ def _zinnia_library_impl(ctx):
         zinniac_args = []
         outputs = []
 
+        # zinniac writes <out_dir>/<basename>.zn{a,b}, so declare outputs at the
+        # source's path relative to this package to keep subdirectories intact.
+        package_prefix = ctx.label.package + "/" if ctx.label.package else ""
+        if src.short_path.startswith(package_prefix):
+            out_base = src.short_path[len(package_prefix):]
+        else:
+            out_base = src.basename
+        out_base = out_base[:-len(src.extension) - 1] if src.extension else out_base
+
         if ctx.attr.assembly:
-            a_out_file = ctx.actions.declare_file(src.basename.replace(".zn", ".zna"))
+            a_out_file = ctx.actions.declare_file(out_base + ".zna")
             out_files.append(a_out_file)
-            out_dir = a_out_file.root.path + "/" + src.dirname
             zinniac_args.append("-a")
             if ctx.attr.minimize:
                 zinniac_args.append("-m")
-            zinniac_args.append("--assembly_out_dir=" + out_dir)
+            zinniac_args.append("--assembly_out_dir=" + a_out_file.dirname)
             outputs.append(a_out_file)
 
         if ctx.attr.bin:
-            b_out_file = ctx.actions.declare_file(src.basename.replace(".zn", ".znb"))
+            b_out_file = ctx.actions.declare_file(out_base + ".znb")
             out_files.append(b_out_file)
-            out_dir = b_out_file.root.path + "/" + src.dirname
-            zinniac_args.extend(["-b", "--binary_out_dir=" + out_dir])
+            zinniac_args.extend(["-b", "--binary_out_dir=" + b_out_file.dirname])
             outputs.append(b_out_file)
 
         zinniac_args.append(src.short_path)
@@ -392,7 +400,6 @@ def _zinnia_test_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
 
-    test_output_file = ctx.actions.declare_file(ctx.label.name + ".out")
     test_script_file = ctx.actions.declare_file(ctx.label.name + ".sh")
 
     dep_files = []
@@ -405,28 +412,25 @@ def _zinnia_test_impl(ctx):
 
     src_files = [main_file] + dep_files
 
-    zinnia_args = [file.path for file in src_files]
-    input_files = src_files
-
-    ctx.actions.run_shell(
-        outputs = [test_output_file],
-        inputs = input_files + [runner_executable],
-        command = "{} {} > {}".format(runner_executable.path, " ".join(zinnia_args), test_output_file.path),
-        mnemonic = "zinnia",
-        progress_message = "Running command: %s %s" %
-                           (runner_executable.path, " ".join(zinnia_args)),
-    )
-
+    # The test passes iff the program exits with code 0. Programs exit nonzero
+    # on an uncaught error, `exit` with a nonzero value, or a failed
+    # test.Tester().test().
     ctx.actions.write(
         output = test_script_file,
-        content = "#!/bin/bash\nsed -e 's/\\x1b\\[[0-9;]*m//g' {} | grep -q \"Error\" && exit -1 || exit 0".format(test_output_file.short_path),
+        content = "#!/bin/bash\nexec {} {} \"$@\"\n".format(
+            shell.quote(runner_executable.short_path),
+            " ".join([shell.quote(file.short_path) for file in src_files]),
+        ),
         is_executable = True,
     )
+
+    runfiles = ctx.runfiles(files = [runner_executable] + src_files + ctx.files.data)
+    runfiles = runfiles.merge(ctx.attr.runner[DefaultInfo].default_runfiles)
 
     return [
         DefaultInfo(
             executable = test_script_file,
-            runfiles = ctx.runfiles(files = [test_output_file] + input_files + ctx.files.data),
+            runfiles = runfiles,
         ),
     ]
 
@@ -478,4 +482,5 @@ def zinnia_test(name, main, srcs = [], deps = [], modules = [], data = []):
         name = name,
         main = main,
         deps = deps,
+        data = data,
     )

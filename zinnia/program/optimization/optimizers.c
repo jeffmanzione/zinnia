@@ -129,9 +129,8 @@ void optimizer_PushRes(OptimizeHelper *oh, const Tape *const tape, int start,
       continue;
     }
     if (first->type == INSTRUCTION_STRING) {
-      if (first->str != second->str) {
-        continue;
-      }
+      // Each string literal must produce a distinct object.
+      continue;
     } else if (first->type == INSTRUCTION_ID) {
       if (first->str != second->str) {
         continue;
