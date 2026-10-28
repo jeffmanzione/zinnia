@@ -37,8 +37,25 @@ class OldCounter {
 class FutureTest {
   @test.Test
   method test_sleep() {
-    result = await async.sleep(0.01)
-    expect(result == None, True)
+    expect(await async.sleep(0.01), None)
+  }
+
+  @test.Test
+  method test_await_already_failed_future_raises() {
+    f = (() async {
+      raise error.Error('failed')
+    })()
+    await async.sleep(0.05)
+    test.expect_raises(() -> await f)
+  }
+
+  @test.Test
+  method test_failed_async_call_does_not_affect_caller() {
+    (() async {
+      raise error.Error('ignored')
+    })()
+    await async.sleep(0.01)
+    expect(1 + 1, 2)
   }
 
   @test.Test
@@ -74,8 +91,7 @@ class CompleterTest {
   method test_complete_without_value() {
     c = async.Completer()
     c.complete()
-    result = await c.as_future()
-    expect(result == None, True)
+    expect(await c.as_future(), None)
   }
 
   @test.Test
@@ -117,6 +133,14 @@ class ActorTest {
   method test_actor_errors_propagate() {
     counter = async.spawn_actor(Counter)
     test.expect_raises(() -> await counter.fail())
+  }
+
+  @test.Test
+  method test_actor_error_raised_when_awaited_late() {
+    counter = async.spawn_actor(Counter)
+    f = counter.fail()
+    await async.sleep(0.1)
+    test.expect_raises(() -> await f)
   }
 
   @test.Test

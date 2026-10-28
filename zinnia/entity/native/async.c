@@ -23,13 +23,14 @@
 
 struct Future_ {
   Frame *frame;
-  bool _is_complete, _is_result_set;
+  bool _is_complete, _is_result_set, _is_error;
 };
 
 void future_init_(Object *obj) {
   Future *f = MNEW(Future);
   f->_is_complete = false;
   f->_is_result_set = false;
+  f->_is_error = false;
   f->frame = NULL;
   obj->_internal_obj = f;
 }
@@ -50,7 +51,12 @@ bool future_is_complete(Future *f) {
   }
   f->_is_complete =
       (f->frame->state == FRAME_COMPLETE) || (f->frame->state == FRAME_ERROR);
+  f->_is_error = f->frame->state == FRAME_ERROR;
   return f->_is_complete;
+}
+
+bool future_is_error(Future *f) {
+  return future_is_complete(f) && f->_is_error;
 }
 
 Value future_value_(Frame *frame, Scope *ctx, Object *obj, Value *args) {

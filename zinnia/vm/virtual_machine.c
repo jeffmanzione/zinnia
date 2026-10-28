@@ -430,102 +430,59 @@ void vm_delete(VM *vm) {
 
 Isolate *vm_main_isolate(VM *vm) { return vm->main; }
 
+// Sets acc to whether lhs and rhs are equal (or unequal for NEQ). Returns true
+// if this calls lhs's == or != method, whose result becomes acc.
+static bool _execute_EQ_values(Frame *frame, Scope *scope, bool is_eq,
+                               const Value *lhs, const Value *rhs) {
+  bool equal;
+  if (IS_OBJECT(lhs)) {
+    if (IS_OBJECT(rhs) && lhs->obj == rhs->obj) {
+      equal = true;
+    } else {
+      const Function *f = class_get_function(lhs->obj->_class,
+                                             is_eq ? EQ_FN_NAME : NEQ_FN_NAME);
+      if (NULL != f) {
+        Object *self = lhs->obj;
+        *frame_mutable_acc(frame) = IS_NONE(rhs) ? NONE_VALUE : *rhs;
+        return _call_function_base(frame, scope, f, self, scope);
+      }
+      equal = false;
+    }
+  } else if (IS_NONE(lhs) || IS_NONE(rhs)) {
+    equal = IS_NONE(lhs) && IS_NONE(rhs);
+  } else if (IS_PRIMITIVE(lhs) && IS_PRIMITIVE(rhs)) {
+    equal = primitive_equals(&lhs->pri, &rhs->pri);
+  } else {
+    // A primitive is never equal to an object.
+    equal = false;
+  }
+  *frame_mutable_acc(frame) = (equal == is_eq) ? TRUE_VALUE : FALSE_VALUE;
+  return false;
+}
+
 bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  const Value *acc, *lookup;
-  Value first, second, tmp;
-  bool result;
+  const bool is_eq = EQ == ins->op;
+  Value lhs, rhs, tmp;
+  const Value *lookup;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
-      second = frame_popstack(frame);
-      first = frame_popstack(frame);
-      if (IS_OBJECT(&first)) {
-        if (IS_OBJECT(&second) && first.obj == second.obj) {
-          *frame_mutable_acc(frame) =
-              (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
-          return false;
-        }
-        const Function *f = class_get_function(
-            first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
-        if (NULL != f) {
-          *frame_mutable_acc(frame) = second;
-          return _call_function_base(frame, scope, f, first.obj, scope);
-        }
-        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
-        return false;
-      }
-      if (IS_NONE(&first)) {
-        *frame_mutable_acc(frame) =
-            IS_NONE(&second) && (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
-        return false;
-      }
-      if (IS_NONE(&second)) {
-        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
-        return false;
-      }
-      if (PRIMITIVE != second.type) {
-        raise_error(frame, scope, "RHS for op 'EQ' must be primitive (1).");
-        return false;
-      }
-      if (PRIMITIVE != first.type) {
-        raise_error(frame, scope, "LHS for op 'EQ' must be primitive (1).");
-        return false;
-      }
-      result = primitive_equals(&first.pri, &second.pri);
-      *frame_mutable_acc(frame) =
-          ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_VALUE
-              : FALSE_VALUE;
+      rhs = frame_popstack(frame);
+      lhs = frame_popstack(frame);
       break;
     case INSTRUCTION_ID:
-      acc = frame_get_acc(frame);
+      lhs = *frame_get_acc(frame);
       lookup = scope_lookup(scope, ins->id, &tmp);
-      if (IS_OBJECT(acc)) {
-        first = *acc;
-        if (IS_OBJECT(lookup) && first.obj == lookup->obj) {
-          *frame_mutable_acc(frame) =
-              (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
-          return false;
-        }
-        const Function *f = class_get_function(
-            first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
-        if (NULL != f) {
-          *frame_mutable_acc(frame) = (lookup == NULL) ? NONE_VALUE : *lookup;
-          return _call_function_base(frame, scope, f, first.obj, scope);
-        }
-
-        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
-        return false;
-      }
-      if (NULL != acc && PRIMITIVE != acc->type) {
-        raise_error(frame, scope, "LHS for op 'EQ' must be primitive (2).");
-        return false;
-      }
-      if (NULL != lookup && PRIMITIVE != lookup->type) {
-        raise_error(frame, scope, "RHS for op 'EQ' must be primitive (2).");
-        return false;
-      }
-      result = primitive_equals(&acc->pri, &lookup->pri);
-      *frame_mutable_acc(frame) =
-          ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_VALUE
-              : FALSE_VALUE;
+      rhs = (NULL == lookup) ? NONE_VALUE : *lookup;
       break;
     case INSTRUCTION_PRIMITIVE:
-      acc = frame_get_acc(frame);
-      if (NULL != acc && PRIMITIVE != acc->type) {
-        raise_error(frame, scope, "LHS for op 'EQ' must be primitive (3).");
-        return false;
-      }
-      result = primitive_equals(&acc->pri, &ins->val);
-      *frame_mutable_acc(frame) =
-          ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_VALUE
-              : FALSE_VALUE;
+      lhs = *frame_get_acc(frame);
+      rhs = value_primitive(ins->val);
       break;
     default:
       FATALF("Invalid arg type=%d for EQ.", ins->type);
+      return false;
   }
-  return false;
+  return _execute_EQ_values(frame, scope, is_eq, &lhs, &rhs);
 }
 
 void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
@@ -972,8 +929,13 @@ bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
                     sizeof(Frame *));
     return true;
   }
-  *frame_mutable_acc(frame) =
-      *future_get_value(frame->parent_isolate->heap, acc->obj);
+  const Value *result = future_get_value(frame->parent_isolate->heap, acc->obj);
+  *frame_mutable_acc(frame) = *result;
+  // Raise the error of a future that already failed, as is done when a future
+  // fails while being awaited.
+  if (future_is_error(future) && IS_OBJECT(result)) {
+    scope->error = result->obj;
+  }
   return false;
 }
 
@@ -1334,7 +1296,17 @@ void _execute_RAIS(VM *vm, Frame *frame, Scope *scope) {
 }
 
 bool _attemp_catch_error(Frame *frame, Scope *ctx) {
-  while (ctx->catch_ins < 0 && NULL != (ctx = frame_back_scope(frame)));
+  while (ctx->catch_ins < 0) {
+    // Only unwind this frame's own scopes. An anonymous function's outermost
+    // scope links to the enclosing scope of its definition, which belongs to
+    // another frame.
+    if (NULL == ctx->previous_scope ||
+        ctx->previous_scope->parent_frame != frame) {
+      ctx = NULL;
+      break;
+    }
+    ctx = frame_back_scope(frame);
+  }
   // There was no try/catch block.
   if (NULL == ctx) {
     frame->state = FRAME_ERROR;
@@ -1693,17 +1665,10 @@ void _isolate_handle_error(Isolate *isolate, Frame *frame) {
     _call_function(frame, (Scope *)NULL, errorln->_function_obj);
     return;
   }
-  _mark_frame_complete(frame->parent_isolate, frame,
-                       /*should_push=*/true);
-  *frame_mutable_acc(frame->parent_frame) = *frame_get_acc(frame);
-
-  // Only remove parent from waiting set if it was only waiting on this task.
-  if (FrameSet_size(&frame->parent_frame->dependent_frames) > 0) {
-    return;
-  }
-  isolate_remove_waiting_frame(frame->parent_frame->parent_isolate,
-                               frame->parent_frame);
-  isolate_push_frame(frame->parent_frame->parent_isolate, frame->parent_frame);
+  // Wakes the frames waiting on this one with the error: a synchronous caller,
+  // and anything awaiting an async call's future. An async call's caller does
+  // not wait on it, so it is unaffected.
+  _mark_frame_complete(frame->parent_isolate, frame, /*should_push=*/true);
 }
 
 void isolate_run(Isolate *isolate) {
