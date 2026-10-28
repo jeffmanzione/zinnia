@@ -170,12 +170,12 @@ Value error_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
       sl->module = c->module;
       sl->func = (Function *)c->func;  // blessed
       const SourceMapping *sm =
-          tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1));
+          bytecode_get_source(c->bytecode, c->ins - ((c == ctx) ? 0 : 1));
       sl->error_token = (Token *)sm->token;                // blessed
       sl->source_error_token = (Token *)sm->source_token;  // blessed
       if (NULL != sl->source_error_token) {
         sl->source_linetext =
-            tape_get_sourceline(c->tape, sl->source_error_token->line);
+            bytecode_get_sourceline(c->bytecode, sl->source_error_token->line);
       } else {
         sl->source_linetext = NULL;
       }

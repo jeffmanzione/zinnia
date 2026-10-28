@@ -5,43 +5,43 @@
 #include "language-tools/lexer/token.h"
 #include "language-tools/semantic_analyzer/expression_tree.h"
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/error.h"
 
-DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
+DEFINE_SEMANTIC_ANALYZER_PRODUCE_FN(Bytecode);
 
 void semantic_analyzer_init_fn(SAMap *populators, SAMap *producers,
                                SAMap *deleters);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(identifier, Tape) { Token *id; };
+DEFINE_EXPRESSION_WITH_PRODUCER(identifier, Bytecode) { Token *id; };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(constant, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(constant, Bytecode) {
   Token *token;
   Primitive value;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(string_literal, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(string_literal, Bytecode) {
   Token *token;
   const char *str;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(tuple_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(tuple_expression, Bytecode) {
   Token *token;
   ExpressionTreeArray list;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(array_declaration, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(array_declaration, Bytecode) {
   Token *token;
   bool is_empty;
   ExpressionTree *exp;  // A tuple expression.
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression, Bytecode) {
   Token *token;
   ExpressionTree *exp;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression_no_constants, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(primary_expression_no_constants, Bytecode) {
   Token *token;
   ExpressionTree *exp;
 };
@@ -54,13 +54,15 @@ typedef struct {
 
 DEFINE_ARRAYLIKE(NamedArgumentArray, NamedArgument);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(named_argument_list, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(named_argument_list, Bytecode) {
   Token *token;
   // NamedArgument
   NamedArgumentArray list;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(named_argument, Tape) { NamedArgument arg; };
+DEFINE_EXPRESSION_WITH_PRODUCER(named_argument, Bytecode) {
+  NamedArgument arg;
+};
 
 typedef enum {
   Postfix_none,
@@ -84,14 +86,14 @@ DEFINE_ARRAYLIKE(PostfixArray, Postfix);
 
 int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
                     const PostfixArray *suffixes, const Postfix **next,
-                    Tape *tape);
+                    Bytecode *bytecode);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(postfix_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(postfix_expression, Bytecode) {
   ExpressionTree *prefix;
   PostfixArray suffixes;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(range_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(range_expression, Bytecode) {
   Token *token;
   uint32_t num_args;
   ExpressionTree *start;
@@ -108,7 +110,7 @@ typedef enum {
   Unary_await
 } UnaryType;
 
-DEFINE_EXPRESSION_WITH_PRODUCER(unary_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(unary_expression, Bytecode) {
   Token *token;
   UnaryType type;
   ExpressionTree *exp;
@@ -148,10 +150,10 @@ typedef struct {
 
 DEFINE_ARRAYLIKE(BiSuffixArray, BiSuffix);
 
-#define DEFINE_BI_EXPRESSION(expr)              \
-  DEFINE_EXPRESSION_WITH_PRODUCER(expr, Tape) { \
-    ExpressionTree *exp;                        \
-    BiSuffixArray suffixes;                     \
+#define DEFINE_BI_EXPRESSION(expr)                  \
+  DEFINE_EXPRESSION_WITH_PRODUCER(expr, Bytecode) { \
+    ExpressionTree *exp;                            \
+    BiSuffixArray suffixes;                         \
   }
 
 DEFINE_BI_EXPRESSION(multiplicative_expression);
@@ -164,14 +166,14 @@ DEFINE_BI_EXPRESSION(binary_and_expression);
 DEFINE_BI_EXPRESSION(binary_xor_expression);
 DEFINE_BI_EXPRESSION(binary_or_expression);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(in_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(in_expression, Bytecode) {
   Token *token;
   bool is_not;
   ExpressionTree *element;
   ExpressionTree *collection;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(is_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(is_expression, Bytecode) {
   Token *token;
   ExpressionTree *exp;
   ExpressionTree *type;
@@ -190,7 +192,7 @@ typedef struct {
   ExpressionTree *else_exp;
 } IfElse;
 
-DEFINE_EXPRESSION_WITH_PRODUCER(conditional_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(conditional_expression, Bytecode) {
   IfElse if_else;
 };
 
@@ -239,7 +241,7 @@ typedef struct {
   ExpressionTree *body;
 } FunctionDef;
 
-DEFINE_EXPRESSION_WITH_PRODUCER(anon_function_definition, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(anon_function_definition, Bytecode) {
   FunctionDef func;
 };
 
@@ -251,7 +253,7 @@ typedef struct {
 
 DEFINE_ARRAYLIKE(MapDecEntryArray, MapDecEntry);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(map_declaration, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(map_declaration, Bytecode) {
   Token *lbrce, *rbrce;
   bool is_empty;
   MapDecEntryArray entries;
@@ -292,60 +294,63 @@ Assignment populate_assignment(SemanticAnalyzer *analyzer,
                                const SyntaxTree *stree);
 void delete_assignment(SemanticAnalyzer *analyzer, Assignment *assignment);
 int produce_assignment(SemanticAnalyzer *analyzer, const Assignment *assign,
-                       Tape *tape, const Token *eq_token);
+                       Bytecode *bytecode, const Token *eq_token);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(assignment_expression, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(assignment_expression, Bytecode) {
   Token *eq_token;
   Assignment assignment;
   ExpressionTree *rhs;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(compound_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(compound_statement, Bytecode) {
   ExpressionTreeArray expressions;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(try_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(try_statement, Bytecode) {
   ExpressionTree *try_body;
   Assignment error_assignment_lhs;
   const Token *try_token, *catch_token;
   ExpressionTree *catch_body;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(raise_statement, Bytecode) {
   const Token *raise_token;
   ExpressionTree *exp;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Tape) { IfElse if_else; };
+DEFINE_EXPRESSION_WITH_PRODUCER(selection_statement, Bytecode) {
+  IfElse if_else;
+};
 
 void populate_if_else(SemanticAnalyzer *analyzer, IfElse *if_else,
                       const SyntaxTree *stree);
 void delete_if_else(SemanticAnalyzer *analyzer, IfElse *if_else);
-int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else, Tape *tape);
+int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else,
+                    Bytecode *bytecode);
 
-DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(jump_statement, Bytecode) {
   const Token *return_token;
   ExpressionTree *exp;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(break_statement, Bytecode) {
   enum { Break_break, Break_continue } type;
   const Token *token;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(exit_statement, Bytecode) {
   const Token *token;
   ExpressionTree *value;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(foreach_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(foreach_statement, Bytecode) {
   Token *for_token, *in_token;
   Assignment assignment_lhs;
   ExpressionTree *iterable;
   ExpressionTree *body;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(for_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(for_statement, Bytecode) {
   Token *for_token;
   ExpressionTree *init;
   ExpressionTree *condition;
@@ -353,7 +358,7 @@ DEFINE_EXPRESSION_WITH_PRODUCER(for_statement, Tape) {
   ExpressionTree *body;
 };
 
-DEFINE_EXPRESSION_WITH_PRODUCER(while_statement, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(while_statement, Bytecode) {
   Token *while_token;
   ExpressionTree *condition;
   ExpressionTree *body;
@@ -402,7 +407,7 @@ typedef struct {
 
 ClassDef populate_class(SemanticAnalyzer *analyzer, const SyntaxTree *stree);
 int produce_class(SemanticAnalyzer *analyzer, const ClassDef *class,
-                  Tape *tape);
+                  Bytecode *bytecode);
 void delete_class(SemanticAnalyzer *analyzer, ClassDef *class);
 
 typedef void (*FuncDefPopulator)(const SyntaxTree *fn_identifier,
@@ -418,11 +423,11 @@ void populate_function_qualifiers(const SyntaxTree *fn_qualifiers,
                                   bool *is_const, const Token **const_token,
                                   bool *is_async, const Token **async_token);
 int produce_function(SemanticAnalyzer *analyzer, const FunctionDef *func,
-                     Tape *tape);
+                     Bytecode *bytecode);
 void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func);
 void delete_arguments(SemanticAnalyzer *analyzer, Arguments *args);
 int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
-                      Tape *tape);
+                      Bytecode *bytecode);
 
 typedef struct {
   bool is_named;
@@ -449,7 +454,7 @@ typedef struct {
   ExpressionTreeArray statements;
 } ModuleDef;
 
-DEFINE_EXPRESSION_WITH_PRODUCER(file_level_statement_list, Tape) {
+DEFINE_EXPRESSION_WITH_PRODUCER(file_level_statement_list, Bytecode) {
   ModuleDef def;
 };
 

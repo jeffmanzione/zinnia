@@ -13,7 +13,7 @@
 #include "c-data-structures/maplike.h"
 #include "c-data-structures/stable_maplike.h"
 #include "memory-wrapper/memory_graph.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
 #include "zinnia/util/sync/mutex.h"
 
@@ -73,7 +73,7 @@ struct Module_ {
   Object *_reflection;
 
   const char *_name;
-  const Tape *_tape;
+  const Bytecode *_bytecode;
   ClassMap _classes;
   FunctionMap _functions;
   bool _is_initialized;

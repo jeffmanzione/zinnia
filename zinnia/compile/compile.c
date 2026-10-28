@@ -19,17 +19,17 @@
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
+#include "zinnia/program/bytecode.h"
+#include "zinnia/program/bytecode_binary.h"
 #include "zinnia/program/optimization/optimize.h"
-#include "zinnia/program/tape.h"
-#include "zinnia/program/tape_binary.h"
 #include "zinnia/util/args/commandlines.h"
 #include "zinnia/util/args/lib_finder.h"
 #include "zinnia/vm/intern.h"
 #include "zinnia/vm/module_manager.h"
 
-IMPL_MAPLIKE(TapeNameMap, char *, Tape *);
+IMPL_MAPLIKE(BytecodeNameMap, char *, Bytecode *);
 
-Tape *read_file_(const char fn[], bool opt) {
+Bytecode *read_file_(const char fn[], bool opt) {
   FileInfo *fi = file_info(fn);
 
   TokenArray tokens;
@@ -51,23 +51,24 @@ Tape *read_file_(const char fn[], bool opt) {
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
     ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
-    Tape *tape = tape_create();
-    tape_set_external_source(tape, fn);
-    semantic_analyzer_produce(&sa, etree, tape);
+    Bytecode *bytecode = bytecode_create();
+    bytecode_set_external_source(bytecode, fn);
+    semantic_analyzer_produce(&sa, etree, bytecode);
 
     if (etree->type != rule_file_level_statement_list) {
-      tape_ins_int(tape, EXIT, 0, token_create(TOKEN_WORD, 0, 0, "", 0));
+      bytecode_ins_int(bytecode, EXIT, 0,
+                       token_create(TOKEN_WORD, 0, 0, "", 0));
     }
 
-    if (NULL == tape_module_name(tape)) {
+    if (NULL == bytecode_module_name(bytecode)) {
       char *dir_path, *module_name_tmp, *ext;
       split_path_file(fn, &dir_path, &module_name_tmp, &ext);
       const char *module_name = global_intern(module_name_tmp);
       RELEASE(module_name_tmp);
       RELEASE(dir_path);
       RELEASE(ext);
-      tape_module(tape, token_create(TOKEN_WORD, 0, 0, module_name,
-                                     strlen(module_name)));
+      bytecode_module(bytecode, token_create(TOKEN_WORD, 0, 0, module_name,
+                                             strlen(module_name)));
     }
 
     semantic_analyzer_delete(&sa, etree);
@@ -79,18 +80,18 @@ Tape *read_file_(const char fn[], bool opt) {
     TokenArray_finalize(&tokens);
 
     if (opt) {
-      tape = optimize(tape);
+      bytecode = optimize(bytecode);
     }
-    tape_set_body(tape, fi);
+    bytecode_set_body(bytecode, fi);
     file_info_delete(fi);
 
-    return tape;
+    return bytecode;
   }
 }
 
-void write_tape(const char fn[], const Tape *tape, bool out_zna,
-                const char machine_dir[], bool out_znb,
-                const char bytecode_dir[], bool minimize) {
+void write_bytecode(const char fn[], const Bytecode *bytecode, bool out_zna,
+                    const char machine_dir[], bool out_znb,
+                    const char bytecode_dir[], bool minimize) {
   char *path, *file_name, *ext;
   split_path_file(fn, &path, &file_name, &ext);
 
@@ -98,7 +99,7 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     make_dir_if_does_not_exist(machine_dir);
     char *file_path = combine_path_file(machine_dir, file_name, ".zna");
     FILE *file = FILE_FN(file_path, "wb");
-    tape_write(tape, file, minimize);
+    bytecode_write(bytecode, file, minimize);
     fclose(file);
     RELEASE(file_path);
   }
@@ -106,7 +107,7 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
     make_dir_if_does_not_exist(bytecode_dir);
     char *file_path = combine_path_file(bytecode_dir, file_name, ".znb");
     FILE *file = FILE_FN(file_path, "wb");
-    tape_write_binary(tape, file);
+    bytecode_write_binary(bytecode, file);
     fclose(file);
     RELEASE(file_path);
   }
@@ -116,24 +117,24 @@ void write_tape(const char fn[], const Tape *tape, bool out_zna,
 }
 
 void compile_to_assembly(const char file_name[], FILE *out) {
-  Tape *tape = read_file_(file_name, /* opt= */ true);
-  tape_write(tape, out, /* minimize */ true);
-  tape_delete(tape);
+  Bytecode *bytecode = read_file_(file_name, /* opt= */ true);
+  bytecode_write(bytecode, out, /* minimize */ true);
+  bytecode_delete(bytecode);
 }
 
 void compile(const SourceNameSet *source_files, bool out_zna,
              const char machine_dir[], bool out_znb, const char bytecode_dir[],
-             bool opt, bool minimize, TapeNameMap *src_map) {
+             bool opt, bool minimize, BytecodeNameMap *src_map) {
   optimize_init();
 
   SourceNameSetIterator srcs;
   SourceNameSet_iterator(&srcs, source_files);
   for (; SourceNameSet_has_next(&srcs); SourceNameSet_next(&srcs)) {
     const char *src = *SourceNameSet_value(&srcs);
-    Tape *tape = read_file_(src, opt);
-    TapeNameMap_insert(src_map, src, sizeof(char *), tape);
-    write_tape(src, tape, out_zna, machine_dir, out_znb, bytecode_dir,
-               minimize);
+    Bytecode *bytecode = read_file_(src, opt);
+    BytecodeNameMap_insert(src_map, src, sizeof(char *), bytecode);
+    write_bytecode(src, bytecode, out_zna, machine_dir, out_znb, bytecode_dir,
+                   minimize);
   }
 
   optimize_finalize();
@@ -154,18 +155,20 @@ int zinniac(int argc, const char *argv[]) {
   const char *bytecode_dir = argstore_lookup_string(store, ArgKey__BIN_OUT_DIR);
   const bool opt = argstore_lookup_bool(store, ArgKey__OPTIMIZE);
 
-  TapeNameMap src_map;
-  TapeNameMap_init(&src_map, hash_interned_string, compare_interned_strings);
+  BytecodeNameMap src_map;
+  BytecodeNameMap_init(&src_map, hash_interned_string,
+                       compare_interned_strings);
   compile(argstore_sources(store), out_zna, machine_dir, out_znb, bytecode_dir,
           opt, minimize, &src_map);
 
 #ifdef DEBUG
-  TapeNameMapIterator tapes;
-  TapeNameMap_iterator(&tapes, &src_map);
-  for (; TapeNameMap_has_entry(&tapes); TapeNameMap_next_entry(&tapes)) {
-    tape_delete(*TapeNameMap_mutable_value(&tapes));
+  BytecodeNameMapIterator bytecodes;
+  BytecodeNameMap_iterator(&bytecodes, &src_map);
+  for (; BytecodeNameMap_has_entry(&bytecodes);
+       BytecodeNameMap_next_entry(&bytecodes)) {
+    bytecode_delete(*BytecodeNameMap_mutable_value(&bytecodes));
   }
-  TapeNameMap_finalize(&src_map);
+  BytecodeNameMap_finalize(&src_map);
 
   argstore_delete(store);
   argconfig_delete(config);

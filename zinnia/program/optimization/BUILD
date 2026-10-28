@@ -28,7 +28,7 @@ cc_library(
     hdrs = ["optimizer.h"],
     deps = [
         "//zinnia/program:instruction",
-        "//zinnia/program:tape",
+        "//zinnia/program:bytecode",
         "//zinnia/util:error",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
@@ -44,7 +44,7 @@ cc_library(
         "//zinnia/alloc",
         "//zinnia/entity:value",
         "//zinnia/program:instruction",
-        "//zinnia/program:tape",
+        "//zinnia/program:bytecode",
         "//zinnia/vm:intern",
     ],
 )

@@ -53,9 +53,9 @@ void optimize_finalize() { OptimizerArray_finalize(&optimizers); }
 
 void populate_gotos_(OptimizeHelper *oh) {
   IntIntMap_init(&oh->i_gotos, hash_int, compare_ints);
-  int i, len = tape_size(oh->tape);
+  int i, len = bytecode_size(oh->bytecode);
   for (i = 0; i < len; i++) {
-    const Instruction *ins = tape_get(oh->tape, i);
+    const Instruction *ins = bytecode_get(oh->bytecode, i);
     if (!is_goto(ins->op)) {
       continue;
     }
@@ -64,21 +64,22 @@ void populate_gotos_(OptimizeHelper *oh) {
   }
 }
 
-void tape_populate_mappings_(const Tape *tape, IntToFunctionRefMap *i_to_refs,
-                             IntToCharPtrArrayMap *i_to_class_starts,
-                             IntToCharPtrArrayMap *i_to_class_ends) {
+void bytecode_populate_mappings_(const Bytecode *bytecode,
+                                 IntToFunctionRefMap *i_to_refs,
+                                 IntToCharPtrArrayMap *i_to_class_starts,
+                                 IntToCharPtrArrayMap *i_to_class_ends) {
   IntToFunctionRefMap_init(i_to_refs, hash_int, compare_ints);
   IntToCharPtrArrayMap_init(i_to_class_starts, hash_int, compare_ints);
   IntToCharPtrArrayMap_init(i_to_class_ends, hash_int, compare_ints);
 
-  FunctionRefMapIOIterator refs_iter = tape_functions(tape);
+  FunctionRefMapIOIterator refs_iter = bytecode_functions(bytecode);
   for (; FunctionRefMap_io_has_next(&refs_iter);
        FunctionRefMap_io_next(&refs_iter)) {
     const FunctionRef *fref = FunctionRefMap_io_value(&refs_iter);
     IntToFunctionRefMap_insert(i_to_refs, fref->index, sizeof(int), fref);
   }
 
-  ClassRefMapIOIterator class_iter = tape_classes(tape);
+  ClassRefMapIOIterator class_iter = bytecode_classes(bytecode);
   for (; ClassRefMap_io_has_next(&class_iter);
        ClassRefMap_io_next(&class_iter)) {
     const ClassRef *cref = ClassRefMap_io_value(&class_iter);
@@ -111,9 +112,9 @@ void tape_populate_mappings_(const Tape *tape, IntToFunctionRefMap *i_to_refs,
   }
 }
 
-void tape_clear_mappings_(IntToFunctionRefMap *i_to_refs,
-                          IntToCharPtrArrayMap *i_to_class_starts,
-                          IntToCharPtrArrayMap *i_to_class_ends) {
+void bytecode_clear_mappings_(IntToFunctionRefMap *i_to_refs,
+                              IntToCharPtrArrayMap *i_to_class_starts,
+                              IntToCharPtrArrayMap *i_to_class_ends) {
   IntToFunctionRefMap_finalize(i_to_refs);
 
   IntToCharPtrArrayMapIterator starts;
@@ -133,24 +134,24 @@ void tape_clear_mappings_(IntToFunctionRefMap *i_to_refs,
   IntToCharPtrArrayMap_finalize(i_to_class_ends);
 }
 
-void oh_init(OptimizeHelper *oh, const Tape *tape) {
-  oh->tape = tape;
+void oh_init(OptimizeHelper *oh, const Bytecode *bytecode) {
+  oh->bytecode = bytecode;
   AdjustmentArray_init(&oh->adjustments);
   IntIntMap_init(&oh->i_to_adj, hash_int, compare_ints);
   IntIntMap_init(&oh->inserts, hash_int, compare_ints);
   populate_gotos_(oh);
-  tape_populate_mappings_(oh->tape, &oh->i_to_refs, &oh->i_to_class_starts,
-                          &oh->i_to_class_ends);
+  bytecode_populate_mappings_(oh->bytecode, &oh->i_to_refs,
+                              &oh->i_to_class_starts, &oh->i_to_class_ends);
 }
 
-void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
-  const Tape *t = oh->tape;
+void oh_resolve_(OptimizeHelper *oh, Bytecode *new_bytecode) {
+  const Bytecode *t = oh->bytecode;
   Token tok;
-  token_fill(&tok, TOKEN_WORD, 0, 0, tape_module_name(t),
-             strlen(tape_module_name(t)));
-  tape_module(new_tape, &tok);
-  tape_set_external_source(new_tape, tape_get_external_source(t));
-  int i, old_len = tape_size(t);
+  token_fill(&tok, TOKEN_WORD, 0, 0, bytecode_module_name(t),
+             strlen(bytecode_module_name(t)));
+  bytecode_module(new_bytecode, &tok);
+  bytecode_set_external_source(new_bytecode, bytecode_get_external_source(t));
+  int i, old_len = bytecode_size(t);
   IntArray old_index;
   IntArray_init(&old_index);
   IntArray new_index;
@@ -168,7 +169,7 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
         class_name = *CharPtrArray_mutable_value(&it);
         Token tok;
         token_fill(&tok, TOKEN_WORD, 0, 0, class_name, strlen(class_name));
-        tape_endclass(new_tape, &tok);
+        bytecode_endclass(new_bytecode, &tok);
         // Only process first one.
         break;
       }
@@ -183,9 +184,9 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
         class_name = *CharPtrArray_mutable_value(&iter);
         Token tok;
         token_fill(&tok, TOKEN_WORD, 0, 0, class_name, strlen(class_name));
-        const ClassRef *cref = tape_get_class(t, class_name);
+        const ClassRef *cref = bytecode_get_class(t, class_name);
         if (0 == CharPtrArray_size(&cref->supers)) {
-          tape_class(new_tape, &tok);
+          bytecode_class(new_bytecode, &tok);
         } else {
           CharPtrArray q_parents;
           CharPtrArray_init(&q_parents);
@@ -196,14 +197,14 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
             CharPtrArray_push_back(
                 &q_parents, *CharPtrArray_mutable_value(&parent_classes));
           }
-          tape_class_with_parents(new_tape, &tok, &q_parents);
+          bytecode_class_with_parents(new_bytecode, &tok, &q_parents);
           CharPtrArray_finalize(&q_parents);
         }
         FieldRefMapIOIterator fields;
         FieldRefMap_io_iterator(&fields, &cref->field_refs);
         for (; FieldRefMap_io_has_next(&fields); FieldRefMap_io_next(&fields)) {
           const FieldRef *fref = FieldRefMap_io_value(&fields);
-          tape_field(new_tape, fref->name);
+          bytecode_field(new_bytecode, fref->name);
         }
         // Handles case where class has no body.
         CharPtrArray *ends =
@@ -215,7 +216,7 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
                CharPtrArray_next(&end_iter)) {
             if (0 == strcmp(class_name, *CharPtrArray_value(&end_iter))) {
               in_class = false;
-              tape_endclass(new_tape, &tok);
+              bytecode_endclass(new_bytecode, &tok);
               break;
             }
           }
@@ -226,19 +227,19 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
     if (NULL != (fref = IntToFunctionRefMap_find(&oh->i_to_refs, i, sizeof(int),
                                                  NULL))) {
       if (fref->is_async) {
-        tape_label_text_async(new_tape, fref->name);
+        bytecode_label_text_async(new_bytecode, fref->name);
       } else {
-        tape_label_text(new_tape, fref->name);
+        bytecode_label_text(new_bytecode, fref->name);
       }
     }
     // Prevents out of bounds.
     if (i >= old_len) {
       break;
     }
-    const Instruction *ins = tape_get(t, i);
+    const Instruction *ins = bytecode_get(t, i);
     // instruction_write(ins, stdout);
     // printf(" <-- o\n");
-    int new_len = tape_size(new_tape);
+    int new_len = bytecode_size(new_bytecode);
     const int insert_index =
         IntIntMap_find(&oh->inserts, i + 1, sizeof(int), -1);
     if (insert_index >= 0) {
@@ -248,9 +249,10 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
       for (j = insert->start; j < insert->end; j++) {
         IntArray_push_back(&new_index, new_len);
         IntArray_push_back(&old_index, j);
-        Instruction *new_ins = tape_add(new_tape);
-        *new_ins = *tape_get(t, j);
-        *tape_add_source(new_tape, new_ins) = *tape_get_source(t, j);
+        Instruction *new_ins = bytecode_add(new_bytecode);
+        *new_ins = *bytecode_get(t, j);
+        *bytecode_add_source(new_bytecode, new_ins) =
+            *bytecode_get_source(t, j);
       }
     }
     const int a_index = IntIntMap_find(&oh->i_to_adj, i + 1, sizeof(int), -1);
@@ -265,8 +267,8 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
     }
     IntArray_push_back(&new_index, new_len);
     IntArray_push_back(&old_index, i);
-    Instruction *new_ins = tape_add(new_tape);
-    *tape_add_source(new_tape, new_ins) = *tape_get_source(t, i);
+    Instruction *new_ins = bytecode_add(new_bytecode);
+    *bytecode_add_source(new_bytecode, new_ins) = *bytecode_get_source(t, i);
     *new_ins = *ins;
     if (NULL != a) {
       if (SET_OP == a->type) {
@@ -280,9 +282,9 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
       }
     }
   }
-  int new_len = tape_size(new_tape);
+  int new_len = bytecode_size(new_bytecode);
   for (i = 0; i < new_len; i++) {
-    Instruction *ins = tape_get_mutable(new_tape, i);
+    Instruction *ins = bytecode_get_mutable(new_bytecode, i);
     if (!is_goto(ins->op)) {
       continue;
     }
@@ -295,27 +297,28 @@ void oh_resolve_(OptimizeHelper *oh, Tape *new_tape) {
   }
   IntArray_finalize(&old_index);
   IntArray_finalize(&new_index);
-  tape_clear_mappings_(&oh->i_to_refs, &oh->i_to_class_starts,
-                       &oh->i_to_class_ends);
+  bytecode_clear_mappings_(&oh->i_to_refs, &oh->i_to_class_starts,
+                           &oh->i_to_class_ends);
   IntIntMap_finalize(&oh->i_to_adj);
   IntIntMap_finalize(&oh->inserts);
   IntIntMap_finalize(&oh->i_gotos);
   AdjustmentArray_finalize(&oh->adjustments);
 }
 
-Tape *optimize(Tape *const t) {
-  Tape *tape = t;
+Bytecode *optimize(Bytecode *const t) {
+  Bytecode *bytecode = t;
   int i, opts_len = OptimizerArray_size(&optimizers);
   for (i = 0; i < opts_len; ++i) {
     OptimizeHelper oh;
-    oh_init(&oh, tape);
-    OptimizerArray_get_unchecked(&optimizers, i)(&oh, tape, 0, tape_size(tape));
-    Tape *new_tape = tape_create();
-    oh_resolve_(&oh, new_tape);
-    tape_delete(tape);
-    tape = new_tape;
+    oh_init(&oh, bytecode);
+    OptimizerArray_get_unchecked(&optimizers, i)(&oh, bytecode, 0,
+                                                 bytecode_size(bytecode));
+    Bytecode *new_bytecode = bytecode_create();
+    oh_resolve_(&oh, new_bytecode);
+    bytecode_delete(bytecode);
+    bytecode = new_bytecode;
   }
-  return tape;
+  return bytecode;
 }
 
 void register_optimizer(const char name[], const Optimizer o) {

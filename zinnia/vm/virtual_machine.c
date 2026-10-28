@@ -353,7 +353,8 @@ Value _module_filename(Frame *frame, Scope *ctx, Object *obj, Value *args) {
 
 Value _module_source_filename(Frame *frame, Scope *ctx, Object *obj,
                               Value *args) {
-  const char *source_fn = tape_get_external_source(obj->_module_obj->_tape);
+  const char *source_fn =
+      bytecode_get_external_source(obj->_module_obj->_bytecode);
   if (NULL != source_fn) {
     return value_object(
         istring_new(frame->parent_isolate->heap, source_fn, strlen(source_fn)));

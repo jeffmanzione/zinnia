@@ -9,7 +9,7 @@
 #include "zinnia/entity/function/function.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/object.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/vm/intern.h"
 #include "zinnia/vm/isolate/isolates.h"
 
@@ -24,7 +24,7 @@ void scope_init(Scope *ctx, Object *self, Module *module,
                 uint32_t instruction_pos) {
   ctx->self = value_object(self);
   ctx->module = module;
-  ctx->tape = module->_tape;
+  ctx->bytecode = module->_bytecode;
   ctx->ins = instruction_pos;
   ctx->func = NULL;
   ctx->error = NULL;
@@ -37,7 +37,7 @@ void scope_finalize(Scope *ctx) { ASSERT(ctx != NULL); }
 
 const Instruction *scope_ins(Scope *ctx) {
   ASSERT(ctx != NULL);
-  return tape_get(ctx->tape, ctx->ins);
+  return bytecode_get(ctx->bytecode, ctx->ins);
 }
 
 Heap *scope_heap_(Scope *ctx) {

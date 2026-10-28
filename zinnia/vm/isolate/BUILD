@@ -16,7 +16,7 @@ cc_library(
         "//zinnia/entity/module",
         "//zinnia/entity/module:modules",
         "//zinnia/program:instruction",
-        "//zinnia/program:tape",
+        "//zinnia/program:bytecode",
         "//zinnia/vm:intern",
     ],
 )
@@ -42,7 +42,7 @@ cc_library(
         "//zinnia/entity:object",
         "//zinnia/entity/module",
         "//zinnia/heap",
-        "//zinnia/program:tape",
+        "//zinnia/program:bytecode",
         "//zinnia/util/sync:critical_section",
         "//zinnia/util/sync:mutex",
         "//zinnia/util/sync:thread",

@@ -3,7 +3,7 @@
 // Created on: Jun 6, 2020
 //     Author: Jeff Manzione
 
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 
 #include "language-tools/lexer/token.h"
 #include "zinnia/alloc/alloc.h"
@@ -14,7 +14,7 @@
 #include "zinnia/util/void_array.h"
 #include "zinnia/vm/intern.h"
 
-#define DEFAULT_TAPE_SZ 64
+#define DEFAULT_BYTECODE_SZ 64
 
 #define CLASS_KEYWORD "class"
 #define CLASSEND_KEYWORD "endclass"
@@ -31,7 +31,7 @@ IMPL_ARRAYLIKE(ClassRefPtrArray, ClassRef *);
 IMPL_STABLE_MAPLIKE(FunctionRefMap, char *, FunctionRef);
 IMPL_STABLE_MAPLIKE(FieldRefMap, char *, FieldRef);
 
-struct Tape_ {
+struct Bytecode_ {
   const char *module_name;
   InstructionArray ins;
 
@@ -48,38 +48,38 @@ struct Tape_ {
 void classref_init_(ClassRef *ref, const char name[]);
 void classref_finalize_(ClassRef *ref);
 
-Tape *tape_create() {
-  Tape *tape = MNEW(Tape);
-  InstructionArray_init(&tape->ins);
-  SourceMappingArray_init(&tape->source_map);
-  CharPtrArray_init(&tape->source_lines);
-  ClassRefMap_init(&tape->class_refs, hash_interned_string,
+Bytecode *bytecode_create() {
+  Bytecode *bytecode = MNEW(Bytecode);
+  InstructionArray_init(&bytecode->ins);
+  SourceMappingArray_init(&bytecode->source_map);
+  CharPtrArray_init(&bytecode->source_lines);
+  ClassRefMap_init(&bytecode->class_refs, hash_interned_string,
                    compare_interned_strings);
-  FunctionRefMap_init(&tape->func_refs, hash_interned_string,
+  FunctionRefMap_init(&bytecode->func_refs, hash_interned_string,
                       compare_interned_strings);
-  tape->current_class = NULL;
-  tape->external_source_fn = NULL;
-  tape->module_name = NULL;
-  return tape;
+  bytecode->current_class = NULL;
+  bytecode->external_source_fn = NULL;
+  bytecode->module_name = NULL;
+  return bytecode;
 }
 
-void tape_delete(Tape *tape) {
-  ASSERT(tape != NULL);
-  InstructionArray_finalize(&tape->ins);
-  SourceMappingArray_finalize(&tape->source_map);
-  CharPtrArray_finalize(&tape->source_lines);
+void bytecode_delete(Bytecode *bytecode) {
+  ASSERT(bytecode != NULL);
+  InstructionArray_finalize(&bytecode->ins);
+  SourceMappingArray_finalize(&bytecode->source_map);
+  CharPtrArray_finalize(&bytecode->source_lines);
   ClassRefMapIOIterator class_i;
-  ClassRefMap_io_iterator(&class_i, &tape->class_refs);
+  ClassRefMap_io_iterator(&class_i, &bytecode->class_refs);
   for (; ClassRefMap_io_has_next(&class_i); ClassRefMap_io_next(&class_i)) {
     classref_finalize_(ClassRefMap_io_mutable_value(&class_i));
   }
-  ClassRefMap_finalize(&tape->class_refs);
-  FunctionRefMap_finalize(&tape->func_refs);
-  RELEASE(tape);
+  ClassRefMap_finalize(&bytecode->class_refs);
+  FunctionRefMap_finalize(&bytecode->func_refs);
+  RELEASE(bytecode);
 }
 
-Instruction *tape_add(Tape *tape) {
-  SourceMapping *sm = SourceMappingArray_push_back_ref(&tape->source_map);
+Instruction *bytecode_add(Bytecode *bytecode) {
+  SourceMapping *sm = SourceMappingArray_push_back_ref(&bytecode->source_map);
   // No sourcemap info present.
   sm->col = -1;
   sm->line = -1;
@@ -87,39 +87,41 @@ Instruction *tape_add(Tape *tape) {
   sm->source_line = -1;
   sm->source_token = NULL;
   sm->token = NULL;
-  return InstructionArray_push_back_ref(&tape->ins);
+  return InstructionArray_push_back_ref(&bytecode->ins);
 }
 
-SourceMapping *tape_add_source(Tape *tape, Instruction *ins) {
-  ASSERT(tape != NULL);
+SourceMapping *bytecode_add_source(Bytecode *bytecode, Instruction *ins) {
+  ASSERT(bytecode != NULL);
   ASSERT(ins != NULL);
-  uintptr_t index = ins - InstructionArray_get_ref_unchecked(&tape->ins, 0);
+  uintptr_t index = ins - InstructionArray_get_ref_unchecked(&bytecode->ins, 0);
   ASSERT(index >= 0);
-  ASSERT(index < tape_size(tape));
-  return SourceMappingArray_mutable_ref_unchecked(&tape->source_map, index);
+  ASSERT(index < bytecode_size(bytecode));
+  return SourceMappingArray_mutable_ref_unchecked(&bytecode->source_map, index);
 }
 
-void tape_set_external_source(Tape *const tape, const char file_name[]) {
-  ASSERT(tape != NULL);
+void bytecode_set_external_source(Bytecode *const bytecode,
+                                  const char file_name[]) {
+  ASSERT(bytecode != NULL);
   // ASSERT(file_name != NULL);
-  tape->external_source_fn = (char *)file_name;
+  bytecode->external_source_fn = (char *)file_name;
 }
 
-const char *tape_get_external_source(const Tape *const tape) {
-  return tape->external_source_fn;
+const char *bytecode_get_external_source(const Bytecode *const bytecode) {
+  return bytecode->external_source_fn;
 }
 
-void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
-                              bool is_async) {
-  ASSERT(tape != NULL);
+void bytecode_start_func_at_index(Bytecode *bytecode, const char name[],
+                                  uint32_t index, bool is_async) {
+  ASSERT(bytecode != NULL);
   ASSERT(name != NULL);
   FunctionRef *ref;
   // In a class.
   const bool inserted =
-      (NULL != tape->current_class)
-          ? FunctionRefMap_insert(&tape->current_class->func_refs, name,
+      (NULL != bytecode->current_class)
+          ? FunctionRefMap_insert(&bytecode->current_class->func_refs, name,
                                   sizeof(char *), &ref)
-          : FunctionRefMap_insert(&tape->func_refs, name, sizeof(char *), &ref);
+          : FunctionRefMap_insert(&bytecode->func_refs, name, sizeof(char *),
+                                  &ref);
 
   if (!inserted) {
     FATALF(
@@ -134,17 +136,18 @@ void tape_start_func_at_index(Tape *tape, const char name[], uint32_t index,
   ref->is_async = is_async;
 }
 
-void tape_start_func_(Tape *tape, const char name[], bool is_async) {
-  tape_start_func_at_index(tape, name, InstructionArray_size(&tape->ins),
-                           is_async);
+void bytecode_start_func_(Bytecode *bytecode, const char name[],
+                          bool is_async) {
+  bytecode_start_func_at_index(bytecode, name,
+                               InstructionArray_size(&bytecode->ins), is_async);
 }
 
-ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
-                                    uint32_t index) {
-  ASSERT(tape != NULL);
+ClassRef *bytecode_start_class_at_index(Bytecode *bytecode, const char name[],
+                                        uint32_t index) {
+  ASSERT(bytecode != NULL);
   ASSERT(name != NULL);
   ClassRef *ref;
-  if (!ClassRefMap_insert(&tape->class_refs, name, sizeof(char *), &ref)) {
+  if (!ClassRefMap_insert(&bytecode->class_refs, name, sizeof(char *), &ref)) {
     FATALF(
         "Attempting to add class %s, but a function by that name already "
         "exists.",
@@ -152,29 +155,30 @@ ClassRef *tape_start_class_at_index(Tape *tape, const char name[],
   }
   classref_init_(ref, name);
   ref->start_index = index;
-  tape->current_class = ref;
+  bytecode->current_class = ref;
   return ref;
 }
 
-void tape_end_class_at_index(Tape *tape, uint32_t index) {
-  ASSERT(tape != NULL);
-  ASSERT(tape->current_class != NULL);
-  tape->current_class->end_index = index;
-  tape->current_class = NULL;
+void bytecode_end_class_at_index(Bytecode *bytecode, uint32_t index) {
+  ASSERT(bytecode != NULL);
+  ASSERT(bytecode->current_class != NULL);
+  bytecode->current_class->end_index = index;
+  bytecode->current_class = NULL;
 }
 
-void tape_start_class(Tape *tape, const char name[]) {
-  tape_start_class_at_index(tape, name, InstructionArray_size(&tape->ins));
+void bytecode_start_class(Bytecode *bytecode, const char name[]) {
+  bytecode_start_class_at_index(bytecode, name,
+                                InstructionArray_size(&bytecode->ins));
 }
 
-void tape_end_class(Tape *tape) {
-  tape_end_class_at_index(tape, InstructionArray_size(&tape->ins));
+void bytecode_end_class(Bytecode *bytecode) {
+  bytecode_end_class_at_index(bytecode, InstructionArray_size(&bytecode->ins));
 }
 
 void field_ref_init_(FieldRef *fref, const char name[]) { fref->name = name; }
 
-void tape_field(Tape *tape, const char *field) {
-  ClassRef *cls = tape->current_class;
+void bytecode_field(Bytecode *bytecode, const char *field) {
+  ClassRef *cls = bytecode->current_class;
   if (NULL == cls) {
     FATALF("Cannot have field outside of a class.");
   }
@@ -188,33 +192,34 @@ void tape_field(Tape *tape, const char *field) {
   field_ref_init_(ref, field);
 }
 
-const Instruction *tape_get(const Tape *tape, uint32_t index) {
-  ASSERT(tape != NULL);
+const Instruction *bytecode_get(const Bytecode *bytecode, uint32_t index) {
+  ASSERT(bytecode != NULL);
   ASSERT(index >= 0);
-  ASSERT(index < tape_size(tape));
-  return InstructionArray_get_ref_unchecked(&tape->ins, index);
+  ASSERT(index < bytecode_size(bytecode));
+  return InstructionArray_get_ref_unchecked(&bytecode->ins, index);
 }
 
-Instruction *tape_get_mutable(Tape *tape, uint32_t index) {
-  ASSERT(tape != NULL);
+Instruction *bytecode_get_mutable(Bytecode *bytecode, uint32_t index) {
+  ASSERT(bytecode != NULL);
   ASSERT(index >= 0);
-  ASSERT(index < tape_size(tape));
-  return InstructionArray_mutable_ref_unchecked(&tape->ins, index);
+  ASSERT(index < bytecode_size(bytecode));
+  return InstructionArray_mutable_ref_unchecked(&bytecode->ins, index);
 }
 
-const SourceMapping *tape_get_source(const Tape *tape, uint32_t index) {
-  ASSERT(tape != NULL);
+const SourceMapping *bytecode_get_source(const Bytecode *bytecode,
+                                         uint32_t index) {
+  ASSERT(bytecode != NULL);
   ASSERT(index >= 0);
-  ASSERT(index < tape_size(tape));
-  return SourceMappingArray_get_ref_unchecked(&tape->source_map, index);
+  ASSERT(index < bytecode_size(bytecode));
+  return SourceMappingArray_get_ref_unchecked(&bytecode->source_map, index);
 }
 
-const char *tape_get_sourceline(const Tape *const tape, int line) {
-  if (line < 0 || line >= CharPtrArray_size(&tape->source_lines)) {
+const char *bytecode_get_sourceline(const Bytecode *const bytecode, int line) {
+  if (line < 0 || line >= CharPtrArray_size(&bytecode->source_lines)) {
     return NULL;
   }
   const char *escaped_line =
-      CharPtrArray_get_unchecked(&tape->source_lines, line);
+      CharPtrArray_get_unchecked(&bytecode->source_lines, line);
   char *unescaped_line;
   unescape(escaped_line, &unescaped_line);
   const char *to_return = global_intern(unescaped_line);
@@ -222,37 +227,40 @@ const char *tape_get_sourceline(const Tape *const tape, int line) {
   return to_return;
 }
 
-size_t tape_size(const Tape *tape) {
-  ASSERT(tape != NULL);
-  return InstructionArray_size(&tape->ins);
+size_t bytecode_size(const Bytecode *bytecode) {
+  ASSERT(bytecode != NULL);
+  return InstructionArray_size(&bytecode->ins);
 }
 
-uint32_t tape_class_count(const Tape *tape) {
-  return ClassRefMap_size(&tape->class_refs);
+uint32_t bytecode_class_count(const Bytecode *bytecode) {
+  return ClassRefMap_size(&bytecode->class_refs);
 }
 
-ClassRefMapIOIterator tape_classes(const Tape *tape) {
+ClassRefMapIOIterator bytecode_classes(const Bytecode *bytecode) {
   ClassRefMapIOIterator it;
-  ClassRefMap_io_iterator(&it, &tape->class_refs);
+  ClassRefMap_io_iterator(&it, &bytecode->class_refs);
   return it;
 }
 
-const ClassRef *tape_get_class(const Tape *tape, const char class_name[]) {
-  return ClassRefMap_find_ref((ClassRefMap *)&tape->class_refs, class_name,
+const ClassRef *bytecode_get_class(const Bytecode *bytecode,
+                                   const char class_name[]) {
+  return ClassRefMap_find_ref((ClassRefMap *)&bytecode->class_refs, class_name,
                               sizeof(char *));
 }
 
-uint32_t tape_func_count(const Tape *tape) {
-  return FunctionRefMap_size(&tape->func_refs);
+uint32_t bytecode_func_count(const Bytecode *bytecode) {
+  return FunctionRefMap_size(&bytecode->func_refs);
 }
 
-FunctionRefMapIOIterator tape_functions(const Tape *tape) {
+FunctionRefMapIOIterator bytecode_functions(const Bytecode *bytecode) {
   FunctionRefMapIOIterator it;
-  FunctionRefMap_io_iterator(&it, &tape->func_refs);
+  FunctionRefMap_io_iterator(&it, &bytecode->func_refs);
   return it;
 }
 
-const char *tape_module_name(const Tape *tape) { return tape->module_name; }
+const char *bytecode_module_name(const Bytecode *bytecode) {
+  return bytecode->module_name;
+}
 
 void classref_init_(ClassRef *ref, const char name[]) {
   ref->name = name;
@@ -269,23 +277,23 @@ void classref_finalize_(ClassRef *ref) {
   CharPtrArray_finalize(&ref->supers);
 }
 
-void tape_write(const Tape *tape, FILE *file, bool minimize) {
-  ASSERT(tape != NULL);
+void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
+  ASSERT(bytecode != NULL);
   ASSERT(file != NULL);
-  if (tape->module_name && 0 != strcmp("$", tape->module_name)) {
-    fprintf(file, "module %s\n", tape->module_name);
+  if (bytecode->module_name && 0 != strcmp("$", bytecode->module_name)) {
+    fprintf(file, "module %s\n", bytecode->module_name);
   }
-  if (NULL != tape->external_source_fn) {
-    fprintf(file, "source '%s'\n", tape->external_source_fn);
+  if (NULL != bytecode->external_source_fn) {
+    fprintf(file, "source '%s'\n", bytecode->external_source_fn);
   }
   ClassRefMapIOIterator cls_iter;
-  ClassRefMap_io_iterator(&cls_iter, &tape->class_refs);
+  ClassRefMap_io_iterator(&cls_iter, &bytecode->class_refs);
   FunctionRefMapIOIterator func_iter;
-  FunctionRefMap_io_iterator(&func_iter, &tape->func_refs);
+  FunctionRefMap_io_iterator(&func_iter, &bytecode->func_refs);
   FunctionRefMapIOIterator cls_func_iter;
   bool in_class = false;
   int i;
-  for (i = 0; i <= InstructionArray_size(&tape->ins); ++i) {
+  for (i = 0; i <= InstructionArray_size(&bytecode->ins); ++i) {
     if (!in_class && ClassRefMap_io_has_next(&cls_iter)) {
       const ClassRef *class_ref = ClassRefMap_io_value(&cls_iter);
       if (class_ref->start_index == i) {
@@ -322,12 +330,12 @@ void tape_write(const Tape *tape, FILE *file, bool minimize) {
         FunctionRefMap_io_next(&func_iter);
       }
     }
-    if (i < InstructionArray_size(&tape->ins)) {
+    if (i < InstructionArray_size(&bytecode->ins)) {
       const Instruction *ins =
-          InstructionArray_get_ref_unchecked(&tape->ins, i);
+          InstructionArray_get_ref_unchecked(&bytecode->ins, i);
       int chars_written = instruction_write(ins, file, minimize);
       const SourceMapping *sm =
-          SourceMappingArray_get_ref_unchecked(&tape->source_map, i);
+          SourceMappingArray_get_ref_unchecked(&bytecode->source_map, i);
       if (sm->col >= 0 && sm->line >= 0) {
         const int remaining_characters_before_comment =
             INSTRUCTION_COMMENT_LPAD - chars_written;
@@ -357,18 +365,18 @@ void tape_write(const Tape *tape, FILE *file, bool minimize) {
       }
     }
   }
-  const int num_src_lines = CharPtrArray_size(&tape->source_lines);
+  const int num_src_lines = CharPtrArray_size(&bytecode->source_lines);
   if (num_src_lines > 0) {
     fprintf(file, "body\n");
     for (int i = 0; i < num_src_lines; ++i) {
       fprintf(file, "%s'%s'\n", minimize ? "" : " ",
-              CharPtrArray_get_unchecked(&tape->source_lines, i));
+              CharPtrArray_get_unchecked(&bytecode->source_lines, i));
     }
   }
 }
 
 // Consumes tail.
-void tape_append(Tape *head, Tape *tail) {
+void bytecode_append(Bytecode *head, Bytecode *tail) {
   ASSERT(head != NULL);
   ASSERT(tail != NULL);
 
@@ -377,10 +385,10 @@ void tape_append(Tape *head, Tape *tail) {
   // Copy all instructions from tail to head.
   int i;
   for (i = 0; i < InstructionArray_size(&tail->ins); ++i) {
-    Instruction *cpy = tape_add(head);
-    SourceMapping *sm_cpy = tape_add_source(head, cpy);
+    Instruction *cpy = bytecode_add(head);
+    SourceMapping *sm_cpy = bytecode_add_source(head, cpy);
     *cpy = InstructionArray_get_unchecked(&tail->ins, i);
-    *sm_cpy = *tape_get_source(tail, i);
+    *sm_cpy = *bytecode_get_source(tail, i);
   }
   // Copy all functions.
   FunctionRefMapIOIterator func_iter;
@@ -466,14 +474,14 @@ Token *next_token_skip_ln_(TokenArray *queue) {
   return first;
 }
 
-void tape_read_body_(Tape *const tape, TokenArray *tokens) {
+void bytecode_read_body_(Bytecode *const bytecode, TokenArray *tokens) {
   while (TokenArray_size(tokens) > 0) {
     Token *tok = next_token_skip_ln_(tokens);
     if (NULL == tok) {
       break;
     }
     ASSERT(token_type_is_string(tok->type));
-    *CharPtrArray_push_back_ref(&tape->source_lines) = (char *)tok->text;
+    *CharPtrArray_push_back_ref(&bytecode->source_lines) = (char *)tok->text;
   }
 }
 
@@ -485,7 +493,7 @@ bool is_body_token_(const Token *tok) {
   return 0 == strcmp(BODY_KEYWORD, tok->text);
 }
 
-bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
+bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
   ASSERT(tokens != NULL);
   if (TokenArray_size(tokens) < 1) {
     return false;
@@ -503,9 +511,9 @@ bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
         FATALF("Invalid function qualifier '%s' on '%s'.", async_keyword->text,
                fn_name->text);
       }
-      tape_label_async(tape, fn_name);
+      bytecode_label_async(bytecode, fn_name);
     } else {
-      tape_label(tape, fn_name);
+      bytecode_label(bytecode, fn_name);
     }
     if (TOKEN_NEWLINE != q_peek_(tokens)->type) {
       FATALF("Invalid token after @def.");
@@ -515,7 +523,7 @@ bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
     Token *class_name = TokenArray_remove_unchecked(tokens, 0);
     if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
-      tape_class(tape, class_name);
+      bytecode_class(bytecode, class_name);
       return true;
     }
     CharPtrArray parents;
@@ -525,29 +533,29 @@ bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
       *CharPtrArray_push_back_ref(&parents) =
           (char *)TokenArray_remove_unchecked(tokens, 0)->text;
     }
-    tape_class_with_parents(tape, class_name, &parents);
+    bytecode_class_with_parents(bytecode, class_name, &parents);
     CharPtrArray_finalize(&parents);
     return true;
   }
   if (0 == strcmp(CLASSEND_KEYWORD, first->text)) {
-    tape_endclass(tape, first);
+    bytecode_endclass(bytecode, first);
     return true;
   }
   if (0 == strcmp(FIELD_KEYWORD, first->text)) {
     Token *field = TokenArray_remove_unchecked(tokens, 0);
-    tape_field(tape, field->text);
+    bytecode_field(bytecode, field->text);
     return true;
   }
   Op op = str_to_op(first->text);
   Token *next = (Token *)q_peek_(tokens);
   if (TOKEN_NEWLINE == next->type || SYMBOL_POUND == next->type) {
-    tape_ins_no_arg(tape, op, first);
+    bytecode_ins_no_arg(bytecode, op, first);
   } else if (SYMBOL_MINUS == next->type) {
     TokenArray_remove_unchecked(tokens, 0);
-    tape_ins_neg(tape, op, TokenArray_remove_unchecked(tokens, 0));
+    bytecode_ins_neg(bytecode, op, TokenArray_remove_unchecked(tokens, 0));
   } else {
     TokenArray_remove_unchecked(tokens, 0);
-    tape_ins(tape, op, next);
+    bytecode_ins(bytecode, op, next);
   }
 
   next = (Token *)q_peek_(tokens);
@@ -555,8 +563,8 @@ bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
     TokenArray_remove_unchecked(tokens, 0);
     Primitive line = token_to_primitive(TokenArray_remove_unchecked(tokens, 0));
     Primitive col = token_to_primitive(TokenArray_remove_unchecked(tokens, 0));
-    SourceMapping *sm =
-        tape_add_source(tape, tape_get_mutable(tape, tape_size(tape) - 1));
+    SourceMapping *sm = bytecode_add_source(
+        bytecode, bytecode_get_mutable(bytecode, bytecode_size(bytecode) - 1));
     sm->source_line = pint(&line);
     sm->source_col = pint(&col);
     sm->source_token =
@@ -566,15 +574,15 @@ bool tape_read_ins(Tape *const tape, TokenArray *tokens) {
   return true;
 }
 
-void tape_read(Tape *const tape, TokenArray *tokens) {
-  ASSERT(tape != NULL);
+void bytecode_read(Bytecode *const bytecode, TokenArray *tokens) {
+  ASSERT(bytecode != NULL);
   ASSERT(tokens != NULL);
   if (0 == strcmp(MODULE_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
     TokenArray_remove_unchecked(tokens, 0);
     Token *module_name = TokenArray_remove_unchecked(tokens, 0);
-    tape->module_name = module_name->text;
+    bytecode->module_name = module_name->text;
   } else {
-    tape->module_name = global_intern("$");
+    bytecode->module_name = global_intern("$");
   }
   if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
     TokenArray_remove_unchecked(tokens, 0);
@@ -583,15 +591,15 @@ void tape_read(Tape *const tape, TokenArray *tokens) {
     TokenArray_remove_unchecked(tokens, 0);
     Token *tok = TokenArray_remove_unchecked(tokens, 0);
     ASSERT(tok != NULL);
-    tape_set_external_source(tape, tok->text);
+    bytecode_set_external_source(bytecode, tok->text);
   }
   while (TokenArray_size(tokens) > 0) {
-    if (!tape_read_ins(tape, tokens)) {
+    if (!bytecode_read_ins(bytecode, tokens)) {
       break;
     }
   }
   if (TokenArray_size(tokens) > 0) {
-    tape_read_body_(tape, tokens);
+    bytecode_read_body_(bytecode, tokens);
   }
 }
 
@@ -599,11 +607,11 @@ void tape_read(Tape *const tape, TokenArray *tokens) {
 // Specialized functions.
 // **********************
 
-int tape_ins_raw(Tape *tape, Instruction *ins) {
-  ASSERT(tape != NULL);
-  Instruction *new_ins = tape_add(tape);
+int bytecode_ins_raw(Bytecode *bytecode, Instruction *ins) {
+  ASSERT(bytecode != NULL);
+  Instruction *new_ins = bytecode_add(bytecode);
   *new_ins = *ins;
-  tape_add_source(tape, new_ins);
+  bytecode_add_source(bytecode, new_ins);
   return 1;
 }
 
@@ -625,12 +633,12 @@ Primitive token_to_primitive(const Token *tok) {
   return val;
 }
 
-int tape_ins(Tape *tape, Op op, const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins(Bytecode *bytecode, Op op, const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
   char *unescaped_str;
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -659,11 +667,11 @@ int tape_ins(Tape *tape, Op op, const Token *token) {
   return 1;
 }
 
-int tape_ins_neg(Tape *tape, Op op, const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins_neg(Bytecode *bytecode, Op op, const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -676,11 +684,12 @@ int tape_ins_neg(Tape *tape, Op op, const Token *token) {
   return 1;
 }
 
-int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins_text(Bytecode *bytecode, Op op, const char text[],
+                      const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -692,11 +701,11 @@ int tape_ins_text(Tape *tape, Op op, const char text[], const Token *token) {
   return 1;
 }
 
-int tape_ins_int(Tape *tape, Op op, int val, const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins_int(Bytecode *bytecode, Op op, int val, const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -709,11 +718,11 @@ int tape_ins_int(Tape *tape, Op op, int val, const Token *token) {
   return 1;
 }
 
-int tape_ins_no_arg(Tape *tape, Op op, const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins_no_arg(Bytecode *bytecode, Op op, const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -724,23 +733,23 @@ int tape_ins_no_arg(Tape *tape, Op op, const Token *token) {
   return 1;
 }
 
-int tape_label(Tape *tape, const Token *token) {
-  tape_start_func_(tape, token->text, /*is_async=*/false);
+int bytecode_label(Bytecode *bytecode, const Token *token) {
+  bytecode_start_func_(bytecode, token->text, /*is_async=*/false);
   return 0;
 }
 
-int tape_label_async(Tape *tape, const Token *token) {
-  tape_start_func_(tape, token->text, /*is_async=*/true);
+int bytecode_label_async(Bytecode *bytecode, const Token *token) {
+  bytecode_start_func_(bytecode, token->text, /*is_async=*/true);
   return 0;
 }
 
-int tape_label_text(Tape *tape, const char text[]) {
-  tape_start_func_(tape, text, /*is_async=*/false);
+int bytecode_label_text(Bytecode *bytecode, const char text[]) {
+  bytecode_start_func_(bytecode, text, /*is_async=*/false);
   return 0;
 }
 
-int tape_label_text_async(Tape *tape, const char text[]) {
-  tape_start_func_(tape, text, /*is_async=*/true);
+int bytecode_label_text_async(Bytecode *bytecode, const char text[]) {
+  bytecode_start_func_(bytecode, text, /*is_async=*/true);
   return 0;
 }
 
@@ -753,23 +762,23 @@ const char *anon_fn_for_token(const Token *token) {
   return label;
 }
 
-int tape_anon_label(Tape *tape, const Token *token) {
+int bytecode_anon_label(Bytecode *bytecode, const Token *token) {
   const char *label = anon_fn_for_token(token);
-  tape_label_text(tape, label);
+  bytecode_label_text(bytecode, label);
   return 0;
 }
 
-int tape_anon_label_async(Tape *tape, const Token *token) {
+int bytecode_anon_label_async(Bytecode *bytecode, const Token *token) {
   const char *label = anon_fn_for_token(token);
-  tape_label_text_async(tape, label);
+  bytecode_label_text_async(bytecode, label);
   return 0;
 }
 
-int tape_ins_anon(Tape *tape, Op op, const Token *token) {
-  ASSERT(tape != NULL);
+int bytecode_ins_anon(Bytecode *bytecode, Op op, const Token *token) {
+  ASSERT(bytecode != NULL);
   ASSERT(token != NULL);
-  Instruction *ins = tape_add(tape);
-  SourceMapping *sm = tape_add_source(tape, ins);
+  Instruction *ins = bytecode_add(bytecode);
+  SourceMapping *sm = bytecode_add_source(bytecode, ins);
 
   ins->op = op;
   sm->token = token;
@@ -781,20 +790,20 @@ int tape_ins_anon(Tape *tape, Op op, const Token *token) {
   return 1;
 }
 
-int tape_module(Tape *tape, const Token *token) {
-  tape->module_name = token->text;
+int bytecode_module(Bytecode *bytecode, const Token *token) {
+  bytecode->module_name = token->text;
   return 0;
 }
 
-int tape_class(Tape *tape, const Token *token) {
-  tape_start_class(tape, token->text);
+int bytecode_class(Bytecode *bytecode, const Token *token) {
+  bytecode_start_class(bytecode, token->text);
   return 0;
 }
 
-int tape_class_with_parents(Tape *tape, const Token *token,
-                            CharPtrArray *q_parents) {
-  tape_class(tape, token);
-  ClassRef *cls = tape->current_class;
+int bytecode_class_with_parents(Bytecode *bytecode, const Token *token,
+                                CharPtrArray *q_parents) {
+  bytecode_class(bytecode, token);
+  ClassRef *cls = bytecode->current_class;
   while (CharPtrArray_size(q_parents) > 0) {
     char *parent = CharPtrArray_pop_back_unchecked(q_parents);
     CharPtrArray_push_back(&cls->supers, parent);
@@ -802,19 +811,19 @@ int tape_class_with_parents(Tape *tape, const Token *token,
   return 0;
 }
 
-int tape_endclass(Tape *tape, const Token *token) {
-  tape_end_class(tape);
+int bytecode_endclass(Bytecode *bytecode, const Token *token) {
+  bytecode_end_class(bytecode);
   return 0;
 }
 
-void tape_set_body(Tape *const tape, FileInfo *fi) {
-  ASSERT(tape != NULL);
+void bytecode_set_body(Bytecode *const bytecode, FileInfo *fi) {
+  ASSERT(bytecode != NULL);
   ASSERT(fi != NULL);
   int len = file_info_len(fi);
   for (int i = 0; i < len; ++i) {
     char *line_escaped;
     escape(file_info_lookup(fi, i + 1)->line_text, &line_escaped);
-    *CharPtrArray_push_back_ref(&tape->source_lines) =
+    *CharPtrArray_push_back_ref(&bytecode->source_lines) =
         (char *)global_intern(line_escaped);
     RELEASE(line_escaped);
   }

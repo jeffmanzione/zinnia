@@ -12,7 +12,7 @@
 #include "zinnia/entity/module/module.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/heap/heap.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/sync/critical_section.h"
 #include "zinnia/util/sync/mutex.h"
 #include "zinnia/util/sync/thread.h"
@@ -40,7 +40,7 @@ struct __Scope {
 
   Value self;
   Module *module;
-  const Tape *tape;
+  const Bytecode *bytecode;
   const Function *func;
   uint32_t ins;
 

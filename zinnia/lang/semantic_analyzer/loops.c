@@ -31,33 +31,33 @@ DELETE_IMPL(foreach_statement, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, foreach_statement->body);
 }
 
-PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0;
-  num_ins += tape_ins_no_arg(target, NBLK, foreach_statement->for_token);
+  num_ins += bytecode_ins_no_arg(target, NBLK, foreach_statement->for_token);
   num_ins +=
       semantic_analyzer_produce(analyzer, foreach_statement->iterable, target);
-  num_ins += tape_ins_no_arg(target, PUSH, foreach_statement->in_token);
-  num_ins +=
-      tape_ins_text(target, CALL, ITER_FN_NAME, foreach_statement->in_token);
-  num_ins += tape_ins_no_arg(target, PUSH, foreach_statement->in_token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, foreach_statement->in_token);
+  num_ins += bytecode_ins_text(target, CALL, ITER_FN_NAME,
+                               foreach_statement->in_token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, foreach_statement->in_token);
 
-  Tape *tmp = tape_create();
-  int body_ins = tape_ins_no_arg(tmp, DUP, foreach_statement->for_token);
+  Bytecode *tmp = bytecode_create();
+  int body_ins = bytecode_ins_no_arg(tmp, DUP, foreach_statement->for_token);
   body_ins +=
-      tape_ins_text(tmp, CALL, NEXT_FN_NAME, foreach_statement->in_token);
+      bytecode_ins_text(tmp, CALL, NEXT_FN_NAME, foreach_statement->in_token);
   body_ins += produce_assignment(analyzer, &foreach_statement->assignment_lhs,
                                  tmp, foreach_statement->in_token);
   body_ins += semantic_analyzer_produce(analyzer, foreach_statement->body, tmp);
 
-  int inc_lines = tape_ins_no_arg(target, DUP, foreach_statement->in_token);
-  inc_lines += tape_ins_text(target, CALL, HAS_NEXT_FN_NAME,
-                             foreach_statement->in_token);
+  int inc_lines = bytecode_ins_no_arg(target, DUP, foreach_statement->in_token);
+  inc_lines += bytecode_ins_text(target, CALL, HAS_NEXT_FN_NAME,
+                                 foreach_statement->in_token);
   inc_lines +=
-      tape_ins_int(target, IFN, body_ins + 1, foreach_statement->in_token);
+      bytecode_ins_int(target, IFN, body_ins + 1, foreach_statement->in_token);
 
   int i;
-  for (i = 0; i < tape_size(tmp); ++i) {
-    Instruction *ins = tape_get_mutable(tmp, i);
+  for (i = 0; i < bytecode_size(tmp); ++i) {
+    Instruction *ins = bytecode_get_mutable(tmp, i);
     if (ins->op != JMP) {
       continue;
     }
@@ -71,12 +71,12 @@ PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Tape *target) {
     }
   }
 
-  tape_append(target, tmp);
+  bytecode_append(target, tmp);
   num_ins += body_ins + inc_lines;
-  num_ins += tape_ins_int(target, JMP, -(inc_lines + body_ins + 1),
-                          foreach_statement->in_token);
-  num_ins += tape_ins_no_arg(target, RES, foreach_statement->in_token);
-  num_ins += tape_ins_no_arg(target, BBLK, foreach_statement->for_token);
+  num_ins += bytecode_ins_int(target, JMP, -(inc_lines + body_ins + 1),
+                              foreach_statement->in_token);
+  num_ins += bytecode_ins_no_arg(target, RES, foreach_statement->in_token);
+  num_ins += bytecode_ins_no_arg(target, BBLK, foreach_statement->for_token);
   return num_ins;
 }
 
@@ -105,23 +105,23 @@ DELETE_IMPL(for_statement, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, for_statement->body);
 }
 
-PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0;
-  num_ins += tape_ins_no_arg(target, NBLK, for_statement->for_token);
+  num_ins += bytecode_ins_no_arg(target, NBLK, for_statement->for_token);
   num_ins += semantic_analyzer_produce(analyzer, for_statement->init, target);
   int condition_ins =
       semantic_analyzer_produce(analyzer, for_statement->condition, target);
   num_ins += condition_ins;
 
-  Tape *tmp_tape = tape_create();
+  Bytecode *tmp_bytecode = bytecode_create();
   int body_ins =
-      semantic_analyzer_produce(analyzer, for_statement->body, tmp_tape);
+      semantic_analyzer_produce(analyzer, for_statement->body, tmp_bytecode);
   int inc_ins =
-      semantic_analyzer_produce(analyzer, for_statement->inc, tmp_tape);
+      semantic_analyzer_produce(analyzer, for_statement->inc, tmp_bytecode);
 
   int i;
-  for (i = 0; i < tape_size(tmp_tape); ++i) {
-    Instruction *ins = tape_get_mutable(tmp_tape, i);
+  for (i = 0; i < bytecode_size(tmp_bytecode); ++i) {
+    Instruction *ins = bytecode_get_mutable(tmp_bytecode, i);
     if (ins->op != JMP) {
       continue;
     }
@@ -135,14 +135,14 @@ PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Tape *target) {
     }
   }
   num_ins += body_ins + inc_ins;
-  num_ins += tape_ins_int(target, IFN, body_ins + inc_ins + 1,
-                          for_statement->for_token);
-  tape_append(target, tmp_tape);
+  num_ins += bytecode_ins_int(target, IFN, body_ins + inc_ins + 1,
+                              for_statement->for_token);
+  bytecode_append(target, tmp_bytecode);
 
-  num_ins +=
-      tape_ins_int(target, JMP, -(body_ins + condition_ins + inc_ins + 1 + 1),
-                   for_statement->for_token);
-  num_ins += tape_ins_no_arg(target, BBLK, for_statement->for_token);
+  num_ins += bytecode_ins_int(target, JMP,
+                              -(body_ins + condition_ins + inc_ins + 1 + 1),
+                              for_statement->for_token);
+  num_ins += bytecode_ins_no_arg(target, BBLK, for_statement->for_token);
 
   return num_ins;
 }
@@ -164,18 +164,18 @@ DELETE_IMPL(while_statement, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, while_statement->body);
 }
 
-PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0;
-  num_ins += tape_ins_no_arg(target, NBLK, while_statement->while_token);
+  num_ins += bytecode_ins_no_arg(target, NBLK, while_statement->while_token);
   num_ins +=
       semantic_analyzer_produce(analyzer, while_statement->condition, target);
 
-  Tape *tmp_tape = tape_create();
+  Bytecode *tmp_bytecode = bytecode_create();
   int lines_for_body =
-      semantic_analyzer_produce(analyzer, while_statement->body, tmp_tape);
+      semantic_analyzer_produce(analyzer, while_statement->body, tmp_bytecode);
   int i;
-  for (i = 0; i < tape_size(tmp_tape); ++i) {
-    Instruction *ins = tape_get_mutable(tmp_tape, i);
+  for (i = 0; i < bytecode_size(tmp_bytecode); ++i) {
+    Instruction *ins = bytecode_get_mutable(tmp_bytecode, i);
     if (ins->op != JMP) {
       continue;
     }
@@ -186,12 +186,13 @@ PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Tape *target) {
     }
   }
 
-  num_ins += lines_for_body + tape_ins_int(target, IFN, lines_for_body + 1,
-                                           while_statement->while_token);
-  tape_append(target, tmp_tape);
+  num_ins += lines_for_body + bytecode_ins_int(target, IFN, lines_for_body + 1,
+                                               while_statement->while_token);
+  bytecode_append(target, tmp_bytecode);
 
-  num_ins += tape_ins_int(target, JMP, -num_ins, while_statement->while_token);
-  num_ins += tape_ins_no_arg(target, BBLK, while_statement->while_token);
+  num_ins +=
+      bytecode_ins_int(target, JMP, -num_ins, while_statement->while_token);
+  num_ins += bytecode_ins_no_arg(target, BBLK, while_statement->while_token);
 
   return num_ins;
 }

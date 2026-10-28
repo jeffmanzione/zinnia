@@ -39,7 +39,7 @@ Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
   char *c_str_text = value_string_copy(arg1);
   SFILE *file = sfile_open(c_str_text);
 
-  Tape *tape = (Tape *)m->_tape;  // bless
+  Bytecode *bytecode = (Bytecode *)m->_bytecode;  // bless
   FileInfo *fi = file_info_sfile(file);
   FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
       vm_module_manager(frame->parent_isolate->vm), m);
@@ -61,7 +61,7 @@ Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
   semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
   ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
-  semantic_analyzer_produce(&sa, etree, tape);
+  semantic_analyzer_produce(&sa, etree, bytecode);
 
   semantic_analyzer_delete(&sa, etree);
   semantic_analyzer_finalize(&sa);

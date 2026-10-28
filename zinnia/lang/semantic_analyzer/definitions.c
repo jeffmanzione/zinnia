@@ -6,8 +6,8 @@
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
 
-DEFINE_ARRAYLIKE(TapePtrArray, Tape *);
-IMPL_ARRAYLIKE(TapePtrArray, Tape *);
+DEFINE_ARRAYLIKE(BytecodePtrArray, Bytecode *);
+IMPL_ARRAYLIKE(BytecodePtrArray, Bytecode *);
 
 IMPL_ARRAYLIKE(NamedArgumentArray, NamedArgument);
 IMPL_ARRAYLIKE(PostfixArray, Postfix);
@@ -65,7 +65,7 @@ REGISTRATION_FN(semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(named_argument_list);
 }
 
-IMPL_SEMANTIC_ANALYZER_PRODUCE_FN(Tape);
+IMPL_SEMANTIC_ANALYZER_PRODUCE_FN(Bytecode);
 
 POPULATE_IMPL(identifier, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
   identifier->id = stree->token;
@@ -73,14 +73,14 @@ POPULATE_IMPL(identifier, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
 
 DELETE_IMPL(identifier, SemanticAnalyzer *analyzer) {}
 
-PRODUCE_IMPL(identifier, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(identifier, SemanticAnalyzer *analyzer, Bytecode *target) {
   return (identifier->id->text == TRUE_KEYWORD)
-             ? tape_ins_no_arg(target, RTRU, identifier->id)
+             ? bytecode_ins_no_arg(target, RTRU, identifier->id)
          : (identifier->id->text == FALSE_KEYWORD)
-             ? tape_ins_no_arg(target, RFLS, identifier->id)
+             ? bytecode_ins_no_arg(target, RFLS, identifier->id)
          : (identifier->id->text == NIL_KEYWORD)
-             ? tape_ins_no_arg(target, RNIL, identifier->id)
-             : tape_ins(target, RES, identifier->id);
+             ? bytecode_ins_no_arg(target, RNIL, identifier->id)
+             : bytecode_ins(target, RES, identifier->id);
 }
 
 POPULATE_IMPL(constant, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
@@ -90,8 +90,8 @@ POPULATE_IMPL(constant, const SyntaxTree *stree, SemanticAnalyzer *analyzer) {
 
 DELETE_IMPL(constant, SemanticAnalyzer *analyzer) {}
 
-PRODUCE_IMPL(constant, SemanticAnalyzer *analyzer, Tape *target) {
-  return tape_ins(target, RES, constant->token);
+PRODUCE_IMPL(constant, SemanticAnalyzer *analyzer, Bytecode *target) {
+  return bytecode_ins(target, RES, constant->token);
 }
 
 POPULATE_IMPL(string_literal, const SyntaxTree *stree,
@@ -102,8 +102,8 @@ POPULATE_IMPL(string_literal, const SyntaxTree *stree,
 
 DELETE_IMPL(string_literal, SemanticAnalyzer *analyzer) {}
 
-PRODUCE_IMPL(string_literal, SemanticAnalyzer *analyzer, Tape *target) {
-  return tape_ins(
+PRODUCE_IMPL(string_literal, SemanticAnalyzer *analyzer, Bytecode *target) {
+  return bytecode_ins(
       target, string_literal->token->type == STRING_SINGLEQUOTE ? RES : IRES,
       string_literal->token);
 }
@@ -139,23 +139,23 @@ DELETE_IMPL(tuple_expression, SemanticAnalyzer *analyzer) {
 
 int tuple_expression_helper(SemanticAnalyzer *analyzer,
                             Expression_tuple_expression *tuple_expression,
-                            Tape *tape) {
+                            Bytecode *bytecode) {
   int i, num_ins = 0,
          tuple_len = ExpressionTreeArray_size(&tuple_expression->list);
   // Start from end and go backward.
   for (i = tuple_len - 1; i >= 0; --i) {
     ExpressionTree *elt = EXTRACT_TREE(&tuple_expression->list, i);
-    num_ins += semantic_analyzer_produce(analyzer, elt, tape);
-    num_ins += tape_ins_no_arg(tape, PUSH, tuple_expression->token);
+    num_ins += semantic_analyzer_produce(analyzer, elt, bytecode);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, tuple_expression->token);
   }
   return num_ins;
 }
 
-PRODUCE_IMPL(tuple_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(tuple_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = tuple_expression_helper(analyzer, tuple_expression, target);
-  num_ins += tape_ins_int(target, TUPL,
-                          ExpressionTreeArray_size(&tuple_expression->list),
-                          tuple_expression->token);
+  num_ins += bytecode_ins_int(target, TUPL,
+                              ExpressionTreeArray_size(&tuple_expression->list),
+                              tuple_expression->token);
   return num_ins;
 }
 
@@ -182,9 +182,9 @@ DELETE_IMPL(array_declaration, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, array_declaration->exp);
 }
 
-PRODUCE_IMPL(array_declaration, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(array_declaration, SemanticAnalyzer *analyzer, Bytecode *target) {
   if (array_declaration->is_empty) {
-    return tape_ins_no_arg(target, ANEW, array_declaration->token);
+    return bytecode_ins_no_arg(target, ANEW, array_declaration->token);
   }
   int num_ins = 0, num_members = 1;
   if (IS_EXPRESSION(array_declaration->exp, tuple_expression)) {
@@ -195,9 +195,10 @@ PRODUCE_IMPL(array_declaration, SemanticAnalyzer *analyzer, Tape *target) {
   } else {
     num_ins +=
         semantic_analyzer_produce(analyzer, array_declaration->exp, target);
-    num_ins += tape_ins_no_arg(target, PUSH, array_declaration->token);
+    num_ins += bytecode_ins_no_arg(target, PUSH, array_declaration->token);
   }
-  num_ins += tape_ins_int(target, ANEW, num_members, array_declaration->token);
+  num_ins +=
+      bytecode_ins_int(target, ANEW, num_members, array_declaration->token);
   return num_ins;
 }
 
@@ -218,7 +219,7 @@ DELETE_IMPL(primary_expression, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, primary_expression->exp);
 }
 
-PRODUCE_IMPL(primary_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(primary_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   return semantic_analyzer_produce(analyzer, primary_expression->exp, target);
 }
 
@@ -236,7 +237,7 @@ POPULATE_IMPL(primary_expression_no_constants, const SyntaxTree *stree,
 }
 
 PRODUCE_IMPL(primary_expression_no_constants, SemanticAnalyzer *analyzer,
-             Tape *target) {
+             Bytecode *target) {
   return semantic_analyzer_produce(
       analyzer, primary_expression_no_constants->exp, target);
 }
@@ -276,23 +277,24 @@ POPULATE_IMPL(named_argument_list, const SyntaxTree *stree,
   }
 }
 
-PRODUCE_IMPL(named_argument_list, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(named_argument_list, SemanticAnalyzer *analyzer,
+             Bytecode *target) {
   int num_ins =
-      tape_ins_text(target, PUSH, OBJECT_NAME, named_argument_list->token);
-  num_ins += tape_ins_no_arg(target, CLLN, named_argument_list->token);
-  num_ins += tape_ins_no_arg(target, PUSH, named_argument_list->token);
+      bytecode_ins_text(target, PUSH, OBJECT_NAME, named_argument_list->token);
+  num_ins += bytecode_ins_no_arg(target, CLLN, named_argument_list->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, named_argument_list->token);
 
   NamedArgumentArrayIterator iter;
   NamedArgumentArray_iterator(&iter, &named_argument_list->list);
   for (; NamedArgumentArray_has_next(&iter); NamedArgumentArray_next(&iter)) {
     const NamedArgument *arg = NamedArgumentArray_value(&iter);
     num_ins += semantic_analyzer_produce(analyzer, arg->value, target);
-    num_ins += tape_ins_no_arg(target, PUSH, arg->colon);
-    num_ins += tape_ins_int(target, PEEK, 1, arg->colon);
-    num_ins += tape_ins(target, FLD, arg->id);
+    num_ins += bytecode_ins_no_arg(target, PUSH, arg->colon);
+    num_ins += bytecode_ins_int(target, PEEK, 1, arg->colon);
+    num_ins += bytecode_ins(target, FLD, arg->id);
   }
 
-  num_ins += tape_ins_no_arg(target, RES, named_argument_list->token);
+  num_ins += bytecode_ins_no_arg(target, RES, named_argument_list->token);
   return num_ins;
 }
 
@@ -311,17 +313,17 @@ POPULATE_IMPL(named_argument, const SyntaxTree *stree,
   populate_named_argument_(analyzer, stree, &named_argument->arg);
 }
 
-PRODUCE_IMPL(named_argument, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(named_argument, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins =
-      tape_ins_text(target, PUSH, OBJECT_NAME, named_argument->arg.colon);
-  num_ins += tape_ins_no_arg(target, CLLN, named_argument->arg.colon);
-  num_ins += tape_ins_no_arg(target, PUSH, named_argument->arg.colon);
+      bytecode_ins_text(target, PUSH, OBJECT_NAME, named_argument->arg.colon);
+  num_ins += bytecode_ins_no_arg(target, CLLN, named_argument->arg.colon);
+  num_ins += bytecode_ins_no_arg(target, PUSH, named_argument->arg.colon);
   num_ins +=
       semantic_analyzer_produce(analyzer, named_argument->arg.value, target);
-  num_ins += tape_ins_no_arg(target, PUSH, named_argument->arg.colon);
-  num_ins += tape_ins_int(target, PEEK, 1, named_argument->arg.colon);
-  num_ins += tape_ins(target, FLD, named_argument->arg.id);
-  num_ins += tape_ins_no_arg(target, RES, named_argument->arg.colon);
+  num_ins += bytecode_ins_no_arg(target, PUSH, named_argument->arg.colon);
+  num_ins += bytecode_ins_int(target, PEEK, 1, named_argument->arg.colon);
+  num_ins += bytecode_ins(target, FLD, named_argument->arg.id);
+  num_ins += bytecode_ins_no_arg(target, RES, named_argument->arg.colon);
   return num_ins;
 }
 
@@ -394,38 +396,39 @@ POPULATE_IMPL(postfix_expression, const SyntaxTree *stree,
 
 int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
                     const PostfixArray *suffixes, const Postfix **next,
-                    Tape *tape) {
+                    Bytecode *bytecode) {
   int num_ins = 0;
   const Postfix *cur = *next;
   *next = (*i + 1 == num_postfix)
               ? NULL
               : PostfixArray_get_ref_unchecked(suffixes, *i + 1);
   if (cur->type == Postfix_fncall) {
-    num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, cur->token);
     if (cur->exp != NULL) {
-      num_ins += semantic_analyzer_produce(analyzer, cur->exp, tape);
+      num_ins += semantic_analyzer_produce(analyzer, cur->exp, bytecode);
     }
-    num_ins +=
-        tape_ins_no_arg(tape, (NULL == cur->exp) ? CLLN : CALL, cur->token);
+    num_ins += bytecode_ins_no_arg(bytecode, (NULL == cur->exp) ? CLLN : CALL,
+                                   cur->token);
   } else if (cur->type == Postfix_array_index) {
-    num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
-    num_ins += semantic_analyzer_produce(analyzer, cur->exp, tape);
-    num_ins += tape_ins_no_arg(tape, AIDX, cur->token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, cur->token);
+    num_ins += semantic_analyzer_produce(analyzer, cur->exp, bytecode);
+    num_ins += bytecode_ins_no_arg(bytecode, AIDX, cur->token);
   } else if (cur->type == Postfix_field) {
     // FunctionDef calls on fields must be handled with CALL X.
     if (NULL != *next && (*next)->type == Postfix_fncall) {
-      num_ins += tape_ins_no_arg(tape, PUSH, cur->token);
-      num_ins += ((*next)->exp != NULL
-                      ? semantic_analyzer_produce(analyzer, (*next)->exp, tape)
-                      : 0);
-      num_ins += tape_ins(tape, (NULL == (*next)->exp) ? CLLN : CALL, cur->id);
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, cur->token);
+      num_ins += ((*next)->exp != NULL ? semantic_analyzer_produce(
+                                             analyzer, (*next)->exp, bytecode)
+                                       : 0);
+      num_ins +=
+          bytecode_ins(bytecode, (NULL == (*next)->exp) ? CLLN : CALL, cur->id);
       // Advance past the function call since we have already handled it.
       ++(*i);
       *next = (*i + 1 == num_postfix)
                   ? NULL
                   : PostfixArray_get_ref_unchecked(suffixes, *i + 1);
     } else {
-      num_ins += tape_ins(tape, GET, cur->id);
+      num_ins += bytecode_ins(bytecode, GET, cur->id);
     }
   } else {
     FATALF("Unknown postfix_expression.");
@@ -433,7 +436,7 @@ int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
   return num_ins;
 }
 
-PRODUCE_IMPL(postfix_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(postfix_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int i, num_ins = 0,
          num_postfix = PostfixArray_size(&postfix_expression->suffixes);
   num_ins +=
@@ -491,23 +494,23 @@ DELETE_IMPL(range_expression, SemanticAnalyzer *analyzer) {
   }
 }
 
-PRODUCE_IMPL(range_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(range_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0;
-  num_ins += tape_ins_text(target, PUSH, global_intern("range"),
-                           range_expression->token);
+  num_ins += bytecode_ins_text(target, PUSH, global_intern("range"),
+                               range_expression->token);
   if (NULL != range_expression->inc) {
     num_ins +=
         semantic_analyzer_produce(analyzer, range_expression->inc, target);
-    num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
+    num_ins += bytecode_ins_no_arg(target, PUSH, range_expression->token);
   }
   num_ins += semantic_analyzer_produce(analyzer, range_expression->end, target);
-  num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, range_expression->token);
   num_ins +=
       semantic_analyzer_produce(analyzer, range_expression->start, target);
-  num_ins += tape_ins_no_arg(target, PUSH, range_expression->token);
-  num_ins += tape_ins_int(target, TUPL, range_expression->num_args,
-                          range_expression->token);
-  num_ins += tape_ins_no_arg(target, CALL, range_expression->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, range_expression->token);
+  num_ins += bytecode_ins_int(target, TUPL, range_expression->num_args,
+                              range_expression->token);
+  num_ins += bytecode_ins_no_arg(target, CALL, range_expression->token);
   return num_ins;
 }
 
@@ -542,33 +545,33 @@ DELETE_IMPL(unary_expression, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, unary_expression->exp);
 }
 
-PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(unary_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0;
   if (unary_expression->type == Unary_negate &&
       rule_constant == unary_expression->exp->type) {
     Expression_constant *constant =
         EXTRACT_EXPRESSION(unary_expression->exp, constant);
-    return tape_ins_neg(target, RES, constant->token);
+    return bytecode_ins_neg(target, RES, constant->token);
   }
   num_ins += semantic_analyzer_produce(analyzer, unary_expression->exp, target);
   switch (unary_expression->type) {
     case Unary_not:
-      num_ins += tape_ins_no_arg(target, NOT, unary_expression->token);
+      num_ins += bytecode_ins_no_arg(target, NOT, unary_expression->token);
       break;
     case Unary_notc:
-      num_ins += tape_ins_no_arg(target, NOTC, unary_expression->token);
+      num_ins += bytecode_ins_no_arg(target, NOTC, unary_expression->token);
       break;
     case Unary_negate:
-      num_ins += tape_ins_no_arg(target, PUSH, unary_expression->token);
-      num_ins += tape_ins_int(target, PUSH, -1, unary_expression->token);
-      num_ins += tape_ins_no_arg(target, MULT, unary_expression->token);
+      num_ins += bytecode_ins_no_arg(target, PUSH, unary_expression->token);
+      num_ins += bytecode_ins_int(target, PUSH, -1, unary_expression->token);
+      num_ins += bytecode_ins_no_arg(target, MULT, unary_expression->token);
       break;
     // TODO: Uncomment when const is implemented.
     // case Unary_const:
     //   num_ins += tape_ins_no_arg(tape, CNST, unary_expression->token);
     //   break;
     case Unary_await:
-      num_ins += tape_ins_no_arg(target, WAIT, unary_expression->token);
+      num_ins += bytecode_ins_no_arg(target, WAIT, unary_expression->token);
       break;
     default:
       FATALF("Unknown unary: %s", unary_expression->token);
@@ -693,21 +696,21 @@ Op bi_to_ins(BiType type) {
     BiSuffixArray_finalize(&expr->suffixes);                           \
   }
 
-#define PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, tape)                 \
-  {                                                                      \
-    int num_ins = 0;                                                     \
-    num_ins += semantic_analyzer_produce(analyzer, expr->exp, tape);     \
-    BiSuffixArrayIterator iter;                                          \
-    BiSuffixArray_iterator(&iter, &expr->suffixes);                      \
-    for (; BiSuffixArray_has_next(&iter); BiSuffixArray_next(&iter)) {   \
-      BiSuffix *suffix = BiSuffixArray_mutable_value(&iter);             \
-      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);             \
-      num_ins += semantic_analyzer_produce(analyzer, suffix->exp, tape); \
-      num_ins += tape_ins_no_arg(tape, PUSH, suffix->token);             \
-      num_ins +=                                                         \
-          tape_ins_no_arg(tape, bi_to_ins(suffix->type), suffix->token); \
-    }                                                                    \
-    return num_ins;                                                      \
+#define PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, bytecode)                 \
+  {                                                                          \
+    int num_ins = 0;                                                         \
+    num_ins += semantic_analyzer_produce(analyzer, expr->exp, bytecode);     \
+    BiSuffixArrayIterator iter;                                              \
+    BiSuffixArray_iterator(&iter, &expr->suffixes);                          \
+    for (; BiSuffixArray_has_next(&iter); BiSuffixArray_next(&iter)) {       \
+      BiSuffix *suffix = BiSuffixArray_mutable_value(&iter);                 \
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, suffix->token);         \
+      num_ins += semantic_analyzer_produce(analyzer, suffix->exp, bytecode); \
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, suffix->token);         \
+      num_ins += bytecode_ins_no_arg(bytecode, bi_to_ins(suffix->type),      \
+                                     suffix->token);                         \
+    }                                                                        \
+    return num_ins;                                                          \
   }
 
 #define BI_EXPRESSION_IMPL(expr)                                           \
@@ -715,7 +718,7 @@ Op bi_to_ins(BiType type) {
   POPULATE_BI_EXPRESSION_IMPL(expr, stree, analyzer);                      \
   DELETE_IMPL(expr, SemanticAnalyzer *analyzer)                            \
   DELETE_BI_EXPRESSION_IMPL(expr, analyzer);                               \
-  PRODUCE_IMPL(expr, SemanticAnalyzer *analyzer, Tape *target)             \
+  PRODUCE_IMPL(expr, SemanticAnalyzer *analyzer, Bytecode *target)         \
   PRODUCE_BI_EXPRESSION_IMPL(expr, analyzer, target)
 
 #define BI_EXPRESSION_IMPL_NO_PRODUCE(expr)                                \
@@ -741,9 +744,9 @@ BI_EXPRESSION_IMPL(binary_or_expression);
 // c
 // ifn d
 // d
-PRODUCE_IMPL(and_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  TapePtrArray and_bodies;
-  TapePtrArray_init(&and_bodies);
+PRODUCE_IMPL(and_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
+  BytecodePtrArray and_bodies;
+  BytecodePtrArray_init(&and_bodies);
   int num_suffixes = BiSuffixArray_size(&and_expression->suffixes);
   int num_ins =
       semantic_analyzer_produce(analyzer, and_expression->exp, target);
@@ -751,23 +754,23 @@ PRODUCE_IMPL(and_expression, SemanticAnalyzer *analyzer, Tape *target) {
   for (i = 0; i < num_suffixes; ++i) {
     const BiSuffix *suffix =
         BiSuffixArray_get_ref_unchecked(&and_expression->suffixes, i);
-    Tape *and_tape = tape_create();
+    Bytecode *and_bytecode = bytecode_create();
     and_suffix_ins +=
-        semantic_analyzer_produce(analyzer, suffix->exp, and_tape);
-    TapePtrArray_push_back(&and_bodies, and_tape);
+        semantic_analyzer_produce(analyzer, suffix->exp, and_bytecode);
+    BytecodePtrArray_push_back(&and_bodies, and_bytecode);
   }
 
   for (i = 0; i < num_suffixes; ++i) {
     const BiSuffix *suffix =
         BiSuffixArray_get_ref_unchecked(&and_expression->suffixes, i);
-    Tape *and_tape = TapePtrArray_get_unchecked(&and_bodies, i);
-    num_ins += tape_ins_int(target, IFN, and_suffix_ins + num_suffixes - i - 1,
-                            suffix->token);
-    and_suffix_ins -= tape_size(and_tape);
-    num_ins += tape_size(and_tape);
-    tape_append(target, and_tape);
+    Bytecode *and_bytecode = BytecodePtrArray_get_unchecked(&and_bodies, i);
+    num_ins += bytecode_ins_int(
+        target, IFN, and_suffix_ins + num_suffixes - i - 1, suffix->token);
+    and_suffix_ins -= bytecode_size(and_bytecode);
+    num_ins += bytecode_size(and_bytecode);
+    bytecode_append(target, and_bytecode);
   }
-  TapePtrArray_finalize(&and_bodies);
+  BytecodePtrArray_finalize(&and_bodies);
   return num_ins;
 }
 
@@ -778,31 +781,32 @@ PRODUCE_IMPL(and_expression, SemanticAnalyzer *analyzer, Tape *target) {
 // c
 // if d
 // d
-PRODUCE_IMPL(or_expression, SemanticAnalyzer *analyzer, Tape *target) {
-  TapePtrArray or_bodies;
-  TapePtrArray_init(&or_bodies);
+PRODUCE_IMPL(or_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
+  BytecodePtrArray or_bodies;
+  BytecodePtrArray_init(&or_bodies);
   int num_suffixes = BiSuffixArray_size(&or_expression->suffixes);
   int num_ins = semantic_analyzer_produce(analyzer, or_expression->exp, target);
   int i, or_suffix_ins = 0;
   for (i = 0; i < num_suffixes; ++i) {
     const BiSuffix *suffix =
         BiSuffixArray_get_ref_unchecked(&or_expression->suffixes, i);
-    Tape *or_tape = tape_create();
-    or_suffix_ins += semantic_analyzer_produce(analyzer, suffix->exp, or_tape);
-    TapePtrArray_push_back(&or_bodies, or_tape);
+    Bytecode *or_bytecode = bytecode_create();
+    or_suffix_ins +=
+        semantic_analyzer_produce(analyzer, suffix->exp, or_bytecode);
+    BytecodePtrArray_push_back(&or_bodies, or_bytecode);
   }
 
   for (i = 0; i < num_suffixes; ++i) {
     const BiSuffix *suffix =
         BiSuffixArray_get_ref_unchecked(&or_expression->suffixes, i);
-    Tape *or_tape = TapePtrArray_get_unchecked(&or_bodies, i);
-    num_ins += tape_ins_int(target, IF, or_suffix_ins + num_suffixes - i - 1,
-                            suffix->token);
-    or_suffix_ins -= tape_size(or_tape);
-    num_ins += tape_size(or_tape);
-    tape_append(target, or_tape);
+    Bytecode *or_bytecode = BytecodePtrArray_get_unchecked(&or_bodies, i);
+    num_ins += bytecode_ins_int(
+        target, IF, or_suffix_ins + num_suffixes - i - 1, suffix->token);
+    or_suffix_ins -= bytecode_size(or_bytecode);
+    num_ins += bytecode_size(or_bytecode);
+    bytecode_append(target, or_bytecode);
   }
-  TapePtrArray_finalize(&or_bodies);
+  BytecodePtrArray_finalize(&or_bodies);
   return num_ins;
 }
 
@@ -822,15 +826,15 @@ DELETE_IMPL(in_expression, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, in_expression->collection);
 }
 
-PRODUCE_IMPL(in_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(in_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins =
       semantic_analyzer_produce(analyzer, in_expression->collection, target);
-  num_ins += tape_ins_no_arg(target, PUSH, in_expression->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, in_expression->token);
   num_ins +=
       semantic_analyzer_produce(analyzer, in_expression->element, target);
-  num_ins += tape_ins_text(target, CALL, IN_FN_NAME, in_expression->token);
+  num_ins += bytecode_ins_text(target, CALL, IN_FN_NAME, in_expression->token);
   num_ins += (in_expression->is_not
-                  ? tape_ins_no_arg(target, NOT, in_expression->token)
+                  ? bytecode_ins_no_arg(target, NOT, in_expression->token)
                   : 0);
   return num_ins;
 }
@@ -849,12 +853,12 @@ DELETE_IMPL(is_expression, SemanticAnalyzer *analyzer) {
   semantic_analyzer_delete(analyzer, is_expression->type);
 }
 
-PRODUCE_IMPL(is_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(is_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = semantic_analyzer_produce(analyzer, is_expression->exp, target);
-  num_ins += tape_ins_no_arg(target, PUSH, is_expression->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, is_expression->token);
   num_ins += semantic_analyzer_produce(analyzer, is_expression->type, target);
-  num_ins += tape_ins_no_arg(target, PUSH, is_expression->token);
-  num_ins += tape_ins_no_arg(target, IS, is_expression->token);
+  num_ins += bytecode_ins_no_arg(target, PUSH, is_expression->token);
+  num_ins += bytecode_ins_no_arg(target, IS, is_expression->token);
   return num_ins;
 }
 
@@ -916,30 +920,31 @@ DELETE_IMPL(conditional_expression, SemanticAnalyzer *analyzer) {
   delete_if_else(analyzer, &conditional_expression->if_else);
 }
 
-int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else, Tape *tape) {
+int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else,
+                    Bytecode *bytecode) {
   int i, num_ins = 0, num_conds = ConditionalArray_size(&if_else->conditions),
          num_cond_ins = 0, num_body_ins = 0;
 
-  TapePtrArray conds;
-  TapePtrArray_init(&conds);
-  TapePtrArray bodies;
-  TapePtrArray_init(&bodies);
+  BytecodePtrArray conds;
+  BytecodePtrArray_init(&conds);
+  BytecodePtrArray bodies;
+  BytecodePtrArray_init(&bodies);
   for (i = 0; i < num_conds; ++i) {
     const Conditional *cond =
         ConditionalArray_get_ref_unchecked(&if_else->conditions, i);
-    Tape *condition = tape_create();
-    Tape *body = tape_create();
+    Bytecode *condition = bytecode_create();
+    Bytecode *body = bytecode_create();
     num_cond_ins +=
         semantic_analyzer_produce(analyzer, cond->condition, condition);
     num_body_ins += semantic_analyzer_produce(analyzer, cond->body, body);
-    TapePtrArray_push_back(&conds, condition);
-    TapePtrArray_push_back(&bodies, body);
+    BytecodePtrArray_push_back(&conds, condition);
+    BytecodePtrArray_push_back(&bodies, body);
   }
 
   int num_else_ins = 0;
-  Tape *else_body = NULL;
+  Bytecode *else_body = NULL;
   if (NULL != if_else->else_exp) {
-    else_body = tape_create();
+    else_body = bytecode_create();
     num_else_ins +=
         semantic_analyzer_produce(analyzer, if_else->else_exp, else_body);
   } else {
@@ -954,45 +959,47 @@ int produce_if_else(SemanticAnalyzer *analyzer, IfElse *if_else, Tape *tape) {
   for (i = 0; i < ConditionalArray_size(&if_else->conditions); ++i) {
     const Conditional *cond =
         ConditionalArray_get_ref_unchecked(&if_else->conditions, i);
-    Tape *condition = TapePtrArray_get_unchecked(&conds, i);
-    Tape *body = TapePtrArray_get_unchecked(&bodies, i);
+    Bytecode *condition = BytecodePtrArray_get_unchecked(&conds, i);
+    Bytecode *body = BytecodePtrArray_get_unchecked(&bodies, i);
 
-    num_cond_ins -= tape_size(condition);
-    num_body_jump -= tape_size(body);
+    num_cond_ins -= bytecode_size(condition);
+    num_body_jump -= bytecode_size(body);
 
-    tape_append(tape, condition);
+    bytecode_append(bytecode, condition);
     if (i == num_conds - 1) {
-      tape_ins_int(
-          tape, IFN,
+      bytecode_ins_int(
+          bytecode, IFN,
           num_body_ins + num_conds + (NULL == if_else->else_exp ? -1 : 0),
           cond->if_token);
     } else {
-      tape_ins_int(tape, IF,
-                   num_cond_ins + num_body_jump + 2 * (num_conds - i - 1),
-                   cond->if_token);
+      bytecode_ins_int(bytecode, IF,
+                       num_cond_ins + num_body_jump + 2 * (num_conds - i - 1),
+                       cond->if_token);
     }
   }
   // Iterate and write all bodies backward.
   for (i = num_conds - 1; i >= 0; --i) {
     const Conditional *cond =
         ConditionalArray_get_ref_unchecked(&if_else->conditions, i);
-    Tape *body = TapePtrArray_get_unchecked(&bodies, i);
-    num_body_ins -= tape_size(body);
-    tape_append(tape, body);
+    Bytecode *body = BytecodePtrArray_get_unchecked(&bodies, i);
+    num_body_ins -= bytecode_size(body);
+    bytecode_append(bytecode, body);
     if (i > 0 || NULL != if_else->else_exp) {
-      tape_ins_int(tape, JMP, num_else_ins + num_body_ins + i, cond->if_token);
+      bytecode_ins_int(bytecode, JMP, num_else_ins + num_body_ins + i,
+                       cond->if_token);
     }
   }
   // Add else if there is one.
   if (NULL != else_body) {
-    tape_append(tape, else_body);
+    bytecode_append(bytecode, else_body);
   }
-  TapePtrArray_finalize(&conds);
-  TapePtrArray_finalize(&bodies);
+  BytecodePtrArray_finalize(&conds);
+  BytecodePtrArray_finalize(&bodies);
   return num_ins;
 }
 
-PRODUCE_IMPL(conditional_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(conditional_expression, SemanticAnalyzer *analyzer,
+             Bytecode *target) {
   return produce_if_else(analyzer, &conditional_expression->if_else, target);
 }
 
@@ -1135,121 +1142,123 @@ void delete_function(SemanticAnalyzer *analyzer, FunctionDef *func) {
   semantic_analyzer_delete(analyzer, func->body);
 }
 
-int produce_argument(const Argument *arg, Tape *tape) {
+int produce_argument(const Argument *arg, Bytecode *bytecode) {
   if (arg->is_field) {
-    int num_ins = tape_ins_no_arg(tape, PUSH, arg->arg_name);
-    num_ins += tape_ins_text(tape, RES, SELF, arg->arg_name);
-    num_ins += tape_ins(tape, arg->is_const ? FLDC : FLD, arg->arg_name);
+    int num_ins = bytecode_ins_no_arg(bytecode, PUSH, arg->arg_name);
+    num_ins += bytecode_ins_text(bytecode, RES, SELF, arg->arg_name);
+    num_ins +=
+        bytecode_ins(bytecode, arg->is_const ? FLDC : FLD, arg->arg_name);
     return num_ins;
   }
-  return tape_ins(tape, arg->is_const ? LETC : LET, arg->arg_name);
+  return bytecode_ins(bytecode, arg->is_const ? LETC : LET, arg->arg_name);
 }
 
 int produce_all_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
-                          Tape *tape) {
+                          Bytecode *bytecode) {
   int i, num_ins = 0, num_args = ArgumentArray_size(&args->args);
   for (i = 0; i < num_args; ++i) {
     const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, i);
     if (arg->has_default) {
       if (args->is_named) {
-        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
-        num_ins += tape_ins(tape, GET, arg->arg_name);
+        num_ins += bytecode_ins_no_arg(bytecode, PEEK, args->token);
+        num_ins += bytecode_ins(bytecode, GET, arg->arg_name);
 
-        Tape *tmp = tape_create();
+        Bytecode *tmp = bytecode_create();
         int default_ins =
             semantic_analyzer_produce(analyzer, arg->default_value, tmp);
 
-        num_ins +=
-            tape_ins_int(tape, IF, default_ins, arg->arg_name) + default_ins;
-        tape_append(tape, tmp);
+        num_ins += bytecode_ins_int(bytecode, IF, default_ins, arg->arg_name) +
+                   default_ins;
+        bytecode_append(bytecode, tmp);
       } else {
-        num_ins += tape_ins_no_arg(tape, PEEK, args->token);
-        num_ins += tape_ins_int(tape, TGTE, i + 1, arg->arg_name);
+        num_ins += bytecode_ins_no_arg(bytecode, PEEK, args->token);
+        num_ins += bytecode_ins_int(bytecode, TGTE, i + 1, arg->arg_name);
 
-        Tape *tmp = tape_create();
+        Bytecode *tmp = bytecode_create();
         int default_ins =
             semantic_analyzer_produce(analyzer, arg->default_value, tmp);
-        num_ins += tape_ins_int(tape, IFN, 3, arg->arg_name);
-        num_ins += tape_ins_no_arg(tape, (i == num_args - 1) ? RES : PEEK,
-                                   arg->arg_name);
-        num_ins += tape_ins_int(tape, TGET, i, args->token);
-        num_ins +=
-            tape_ins_int(tape, JMP, default_ins, arg->arg_name) + default_ins;
-        tape_append(tape, tmp);
+        num_ins += bytecode_ins_int(bytecode, IFN, 3, arg->arg_name);
+        num_ins += bytecode_ins_no_arg(
+            bytecode, (i == num_args - 1) ? RES : PEEK, arg->arg_name);
+        num_ins += bytecode_ins_int(bytecode, TGET, i, args->token);
+        num_ins += bytecode_ins_int(bytecode, JMP, default_ins, arg->arg_name) +
+                   default_ins;
+        bytecode_append(bytecode, tmp);
       }
     } else {
       if (i == num_args - 1) {
         // Pop for last arg.
-        num_ins += tape_ins_no_arg(tape, RES, args->token);
+        num_ins += bytecode_ins_no_arg(bytecode, RES, args->token);
       } else {
-        num_ins += tape_ins_no_arg(tape, PEEK, arg->arg_name);
+        num_ins += bytecode_ins_no_arg(bytecode, PEEK, arg->arg_name);
       }
       if (args->is_named) {
-        num_ins += tape_ins(tape, GET, arg->arg_name);
+        num_ins += bytecode_ins(bytecode, GET, arg->arg_name);
       } else {
-        num_ins += tape_ins_int(tape, TGET, i, args->token);
+        num_ins += bytecode_ins_int(bytecode, TGET, i, args->token);
       }
     }
-    num_ins += produce_argument(arg, tape);
+    num_ins += produce_argument(arg, bytecode);
   }
   return num_ins;
 }
 
 int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
-                      Tape *tape) {
+                      Bytecode *bytecode) {
   if (args->is_named) {
-    int num_ins = tape_ins_int(tape, IF, 2, args->token);
-    num_ins += tape_ins_text(tape, PUSH, OBJECT_NAME, args->token);
-    num_ins += tape_ins_no_arg(tape, CLLN, args->token);
-    num_ins += tape_ins_no_arg(tape, PUSH, args->token);
-    return num_ins + produce_all_arguments(analyzer, args, tape);
+    int num_ins = bytecode_ins_int(bytecode, IF, 2, args->token);
+    num_ins += bytecode_ins_text(bytecode, PUSH, OBJECT_NAME, args->token);
+    num_ins += bytecode_ins_no_arg(bytecode, CLLN, args->token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, args->token);
+    return num_ins + produce_all_arguments(analyzer, args, bytecode);
   }
   int num_args = ArgumentArray_size(&args->args);
   int i, num_ins = 0;
   if (num_args == 1) {
     const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, 0);
     if (arg->has_default) {
-      Tape *defaults = tape_create();
+      Bytecode *defaults = bytecode_create();
       int num_default_ins =
           semantic_analyzer_produce(analyzer, arg->default_value, defaults);
       num_ins += num_default_ins;
-      num_ins += tape_ins_no_arg(tape, PUSH, arg->arg_name);
-      num_ins += tape_ins_int(tape, TGTE, 1, arg->arg_name);
-      num_ins += tape_ins_int(tape, IF, num_default_ins + 1, arg->arg_name);
-      tape_append(tape, defaults);
-      num_ins += tape_ins_int(tape, JMP, 1, arg->arg_name);
-      num_ins += tape_ins_no_arg(tape, RES, arg->arg_name);
-      num_ins += tape_ins_int(tape, TGET, 0, arg->arg_name);
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, arg->arg_name);
+      num_ins += bytecode_ins_int(bytecode, TGTE, 1, arg->arg_name);
+      num_ins +=
+          bytecode_ins_int(bytecode, IF, num_default_ins + 1, arg->arg_name);
+      bytecode_append(bytecode, defaults);
+      num_ins += bytecode_ins_int(bytecode, JMP, 1, arg->arg_name);
+      num_ins += bytecode_ins_no_arg(bytecode, RES, arg->arg_name);
+      num_ins += bytecode_ins_int(bytecode, TGET, 0, arg->arg_name);
     }
-    num_ins += produce_argument(arg, tape);
+    num_ins += produce_argument(arg, bytecode);
     return num_ins;
   }
-  num_ins += tape_ins_no_arg(tape, PUSH, args->token);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, args->token);
 
   // Handle case where only 1 arg is passed and the rest are optional.
   const Argument *first = ArgumentArray_get_ref_unchecked(&args->args, 0);
-  num_ins += tape_ins_no_arg(tape, TLEN, first->arg_name);
-  num_ins += tape_ins_no_arg(tape, PUSH, first->arg_name);
-  num_ins += tape_ins_int(tape, PUSH, -1, first->arg_name);
-  num_ins += tape_ins_no_arg(tape, EQ, first->arg_name);
+  num_ins += bytecode_ins_no_arg(bytecode, TLEN, first->arg_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, first->arg_name);
+  num_ins += bytecode_ins_int(bytecode, PUSH, -1, first->arg_name);
+  num_ins += bytecode_ins_no_arg(bytecode, EQ, first->arg_name);
 
-  Tape *defaults = tape_create();
+  Bytecode *defaults = bytecode_create();
   int defaults_ins = 0;
-  defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+  defaults_ins += bytecode_ins_no_arg(defaults, RES, first->arg_name);
   if (first->has_default) {
     // Use the default value if no args were passed.
-    Tape *first_default = tape_create();
+    Bytecode *first_default = bytecode_create();
     int first_default_ins = semantic_analyzer_produce(
         analyzer, first->default_value, first_default);
-    defaults_ins += tape_ins_no_arg(defaults, PUSH, first->arg_name);
-    defaults_ins += tape_ins_int(defaults, TGTE, 1, first->arg_name);
+    defaults_ins += bytecode_ins_no_arg(defaults, PUSH, first->arg_name);
+    defaults_ins += bytecode_ins_int(defaults, TGTE, 1, first->arg_name);
     defaults_ins +=
-        tape_ins_int(defaults, IF, first_default_ins + 2, first->arg_name);
-    defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
-    tape_append(defaults, first_default);
+        bytecode_ins_int(defaults, IF, first_default_ins + 2, first->arg_name);
+    defaults_ins += bytecode_ins_no_arg(defaults, RES, first->arg_name);
+    bytecode_append(defaults, first_default);
     defaults_ins += first_default_ins;
-    defaults_ins += tape_ins_int(defaults, JMP, 1, first->arg_name);
-    defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+    defaults_ins += bytecode_ins_int(defaults, JMP, 1, first->arg_name);
+    defaults_ins += bytecode_ins_no_arg(defaults, RES, first->arg_name);
   }
   defaults_ins += produce_argument(first, defaults);
   for (i = 1; i < num_args; ++i) {
@@ -1258,41 +1267,44 @@ int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
       defaults_ins +=
           semantic_analyzer_produce(analyzer, arg->default_value, defaults);
     } else {
-      defaults_ins += tape_ins_no_arg(defaults, RNIL, arg->arg_name);
+      defaults_ins += bytecode_ins_no_arg(defaults, RNIL, arg->arg_name);
     }
     defaults_ins += produce_argument(arg, defaults);
   }
 
-  Tape *non_defaults = tape_create();
+  Bytecode *non_defaults = bytecode_create();
   int nondefaults_ins = 0;
   nondefaults_ins += produce_all_arguments(analyzer, args, non_defaults);
 
-  defaults_ins += tape_ins_int(defaults, JMP, nondefaults_ins, first->arg_name);
+  defaults_ins +=
+      bytecode_ins_int(defaults, JMP, nondefaults_ins, first->arg_name);
 
-  num_ins += tape_ins_int(tape, IFN, defaults_ins, first->arg_name);
-  tape_append(tape, defaults);
-  tape_append(tape, non_defaults);
+  num_ins += bytecode_ins_int(bytecode, IFN, defaults_ins, first->arg_name);
+  bytecode_append(bytecode, defaults);
+  bytecode_append(bytecode, non_defaults);
   num_ins += defaults_ins + nondefaults_ins;
   return num_ins;
 }
 
-int produce_function_name(const FunctionDef *func, Tape *tape) {
+int produce_function_name(const FunctionDef *func, Bytecode *bytecode) {
   switch (func->special_method) {
     case SpecialMethod__NONE:
-      return func->is_async ? tape_label_async(tape, func->fn_name)
-                            : tape_label(tape, func->fn_name);
+      return func->is_async ? bytecode_label_async(bytecode, func->fn_name)
+                            : bytecode_label(bytecode, func->fn_name);
     case SpecialMethod__EQUIV:
-      return func->is_async ? tape_label_text_async(tape, EQ_FN_NAME)
-                            : tape_label_text(tape, EQ_FN_NAME);
+      return func->is_async ? bytecode_label_text_async(bytecode, EQ_FN_NAME)
+                            : bytecode_label_text(bytecode, EQ_FN_NAME);
     case SpecialMethod__NEQUIV:
-      return func->is_async ? tape_label_text_async(tape, NEQ_FN_NAME)
-                            : tape_label_text(tape, NEQ_FN_NAME);
+      return func->is_async ? bytecode_label_text_async(bytecode, NEQ_FN_NAME)
+                            : bytecode_label_text(bytecode, NEQ_FN_NAME);
     case SpecialMethod__ARRAY_INDEX:
-      return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_INDEX_KEY)
-                            : tape_label_text(tape, ARRAYLIKE_INDEX_KEY);
+      return func->is_async
+                 ? bytecode_label_text_async(bytecode, ARRAYLIKE_INDEX_KEY)
+                 : bytecode_label_text(bytecode, ARRAYLIKE_INDEX_KEY);
     case SpecialMethod__ARRAY_SET:
-      return func->is_async ? tape_label_text_async(tape, ARRAYLIKE_SET_KEY)
-                            : tape_label_text(tape, ARRAYLIKE_SET_KEY);
+      return func->is_async
+                 ? bytecode_label_text_async(bytecode, ARRAYLIKE_SET_KEY)
+                 : bytecode_label_text(bytecode, ARRAYLIKE_SET_KEY);
     default:
       FATALF("Unknown SpecialMethod.");
   }
@@ -1300,18 +1312,18 @@ int produce_function_name(const FunctionDef *func, Tape *tape) {
 }
 
 int produce_function(SemanticAnalyzer *analyzer, const FunctionDef *func,
-                     Tape *tape) {
+                     Bytecode *bytecode) {
   int num_ins = 0;
-  num_ins += produce_function_name(func, tape);
+  num_ins += produce_function_name(func, bytecode);
   if (func->has_args) {
-    num_ins += produce_arguments(analyzer, &func->args, tape);
+    num_ins += produce_arguments(analyzer, &func->args, bytecode);
   }
-  num_ins += semantic_analyzer_produce(analyzer, func->body, tape);
+  num_ins += semantic_analyzer_produce(analyzer, func->body, bytecode);
   // TODO: Uncomment when const is implemented.
   // if (func->is_const) {
   //   num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
   // }
-  num_ins += tape_ins_no_arg(tape, RET, func->def_token);
+  num_ins += bytecode_ins_no_arg(bytecode, RET, func->def_token);
   return num_ins;
 }
 
@@ -1375,9 +1387,9 @@ DELETE_IMPL(anon_function_definition, SemanticAnalyzer *analyzer) {
 }
 
 int produce_anon_function(SemanticAnalyzer *analyzer, FunctionDef *func,
-                          Tape *tape) {
+                          Bytecode *bytecode) {
   int num_ins = 0, func_ins = 0;
-  Tape *tmp = tape_create();
+  Bytecode *tmp = bytecode_create();
   if (func->has_args) {
     func_ins += produce_arguments(analyzer, &func->args, tmp);
   }
@@ -1386,21 +1398,21 @@ int produce_anon_function(SemanticAnalyzer *analyzer, FunctionDef *func,
   // if (func->is_const) {
   //   func_ins += tape_ins_no_arg(tmp, CNST, func->const_token);
   // }
-  func_ins += tape_ins_no_arg(tmp, RET, func->def_token);
-  num_ins += tape_ins_int(tape, JMP, func_ins, func->def_token);
+  func_ins += bytecode_ins_no_arg(tmp, RET, func->def_token);
+  num_ins += bytecode_ins_int(bytecode, JMP, func_ins, func->def_token);
   if (func->is_async) {
-    num_ins += tape_anon_label_async(tape, func->def_token);
+    num_ins += bytecode_anon_label_async(bytecode, func->def_token);
   } else {
-    num_ins += tape_anon_label(tape, func->def_token);
+    num_ins += bytecode_anon_label(bytecode, func->def_token);
   }
-  tape_append(tape, tmp);
-  num_ins += func_ins + tape_ins_anon(tape, RES, func->def_token);
+  bytecode_append(bytecode, tmp);
+  num_ins += func_ins + bytecode_ins_anon(bytecode, RES, func->def_token);
 
   return num_ins;
 }
 
 PRODUCE_IMPL(anon_function_definition, SemanticAnalyzer *analyzer,
-             Tape *target) {
+             Bytecode *target) {
   return produce_anon_function(analyzer, &anon_function_definition->func,
                                target);
 }
@@ -1479,28 +1491,28 @@ DELETE_IMPL(map_declaration, SemanticAnalyzer *analyzer) {
   MapDecEntryArray_finalize(&map_declaration->entries);
 }
 
-PRODUCE_IMPL(map_declaration, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(map_declaration, SemanticAnalyzer *analyzer, Bytecode *target) {
   int num_ins = 0, i;
-  num_ins += tape_ins_text(target, PUSH, global_intern("struct"),
-                           map_declaration->lbrce);
-  num_ins +=
-      tape_ins_text(target, CLLN, global_intern("Map"), map_declaration->lbrce);
+  num_ins += bytecode_ins_text(target, PUSH, global_intern("struct"),
+                               map_declaration->lbrce);
+  num_ins += bytecode_ins_text(target, CLLN, global_intern("Map"),
+                               map_declaration->lbrce);
   if (map_declaration->is_empty) {
     return num_ins;
   }
-  num_ins += tape_ins_no_arg(target, PUSH, map_declaration->lbrce);
+  num_ins += bytecode_ins_no_arg(target, PUSH, map_declaration->lbrce);
   for (i = 0; i < MapDecEntryArray_size(&map_declaration->entries); ++i) {
     const MapDecEntry *entry =
         MapDecEntryArray_get_ref_unchecked(&map_declaration->entries, i);
-    num_ins += tape_ins_no_arg(target, DUP, entry->colon);
+    num_ins += bytecode_ins_no_arg(target, DUP, entry->colon);
     num_ins += semantic_analyzer_produce(analyzer, entry->rhs, target);
-    num_ins += tape_ins_no_arg(target, PUSH, entry->colon);
+    num_ins += bytecode_ins_no_arg(target, PUSH, entry->colon);
     num_ins += semantic_analyzer_produce(analyzer, entry->lhs, target);
-    num_ins += tape_ins_no_arg(target, PUSH, entry->colon);
-    num_ins += tape_ins_int(target, TUPL, 2, entry->colon);
-    num_ins += tape_ins_text(target, CALL, ARRAYLIKE_SET_KEY, entry->colon);
+    num_ins += bytecode_ins_no_arg(target, PUSH, entry->colon);
+    num_ins += bytecode_ins_int(target, TUPL, 2, entry->colon);
+    num_ins += bytecode_ins_text(target, CALL, ARRAYLIKE_SET_KEY, entry->colon);
   }
-  num_ins += tape_ins_no_arg(target, RES, map_declaration->lbrce);
+  num_ins += bytecode_ins_no_arg(target, RES, map_declaration->lbrce);
   return num_ins;
 }
 
@@ -1684,39 +1696,41 @@ DELETE_IMPL(assignment_expression, SemanticAnalyzer *analyzer) {
 }
 
 int produce_assignment_multi(SemanticAnalyzer *analyzer,
-                             const MultiAssignment *multi, Tape *tape,
+                             const MultiAssignment *multi, Bytecode *bytecode,
                              const Token *eq_token) {
   int i, num_ins = 0, len = AssignmentArray_size(multi->subargs);
 
-  num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, eq_token);
   for (i = 0; i < len; ++i) {
     const Assignment *assign =
         AssignmentArray_get_ref_unchecked(multi->subargs, i);
-    num_ins += tape_ins_no_arg(tape, (i < len - 1) ? PEEK : RES, eq_token);
-    num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
-    num_ins += tape_ins_int(tape, RES, i, eq_token);
-    num_ins += tape_ins_no_arg(tape, AIDX, eq_token);
-    num_ins += produce_assignment(analyzer, assign, tape, eq_token);
+    num_ins +=
+        bytecode_ins_no_arg(bytecode, (i < len - 1) ? PEEK : RES, eq_token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, eq_token);
+    num_ins += bytecode_ins_int(bytecode, RES, i, eq_token);
+    num_ins += bytecode_ins_no_arg(bytecode, AIDX, eq_token);
+    num_ins += produce_assignment(analyzer, assign, bytecode, eq_token);
   }
   return num_ins;
 }
 
 int produce_assignment(SemanticAnalyzer *analyzer, const Assignment *assign,
-                       Tape *tape, const Token *eq_token) {
+                       Bytecode *bytecode, const Token *eq_token) {
   int num_ins = 0;
   if (assign->type == Assignment_single) {
     const SingleAssignment *single = &assign->single;
     if (single->type == SingleAssignment_var) {
       if (single->is_const) {
-        num_ins += tape_ins(tape, SETC, single->var);
+        num_ins += bytecode_ins(bytecode, SETC, single->var);
       } else {
-        num_ins += tape_ins(tape, SET, single->var);
+        num_ins += bytecode_ins(bytecode, SET, single->var);
       }
     } else {
       ASSERT(single->type == SingleAssignment_complex);
       ASSERT(single->prefix_exp != NULL);
-      num_ins += tape_ins_no_arg(tape, PUSH, eq_token);
-      num_ins += semantic_analyzer_produce(analyzer, single->prefix_exp, tape);
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, eq_token);
+      num_ins +=
+          semantic_analyzer_produce(analyzer, single->prefix_exp, bytecode);
       int i, len = PostfixArray_size(&single->suffixes);
       const Postfix *next =
           PostfixArray_get_ref_unchecked(&single->suffixes, 0);
@@ -1725,17 +1739,17 @@ int produce_assignment(SemanticAnalyzer *analyzer, const Assignment *assign,
           break;
         }
         num_ins += produce_postfix(analyzer, &i, len - 1, &single->suffixes,
-                                   &next, tape);
+                                   &next, bytecode);
       }
       // Last one should be the set part.
       const Postfix *postfix =
           PostfixArray_get_ref_unchecked(&single->suffixes, len - 1);
       if (postfix->type == Postfix_field) {
-        num_ins += tape_ins(tape, FLD, postfix->id);
+        num_ins += bytecode_ins(bytecode, FLD, postfix->id);
       } else if (postfix->type == Postfix_array_index) {
-        num_ins += tape_ins_no_arg(tape, PUSH, postfix->token);
-        num_ins += semantic_analyzer_produce(analyzer, postfix->exp, tape);
-        num_ins += tape_ins_no_arg(tape, ASET, postfix->token);
+        num_ins += bytecode_ins_no_arg(bytecode, PUSH, postfix->token);
+        num_ins += semantic_analyzer_produce(analyzer, postfix->exp, bytecode);
+        num_ins += bytecode_ins_no_arg(bytecode, ASET, postfix->token);
       } else {
         FATALF("Unknown postfix.");
       }
@@ -1743,14 +1757,15 @@ int produce_assignment(SemanticAnalyzer *analyzer, const Assignment *assign,
   } else if (assign->type == Assignment_array ||
              assign->type == Assignment_tuple) {
     num_ins +=
-        produce_assignment_multi(analyzer, &assign->multi, tape, eq_token);
+        produce_assignment_multi(analyzer, &assign->multi, bytecode, eq_token);
   } else {
     FATALF("Unknown multi.");
   }
   return num_ins;
 }
 
-PRODUCE_IMPL(assignment_expression, SemanticAnalyzer *analyzer, Tape *target) {
+PRODUCE_IMPL(assignment_expression, SemanticAnalyzer *analyzer,
+             Bytecode *target) {
   int num_ins =
       semantic_analyzer_produce(analyzer, assignment_expression->rhs, target);
   num_ins += produce_assignment(analyzer, &assignment_expression->assignment,
