@@ -170,3 +170,28 @@ void isolate_delete_frame(Isolate *isolate, Frame *frame) {
   frame_finalize(frame);
   arena_free(&isolate->frame_arena, frame);
 }
+
+void isolate_wake_dependent_frames(Isolate *isolate, Frame *frame,
+                                   bool should_push) {
+  FrameSetIterator dependent_frames;
+  FrameSet_iterator(&dependent_frames, &frame->dependent_frames);
+  for (; FrameSet_has_next(&dependent_frames);
+       FrameSet_next(&dependent_frames)) {
+    Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
+    // Only requeue parent task if it is waiting.
+    if (FRAME_WAITING != dependent_frame->state) {
+      continue;
+    } else if (FRAME_ERROR == frame->state) {
+      dependent_frame->child_frame_has_error = true;
+    }
+    *frame_mutable_acc(dependent_frame) = *frame_get_acc(frame);
+    if (should_push) {
+      isolate_push_frame(dependent_frame->parent_isolate, dependent_frame);
+    } else {
+      isolate_enqueue_frame(dependent_frame->parent_isolate, dependent_frame);
+    }
+    isolate_remove_waiting_frame(dependent_frame->parent_isolate,
+                                 dependent_frame);
+    condition_broadcast(isolate->frame_wait_cond);
+  }
+}

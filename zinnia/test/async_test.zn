@@ -34,6 +34,60 @@ class OldCounter {
 }
 
 @test.TestClass
+class FutureTest {
+  @test.Test
+  method test_sleep() {
+    result = await async.sleep(0.01)
+    expect(result == None, True)
+  }
+
+  @test.Test
+  method test_all() {
+    f = (x) async -> x * 2
+    expect(await async.all([f(1), f(2), f(3)]), [2, 4, 6])
+  }
+}
+
+@test.TestClass
+class CompleterTest {
+  @test.Test
+  method test_complete_before_await() {
+    c = async.Completer()
+    c.complete(5)
+    expect(c.completed, True)
+    expect(await c.as_future(), 5)
+  }
+
+  @test.Test
+  method test_complete_after_await() {
+    c = async.Completer()
+    () async {
+      await async.sleep(0.01)
+      c.complete('done')
+    }()
+    expect(c.completed, False)
+    expect(await c.as_future(), 'done')
+    expect(c.completed, True)
+  }
+
+  @test.Test
+  method test_complete_without_value() {
+    c = async.Completer()
+    c.complete()
+    result = await c.as_future()
+    expect(result == None, True)
+  }
+
+  @test.Test
+  method test_complete_twice_raises() {
+    c = async.Completer()
+    c.complete(1)
+    test.expect_raises(() -> c.complete(2))
+    expect(await c.as_future(), 1)
+  }
+}
+
+@test.TestClass
 class IsolateTest {
   @test.Test
   method test_spawn_isolate() {

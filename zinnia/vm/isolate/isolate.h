@@ -29,4 +29,9 @@ void isolate_remove_blocking_frame(Isolate *isolate, Frame *frame);
 
 void isolate_delete_frame(Isolate *isolate, Frame *frame);
 
+// Requeues the waiting frames that depend on [frame], passing them its result.
+// Frames are pushed to the front of the queue if [should_push].
+void isolate_wake_dependent_frames(Isolate *isolate, Frame *frame,
+                                   bool should_push);
+
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ISOLATE_H_ */

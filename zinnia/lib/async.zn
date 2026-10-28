@@ -76,28 +76,24 @@ class Future {
 ; io.println(await completer.as_future())
 ; ```
 class Completer {
-  field completed, _value
+  field completed, _future
 
   new() {
     completed = False
-    _value = None
+    _future = __completer_future()
   }
 
-  ; Completes the future with the value [v].
-  method complete(v) {
-    _value = v
+  ; Completes the future with the value [v], resuming anything awaiting it.
+  ;
+  ; Raises an error if the completer was already completed.
+  method complete(v=None) {
+    __complete_future(_future, v)
     completed = True
   }
 
-  ; Returns a future to the completed value.
+  ; Returns the future, which completes when complete() is called.
   method as_future() {
-    if completed {
-      return value(_value)
-    }
-    return () async {
-      while ~(() -> completed)() {}
-      return _value
-    }()
+    return _future
   }
 }
 

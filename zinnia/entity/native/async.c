@@ -77,6 +77,40 @@ const Value *future_get_value(Heap *heap, Object *obj) {
 
 Frame *future_get_frame(Future *f) { return f->frame; }
 
+// Returns a future that completes when __complete_future() is called on it.
+Value completer_future_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  // The frame never runs; it only holds the result and the frames waiting on
+  // it.
+  Frame *pending = isolate_create_unqueued_frame(frame->parent_isolate);
+  return value_object(future_create(pending));
+}
+
+// Completes a future from __completer_future() with a value, waking the frames
+// awaiting it.
+Value complete_future_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  EXTRACT_TUPLE_ARGS(tuple, args, 2, frame, ctx);
+  const Value *future_value = tuple_get(tuple, 0);
+  if (!IS_CLASS(future_value, Class_Future)) {
+    return raise_error(frame, ctx, "__complete_future expects (Future, ANY).");
+  }
+  Future *future = (Future *)future_value->obj->_internal_obj;
+  if (future_is_complete(future)) {
+    return raise_error(frame, ctx, "Future is already complete.");
+  }
+  const Value *result = tuple_get(tuple, 1);
+  Isolate *isolate = frame->parent_isolate;
+  object_set_member(isolate->heap, future_value->obj, RESULT_VAL, result);
+  future->_is_result_set = true;
+  future->_is_complete = true;
+
+  Frame *pending = future->frame;
+  *frame_mutable_acc(pending) = *result;
+  pending->state = FRAME_COMPLETE;
+  isolate_mark_frame_complete(isolate, pending);
+  isolate_wake_dependent_frames(isolate, pending, /*should_push=*/false);
+  return NONE_VALUE;
+}
+
 Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(
@@ -252,4 +286,7 @@ void async_add_native(ModuleManager *mm, Module *async) {
   native_function(async, global_intern("__spawn_isolate"), spawn_isolate_);
   native_blocking_function(async, global_intern("__sleep"), sleep__);
   native_function(async, global_intern("__actor_call"), actor_call_);
+  native_function(async, global_intern("__completer_future"),
+                  completer_future_);
+  native_function(async, global_intern("__complete_future"), complete_future_);
 }
