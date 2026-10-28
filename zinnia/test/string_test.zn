@@ -33,6 +33,35 @@ class TrimTest {
 }
 
 @test.TestClass
+class SplitTest {
+  @test.Test
+  method test_split() {
+    expect('a,b,c'.split(','), ['a', 'b', 'c'])
+    expect('ab,c'.split(','), ['ab', 'c'])
+    expect('a'.split(','), ['a'])
+    expect('a--b--c'.split('--'), ['a', 'b', 'c'])
+  }
+
+  @test.Test
+  method test_split_keeps_inner_empty_parts() {
+    expect('a,,b'.split(','), ['a', '', 'b'])
+    expect(',a'.split(','), ['', 'a'])
+  }
+
+  @test.Test
+  method test_split_drops_trailing_empty_parts() {
+    expect('a,'.split(','), ['a'])
+    expect('a\r\n\r\n'.split('\r\n'), ['a'])
+    expect(''.split(','), [])
+  }
+
+  @test.Test
+  method test_split_empty_delimiter_raises() {
+    test.expect_raises(() -> 'abc'.split(''))
+  }
+}
+
+@test.TestClass
 class ImmutableStringTest {
   @test.Test
   method test_literal_is_immutable() {
@@ -66,6 +95,33 @@ class ImmutableStringTest {
   method test_to_s_quotes_immutable_strings() {
     expect(str([i'a', 'b']), '[\'a\', \'b\']')
     expect(str((i'a', 'b')), '(\'a\', \'b\')')
+  }
+
+  @test.Test
+  method test_copy_is_mutable() {
+    s = i'abc'
+    c = s.copy()
+    test.expect_is(c, String)
+    c.extend('d')
+    expect(c, 'abcd')
+    expect(s, 'abc')
+  }
+
+  @test.Test
+  method test_trim_returns_new_string() {
+    s = i'  a  '
+    expect(s.trim(), 'a')
+    expect(s.ltrim(), 'a  ')
+    expect(s.rtrim(), '  a')
+    expect(i''.trim(), '')
+    expect(s, '  a  ')
+    test.expect_is(s.trim(), String)
+  }
+
+  @test.Test
+  method test_split() {
+    expect(i'a,b,,c,'.split(','), ['a', 'b', '', 'c'])
+    expect(i'a'.split(i','), ['a'])
   }
 
   @test.Test
