@@ -1,7 +1,7 @@
 
-![ZInnia Logo](https://repository-images.githubusercontent.com/266423086/01b55ccc-4cd2-4d80-a260-24ffc896c6f4)
+![Zinnia Logo](https://repository-images.githubusercontent.com/266423086/01b55ccc-4cd2-4d80-a260-24ffc896c6f4)
 
-## A process virtual machine programming language that melds my favorite features features of JavaScript and Java.
+## A process virtual machine programming language that melds my favorite features of JavaScript and Java.
 
 ## Why use Zinnia?
 
@@ -22,7 +22,7 @@ It supports compilation of programs to the following outputs:
 - [c-data-structures](https://github.com/jeffmanzione/c-data-structures) - Some useful data structures.
 - [file-utils](https://github.com/jeffmanzione/file-utils) - Basic C file wrapper for reading files.
 - [intern](https://github.com/jeffmanzione/intern) - String intern.
-- [language-tools](https://github.com/jeffmanzione/language-tools) - Creating the lexer, parser, and semanatic analyzer.
+- [language-tools](https://github.com/jeffmanzione/language-tools) - Creating the lexer, parser, and semantic analyzer.
 - [libzip](https://github.com/nih-at/libzip) - For .zip creation.
 - [memory-wrapper](https://github.com/jeffmanzione/memory-wrapper) - Heap-based memory storage.
 - [rzalloc](https://github.com/jeffmanzione/rzalloc) - Bulk memory allocation.
@@ -51,15 +51,16 @@ args=(
 bazel build -c opt "${args[@]}"
 ```
 
-## Compiling your program to assembly and bytecode
+## Compili## Compiling your program to assembly and bytecode
 
 Use `zinniac` to compile your program.
 
-- `-a`: Output assembly (default=`false`).
-- `-b`: Output binary (default=`false`).
-- `-o`: Optimize the program (default=`true`).
-- `-binary_out_dir`: Output location of JB files (default=`"./"`).
-- `-assembly_out_dir`: Output location for JA files (default=`"./"`).
+- `-a`, `--assembly`: Output assembly (.zna) (default=`false`).
+- `-b`, `--bytecode`: Output bytecode (.znb) (default=`false`).
+- `-m`, `--minimize`: Minimize the assembly output (default=`false`).
+- `-o`, `--optimize`: Optimize the program (default=`true`).
+- `--assembly_out_dir=DIR`: Output location for .zna files (default=`"./"`).
+- `--binary_out_dir=DIR`: Output location for .znb files (default=`"./"`).
 
 ```shell
 zinniac -a -b my_program.zn
@@ -67,7 +68,8 @@ zinniac -a -b my_program.zn
 
 ## Running your program
 
-Use `zinnia` to run your program either from source, assembly, or bytecode.
+Use `zinnia` to run your program either from source, assembly, bytecode, or a
+seed archive.
 
 ```shell
 zinnia my_program.zn
@@ -75,6 +77,52 @@ zinnia my_program.zn
 zinnia my_program.zna
 # or
 zinnia my_program.znb
+```
+
+Arguments after `--` are passed to the program and are available as `args`:
+
+```shell
+zinnia my_program.zn -- --name=value --flag --noother_flag
+```
+
+`zinnia` exits with the code given to `exit` (e.g., `exit 2`) in the main
+module, or `1` if the program raises an uncaught error.
+
+## Building programs with Bazel
+
+`//zinnia:zinnia.bzl` provides rules for building Zinnia code with Bazel:
+
+- `zinnia_library`: Compiles .zn sources to .zna and .znb files.
+- `zinnia_binary`: Packages a program into a native executable.
+- `zinnia_cc_library`: Statically links a C library into a program as a module.
+- `zinnia_seed`: Bundles modules into a .znseed archive.
+- `zinnia_test`: Runs a program as a test, which passes if the program exits
+  with code `0`.
+
+See the [examples](https://github.com/jeffmanzione/zinnia/tree/master/examples)
+for usage.
+
+## Testing
+
+```shell
+bazel test -c opt //...
+```
+
+Tests are written with the `test` library, which raises an error (failing the
+test) if any test fails:
+
+```
+import test
+
+test.Tester().test(self)
+
+@test.TestClass
+class MyTest {
+  @test.Test
+  method test_add() {
+    test.expect(1 + 1, 2)
+  }
+}
 ```
 
 ## Examples
