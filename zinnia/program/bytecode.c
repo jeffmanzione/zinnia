@@ -294,20 +294,32 @@ void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
   bool in_class = false;
   int i;
   for (i = 0; i <= InstructionArray_size(&bytecode->ins); ++i) {
-    if (!in_class && ClassRefMap_io_has_next(&cls_iter)) {
+    while (!in_class && ClassRefMap_io_has_next(&cls_iter)) {
       const ClassRef *class_ref = ClassRefMap_io_value(&cls_iter);
-      if (class_ref->start_index == i) {
-        in_class = true;
-        FunctionRefMap_io_iterator(&cls_func_iter, &class_ref->func_refs);
-        fprintf(file, "class %s\n", class_ref->name);
-
-        FieldRefMapIOIterator fields;
-        FieldRefMap_io_iterator(&fields, &class_ref->field_refs);
-        for (; FieldRefMap_io_has_next(&fields); FieldRefMap_io_next(&fields)) {
-          const FieldRef *field = FieldRefMap_io_mutable_value(&fields);
-          fprintf(file, "%sfield %s\n", minimize ? "" : " ", field->name);
-        }
+      if (class_ref->start_index != i) {
+        break;
       }
+      fprintf(file, "class %s\n", class_ref->name);
+
+      FieldRefMapIOIterator fields;
+      FieldRefMap_io_iterator(&fields, &class_ref->field_refs);
+      for (; FieldRefMap_io_has_next(&fields); FieldRefMap_io_next(&fields)) {
+        const FieldRef *field = FieldRefMap_io_mutable_value(&fields);
+        fprintf(file, "%sfield %s\n", minimize ? "" : " ", field->name);
+      }
+      if (class_ref->end_index == i) {
+        // A class with no methods has no instructions, so close it before
+        // writing any module-level function label at this index.
+        if (minimize) {
+          fprintf(file, "endclass\n");
+        } else {
+          fprintf(file, "endclass  ; %s\n", class_ref->name);
+        }
+        ClassRefMap_io_next(&cls_iter);
+        continue;
+      }
+      in_class = true;
+      FunctionRefMap_io_iterator(&cls_func_iter, &class_ref->func_refs);
     }
     if (in_class && FunctionRefMap_io_has_next(&cls_func_iter)) {
       const FunctionRef *func_ref = FunctionRefMap_io_value(&cls_func_iter);
