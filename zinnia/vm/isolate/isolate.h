@@ -31,7 +31,12 @@ void isolate_delete_frame(Isolate *isolate, Frame *frame);
 
 // Requeues the waiting frames that depend on [frame], passing them its result.
 // Frames are pushed to the front of the queue if [should_push].
+// Enqueues a frame from another thread and wakes the isolate to run it.
+void isolate_enqueue_frame_and_wake(Isolate *isolate, Frame *frame);
+// Makes waiting_frame wait on frame unless frame is already complete. Returns
+// whether it is waiting.
+bool isolate_wait_on_frame(Frame *frame, Frame *waiting_frame);
 void isolate_wake_dependent_frames(Isolate *isolate, Frame *frame,
                                    bool should_push);
 
-#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ISOLATE_H_ */
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ISOLATE_H_ */
