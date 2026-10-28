@@ -210,9 +210,13 @@ function parse_request(req) {
     
     map = {}
     for i=1, i<parts.len(), i=i+1 {
-      kv = parts[i].split(':')
-      key = kv[0].trim()
-      map[kv[0].trim()] = kv[1].trim()
+      ; Split at the first ':' since values may contain ':' (e.g. Host: a:80).
+      line = parts[i]
+      colon = line.find(':')
+      if colon == None {
+        continue
+      }
+      map[line.substr(0, colon).trim()] = line.substr(colon + 1).trim()
     }
     return HttpRequest(type, path, params, protocol[0], protocol[1], map)
   } catch e {
