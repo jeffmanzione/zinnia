@@ -1,4 +1,5 @@
 import classes as class_lib
+import error
 import test
 
 self.expect = test.expect
@@ -69,3 +70,115 @@ class GeneratedSuperclassTest {
     expect(ExtendsGenerated().base_value(), 42)
   }
 }
+
+@test.TestClass
+class EqualityTest {
+  @test.Test
+  method test_none_variables() {
+    a = None
+    b = None
+    expect(a == b, True)
+    expect(a != b, False)
+    expect(None == a, True)
+    expect(a == None, True)
+    expect(None != a, False)
+  }
+
+  @test.Test
+  method test_none_and_primitive() {
+    n = None
+    one = 1
+    expect(n == one, False)
+    expect(one == n, False)
+    expect(n == 1, False)
+    expect(n != 1, True)
+    expect(1 == n, False)
+    expect(1 != n, True)
+  }
+
+  @test.Test
+  method test_none_and_object() {
+    n = None
+    s = 'a'
+    expect(n == s, False)
+    expect(s == n, False)
+    expect(n != s, True)
+  }
+
+  @test.Test
+  method test_primitive_and_object() {
+    one = 1
+    s = 'a'
+    expect(s == 1, False)
+    expect(1 == s, False)
+    expect(one == s, False)
+    expect(s != 1, True)
+    expect(1 != s, True)
+  }
+
+  @test.Test
+  method test_primitives() {
+    one = 1
+    other_one = 1
+    two = 2
+    expect(one == other_one, True)
+    expect(one == two, False)
+    expect(one != two, True)
+    expect(one == 1.0, True)
+  }
+
+  @test.Test
+  method test_expect_none() {
+    expect(None, None)
+  }
+}
+
+@test.TestClass
+class ErrorPropagationTest {
+  @test.Test
+  method test_closure_error_caught_by_caller() {
+    caught = None
+    try {
+      (() { raise error.Error('closure') })()
+    } catch e {
+      caught = e.message
+    }
+    expect(caught, 'closure')
+  }
+
+  @test.Test
+  method test_callback_error_caught_by_caller() {
+    caught = None
+    try {
+      [1, 2].map((i) { raise error.Error('callback ' + str(i)) })
+    } catch e {
+      caught = e.message
+    }
+    expect(caught, 'callback 1')
+  }
+
+  @test.Test
+  method test_error_caught_inside_closure() {
+    r = (() {
+      try {
+        raise error.Error('inside')
+      } catch e {
+        return 'handled ' + e.message
+      }
+    })()
+    expect(r, 'handled inside')
+  }
+
+  @test.Test
+  method test_execution_continues_in_order() {
+    order = []
+    try {
+      (() { raise error.Error('x') })()
+    } catch e {
+      order.append(1)
+    }
+    order.append(2)
+    expect(order, [1, 2])
+  }
+}
+

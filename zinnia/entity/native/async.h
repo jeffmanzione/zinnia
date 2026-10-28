@@ -12,6 +12,8 @@ typedef struct Future_ Future;
 
 Object *future_create(Frame *frame);
 bool future_is_complete(Future *f);
+// Returns whether the future completed with an error.
+bool future_is_error(Future *f);
 const Value *future_get_value(Heap *heap, Object *obj);
 Frame *future_get_frame(Future *f);
 
