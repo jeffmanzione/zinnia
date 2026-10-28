@@ -501,8 +501,9 @@ Entity string_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
 }
 
 Entity istring_hash_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  // Must match string_hash_() so equal String and IString keys hash the same.
   IString *str = (IString *)obj->_internal_obj;
-  return entity_int((int32_t)(intptr_t)str->str);
+  return entity_int(hash_string(str->str, str->len));
 }
 
 Entity string_len_(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -706,39 +707,42 @@ Entity string_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
       string_new(task->parent_process->heap, str->table, String_size(str)));
 }
 
-Entity string_ltrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  String *str = (String *)obj->_internal_obj;
-  int i = 0;
-  while (is_any_space_(str->table[i])) {
-    ++i;
+// Removes leading and/or trailing whitespace from str.
+static void trim_(String *str, bool left, bool right) {
+  const int size = String_size(str);
+  int start = 0, end = size;
+  if (left) {
+    while (start < end && is_any_space_(str->table[start])) {
+      ++start;
+    }
   }
-  String_lshrink(str, i);
+  if (right) {
+    while (end > start && is_any_space_(str->table[end - 1])) {
+      --end;
+    }
+  }
+  // Shrink right first so the left shift moves only the kept characters.
+  // Shrinking by 0 is invalid.
+  if (end < size) {
+    String_rshrink(str, size - end);
+  }
+  if (start > 0) {
+    String_lshrink(str, start);
+  }
+}
+
+Entity string_ltrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/false);
   return entity_object(obj);
 }
 
 Entity string_rtrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  String *str = (String *)obj->_internal_obj;
-  int i = 0;
-  while (is_any_space_(str->table[String_size(str) - 1 - i]) &&
-         i < String_size(str)) {
-    ++i;
-  }
-  String_rshrink(str, i);
+  trim_((String *)obj->_internal_obj, /*left=*/false, /*right=*/true);
   return entity_object(obj);
 }
 
 Entity string_trim_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  String *str = (String *)obj->_internal_obj;
-  int i = 0;
-  while (is_any_space_(str->table[i])) {
-    ++i;
-  }
-  String_lshrink(str, i);
-  i = 0;
-  while (is_any_space_(str->table[String_size(str) - 1 - i])) {
-    ++i;
-  }
-  String_rshrink(str, i);
+  trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/true);
   return entity_object(obj);
 }
 
@@ -749,10 +753,15 @@ Entity string_lshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
+  if (index < 0) {
+    return raise_error(task, ctx, "Cannot shrink by a negative amount.");
+  }
   if (index > String_size(str)) {
     return raise_error(task, ctx, "Cannot shrink more than the entire size.");
   }
-  String_lshrink(str, index);
+  if (index > 0) {
+    String_lshrink(str, index);
+  }
   return entity_object(obj);
 }
 
@@ -763,10 +772,15 @@ Entity string_rshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
     return raise_error(task, ctx, "Trimming String with something not an Int.");
   }
   int32_t index = pint(&args->pri);
+  if (index < 0) {
+    return raise_error(task, ctx, "Cannot shrink by a negative amount.");
+  }
   if (index > String_size(str)) {
     return raise_error(task, ctx, "Cannot shrink more than the entire size.");
   }
-  String_rshrink(str, index);
+  if (index > 0) {
+    String_rshrink(str, index);
+  }
   return entity_object(obj);
 }
 

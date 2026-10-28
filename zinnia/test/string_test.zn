@@ -1,0 +1,77 @@
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class TrimTest {
+  @test.Test
+  method test_trim() {
+    expect(' a b '.copy().trim(), 'a b')
+    expect('ab'.copy().trim(), 'ab')
+    expect('   '.copy().trim(), '')
+    expect(''.copy().trim(), '')
+  }
+
+  @test.Test
+  method test_ltrim_rtrim() {
+    expect(' a '.copy().ltrim(), 'a ')
+    expect(' a '.copy().rtrim(), ' a')
+    expect('a'.copy().ltrim(), 'a')
+    expect('a'.copy().rtrim(), 'a')
+    expect('  '.copy().rtrim(), '')
+  }
+
+  @test.Test
+  method test_shrink_by_zero() {
+    expect('abc'.copy().lshrink(0), 'abc')
+    expect('abc'.copy().rshrink(0), 'abc')
+    expect('abc'.copy().lshrink(1), 'bc')
+    expect('abc'.copy().rshrink(1), 'ab')
+  }
+}
+
+@test.TestClass
+class ImmutableStringTest {
+  @test.Test
+  method test_literal_is_immutable() {
+    test.expect_is(i'abc', IString)
+    test.expect_is('abc', String)
+    test.expect_raises(() -> i'abc'.extend('d'))
+  }
+
+  @test.Test
+  method test_equals_mutable_string() {
+    expect(i'abc' == 'abc', True)
+    expect('abc' == i'abc', True)
+    expect(hash(i'abc'), hash('abc'))
+  }
+
+  @test.Test
+  method test_map_keys_match_across_string_types() {
+    m = {}
+    m['a'] = 1
+    m[i'b'] = 2
+    expect(m[i'a'], 1)
+    expect(m['b'], 2)
+  }
+
+  @test.Test
+  method test_strfmt_with_immutable_format() {
+    expect(strfmt(i'x=%v', 1), 'x=1')
+  }
+
+  @test.Test
+  method test_to_s_quotes_immutable_strings() {
+    expect(str([i'a', 'b']), '[\'a\', \'b\']')
+    expect(str((i'a', 'b')), '(\'a\', \'b\')')
+  }
+
+  @test.Test
+  method test_concatenation() {
+    expect(i'a' + 'b', 'ab')
+    expect('a' + i'b', 'ab')
+    expect(cat(i'a', 'b'), 'ab')
+  }
+}
