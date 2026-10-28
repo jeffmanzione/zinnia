@@ -5,9 +5,9 @@ package(
 )
 
 cc_library(
-    name = "entity",
-    srcs = ["entity.c"],
-    hdrs = ["entity.h"],
+    name = "value",
+    srcs = ["value.c"],
+    hdrs = ["value.h"],
     deps = [
         ":object",
         ":primitive",

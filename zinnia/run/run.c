@@ -17,10 +17,10 @@
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/string/string_helper.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/program/optimization/optimize.h"
 #include "zinnia/program/tape.h"
 #include "zinnia/seed/seed.h"
@@ -94,7 +94,7 @@ int run_files(const CharPtrArray *source_file_names,
         main_module = modulemanager_load(mm, module_info);
         main_module->_is_initialized = true;
         object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
-                          MAIN_KEY, &TRUE_ENTITY);
+                          MAIN_KEY, &TRUE_VALUE);
       }
     }
   }
@@ -157,7 +157,7 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
           main_module = modulemanager_load(mm, module_info);
           main_module->_is_initialized = true;
           object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
-                            MAIN_KEY, &TRUE_ENTITY);
+                            MAIN_KEY, &TRUE_VALUE);
         }
       }
     }

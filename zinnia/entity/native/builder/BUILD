@@ -21,7 +21,7 @@ cc_library(
     srcs = ["function_context.c"],
     hdrs = ["function_context.h"],
     deps = [
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity/native:error",
         "//zinnia/entity/string:string_helper",

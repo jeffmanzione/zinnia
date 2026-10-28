@@ -10,7 +10,7 @@
 
 #include "c-data-structures/arraylike.h"
 #include "language-tools/lexer/token.h"
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/program/optimization/optimizers.h"

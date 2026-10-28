@@ -9,11 +9,11 @@
 
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/native.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/string/string_helper.h"
 #include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
@@ -36,14 +36,13 @@ void error_delete_(Object *obj) {}
 void stackline_init_(Object *obj) { obj->_internal_obj = CNEW(StackLine_); }
 void stackline_delete_(Object *obj) { RELEASE(obj->_internal_obj); }
 
-Entity raise_error_with_object(Frame *frame, Scope *scope, Object *err) {
+Value raise_error_with_object(Frame *frame, Scope *scope, Object *err) {
   scope->error = err;
-  *frame_mutable_acc(frame) = entity_object(err);
-  return entity_object(err);
+  *frame_mutable_acc(frame) = value_object(err);
+  return value_object(err);
 }
 
-Entity raise_errorv(Frame *frame, Scope *scope, const char fmt[],
-                    va_list args) {
+Value raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args) {
   char buffer[1024];
   int num_chars = vsprintf(buffer, fmt, args);
   Object *error_msg =
@@ -52,16 +51,16 @@ Entity raise_errorv(Frame *frame, Scope *scope, const char fmt[],
   return raise_error_with_object(frame, scope, err);
 }
 
-Entity raise_error(Frame *frame, Scope *scope, const char fmt[], ...) {
+Value raise_error(Frame *frame, Scope *scope, const char fmt[], ...) {
   va_list args;
   va_start(args, fmt);
-  Entity retval = raise_errorv(frame, scope, fmt, args);
+  Value retval = raise_errorv(frame, scope, fmt, args);
   va_end(args);
   return retval;
 }
 
-Entity native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
-                                   ...) {
+Value native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
+                                  ...) {
   va_list args;
   va_start(args, fmt);
   char buffer[1024];
@@ -89,73 +88,72 @@ Module *stackline_module(Object *stackline) {
   return sl->module;
 }
 
-Entity stackline_module_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value stackline_module_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   if (NULL == sl->module) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_object(sl->module->_reflection);
+  return value_object(sl->module->_reflection);
 }
 
-Entity stackline_function_(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
+Value stackline_function_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   if (NULL == sl->func) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_object(sl->func->_reflection);
+  return value_object(sl->func->_reflection);
 }
 
-Entity token_tuple_(Frame *frame, const Token *token) {
+Value token_tuple_(Frame *frame, const Token *token) {
   if (NULL == token) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   Object *tuple_obj = heap_new(frame->parent_isolate->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
 
-  Entity token_text;
+  Value token_text;
   if (NULL == token->text) {
-    token_text = NONE_ENTITY;
+    token_text = NONE_VALUE;
   } else {
-    token_text = entity_object(
+    token_text = value_object(
         string_new(frame->parent_isolate->heap, token->text, token->len));
   }
   tuple_set(frame->parent_isolate->heap, tuple_obj, 0, &token_text);
-  Entity line = entity_int(token->line);
+  Value line = value_int(token->line);
   tuple_set(frame->parent_isolate->heap, tuple_obj, 1, &line);
-  Entity col = entity_int(token->col);
+  Value col = value_int(token->col);
   tuple_set(frame->parent_isolate->heap, tuple_obj, 2, &col);
-  return entity_object(tuple_obj);
+  return value_object(tuple_obj);
 }
 
-Entity stackline_token_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value stackline_token_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   return token_tuple_(frame, sl->error_token);
 }
 
-Entity stackline_source_token_(Frame *frame, Scope *ctx, Object *obj,
-                               Entity *args) {
+Value stackline_source_token_(Frame *frame, Scope *ctx, Object *obj,
+                              Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   return token_tuple_(frame, sl->source_error_token);
 }
 
-Entity stackline_has_source_map_(Frame *frame, Scope *ctx, Object *obj,
-                                 Entity *args) {
+Value stackline_has_source_map_(Frame *frame, Scope *ctx, Object *obj,
+                                Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
-  return NULL == sl->source_error_token ? FALSE_ENTITY : TRUE_ENTITY;
+  return NULL == sl->source_error_token ? FALSE_VALUE : TRUE_VALUE;
 }
 
-Entity stackline_source_linetext_(Frame *frame, Scope *ctx, Object *obj,
-                                  Entity *args) {
+Value stackline_source_linetext_(Frame *frame, Scope *ctx, Object *obj,
+                                 Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   return (NULL == sl->source_linetext)
-             ? NONE_ENTITY
-             : entity_object(string_new(frame->parent_isolate->heap,
-                                        sl->source_linetext,
-                                        strlen(sl->source_linetext)));
+             ? NONE_VALUE
+             : value_object(string_new(frame->parent_isolate->heap,
+                                       sl->source_linetext,
+                                       strlen(sl->source_linetext)));
 }
 
-Entity error_constructor_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value error_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_STRING(args)) {
     return raise_error(frame, ctx, "Error argument is not a String.");
   }
@@ -181,25 +179,24 @@ Entity error_constructor_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
       } else {
         sl->source_linetext = NULL;
       }
-      Entity sl_e = entity_object(stackline);
+      Value sl_e = value_object(stackline);
       array_add(frame->parent_isolate->heap, stacktrace, &sl_e);
     }
     t = t->parent_frame;
   }
   object_set_member_obj(frame->parent_isolate->heap, obj,
                         global_intern("stacktrace"), stacktrace);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
 Object *error_new(Frame *frame, Scope *ctx, Object *error_msg) {
-  Entity error_msg_e = entity_object(error_msg);
+  Value error_msg_e = value_object(error_msg);
   Object *err = heap_new(frame->parent_isolate->heap, Class_Error);
   error_constructor_(frame, ctx, err, &error_msg_e);
   return err;
 }
 
-void stackline_copy_(EntityCopier *copier, Object *src_obj,
-                     Object *target_obj) {
+void stackline_copy_(ValueCopier *copier, Object *src_obj, Object *target_obj) {
   StackLine_ *src = (StackLine_ *)src_obj->_internal_obj;
   StackLine_ *target = (StackLine_ *)target_obj->_internal_obj;
   *target = *src;

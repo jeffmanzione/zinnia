@@ -14,7 +14,7 @@
 #endif
 
 #define EXTRACT_TUPLE_ARGS2(var, fn_ctx, num_args)                          \
-  const Entity *args = FunctionContext_args(fn_ctx);                        \
+  const Value *args = FunctionContext_args(fn_ctx);                         \
   if (!IS_TUPLE(args)) {                                                    \
     FunctionContext_raise_error(fn_ctx, "Expected tuple(%d) argument",      \
                                 num_args);                                  \
@@ -52,12 +52,12 @@
   }                                                                    \
   var = bool_of(&tuple_get(tuple, index)->pri);
 
-#define EXCTRACT_STRING_OR_THROW2(str, str_len, fn_ctx, entity) \
-  char *str;                                                    \
-  int str_len;                                                  \
-  if (!extract_string(entity, &str, &str_len)) {                \
-    FunctionContext_raise_error(fn_ctx, "Must be a string");    \
-    return;                                                     \
+#define EXCTRACT_STRING_OR_THROW2(str, str_len, fn_ctx, value) \
+  char *str;                                                   \
+  int str_len;                                                 \
+  if (!extract_string(value, &str, &str_len)) {                \
+    FunctionContext_raise_error(fn_ctx, "Must be a string");   \
+    return;                                                    \
   }
 
 #define EXCTRACT_STRING_AT_INDEX_OR_THROW2(str, str_len, fn_ctx, tuple, index) \

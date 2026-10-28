@@ -1,57 +1,57 @@
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 
 #include <inttypes.h>
 
 #include "zinnia/util/error.h"
 
-IMPL_STABLE_MAPLIKE(EntityMap, char *, Entity);
+IMPL_STABLE_MAPLIKE(ValueMap, char *, Value);
 
-Entity NONE_ENTITY = {.type = NONE};
-Entity TRUE_ENTITY = {.type = PRIMITIVE,
-                      .pri = {._type = PRIMITIVE_BOOL, ._bool_val = true}};
-Entity FALSE_ENTITY = {.type = PRIMITIVE,
-                       .pri = {._type = PRIMITIVE_BOOL, ._bool_val = false}};
+Value NONE_VALUE = {.type = NONE};
+Value TRUE_VALUE = {.type = PRIMITIVE,
+                    .pri = {._type = PRIMITIVE_BOOL, ._bool_val = true}};
+Value FALSE_VALUE = {.type = PRIMITIVE,
+                     .pri = {._type = PRIMITIVE_BOOL, ._bool_val = false}};
 
-EntityType etype(const Entity *e) {
+ValueType etype(const Value *e) {
   ASSERT(e != NULL);
   return e->type;
 }
 
-const Object *object(const Entity *e) {
+const Object *object(const Value *e) {
   ASSERT(e != NULL);
   return e->obj;
 }
 
-Object *object_m(Entity *e) {
+Object *object_m(Value *e) {
   ASSERT(e != NULL);
   return e->obj;
 }
 
-Entity entity_char(const int8_t c) {
-  Entity e = {.type = PRIMITIVE};
+Value value_char(const int8_t c) {
+  Value e = {.type = PRIMITIVE};
   pset_char(&e.pri, c);
   return e;
 }
 
-Entity entity_int(const int64_t i) {
-  Entity e = {.type = PRIMITIVE};
+Value value_int(const int64_t i) {
+  Value e = {.type = PRIMITIVE};
   pset_int(&e.pri, i);
   return e;
 }
 
-Entity entity_float(const double d) {
-  Entity e = {.type = PRIMITIVE};
+Value value_float(const double d) {
+  Value e = {.type = PRIMITIVE};
   pset_float(&e.pri, d);
   return e;
 }
 
-Entity entity_primitive_ptr(const Primitive *p) {
-  Entity e = {.type = PRIMITIVE, .pri = *p};
+Value value_primitive_ptr(const Primitive *p) {
+  Value e = {.type = PRIMITIVE, .pri = *p};
   return e;
 }
 
-Entity entity_primitive(Primitive p) {
-  Entity e = {.type = PRIMITIVE, .pri = p};
+Value value_primitive(Primitive p) {
+  Value e = {.type = PRIMITIVE, .pri = p};
   return e;
 }
 
@@ -83,7 +83,7 @@ void object_print_(const Object *obj, FILE *file) {
           obj->_class->_name);
 }
 
-void entity_print(const Entity *e, FILE *file) {
+void value_print(const Value *e, FILE *file) {
   ASSERT(e != NULL);
   ASSERT(file != NULL);
   switch (e->type) {
@@ -101,18 +101,18 @@ void entity_print(const Entity *e, FILE *file) {
   }
 }
 
-Entity entity_none() {
-  Entity e = {.type = NONE};
+Value value_none() {
+  Value e = {.type = NONE};
   return e;
 }
 
-Entity *object_get(Object *obj, const char field[]) {
+Value *object_get(Object *obj, const char field[]) {
   ASSERT(obj != NULL);
   ASSERT(field != NULL);
-  return EntityMap_find_ref(&obj->_members, field, sizeof(char *));
+  return ValueMap_find_ref(&obj->_members, field, sizeof(char *));
 }
 
-Entity entity_object(Object *obj) {
-  Entity e = {.type = OBJECT, .obj = obj};
+Value value_object(Object *obj) {
+  Value e = {.type = OBJECT, .obj = obj};
   return e;
 }

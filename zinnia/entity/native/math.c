@@ -8,7 +8,7 @@
 #include <math.h>
 
 #define SingleFloatFn(name, val_var, body)                                     \
-  Entity name##_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {        \
+  Value name##_(Frame *frame, Scope *ctx, Object *obj, Value *args) {          \
     if (NULL == args || PRIMITIVE != args->type) {                             \
       return raise_error(frame, ctx,                                           \
                          #name "() takes exactly 1 primitive type argument."); \
@@ -18,39 +18,39 @@
   }
 
 #define SingleFloatToCFn(name, cname) \
-  SingleFloatFn(name, r, { return entity_float(cname(r)); });
+  SingleFloatFn(name, r, { return value_float(cname(r)); });
 
 double log_special_(double base, double num) {
   return log10(num) / log10(base);
 }
 
-Entity log_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value log_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (IS_TUPLE(args)) {
     EXTRACT_TUPLE_ARGS(tuple, args, 2, frame, ctx);
     EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, tuple, 0);
     EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double base, tuple, 1);
-    return entity_float(log_special_(base, num));
+    return value_float(log_special_(base, num));
   }
   if (args->type != PRIMITIVE) {
     return raise_error(frame, ctx, "Cannot perform _log_ on a non-value.");
   }
-  return entity_float(log(float_of(&args->pri)));
+  return value_float(log(float_of(&args->pri)));
 }
 
-Entity pow_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value pow_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double num, t, 0);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double power, t, 1);
 
-  return entity_float(pow(num, power));
+  return value_float(pow(num, power));
 }
 
-Entity mod_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value mod_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double numerator, t, 0);
   EXTRACT_FLOAT_AT_INDEX_OR_THROW(const double denominator, t, 1);
 
-  return entity_float(fmod(numerator, denominator));
+  return value_float(fmod(numerator, denominator));
 }
 
 SingleFloatToCFn(sin, sin);

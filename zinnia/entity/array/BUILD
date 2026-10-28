@@ -9,7 +9,7 @@ cc_library(
     srcs = ["array.c"],
     hdrs = ["array.h"],
     deps = [
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/util:error",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",

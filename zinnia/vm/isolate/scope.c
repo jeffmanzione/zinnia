@@ -22,7 +22,7 @@ void scope_add_reflection_(Scope *scope) {
 
 void scope_init(Scope *ctx, Object *self, Module *module,
                 uint32_t instruction_pos) {
-  ctx->self = entity_object(self);
+  ctx->self = value_object(self);
   ctx->module = module;
   ctx->tape = module->_tape;
   ctx->ins = instruction_pos;
@@ -61,13 +61,13 @@ Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
   return fn_ref;
 }
 
-Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
+Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   if (SELF == id) {
     return &ctx->self;
   }
-  Entity *member = object_get(ctx->_reflection, id);
+  Value *member = object_get(ctx->_reflection, id);
   if (NULL != member) {
     return member;
   }
@@ -84,7 +84,7 @@ Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
   if (NULL != member) {
     if (OBJECT == member->type && Class_Function == member->obj->_class &&
         member->obj->_function_obj->_is_anon) {
-      *tmp = entity_object(
+      *tmp = value_object(
           wrap_function_in_ref(member->obj->_function_obj, ctx->self.obj,
                                frame->parent_isolate->heap, ctx));
       return tmp;
@@ -107,7 +107,7 @@ Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
     //                                id, f_ref);
     // }
 
-    *tmp = entity_object(f_ref);
+    *tmp = value_object(f_ref);
     return tmp;
   }
   member = object_get(ctx->module->_reflection, id);
@@ -118,11 +118,11 @@ Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
   Object *obj = module_lookup(ctx->module, id);
   if (NULL != obj) {
     if (Class_Function == obj->_class && obj->_function_obj->_is_anon) {
-      *tmp = entity_object(wrap_function_in_ref(
+      *tmp = value_object(wrap_function_in_ref(
           obj->_function_obj, ctx->self.obj, frame->parent_isolate->heap, ctx));
       return tmp;
     }
-    *tmp = entity_object(obj);
+    *tmp = value_object(obj);
     return tmp;
   }
 
@@ -133,24 +133,24 @@ Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp) {
 
   obj = module_lookup(Module_builtin, id);
   if (NULL != obj) {
-    *tmp = entity_object(obj);
+    *tmp = value_object(obj);
     return tmp;
   }
   return NULL;
 }
 
-void scope_let(Scope *ctx, const char id[], const Entity *e) {
+void scope_let(Scope *ctx, const char id[], const Value *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
   object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
 }
 
-void scope_set(Scope *ctx, const char id[], const Entity *e) {
+void scope_set(Scope *ctx, const char id[], const Value *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
-  Entity *member = NULL;
+  Value *member = NULL;
   if (NULL != object_get(ctx->_reflection, id)) {
     object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
     return;

@@ -53,21 +53,21 @@ bool future_is_complete(Future *f) {
   return f->_is_complete;
 }
 
-Entity future_value_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value future_value_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Object *f_obj = heap_new(frame->parent_isolate->heap, Class_Future);
   Future *f = (Future *)f_obj->_internal_obj;
   f->_is_complete = true;
   f->_is_result_set = true;
   object_set_member(frame->parent_isolate->heap, f_obj, RESULT_VAL, args);
-  return entity_object(f_obj);
+  return value_object(f_obj);
 }
 
-const Entity *future_get_value(Heap *heap, Object *obj) {
+const Value *future_get_value(Heap *heap, Object *obj) {
   ASSERT(obj != NULL);
   ASSERT(obj->_class == Class_Future);
   Future *f = (Future *)obj->_internal_obj;
   if (!f->_is_result_set) {
-    const Entity *result = frame_get_acc(f->frame);
+    const Value *result = frame_get_acc(f->frame);
     object_set_member(heap, obj, RESULT_VAL, result);
     f->_is_result_set = true;
     return result;
@@ -77,7 +77,7 @@ const Entity *future_get_value(Heap *heap, Object *obj) {
 
 Frame *future_get_frame(Future *f) { return f->frame; }
 
-Entity spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(
         frame, ctx,
@@ -87,9 +87,9 @@ Entity spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
 
   EXTRACT_TUPLE_ARGS(tuple, args, 3, frame, ctx);
 
-  const Entity *fn = tuple_get(tuple, 0);
-  const Entity *fn_args = tuple_get(tuple, 1);
-  const Entity *keep_alive_arg = tuple_get(tuple, 2);
+  const Value *fn = tuple_get(tuple, 0);
+  const Value *fn_args = tuple_get(tuple, 1);
+  const Value *keep_alive_arg = tuple_get(tuple, 2);
   if (!IS_OBJECT(fn) || !(inherits_from(fn->obj->_class, Class_Function) ||
                           IS_CLASS(fn, Class_FunctionRef))) {
     return raise_error(frame, ctx,
@@ -116,11 +116,11 @@ Entity spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   }
 
   BULK_COPY(copier, new_isolate->heap, {
-    Entity self_e = entity_object(self);
-    self = entitycopier_copy(&copier, &self_e).obj;
+    Value self_e = value_object(self);
+    self = valuecopier_copy(&copier, &self_e).obj;
     new_ctx =
         frame_create_scope(new_frame, self, (Module *)f->_module, f->_ins_pos);
-    *frame_mutable_acc(new_frame) = entitycopier_copy(&copier, fn_args);
+    *frame_mutable_acc(new_frame) = valuecopier_copy(&copier, fn_args);
   });
 
   scope_set_function(new_ctx, f);
@@ -131,10 +131,10 @@ Entity spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
     isolate_insert_waiting_frame(new_isolate, new_isolate->keep_alive_frame);
   }
 
-  return entity_object(new_isolate->_reflection);
+  return value_object(new_isolate->_reflection);
 }
 
-Entity sleep__(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value sleep__(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   double sleep_duration_sec = 0;
   if (IS_INT(args)) {
     sleep_duration_sec = pint(&args->pri);
@@ -150,11 +150,11 @@ Entity sleep__(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
 #else
   sleep(sleep_duration_sec);
 #endif
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity validate_actor_call_(Frame *current_frame, Scope *current_ctx,
-                            Entity *args) {
+Value validate_actor_call_(Frame *current_frame, Scope *current_ctx,
+                           Value *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(current_frame, current_ctx,
                        "Cannot call __actor_call with something other than "
@@ -163,21 +163,21 @@ Entity validate_actor_call_(Frame *current_frame, Scope *current_ctx,
 
   EXTRACT_TUPLE_ARGS(tuple, args, 3, current_frame, current_ctx);
 
-  const Entity *actor_entity = tuple_get(tuple, 0);
-  if (!IS_CLASS(actor_entity, Class_ActorRef)) {
+  const Value *actor_value = tuple_get(tuple, 0);
+  if (!IS_CLASS(actor_value, Class_ActorRef)) {
     return raise_error(current_frame, current_ctx,
                        "__actor_call expects (ActorRef, String, args).");
   }
 
-  const Entity *fn_name_entity = tuple_get(tuple, 1);
-  if (!IS_STRING(fn_name_entity)) {
+  const Value *fn_name_value = tuple_get(tuple, 1);
+  if (!IS_STRING(fn_name_value)) {
     return raise_error(current_frame, current_ctx,
                        "__actor_call expects (ActorRef, String, args).");
   }
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity create_future_for_frame_(Frame *current_frame, Frame *actor_frame) {
+Value create_future_for_frame_(Frame *current_frame, Frame *actor_frame) {
   Frame *new_frame =
       isolate_create_unqueued_frame(current_frame->parent_isolate);
   new_frame->parent_frame = current_frame;
@@ -187,28 +187,28 @@ Entity create_future_for_frame_(Frame *current_frame, Frame *actor_frame) {
 
   isolate_insert_waiting_frame(current_frame->parent_isolate, new_frame);
 
-  return entity_object(future_obj);
+  return value_object(future_obj);
 }
 
-Entity actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
-                   Entity *args) {
-  Entity error = validate_actor_call_(current_frame, current_ctx, args);
+Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
+                  Value *args) {
+  Value error = validate_actor_call_(current_frame, current_ctx, args);
   if (NONE != error.type) {
     return error;
   }
 
   const Tuple *tuple = (Tuple *)args->obj->_internal_obj;
-  const Entity *actor_entity = tuple_get(tuple, 0);
-  const Entity *fn_name_entity = tuple_get(tuple, 1);
-  const Entity *fn_args = tuple_get(tuple, 2);
+  const Value *actor_value = tuple_get(tuple, 0);
+  const Value *fn_name_value = tuple_get(tuple, 1);
+  const Value *fn_args = tuple_get(tuple, 2);
 
-  ActorRef *actor = extract_actor_from_obj(actor_entity->obj);
+  ActorRef *actor = extract_actor_from_obj(actor_value->obj);
   Isolate *actor_isolate = actor_get_isolate(actor);
   Object *actor_object = actor_get_object(actor);
 
-  const char *fn_name = intern_entity(fn_name_entity);
+  const char *fn_name = intern_value(fn_name_value);
 
-  Entity fn =
+  Value fn =
       object_get_maybe_wrap(actor_object, fn_name, actor_isolate->heap, NULL);
 
   const Function *f;
@@ -236,14 +236,14 @@ Entity actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
   SYNCHRONIZED(current_frame->parent_isolate->heap_access_lock, {
     SYNCHRONIZED(actor_isolate->heap_access_lock, {
       *frame_mutable_acc(actor_frame) =
-          entity_copy(fn_args, actor_isolate->heap);
+          value_copy(fn_args, actor_isolate->heap);
     });
   });
 
   isolate_enqueue_frame(actor_isolate, actor_frame);
-  Entity future_entity = create_future_for_frame_(current_frame, actor_frame);
+  Value future_value = create_future_for_frame_(current_frame, actor_frame);
   condition_broadcast(actor_isolate->frame_wait_cond);
-  return future_entity;
+  return future_value;
 }
 
 void async_add_native(ModuleManager *mm, Module *async) {

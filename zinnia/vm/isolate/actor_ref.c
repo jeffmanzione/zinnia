@@ -39,9 +39,9 @@ Object *actor_get_object(ActorRef *actor) { return actor->actor_object; }
 
 Isolate *actor_get_isolate(ActorRef *actor) { return actor->actor_isolate; }
 
-ActorRef *extract_actor(Entity *actor_entity) {
-  ASSERT(IS_CLASS(actor_entity, Class_ActorRef));
-  return (ActorRef *)actor_entity->obj->_internal_obj;
+ActorRef *extract_actor(Value *actor_value) {
+  ASSERT(IS_CLASS(actor_value, Class_ActorRef));
+  return (ActorRef *)actor_value->obj->_internal_obj;
 }
 
 ActorRef *extract_actor_from_obj(Object *actor_obj) {

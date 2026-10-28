@@ -17,12 +17,12 @@
 #include "zinnia/lang/lexer/lang_lexer.h"
 #endif
 
-Entity load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
-                             Entity *args) {
+Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
   EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
 
-  const Entity *arg0 = tuple_get(t, 0);
-  const Entity *arg1 = tuple_get(t, 1);
+  const Value *arg0 = tuple_get(t, 0);
+  const Value *arg1 = tuple_get(t, 1);
   if (!IS_CLASS(arg0, Class_Module)) {
     return raise_error(frame, ctx,
                        "Invalid argument(0) for "
@@ -36,7 +36,7 @@ Entity load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
                        "__load_class_from_text: Expected type String.");
   }
 
-  char *c_str_text = entity_string_copy(arg1);
+  char *c_str_text = value_string_copy(arg1);
   SFILE *file = sfile_open(c_str_text);
 
   Tape *tape = (Tape *)m->_tape;  // bless
@@ -90,7 +90,7 @@ Entity load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
 
   RELEASE(c_str_text);
 
-  return entity_object(new_class->_reflection);
+  return value_object(new_class->_reflection);
 }
 
 void classes_add_native(ModuleManager *mm, Module *classes) {

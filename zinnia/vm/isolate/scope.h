@@ -18,9 +18,9 @@ Object *scope_self(Scope *ctx);
 Module *scope_module(Scope *ctx);
 const Instruction *scope_ins(Scope *ctx);
 void scope_set_function(Scope *ctx, const Function *func);
-Entity *scope_lookup(Scope *ctx, const char id[], Entity *tmp);
-void scope_let(Scope *ctx, const char id[], const Entity *e);
-void scope_set(Scope *ctx, const char id[], const Entity *e);
+Value *scope_lookup(Scope *ctx, const char id[], Value *tmp);
+void scope_let(Scope *ctx, const char id[], const Value *e);
+void scope_set(Scope *ctx, const char id[], const Value *e);
 
 Scope *frame_get_scope_for_index(Frame *frame, uint32_t index);
 

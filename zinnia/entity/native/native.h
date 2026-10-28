@@ -7,12 +7,12 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_NATIVE_H_
 
 #include "zinnia/entity/class/class.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/function/function.h"
 #include "zinnia/entity/object.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/vm/isolate/isolates.h"
 
-typedef Entity (*NativeFn)(Frame *, Scope *, Object *obj, Entity *args);
+typedef Value (*NativeFn)(Frame *, Scope *, Object *obj, Value *args);
 
 Function *native_method(Class *class, const char *name, NativeFn native_fn);
 Function *native_blocking_method(Class *class, const char *name,

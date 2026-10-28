@@ -21,17 +21,17 @@ typedef struct Object_ Object;
 typedef struct Class_ Class;
 typedef struct Module_ Module;
 typedef struct Function_ Function;
-typedef struct EntityCopier_ EntityCopier;
-typedef struct Entity_ Entity;
+typedef struct ValueCopier_ ValueCopier;
+typedef struct Value_ Value;
 typedef struct Field_ Field;
 
 typedef void (*ObjDelFn)(Object *);
 typedef void (*ObjInitFn)(Object *);
 // TODO: This should only be temporary until to_s() is supported.
 typedef void (*ObjPrintFn)(const Object *, FILE *);
-typedef void (*ObjCopyFn)(EntityCopier *copier, Object *src, Object *target);
+typedef void (*ObjCopyFn)(ValueCopier *copier, Object *src, Object *target);
 
-DEFINE_STABLE_MAPLIKE(EntityMap, char *, Entity);
+DEFINE_STABLE_MAPLIKE(ValueMap, char *, Value);
 DEFINE_STABLE_MAPLIKE(ClassMap, char *, Class);
 DEFINE_STABLE_MAPLIKE(FieldMap, char *, Field);
 DEFINE_STABLE_MAPLIKE(FunctionMap, char *, Function);
@@ -40,7 +40,7 @@ DEFINE_STABLE_MAPLIKE(FunctionMap, char *, Function);
 struct Object_ {
   const Node *_node_ref;
   const Class *_class;
-  EntityMap _members;  // Member
+  ValueMap _members;  // Member
 
   // If the object is reflected.
   union {

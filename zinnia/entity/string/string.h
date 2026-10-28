@@ -7,8 +7,8 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_STRING_STRING_H_
 
 #include "c-data-structures/arraylike.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
+#include "zinnia/entity/value.h"
 
 DEFINE_ARRAYLIKE(String, char);
 

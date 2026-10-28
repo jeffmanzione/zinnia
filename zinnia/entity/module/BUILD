@@ -9,7 +9,7 @@ cc_library(
     srcs = ["module.c"],
     hdrs = ["module.h"],
     deps = [
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity/class",
         "//zinnia/entity/function",

@@ -13,7 +13,6 @@
 #include "zinnia/entity/array/array.h"
 #include "zinnia/entity/class/classes.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/async.h"
 #include "zinnia/entity/native/builder/function_context.h"
 #include "zinnia/entity/native/error.h"
@@ -24,6 +23,7 @@
 #include "zinnia/entity/string/string.h"
 #include "zinnia/entity/string/string_helper.h"
 #include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/string_util.h"
 #include "zinnia/util/void_array.h"
@@ -81,7 +81,7 @@ bool istr_to_int64_(IString *str, int64_t *result) {
   return true;
 }
 
-bool entity_to_int64_(const Entity *e, int64_t *result) {
+bool value_to_int64_(const Value *e, int64_t *result) {
   if (IS_CLASS(e, Class_String)) {
     return str_to_int64_(e->obj->_internal_obj, result);
   }
@@ -91,42 +91,42 @@ bool entity_to_int64_(const Entity *e, int64_t *result) {
   return false;
 }
 
-Entity Int_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value Int_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   int64_t result;
   int len;
   char *raw_str;
   if (NULL == args) {
-    return entity_int(0);
+    return value_int(0);
   }
   switch (args->type) {
     case NONE:
-      return entity_int(0);
+      return value_int(0);
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
         return raise_error(frame, ctx, "Cannot convert input to Int.");
       }
-      if (!entity_to_int64_(args, &result)) {
+      if (!value_to_int64_(args, &result)) {
         return raise_error(frame, ctx, "Cannot convert input '%*s' to Int.",
                            len, raw_str);
       }
-      return entity_int(result);
+      return value_int(result);
     case PRIMITIVE:
       switch (ptype(&args->pri)) {
         case PRIMITIVE_BOOL:
-          return entity_int(pbool(&args->pri) ? 1 : 0);
+          return value_int(pbool(&args->pri) ? 1 : 0);
         case PRIMITIVE_CHAR:
-          return entity_int((int64_t)pchar(&args->pri));
+          return value_int((int64_t)pchar(&args->pri));
         case PRIMITIVE_INT:
           return *args;
         case PRIMITIVE_FLOAT:
-          return entity_int((int64_t)pfloat(&args->pri));
+          return value_int((int64_t)pfloat(&args->pri));
         default:
           return raise_error(frame, ctx, "Unknown primitive type.");
       }
     default:
       return raise_error(frame, ctx, "Unknown type.");
   }
-  return entity_int(0);
+  return value_int(0);
 }
 
 bool str_to_float_(String *str, double *result) {
@@ -153,7 +153,7 @@ bool istr_to_float_(IString *str, double *result) {
   return true;
 }
 
-bool entity_to_float_(const Entity *e, double *result) {
+bool value_to_float_(const Value *e, double *result) {
   if (IS_CLASS(e, Class_String)) {
     return str_to_float_(e->obj->_internal_obj, result);
   }
@@ -163,33 +163,33 @@ bool entity_to_float_(const Entity *e, double *result) {
   return false;
 }
 
-Entity Float_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value Float_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   double result;
   int len;
   char *raw_str;
   if (NULL == args) {
-    return entity_float(0);
+    return value_float(0);
   }
   switch (args->type) {
     case NONE:
-      return entity_float(0.f);
+      return value_float(0.f);
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
         return raise_error(frame, ctx, "Cannot convert input to Float.");
       }
-      if (!entity_to_float_(args, &result)) {
+      if (!value_to_float_(args, &result)) {
         return raise_error(frame, ctx, "Cannot convert input '%*s' to Float.",
                            len, raw_str);
       }
-      return entity_float(result);
+      return value_float(result);
     case PRIMITIVE:
       switch (ptype(&args->pri)) {
         case PRIMITIVE_BOOL:
-          return entity_float(pbool(&args->pri) ? 1 : 0);
+          return value_float(pbool(&args->pri) ? 1 : 0);
         case PRIMITIVE_CHAR:
-          return entity_float((double)pchar(&args->pri));
+          return value_float((double)pchar(&args->pri));
         case PRIMITIVE_INT:
-          return entity_float((double)pint(&args->pri));
+          return value_float((double)pint(&args->pri));
         case PRIMITIVE_FLOAT:
           return *args;
         default:
@@ -198,7 +198,7 @@ Entity Float_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
     default:
       return raise_error(frame, ctx, "Unknown type.");
   }
-  return entity_float(0.f);
+  return value_float(0.f);
 }
 
 bool str_to_bool_(String *str, bool *result) {
@@ -234,7 +234,7 @@ bool istr_to_bool_(IString *str, bool *result) {
   return false;
 }
 
-bool entity_to_bool_(const Entity *e, bool *result) {
+bool value_to_bool_(const Value *e, bool *result) {
   if (IS_CLASS(e, Class_String)) {
     return str_to_bool_((String *)e->obj->_internal_obj, result);
   }
@@ -244,32 +244,32 @@ bool entity_to_bool_(const Entity *e, bool *result) {
   return false;
 }
 
-Entity _Bool_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value _Bool_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   bool result;
   int len;
   char *raw_str;
   if (NULL == args) {
-    return FALSE_ENTITY;
+    return FALSE_VALUE;
   }
   switch (args->type) {
     case NONE:
-      return FALSE_ENTITY;
+      return FALSE_VALUE;
     case OBJECT:
       if (!extract_string(args, &raw_str, &len)) {
         return raise_error(frame, ctx, "Cannot convert input to bool Int.");
       }
-      if (!entity_to_bool_(args, &result)) {
+      if (!value_to_bool_(args, &result)) {
         return raise_error(frame, ctx,
                            "Cannot convert input '%*s' to bool Int.", len,
                            raw_str);
       }
-      return result ? TRUE_ENTITY : FALSE_ENTITY;
+      return result ? TRUE_VALUE : FALSE_VALUE;
     case PRIMITIVE:
-      return IS_TRUE(args) ? TRUE_ENTITY : FALSE_ENTITY;
+      return IS_TRUE(args) ? TRUE_VALUE : FALSE_VALUE;
     default:
       return raise_error(frame, ctx, "Unknown type.");
   }
-  return FALSE_ENTITY;
+  return FALSE_VALUE;
 }
 
 Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
@@ -282,7 +282,7 @@ Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
 
 // volatile int tmp = 0;
 
-Entity collect_garbage_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value collect_garbage_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Isolate *isolate = frame->parent_isolate;
   Heap *heap = isolate->heap;
   uint32_t deleted_nodes_count = isolate_collect_garbage(isolate);
@@ -310,9 +310,9 @@ Entity collect_garbage_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   ObjectTypeCountMapIterator iter = heapprofile_object_type_counts(hp);
   for (; ObjectTypeCountMap_has_entry(&iter);
        ObjectTypeCountMap_next_entry(&iter)) {
-    Entity class_e = entity_object(ObjectTypeCountMap_key(&iter)->_reflection);
-    Entity count_e = entity_int(*ObjectTypeCountMap_value(&iter));
-    Entity tuple_e = entity_object(tuple_create2(heap, &class_e, &count_e));
+    Value class_e = value_object(ObjectTypeCountMap_key(&iter)->_reflection);
+    Value count_e = value_int(*ObjectTypeCountMap_value(&iter));
+    Value tuple_e = value_object(tuple_create2(heap, &class_e, &count_e));
     array_add(heap, object_counts, &tuple_e);
   }
   heapprofile_delete(hp);
@@ -323,20 +323,20 @@ Entity collect_garbage_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   // alloc_to_csv(file);
   // fclose(file);
 
-  Entity deleted_nodes_count_e = entity_int(deleted_nodes_count);
-  Entity remaining_object_count_e = entity_int(heap_object_count(heap));
-  Entity object_counts_e = entity_object(object_counts);
+  Value deleted_nodes_count_e = value_int(deleted_nodes_count);
+  Value remaining_object_count_e = value_int(heap_object_count(heap));
+  Value object_counts_e = value_object(object_counts);
   Object *result_tuple =
       tuple_create3(heap, &deleted_nodes_count_e, &remaining_object_count_e,
                     &object_counts_e);
-  return entity_object(result_tuple);
+  return value_object(result_tuple);
 }
 
-Entity stringify_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value stringify_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(args != NULL);
   ASSERT(PRIMITIVE == args->type || NONE == args->type);
   if (IS_NONE(args)) {
-    return entity_object(
+    return value_object(
         string_new(frame->parent_isolate->heap, "None", strlen("None")));
   }
 
@@ -360,23 +360,23 @@ Entity stringify_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
       break;
   }
   ASSERT(num_written > 0);
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, buffer, num_written));
 }
 
-Entity tuple_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value tuple_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(args != NULL);
   Array *arr = (Array *)args->obj->_internal_obj;
   Object *tup = heap_new(frame->parent_isolate->heap, Class_Tuple);
   tup->_internal_obj = tuple_create(Array_size(arr));
   for (int i = 0; i < Array_size(arr); ++i) {
-    const Entity *e = Array_get_ref_unchecked(arr, i);
+    const Value *e = Array_get_ref_unchecked(arr, i);
     tuple_set(frame->parent_isolate->heap, tup, i, e);
   }
-  return entity_object(tup);
+  return value_object(tup);
 }
 
-Entity color_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value color_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_NONE(args) && !IS_STRING(args) && !IS_INT(args)) {
     return raise_error(
         frame, ctx, "Function 'color' expect Int, String, or None argument.");
@@ -399,10 +399,10 @@ Entity color_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
     sprintf(buf, "\x1b[%" PRId64 "m", pint(&args->pri));
     ret = string_new(frame->parent_isolate->heap, buf, strlen(buf));
   }
-  return entity_object(ret);
+  return value_object(ret);
 }
 
-Entity string_extend_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_extend_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (IS_CLASS(args, Class_String)) {
     String_append((String *)obj->_internal_obj,
                   (String *)args->obj->_internal_obj);
@@ -413,12 +413,12 @@ Entity string_extend_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
     return raise_error(frame, ctx,
                        "Cannot extend a string with something not a string.");
   }
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity string_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_cmp_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_STRING(args)) {
-    return entity_int(1);
+    return value_int(1);
   }
   char *self, *other;
   int self_len, other_len;
@@ -426,12 +426,12 @@ Entity string_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   extract_string(args, &other, &other_len);
 
   int min_len_cmp = strncmp(self, other, min(self_len, other_len));
-  return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
+  return value_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }
 
-Entity istring_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_cmp_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_STRING(args)) {
-    return entity_int(1);
+    return value_int(1);
   }
   char *self, *other;
   int self_len, other_len;
@@ -439,34 +439,34 @@ Entity istring_cmp_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   extract_string(args, &other, &other_len);
 
   if (self == other) {
-    return entity_int(0);
+    return value_int(0);
   }
 
   int min_len_cmp = strncmp(self, other, min(self_len, other_len));
-  return entity_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
+  return value_int((min_len_cmp != 0) ? min_len_cmp : self_len - other_len);
 }
 
-Entity string_eq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_eq_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Primitive p = string_cmp_(frame, ctx, obj, args).pri;
-  return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
+  return pint(&p) == 0 ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity istring_eq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_eq_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Primitive p = istring_cmp_(frame, ctx, obj, args).pri;
-  return pint(&p) == 0 ? TRUE_ENTITY : FALSE_ENTITY;
+  return pint(&p) == 0 ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity string_neq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_neq_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Primitive p = string_cmp_(frame, ctx, obj, args).pri;
-  return pint(&p) != 0 ? TRUE_ENTITY : FALSE_ENTITY;
+  return pint(&p) != 0 ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity istring_neq_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_neq_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Primitive p = istring_cmp_(frame, ctx, obj, args).pri;
-  return pint(&p) != 0 ? TRUE_ENTITY : FALSE_ENTITY;
+  return pint(&p) != 0 ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity string_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_index_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(args != NULL);
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(frame, ctx, "Bad string index input");
@@ -476,10 +476,10 @@ Entity string_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (index < 0 || index >= String_size(self)) {
     return raise_error(frame, ctx, "Index out of bounds.");
   }
-  return entity_char(String_get_unchecked(self, index));
+  return value_char(String_get_unchecked(self, index));
 }
 
-Entity istring_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_index_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(args != NULL);
   if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {
     return raise_error(frame, ctx, "Bad string index input");
@@ -493,36 +493,36 @@ Entity istring_index_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (index < 0 || index >= self_len) {
     return raise_error(frame, ctx, "Index out of bounds.");
   }
-  return entity_char(self[index]);
+  return value_char(self[index]);
 }
 
-Entity string_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_hash_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
-  return entity_int(hash_string(str->table, String_size(str)));
+  return value_int(hash_string(str->table, String_size(str)));
 }
 
-Entity istring_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_hash_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   // Must match string_hash_() so equal String and IString keys hash the same.
   IString *str = (IString *)obj->_internal_obj;
-  return entity_int(hash_string(str->str, str->len));
+  return value_int(hash_string(str->str, str->len));
 }
 
-Entity string_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_len_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
-  return entity_int(String_size(str));
+  return value_int(String_size(str));
 }
 
-Entity istring_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_len_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   IString *istr = (IString *)obj->_internal_obj;
-  return entity_int(istr->len);
+  return value_int(istr->len);
 }
 
-Entity string_set_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_set_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
 
   EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXTRACT_INT_AT_INDEX_OR_THROW(const uint64_t index, tupl_args, 0);
-  const Entity *val = tuple_get(tupl_args, 1);
+  const Value *val = tuple_get(tupl_args, 1);
 
   if (NULL != val && PRIMITIVE == val->type &&
       PRIMITIVE_CHAR == ptype(&val->pri)) {
@@ -534,7 +534,7 @@ Entity string_set_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   } else {
     return raise_error(frame, ctx, "Bad string index.");
   }
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
 #define IS_OBJECT_CLASS(e, class) \
@@ -543,7 +543,7 @@ Entity string_set_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
 #define IS_VALUE_TYPE(e, valtype) \
   (((e) != NULL) && (PRIMITIVE == (e)->type) && ((valtype) == ptype(&(e)->pri)))
 
-Entity string_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
   EXCTRACT_STRING_AT_INDEX_OR_THROW(substr, substr_len, tupl_args, 0);
@@ -555,7 +555,7 @@ Entity string_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
                        index, String_size(str));
   }
   if ((index + substr_len) > String_size(str)) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   char *start_index = str->table + index;
   size_t size_after_start = String_size(str) - index;
@@ -563,12 +563,12 @@ Entity string_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *found_index =
       find_str(start_index, size_after_start, substr, substr_len);
   if (NULL == found_index) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_int(found_index - start_index);
+  return value_int(found_index - start_index);
 }
 
-Entity istring_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
@@ -583,7 +583,7 @@ Entity istring_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
                        index, substr_len);
   }
   if ((index + substr_len) > substr_len) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   char *start_index = str + index;
   size_t size_after_start = str_len - index;
@@ -591,12 +591,12 @@ Entity istring_find_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char *found_index =
       find_str(start_index, size_after_start, substr, substr_len);
   if (NULL == found_index) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_int(found_index - start_index);
+  return value_int(found_index - start_index);
 }
 
-Entity string_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_find_all_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
 
   EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
@@ -610,7 +610,7 @@ Entity string_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   }
   Object *array_obj = array_create(frame->parent_isolate->heap);
   if ((index + substr_len) > String_size(str)) {
-    return entity_object(array_obj);
+    return value_object(array_obj);
   }
 
   size_t chars_remaining = String_size(str) - index;
@@ -619,15 +619,15 @@ Entity string_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
          NULL != (i_index =
                       find_str(i_index, chars_remaining, substr, substr_len))) {
     int index = i_index - str->table;
-    Entity index_e = entity_int(index);
+    Value index_e = value_int(index);
     array_add(frame->parent_isolate->heap, array_obj, &index_e);
     i_index++;
     chars_remaining = String_size(str) - index - 1;
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity istring_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_find_all_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
@@ -643,7 +643,7 @@ Entity istring_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   }
   Object *array_obj = array_create(frame->parent_isolate->heap);
   if ((index + substr_len) > str_len) {
-    return entity_object(array_obj);
+    return value_object(array_obj);
   }
 
   size_t chars_remaining = str_len - index;
@@ -652,15 +652,15 @@ Entity istring_find_all_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
          NULL != (i_index =
                       find_str(i_index, chars_remaining, substr, substr_len))) {
     int index = i_index - str;
-    Entity index_e = entity_int(index);
+    Value index_e = value_int(index);
     array_add(frame->parent_isolate->heap, array_obj, &index_e);
     i_index++;
     chars_remaining = str_len - index - 1;
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity string_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_substr_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
 
   EXTRACT_TUPLE_ARGS(tupl_args, args, 2, frame, ctx);
@@ -676,11 +676,11 @@ Entity string_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (end < start) {
     return raise_error(frame, ctx, "start_index > end_index.");
   }
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, str->table + start, end - start));
 }
 
-Entity istring_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_substr_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int str_len;
   extract_string_obj(obj, &str, &str_len);
@@ -698,20 +698,20 @@ Entity istring_substr_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (end < start) {
     return raise_error(frame, ctx, "start_index > end_index.");
   }
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, str + start, end - start));
 }
 
-Entity string_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_copy_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, str->table, String_size(str)));
 }
 
 // Returns a mutable String with the same contents.
-Entity istring_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_copy_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   IString *istr = (IString *)obj->_internal_obj;
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, istr->str, istr->len));
 }
 
@@ -748,44 +748,44 @@ static void trim_(String *str, bool left, bool right) {
   }
 }
 
-Entity string_ltrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_ltrim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/false);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity string_rtrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_rtrim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   trim_((String *)obj->_internal_obj, /*left=*/false, /*right=*/true);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity string_trim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_trim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/true);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
 // IStrings are immutable, so trimming one returns a new String.
-static Entity istring_trim_impl_(Frame *frame, Object *obj, bool left,
-                                 bool right) {
+static Value istring_trim_impl_(Frame *frame, Object *obj, bool left,
+                                bool right) {
   IString *istr = (IString *)obj->_internal_obj;
   int start, end;
   trim_bounds_(istr->str, istr->len, left, right, &start, &end);
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, istr->str + start, end - start));
 }
 
-Entity istring_ltrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_ltrim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return istring_trim_impl_(frame, obj, /*left=*/true, /*right=*/false);
 }
 
-Entity istring_rtrim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_rtrim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return istring_trim_impl_(frame, obj, /*left=*/false, /*right=*/true);
 }
 
-Entity istring_trim_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_trim_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return istring_trim_impl_(frame, obj, /*left=*/true, /*right=*/true);
 }
 
-Entity string_lshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_lshrink_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   if (NULL == args || PRIMITIVE != args->type ||
       PRIMITIVE_INT != ptype(&args->pri)) {
@@ -802,10 +802,10 @@ Entity string_lshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (index > 0) {
     String_lshrink(str, index);
   }
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity string_rshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_rshrink_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   if (NULL == args || PRIMITIVE != args->type ||
       PRIMITIVE_INT != ptype(&args->pri)) {
@@ -822,13 +822,13 @@ Entity string_rshrink_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   if (index > 0) {
     String_rshrink(str, index);
   }
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity string_clear_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_clear_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   String_clear(str);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
 typedef struct {
@@ -861,8 +861,8 @@ static bool splitter_next_(Splitter_ *s, int *start, int *len) {
 
 // Splits str around each occurrence of the delimiter in args. Empty parts are
 // kept, except trailing ones (so a trailing delimiter adds no part).
-static Entity split_(Frame *frame, Scope *ctx, const char *str, int len,
-                     const Entity *args) {
+static Value split_(Frame *frame, Scope *ctx, const char *str, int len,
+                    const Value *args) {
   if (!IS_STRING(args)) {
     return raise_error(frame, ctx, "Argument to split() must be a String.");
   }
@@ -885,25 +885,24 @@ static Entity split_(Frame *frame, Scope *ctx, const char *str, int len,
   splitter = (Splitter_){str, len, delim, delim_len, 0, false};
   for (int i = 0; i < num_parts_to_keep; ++i) {
     splitter_next_(&splitter, &start, &part_len);
-    Entity part = entity_object(
+    Value part = value_object(
         string_new(frame->parent_isolate->heap, str + start, part_len));
     array_add(frame->parent_isolate->heap, array_obj, &part);
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity string_split_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_split_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   return split_(frame, ctx, str->table, String_size(str), args);
 }
 
-Entity istring_split_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_split_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   IString *istr = (IString *)obj->_internal_obj;
   return split_(frame, ctx, istr->str, istr->len, args);
 }
 
-Entity string_starts_with_(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
+Value string_starts_with_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   size_t lenstr = String_size(str);
 
@@ -912,14 +911,12 @@ Entity string_starts_with_(Frame *frame, Scope *ctx, Object *obj,
   extract_string(args, &prefix, &lenprefix);
 
   if (lenprefix > lenstr) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return 0 == strncmp(str->table, prefix, lenprefix) ? TRUE_ENTITY
-                                                     : FALSE_ENTITY;
+  return 0 == strncmp(str->table, prefix, lenprefix) ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity istring_starts_with_(Frame *frame, Scope *ctx, Object *obj,
-                            Entity *args) {
+Value istring_starts_with_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int lenstr;
   extract_string_obj(obj, &str, &lenstr);
@@ -929,12 +926,12 @@ Entity istring_starts_with_(Frame *frame, Scope *ctx, Object *obj,
   extract_string(args, &prefix, &lenprefix);
 
   if (lenprefix > lenstr) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return 0 == strncmp(str, prefix, lenprefix) ? TRUE_ENTITY : FALSE_ENTITY;
+  return 0 == strncmp(str, prefix, lenprefix) ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity string_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value string_ends_with_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   String *str = (String *)obj->_internal_obj;
   size_t lenstr = String_size(str);
 
@@ -943,14 +940,14 @@ Entity string_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   extract_string(args, &suffix, &lensuffix);
 
   if (lensuffix > lenstr) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   return 0 == strncmp(str->table + lenstr - lensuffix, suffix, lensuffix)
-             ? TRUE_ENTITY
-             : FALSE_ENTITY;
+             ? TRUE_VALUE
+             : FALSE_VALUE;
 }
 
-Entity istring_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_ends_with_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int lenstr;
   extract_string_obj(obj, &str, &lenstr);
@@ -960,132 +957,128 @@ Entity istring_ends_with_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   extract_string(args, &suffix, &lensuffix);
 
   if (lensuffix > lenstr) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   return 0 == strncmp(str + lenstr - lensuffix, suffix, lensuffix)
-             ? TRUE_ENTITY
-             : FALSE_ENTITY;
+             ? TRUE_VALUE
+             : FALSE_VALUE;
 }
 
-Entity istring_to_s_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value istring_to_s_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char *str;
   int len;
   extract_string_obj(obj, &str, &len);
-  return entity_object(string_new(frame->parent_isolate->heap, str, len));
+  return value_object(string_new(frame->parent_isolate->heap, str, len));
 }
 
-Entity array_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value array_len_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Array *arr = (Array *)obj->_internal_obj;
-  return entity_int(Array_size(arr));
+  return value_int(Array_size(arr));
 }
 
-Entity array_append_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value array_append_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   array_add(frame->parent_isolate->heap, obj, args);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity array_remove_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value array_remove_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return array_remove(frame->parent_isolate->heap, obj, pint(&args->pri));
 }
 
-Entity tuple_len_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value tuple_len_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Tuple *t = (Tuple *)obj->_internal_obj;
-  return entity_int(tuple_size(t));
+  return value_int(tuple_size(t));
 }
 
-Entity object_class_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(obj->_class->_reflection);
+Value object_class_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(obj->_class->_reflection);
 }
 
-Entity object_hash_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_int((int32_t)(intptr_t)obj);
+Value object_hash_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_int((int32_t)(intptr_t)obj);
 }
 
-Entity object_address_int_(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
-  return entity_int((int32_t)(intptr_t)obj);
+Value object_address_int_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_int((int32_t)(intptr_t)obj);
 }
 
-Entity object_address_hex_(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
+Value object_address_hex_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   char buffer[BUFFER_SIZE];
   int num_written = snprintf(buffer, BUFFER_SIZE, "%p", obj);
   ASSERT(num_written > 0);
-  return entity_object(
+  return value_object(
       string_new(frame->parent_isolate->heap, buffer, num_written));
 }
 
-Entity class_module_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(obj->_class_obj->_module->_reflection);
+Value class_module_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(obj->_class_obj->_module->_reflection);
 }
 
-Entity function_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(istring_new_no_intern(
-      frame->parent_isolate->heap, obj->_function_obj->_name,
-      strlen(obj->_function_obj->_name)));
+Value function_name_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(istring_new_no_intern(frame->parent_isolate->heap,
+                                            obj->_function_obj->_name,
+                                            strlen(obj->_function_obj->_name)));
 }
 
-Entity function_module_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(obj->_function_obj->_module->_reflection);
+Value function_module_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(obj->_function_obj->_module->_reflection);
 }
 
-Entity function_is_method_(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
-  return (NULL == obj->_function_obj->_parent_class) ? FALSE_ENTITY
-                                                     : TRUE_ENTITY;
+Value function_is_method_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return (NULL == obj->_function_obj->_parent_class) ? FALSE_VALUE : TRUE_VALUE;
 }
-Entity function_parent_class_(Frame *frame, Scope *ctx, Object *obj,
-                              Entity *args) {
+Value function_parent_class_(Frame *frame, Scope *ctx, Object *obj,
+                             Value *args) {
   return (NULL == obj->_function_obj->_parent_class)
-             ? NONE_ENTITY
-             : entity_object(obj->_function_obj->_parent_class->_reflection);
+             ? NONE_VALUE
+             : value_object(obj->_function_obj->_parent_class->_reflection);
 }
 
-Entity class_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(istring_new_no_intern(frame->parent_isolate->heap,
-                                             obj->_class_obj->_name,
-                                             strlen(obj->_class_obj->_name)));
+Value class_name_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(istring_new_no_intern(frame->parent_isolate->heap,
+                                            obj->_class_obj->_name,
+                                            strlen(obj->_class_obj->_name)));
 }
 
-Entity module_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_object(istring_new_no_intern(frame->parent_isolate->heap,
-                                             obj->_module_obj->_name,
-                                             strlen(obj->_module_obj->_name)));
+Value module_name_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_object(istring_new_no_intern(frame->parent_isolate->heap,
+                                            obj->_module_obj->_name,
+                                            strlen(obj->_module_obj->_name)));
 }
 
-Entity module_functions_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value module_functions_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Module);
   Object *array_obj = array_create(frame->parent_isolate->heap);
   Module *m = obj->_module_obj;
   FunctionMapIterator funcs = module_functions(m);
   for (; FunctionMap_has_entry(&funcs); FunctionMap_next_entry(&funcs)) {
     const Function *f = FunctionMap_value(&funcs);
-    Entity func = entity_object(f->_reflection);
+    Value func = value_object(f->_reflection);
     array_add(frame->parent_isolate->heap, array_obj, &func);
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity module_classes_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value module_classes_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Module);
   Object *array_obj = array_create(frame->parent_isolate->heap);
   Module *m = obj->_module_obj;
   ClassMapIterator classes = module_classes(m);
   for (; ClassMap_has_entry(&classes); ClassMap_next_entry(&classes)) {
     const Class *c = ClassMap_value(&classes);
-    Entity class = entity_object(c->_reflection);
+    Value class = value_object(c->_reflection);
     array_add(frame->parent_isolate->heap, array_obj, &class);
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity module_has_dl_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value module_has_dl_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Module);
   Module *m = obj->_module_obj;
-  return m->dl != NULL ? TRUE_ENTITY : FALSE_ENTITY;
+  return m->dl != NULL ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Module);
   Module *m = obj->_module_obj;
   if (!m->dl) {
@@ -1098,23 +1091,23 @@ Entity module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
                        "Attempted dlcall on module with invalid arguments.");
   }
   const char *fn_name;
-  Entity args_to_pass = NONE_ENTITY;
+  Value args_to_pass = NONE_VALUE;
   if (IS_STRING(args)) {
-    fn_name = entity_string_copy(args);
+    fn_name = value_string_copy(args);
   } else {
     Tuple *tuple = (Tuple *)args->obj->_internal_obj;
     if (tuple_size(tuple) == 0) {
       return raise_error(frame, ctx,
                          "Attempted dlcall on module with invalid arguments.");
     }
-    fn_name = entity_string_copy(tuple_get(tuple, 0));
+    fn_name = value_string_copy(tuple_get(tuple, 0));
 
     if (tuple_size(tuple) == 2) {
       args_to_pass = *tuple_get(tuple, 1);
     } else {
       Object *tuple_obj = heap_new(frame->parent_isolate->heap, Class_Tuple);
       tuple_obj->_internal_obj = tuple_create(tuple_size(tuple) - 1);
-      args_to_pass = entity_object(tuple_obj);
+      args_to_pass = value_object(tuple_obj);
       for (int i = 0; i < tuple_size(tuple) - 1; ++i) {
         tuple_set(frame->parent_isolate->heap, tuple_obj, i,
                   tuple_get(tuple, i + 1));
@@ -1124,7 +1117,7 @@ Entity module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   char error_buf[255];
   NativeFunctionHandlerFn fn;
   if (!open_dl_sym(m->dl, fn_name, (DlFnHandle *)&fn, error_buf)) {
-    Entity error = raise_error(
+    Value error = raise_error(
         frame, ctx,
         "Attempted dlcall on module which did not have function by name '%s'.",
         fn_name);
@@ -1138,38 +1131,37 @@ Entity module_dlcall_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   return *FunctionContext_get_retval(&fn_ctx);
 }
 
-Entity function_ref_name_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value function_ref_name_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   const char *name = function_ref_get_func(obj)->_name;
-  return entity_object(
+  return value_object(
       istring_new_no_intern(frame->parent_isolate->heap, name, strlen(name)));
 }
 
-Entity function_ref_module_(Frame *frame, Scope *ctx, Object *obj,
-                            Entity *args) {
+Value function_ref_module_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   const Function *f = function_ref_get_func(obj);
-  return entity_object(f->_module->_reflection);
+  return value_object(f->_module->_reflection);
 }
 
-Entity function_ref_func_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value function_ref_func_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   const Function *f = function_ref_get_func(obj);
-  return entity_object(f->_reflection);
+  return value_object(f->_reflection);
 }
 
-Entity function_ref_obj_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value function_ref_obj_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Object *f_obj = function_ref_get_object(obj);
-  return entity_object(f_obj);
+  return value_object(f_obj);
 }
 
 void range_init_(Object *obj) { obj->_internal_obj = CNEW(Range_); }
 void range_delete_(Object *obj) { RELEASE(obj->_internal_obj); }
 
-void range_copy_(EntityCopier *copier, Object *src_obj, Object *target_obj) {
+void range_copy_(ValueCopier *copier, Object *src_obj, Object *target_obj) {
   Range_ *src = (Range_ *)src_obj->_internal_obj;
   Range_ *target = (Range_ *)target_obj->_internal_obj;
   *target = *src;
 }
 
-Entity range_constructor_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value range_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t, args, 3, frame, ctx);
 
   Range_ *range = (Range_ *)obj->_internal_obj;
@@ -1178,39 +1170,39 @@ Entity range_constructor_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   EXTRACT_INT_AT_INDEX_OR_THROW(range->inc, t, 1);
   EXTRACT_INT_AT_INDEX_OR_THROW(range->end, t, 2);
 
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity range_start_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_int(((Range_ *)obj->_internal_obj)->start);
+Value range_start_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_int(((Range_ *)obj->_internal_obj)->start);
 }
 
-Entity range_inc_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_int(((Range_ *)obj->_internal_obj)->inc);
+Value range_inc_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_int(((Range_ *)obj->_internal_obj)->inc);
 }
 
-Entity range_end_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  return entity_int(((Range_ *)obj->_internal_obj)->end);
+Value range_end_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return value_int(((Range_ *)obj->_internal_obj)->end);
 }
 
-Entity class_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value class_super_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return (NULL == obj->_class_obj->_super)
-             ? NONE_ENTITY
-             : entity_object(obj->_class_obj->_super->_reflection);
+             ? NONE_VALUE
+             : value_object(obj->_class_obj->_super->_reflection);
 }
 
-Entity class_is_subclass_of_(Frame *frame, Scope *ctx, Object *obj,
-                             Entity *args) {
+Value class_is_subclass_of_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
   if (!IS_CLASS(args, Class_Class)) {
     return raise_error(frame, ctx,
                        "is_subclass_of() requires a Class as an argument.");
   }
   const bool is_subclass_of =
       inherits_from(obj->_class_obj, args->obj->_class_obj);
-  return is_subclass_of ? TRUE_ENTITY : FALSE_ENTITY;
+  return is_subclass_of ? TRUE_VALUE : FALSE_VALUE;
 }
 
-Entity object_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value object_super_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_CLASS(args, Class_Class)) {
     return raise_error(frame, ctx, "super() requires a Class as an argument.");
   }
@@ -1226,30 +1218,30 @@ Entity object_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
     super = super->_super;
   }
   if (NULL != constructor) {
-    return entity_object(wrap_function_in_ref2_(constructor, obj, frame, ctx));
+    return value_object(wrap_function_in_ref2_(constructor, obj, frame, ctx));
   }
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity object_copy_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
-  Entity e = entity_object(obj);
-  return entity_copy(&e, frame->parent_isolate->heap);
+Value object_copy_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Value e = value_object(obj);
+  return value_copy(&e, frame->parent_isolate->heap);
 }
 
-Entity class_methods_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value class_methods_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Class);
   Object *array_obj = array_create(frame->parent_isolate->heap);
   Class *c = obj->_class_obj;
   FunctionMapIterator funcs = class_functions(c);
   for (; FunctionMap_has_entry(&funcs); FunctionMap_next_entry(&funcs)) {
     const Function *f = FunctionMap_value(&funcs);
-    Entity func = entity_object(f->_reflection);
+    Value func = value_object(f->_reflection);
     array_add(frame->parent_isolate->heap, array_obj, &func);
   }
-  return entity_object(array_obj);
+  return value_object(array_obj);
 }
 
-Entity class_set_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value class_set_super_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_CLASS(args, Class_Class)) {
     return raise_error(frame, ctx,
                        "Argument 1 of $_set_super_ must be of type Class.");
@@ -1257,36 +1249,36 @@ Entity class_set_super_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   Class *class = obj->_class_obj;
   Class *new_super = args->obj->_class_obj;
   class->_super = new_super;
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity class_fields_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value class_fields_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   ASSERT(obj->_class == Class_Class);
   return *object_get(obj, FIELDS_PRIVATE_KEY);
 }
 
-Entity set_member_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value set_member_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t_args, args, 2, frame, ctx);
 
   if (!IS_STRING(tuple_get(t_args, 0))) {
     return raise_error(frame, ctx,
                        "First argument to $set() must be a String.");
   }
-  const char *key = intern_entity(tuple_get(t_args, 0));
+  const char *key = intern_value(tuple_get(t_args, 0));
   object_set_member(frame->parent_isolate->heap, obj, key,
                     tuple_get(t_args, 1));
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity class_set_method_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value class_set_method_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t_args, args, 2, frame, ctx);
 
   if (!IS_STRING(tuple_get(t_args, 0))) {
     return raise_error(frame, ctx,
                        "First argument to $set_method() must be a String.");
   }
-  const char *key = intern_entity(tuple_get(t_args, 0));
-  const Entity *arg1 = tuple_get(t_args, 1);
+  const char *key = intern_value(tuple_get(t_args, 0));
+  const Value *arg1 = tuple_get(t_args, 1);
   // if (IS_CLASS(arg1, Class_FunctionRef)) {
   //   const Function *func = function_ref_get_func(arg1->obj);
   //   add_reflection_to_function(
@@ -1300,14 +1292,14 @@ Entity class_set_method_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   // }
   object_set_member(frame->parent_isolate->heap, obj, key, arg1);
 
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity get_member_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value get_member_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_STRING(args)) {
     return raise_error(frame, ctx, "$get() can only be called with a String.");
   }
-  const char *key = intern_entity(args);
+  const char *key = intern_value(args);
   return object_get_maybe_wrap(obj, key, frame->parent_isolate->heap, ctx);
 }
 
@@ -1315,8 +1307,8 @@ void isolate_init_(Object *obj) {}
 void isolate_delete_(Object *obj) {}
 
 // Not safe after new process is started.
-Entity create_future_for_isolate_(Isolate *isolate, Isolate *new_isolate,
-                                  Frame *frame) {
+Value create_future_for_isolate_(Isolate *isolate, Isolate *new_isolate,
+                                 Frame *frame) {
   Frame *new_frame = isolate_create_unqueued_frame(isolate);
   new_frame->parent_frame = frame;
 
@@ -1325,14 +1317,14 @@ Entity create_future_for_isolate_(Isolate *isolate, Isolate *new_isolate,
 
   isolate_insert_waiting_frame(isolate, new_frame);
 
-  return entity_object(future_obj);
+  return value_object(future_obj);
 }
 
-Entity isolate_start_(Frame *current_frame, Scope *current_ctx, Object *obj,
-                      Entity *args) {
+Value isolate_start_(Frame *current_frame, Scope *current_ctx, Object *obj,
+                     Value *args) {
   Isolate *isolate = (Isolate *)obj->_internal_obj;
-  Entity future = create_future_for_isolate_(current_frame->parent_isolate,
-                                             isolate, current_frame);
+  Value future = create_future_for_isolate_(current_frame->parent_isolate,
+                                            isolate, current_frame);
   isolate_run_in_new_thread(isolate);
   return future;
 }
@@ -1353,10 +1345,10 @@ void actor_init_(Object *obj) { create_actor_on_object(obj); }
 
 void actor_delete_(Object *obj) { actor_delete(extract_actor_from_obj(obj)); }
 
-Entity actor_isolate_(Frame *current_frame, Scope *current_ctx, Object *obj,
-                      Entity *args) {
+Value actor_isolate_(Frame *current_frame, Scope *current_ctx, Object *obj,
+                     Value *args) {
   ActorRef *actor = extract_actor_from_obj(obj);
-  return entity_object(actor_get_isolate(actor)->_reflection);
+  return value_object(actor_get_isolate(actor)->_reflection);
 }
 
 void builtin_add_string_(Module *builtin) {

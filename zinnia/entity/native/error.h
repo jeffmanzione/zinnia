@@ -20,11 +20,11 @@ void error_add_native(ModuleManager *mm, Module *error);
 uint32_t stackline_linenum(Object *stackline);
 Module *stackline_module(Object *stackline);
 
-Entity raise_error(Frame *frame, Scope *scope, const char fmt[], ...);
-Entity raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args);
-Entity raise_error_with_object(Frame *frame, Scope *scope, Object *err);
+Value raise_error(Frame *frame, Scope *scope, const char fmt[], ...);
+Value raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args);
+Value raise_error_with_object(Frame *frame, Scope *scope, Object *err);
 
-Entity native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
-                                   ...);
+Value native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
+                                  ...);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_ERROR_H_ */

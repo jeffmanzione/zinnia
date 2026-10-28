@@ -29,7 +29,7 @@ const char *wait_reason_str(WaitReason reason) { return _wait_reasons[reason]; }
 void frame_init(Frame *frame) {
   frame->state = FRAME_NEW;
   frame->wait_reason = WAITING_TO_START;
-  EntityStack_init(&frame->entity_stack);
+  ValueStack_init(&frame->value_stack);
   frame->parent_frame = NULL;
   FrameSet_init(&frame->dependent_frames, hash_frame, compare_frames);
   frame->child_frame_has_error = false;
@@ -44,7 +44,7 @@ void frame_finalize(Frame *frame) {
     return;
   }
   FrameSet_finalize(&frame->dependent_frames);
-  EntityStack_finalize(&frame->entity_stack);
+  ValueStack_finalize(&frame->value_stack);
   if (NULL != frame->parent_isolate) {
     heap_dec_edge(frame->parent_isolate->heap,
                   frame->parent_isolate->_reflection, frame->_reflection);
@@ -73,32 +73,32 @@ Scope *frame_back_scope(Frame *frame) {
   return frame->current;
 }
 
-Entity frame_popstack(Frame *frame) {
-  ASSERT(EntityStack_size(&frame->entity_stack) > 0);
-  Entity e = *frame_peekstack(frame);
+Value frame_popstack(Frame *frame) {
+  ASSERT(ValueStack_size(&frame->value_stack) > 0);
+  Value e = *frame_peekstack(frame);
   frame_dropstack(frame);
   return e;
 }
 
-const Entity *frame_peekstack(Frame *frame) {
-  ASSERT(EntityStack_size(&frame->entity_stack) > 0);
-  return EntityStack_last_ref_unchecked(&frame->entity_stack);
+const Value *frame_peekstack(Frame *frame) {
+  ASSERT(ValueStack_size(&frame->value_stack) > 0);
+  return ValueStack_last_ref_unchecked(&frame->value_stack);
 }
 
-const Entity *frame_peekstack_n(Frame *frame, int n) {
-  ASSERT(EntityStack_size(&frame->entity_stack) > n);
-  return EntityStack_get_ref_unchecked(
-      &frame->entity_stack, EntityStack_size(&frame->entity_stack) - 1 - n);
+const Value *frame_peekstack_n(Frame *frame, int n) {
+  ASSERT(ValueStack_size(&frame->value_stack) > n);
+  return ValueStack_get_ref_unchecked(
+      &frame->value_stack, ValueStack_size(&frame->value_stack) - 1 - n);
 }
 
 void frame_dropstack(Frame *frame) {
-  EntityStack_pop_back_unchecked(&frame->entity_stack);
+  ValueStack_pop_back_unchecked(&frame->value_stack);
 }
 
-Entity *frame_pushstack(Frame *frame) {
-  return EntityStack_push_back_ref(&frame->entity_stack);
+Value *frame_pushstack(Frame *frame) {
+  return ValueStack_push_back_ref(&frame->value_stack);
 }
 
-const Entity *frame_get_acc(Frame *frame) { return &frame->acc; }
+const Value *frame_get_acc(Frame *frame) { return &frame->acc; }
 
-Entity *frame_mutable_acc(Frame *frame) { return &frame->acc; }
+Value *frame_mutable_acc(Frame *frame) { return &frame->acc; }

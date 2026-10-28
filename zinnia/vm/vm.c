@@ -35,10 +35,10 @@ Isolate *vm_create_isolate(VM *vm) {
   return isolate;
 }
 
-Entity *class_get_field(const Class *cls, const char name[]) {
+Value *class_get_field(const Class *cls, const char name[]) {
   const Class *class = cls;
   while (NULL != class) {
-    Entity *field = object_get(cls->_reflection, name);
+    Value *field = object_get(cls->_reflection, name);
     if (NULL != field) {
       return field;
     }
@@ -47,25 +47,25 @@ Entity *class_get_field(const Class *cls, const char name[]) {
   return NULL;
 }
 
-Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
-                             Scope *ctx) {
-  Entity member = NONE_ENTITY;
-  const Entity *member_ptr =
+Value object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
+                            Scope *ctx) {
+  Value member = NONE_VALUE;
+  const Value *member_ptr =
       (Class_Class == obj->_class) ? NULL : object_get(obj, field);
 
   if (NULL == member_ptr) {
     const Function *f = class_get_function(obj->_class, field);
     if (NULL != f) {
-      member = entity_object(f->_reflection);
+      member = value_object(f->_reflection);
     } else {
-      Entity *field_value = class_get_field(obj->_class, field);
+      Value *field_value = class_get_field(obj->_class, field);
       if (NULL != field_value) {
         return *field_value;
       }
       if (obj->_class == Class_Class) {
         field_value = class_get_field(obj->_class_obj, field);
         if (NULL == field_value) {
-          return NONE_ENTITY;
+          return NONE_VALUE;
         }
         return *field_value;
       }
@@ -74,7 +74,7 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
     member = *member_ptr;
   }
   if (OBJECT == member.type && Class_Function == member.obj->_class) {
-    return entity_object(
+    return value_object(
         wrap_function_in_ref(member.obj->_function_obj, obj, heap, ctx));
   }
   return member;
@@ -95,10 +95,10 @@ void frame_inc_all_scope_(Isolate *isolate, Frame *frame) {
     Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
     heap_inc_edge(heap, dependent_frame->_reflection, frame->_reflection);
   }
-  EntityStackIterator stack;
-  EntityStack_iterator(&stack, &frame->entity_stack);
-  for (; EntityStack_has_next(&stack); EntityStack_next(&stack)) {
-    Entity *e = EntityStack_mutable_value(&stack);
+  ValueStackIterator stack;
+  ValueStack_iterator(&stack, &frame->value_stack);
+  for (; ValueStack_has_next(&stack); ValueStack_next(&stack)) {
+    Value *e = ValueStack_mutable_value(&stack);
     if (OBJECT == e->type) {
       heap_inc_edge(heap, frame->_reflection, e->obj);
     }
@@ -135,10 +135,10 @@ void frame_dec_all_scope_(Isolate *isolate, Frame *frame) {
     Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
     heap_dec_edge(heap, dependent_frame->_reflection, frame->_reflection);
   }
-  EntityStackIterator stack;
-  EntityStack_iterator(&stack, &frame->entity_stack);
-  for (; EntityStack_has_next(&stack); EntityStack_next(&stack)) {
-    Entity *e = EntityStack_mutable_value(&stack);
+  ValueStackIterator stack;
+  ValueStack_iterator(&stack, &frame->value_stack);
+  for (; ValueStack_has_next(&stack); ValueStack_next(&stack)) {
+    Value *e = ValueStack_mutable_value(&stack);
     if (OBJECT == e->type) {
       heap_dec_edge(heap, frame->_reflection, e->obj);
     }

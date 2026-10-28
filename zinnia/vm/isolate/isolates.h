@@ -28,7 +28,7 @@ uint32_t hash_frame(const Frame *tsk, uint32_t size);
 int32_t compare_frames(const Frame *tsk1, uint32_t size1, const Frame *tsk2,
                        uint32_t size2);
 
-DEFINE_ARRAYLIKE(EntityStack, Entity);
+DEFINE_ARRAYLIKE(ValueStack, Value);
 DEFINE_SETLIKE(FrameSet, Frame *);
 DEFINE_ARRAYLIKE(FrameArray, Frame *);
 
@@ -38,7 +38,7 @@ struct __Scope {
 
   Object *_reflection;
 
-  Entity self;
+  Value self;
   Module *module;
   const Tape *tape;
   const Function *func;
@@ -70,8 +70,8 @@ struct __Frame {
   Isolate *parent_isolate;
   Scope *current;
 
-  Entity acc;
-  EntityStack entity_stack;
+  Value acc;
+  ValueStack value_stack;
 
   Frame *parent_frame;
 

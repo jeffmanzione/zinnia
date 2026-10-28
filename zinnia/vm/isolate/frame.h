@@ -6,7 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/vm/isolate/isolates.h"
 
 const char *frame_state_str(FrameState state);
@@ -18,13 +18,13 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
                           uint32_t instruction_pos);
 Scope *frame_back_scope(Frame *frame);
 
-Entity frame_popstack(Frame *frame);
-const Entity *frame_peekstack(Frame *frame);
-const Entity *frame_peekstack_n(Frame *frame, int n);
+Value frame_popstack(Frame *frame);
+const Value *frame_peekstack(Frame *frame);
+const Value *frame_peekstack_n(Frame *frame, int n);
 void frame_dropstack(Frame *frame);
-Entity *frame_pushstack(Frame *frame);
+Value *frame_pushstack(Frame *frame);
 
-const Entity *frame_get_acc(Frame *frame);
-Entity *frame_mutable_acc(Frame *frame);
+const Value *frame_get_acc(Frame *frame);
+Value *frame_mutable_acc(Frame *frame);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_ */

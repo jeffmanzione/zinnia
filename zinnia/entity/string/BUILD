@@ -10,7 +10,7 @@ cc_library(
     hdrs = ["string.h"],
     deps = [
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/util:error",
         "//zinnia/vm:intern",

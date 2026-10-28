@@ -74,11 +74,11 @@ void *function_ref_get_parent_scope(Object *fn_ref_obj) {
   return func_ref->parent_scope;
 }
 
-void function_ref_copy(EntityCopier *copier, const Object *src_obj,
+void function_ref_copy(ValueCopier *copier, const Object *src_obj,
                        Object *target_obj) {
   _FunctionRef *func_ref = (_FunctionRef *)src_obj->_internal_obj;
-  Entity e = entity_object(func_ref->obj);
-  Entity cpy_obj = entitycopier_copy(copier, &e);
+  Value e = value_object(func_ref->obj);
+  Value cpy_obj = valuecopier_copy(copier, &e);
   // TODO: Deep copy parent context?
   function_ref_init__(target_obj, cpy_obj.obj, func_ref->func,
                       func_ref->parent_scope, copier->target);

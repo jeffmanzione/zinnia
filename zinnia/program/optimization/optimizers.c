@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/program/optimization/optimizer.h"
 #include "zinnia/program/tape.h"

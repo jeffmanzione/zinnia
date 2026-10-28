@@ -31,8 +31,8 @@ ModuleManager *vm_module_manager(VM *vm);
 Isolate *vm_create_isolate(VM *vm);
 Isolate *create_isolate_no_reflection(VM *vm);
 void add_reflection_to_isolate(Isolate *isolate);
-Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
-                             Scope *ctx);
+Value object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
+                            Scope *ctx);
 
 uint32_t isolate_collect_garbage(Isolate *isolate);
 

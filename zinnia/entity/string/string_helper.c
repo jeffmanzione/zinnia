@@ -28,7 +28,7 @@ Object *istring_new_no_intern(Heap *heap, const char src[], size_t len) {
   return str;
 }
 
-bool extract_string(const Entity *e, char **raw_str, int *len) {
+bool extract_string(const Value *e, char **raw_str, int *len) {
   if (IS_CLASS(e, Class_String)) {
     const String *str = (String *)e->obj->_internal_obj;
     *raw_str = str->table;
@@ -64,7 +64,7 @@ bool extract_string_obj(const Object *obj, char **raw_str, int *len) {
   return false;
 }
 
-const char *intern_entity(const Entity *e) {
+const char *intern_value(const Value *e) {
   if (IS_CLASS(e, Class_String)) {
     const String *str = (String *)e->obj->_internal_obj;
     return global_intern_range(str->table, 0, String_size(str));
@@ -76,7 +76,7 @@ const char *intern_entity(const Entity *e) {
   return NULL;
 }
 
-int entity_string_len(const Entity *e) {
+int value_string_len(const Value *e) {
   if (IS_CLASS(e, Class_String)) {
     const String *str = (String *)e->obj->_internal_obj;
     return String_size(str);
@@ -88,7 +88,7 @@ int entity_string_len(const Entity *e) {
   return -1;
 }
 
-char *entity_string_copy(const Entity *e) {
+char *value_string_copy(const Value *e) {
   char *str;
   int len;
   extract_string(e, &str, &len);

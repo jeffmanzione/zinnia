@@ -10,7 +10,6 @@
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/array/array.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/native/async.h"
 #include "zinnia/entity/native/builder/function_context.h"
@@ -21,6 +20,7 @@
 #include "zinnia/entity/string/string.h"
 #include "zinnia/entity/string/string_helper.h"
 #include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/sync/mutex.h"
 #include "zinnia/util/sync/thread.h"
@@ -97,66 +97,66 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
     return primitive_int(char_of(p1) symbol char_of(p2));               \
   }
 
-#define PRIMITIVE_OP(op, symbol, math_fn)                                    \
-  math_fn;                                                                   \
-  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                     \
-                     const Instruction *ins) {                               \
-    const Entity *acc, *lookup;                                              \
-    Entity first, second, tmp;                                               \
-    switch (ins->type) {                                                     \
-      case INSTRUCTION_NO_ARG:                                               \
-        second = frame_popstack(frame);                                      \
-        if (PRIMITIVE != second.type) {                                      \
-          raise_error(frame, scope, "RHS for op '%s' must be primitive.",    \
-                      #op);                                                  \
-          return;                                                            \
-        }                                                                    \
-        first = frame_popstack(frame);                                       \
-        if (PRIMITIVE != first.type) {                                       \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.",    \
-                      #op);                                                  \
-          return;                                                            \
-        }                                                                    \
-        *frame_mutable_acc(frame) = entity_primitive(                        \
-            _execute_primitive_##op(&first.pri, &second.pri));               \
-        break;                                                               \
-      case INSTRUCTION_ID:                                                   \
-        acc = frame_get_acc(frame);                                          \
-        if (NULL != acc && PRIMITIVE != acc->type) {                         \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.",    \
-                      #op);                                                  \
-          return;                                                            \
-        }                                                                    \
-        lookup = scope_lookup(scope, ins->id, &tmp);                         \
-        if (NULL != lookup && PRIMITIVE != lookup->type) {                   \
-          raise_error(frame, scope, "RHS for op '%s' must be primitive.",    \
-                      #op);                                                  \
-          return;                                                            \
-        }                                                                    \
-        *frame_mutable_acc(frame) = entity_primitive(                        \
-            _execute_primitive_##op(&acc->pri, &lookup->pri));               \
-        break;                                                               \
-      case INSTRUCTION_PRIMITIVE:                                            \
-        acc = frame_get_acc(frame);                                          \
-        if (NULL != acc && PRIMITIVE != acc->type) {                         \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.",    \
-                      #op);                                                  \
-          return;                                                            \
-        }                                                                    \
-        *frame_mutable_acc(frame) =                                          \
-            entity_primitive(_execute_primitive_##op(&acc->pri, &ins->val)); \
-        break;                                                               \
-      default:                                                               \
-        FATALF("Invalid arg type=%d for " #op ".", ins->type);               \
-    }                                                                        \
+#define PRIMITIVE_OP(op, symbol, math_fn)                                      \
+  math_fn;                                                                     \
+  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                       \
+                     const Instruction *ins) {                                 \
+    const Value *acc, *lookup;                                                 \
+    Value first, second, tmp;                                                  \
+    switch (ins->type) {                                                       \
+      case INSTRUCTION_NO_ARG:                                                 \
+        second = frame_popstack(frame);                                        \
+        if (PRIMITIVE != second.type) {                                        \
+          raise_error(frame, scope, "RHS for op '%s' must be primitive.",      \
+                      #op);                                                    \
+          return;                                                              \
+        }                                                                      \
+        first = frame_popstack(frame);                                         \
+        if (PRIMITIVE != first.type) {                                         \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",      \
+                      #op);                                                    \
+          return;                                                              \
+        }                                                                      \
+        *frame_mutable_acc(frame) =                                            \
+            value_primitive(_execute_primitive_##op(&first.pri, &second.pri)); \
+        break;                                                                 \
+      case INSTRUCTION_ID:                                                     \
+        acc = frame_get_acc(frame);                                            \
+        if (NULL != acc && PRIMITIVE != acc->type) {                           \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",      \
+                      #op);                                                    \
+          return;                                                              \
+        }                                                                      \
+        lookup = scope_lookup(scope, ins->id, &tmp);                           \
+        if (NULL != lookup && PRIMITIVE != lookup->type) {                     \
+          raise_error(frame, scope, "RHS for op '%s' must be primitive.",      \
+                      #op);                                                    \
+          return;                                                              \
+        }                                                                      \
+        *frame_mutable_acc(frame) =                                            \
+            value_primitive(_execute_primitive_##op(&acc->pri, &lookup->pri)); \
+        break;                                                                 \
+      case INSTRUCTION_PRIMITIVE:                                              \
+        acc = frame_get_acc(frame);                                            \
+        if (NULL != acc && PRIMITIVE != acc->type) {                           \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",      \
+                      #op);                                                    \
+          return;                                                              \
+        }                                                                      \
+        *frame_mutable_acc(frame) =                                            \
+            value_primitive(_execute_primitive_##op(&acc->pri, &ins->val));    \
+        break;                                                                 \
+      default:                                                                 \
+        FATALF("Invalid arg type=%d for " #op ".", ins->type);                 \
+    }                                                                          \
   }
 
 #define PRIMITIVE_BOOL_OP(op, symbol, math_fn)                            \
   math_fn;                                                                \
   void _execute_##op(VM *vm, Frame *frame, Scope *scope,                  \
                      const Instruction *ins) {                            \
-    const Entity *acc, *lookup;                                           \
-    Entity first, second, tmp;                                            \
+    const Value *acc, *lookup;                                            \
+    Value first, second, tmp;                                             \
     Primitive result;                                                     \
     switch (ins->type) {                                                  \
       case INSTRUCTION_NO_ARG:                                            \
@@ -174,7 +174,7 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
         }                                                                 \
         result = _execute_primitive_##op(&first.pri, &second.pri);        \
         *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;            \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
         break;                                                            \
       case INSTRUCTION_ID:                                                \
         acc = frame_get_acc(frame);                                       \
@@ -192,7 +192,7 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
         }                                                                 \
         result = _execute_primitive_##op(&acc->pri, &lookup->pri);        \
         *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;            \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
         break;                                                            \
       case INSTRUCTION_PRIMITIVE:                                         \
         acc = frame_get_acc(frame);                                       \
@@ -203,7 +203,7 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
         }                                                                 \
         result = _execute_primitive_##op(&acc->pri, &ins->val);           \
         *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_ENTITY : TRUE_ENTITY;            \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
         break;                                                            \
       default:                                                            \
         FATALF("Invalid arg type=%d for " #op ".", ins->type);            \
@@ -225,7 +225,7 @@ PRIMITIVE_OP(BAND, &, MATH_OP_INT(BAND, &));
 PRIMITIVE_OP(BXOR, ^, MATH_OP_INT(BXOR, ^));
 PRIMITIVE_OP(BOR, |, MATH_OP_INT(BOR, |));
 
-Entity string_concat(Frame *frame, const Entity *s1, const Entity *s2) {
+Value string_concat(Frame *frame, const Value *s1, const Value *s2) {
   ASSERT(IS_STRING(s1));
   ASSERT(IS_STRING(s2));
 
@@ -240,25 +240,25 @@ Entity string_concat(Frame *frame, const Entity *s1, const Entity *s2) {
   Object *new = string_new(frame->parent_isolate->heap, s1_str, s1_str_len);
   String *new_str = (String *)new->_internal_obj;
   String_append_raw(new_str, s2_str, s2_str_len);
-  return entity_object(new);
+  return value_object(new);
 }
 
 void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
                               const Instruction *ins) {
   if (INSTRUCTION_NO_ARG == ins->type) {
-    const Entity *first_ptr = frame_peekstack_n(frame, 1);
-    const Entity *second_ptr = frame_peekstack(frame);
+    const Value *first_ptr = frame_peekstack_n(frame, 1);
+    const Value *second_ptr = frame_peekstack(frame);
     if (IS_STRING(first_ptr) && IS_STRING(second_ptr)) {
-      Entity second = frame_popstack(frame);
-      Entity first = frame_popstack(frame);
+      Value second = frame_popstack(frame);
+      Value first = frame_popstack(frame);
       *frame_mutable_acc(frame) = string_concat(frame, &first, &second);
       return;
     }
   } else if (INSTRUCTION_ID == ins->type) {
-    const Entity *acc = frame_get_acc(frame);
+    const Value *acc = frame_get_acc(frame);
     if (IS_STRING(acc)) {
-      Entity tmp;
-      Entity *lookup = scope_lookup(scope, ins->id, &tmp);
+      Value tmp;
+      Value *lookup = scope_lookup(scope, ins->id, &tmp);
       if (!IS_STRING(lookup)) {
         raise_error(frame, scope, "RHS for op '+' must be String.");
         return;
@@ -272,8 +272,8 @@ void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
 
 void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   const int inc_amount = ins->op == INC ? 1 : -1;
-  Entity tmp;
-  Entity *stored = scope_lookup(scope, ins->id, &tmp);
+  Value tmp;
+  Value *stored = scope_lookup(scope, ins->id, &tmp);
   if (NULL == stored || NONE == stored->type || OBJECT == stored->type) {
     raise_error(frame, scope, "Can only increment a primitive.");
   }
@@ -295,8 +295,8 @@ void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 
 void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
                            const Instruction *ins) {
-  Entity first, second;
-  const Entity *tmp;
+  Value first, second;
+  const Value *tmp;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       tmp = frame_peekstack_n(frame, 1);
@@ -319,7 +319,7 @@ void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
         break;
       }
       tmp = scope_lookup(scope, ins->id, &second);
-      *frame_mutable_acc(frame) = (NULL == tmp) ? NONE_ENTITY : *tmp;
+      *frame_mutable_acc(frame) = (NULL == tmp) ? NONE_VALUE : *tmp;
       break;
     case INSTRUCTION_PRIMITIVE:
       first = *frame_get_acc(frame);
@@ -330,50 +330,49 @@ void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
       if (NONE != first.type) {
         break;
       }
-      *frame_mutable_acc(frame) = entity_primitive(ins->val);
+      *frame_mutable_acc(frame) = value_primitive(ins->val);
       break;
     default:
       FATALF("Invalid arg type=%d for BOR.", ins->type);
   }
 }
 
-Entity _module_filename(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value _module_filename(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   const FileInfo *fi = modulemanager_get_fileinfo(
       vm_module_manager(frame->parent_isolate->vm), obj->_module_obj);
   if (NULL == fi) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   if (NULL == file_info_name(fi)) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_object(istring_new(frame->parent_isolate->heap,
-                                   file_info_name(fi),
-                                   strlen(file_info_name(fi))));
+  return value_object(istring_new(frame->parent_isolate->heap,
+                                  file_info_name(fi),
+                                  strlen(file_info_name(fi))));
 }
 
-Entity _module_source_filename(Frame *frame, Scope *ctx, Object *obj,
-                               Entity *args) {
+Value _module_source_filename(Frame *frame, Scope *ctx, Object *obj,
+                              Value *args) {
   const char *source_fn = tape_get_external_source(obj->_module_obj->_tape);
   if (NULL != source_fn) {
-    return entity_object(
+    return value_object(
         istring_new(frame->parent_isolate->heap, source_fn, strlen(source_fn)));
   } else {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
 }
 
-Entity _stackline_linetext(Frame *frame, Scope *ctx, Object *obj,
-                           Entity *args) {
+Value _stackline_linetext(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (NULL == stackline_module(obj)) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   const FileInfo *fi = modulemanager_get_fileinfo(
       vm_module_manager(frame->parent_isolate->vm), stackline_module(obj));
   const LineInfo *li = file_info_lookup(fi, stackline_linenum(obj) + 1);
   return (NULL == li)
-             ? NONE_ENTITY
-             : entity_object(string_new(frame->parent_isolate->heap,
-                                        li->line_text, strlen(li->line_text)));
+             ? NONE_VALUE
+             : value_object(string_new(frame->parent_isolate->heap,
+                                       li->line_text, strlen(li->line_text)));
 }
 
 void _add_filename_method(VM *vm) {
@@ -431,8 +430,8 @@ void vm_delete(VM *vm) {
 Isolate *vm_main_isolate(VM *vm) { return vm->main; }
 
 bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  const Entity *acc, *lookup;
-  Entity first, second, tmp;
+  const Value *acc, *lookup;
+  Value first, second, tmp;
   bool result;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
@@ -441,7 +440,7 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       if (IS_OBJECT(&first)) {
         if (IS_OBJECT(&second) && first.obj == second.obj) {
           *frame_mutable_acc(frame) =
-              (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+              (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
           return false;
         }
         const Function *f = class_get_function(
@@ -450,18 +449,16 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
           *frame_mutable_acc(frame) = second;
           return _call_function_base(frame, scope, f, first.obj, scope);
         }
-        *frame_mutable_acc(frame) =
-            (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
         return false;
       }
       if (IS_NONE(&first)) {
         *frame_mutable_acc(frame) =
-            IS_NONE(&second) && (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+            IS_NONE(&second) && (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
         return false;
       }
       if (IS_NONE(&second)) {
-        *frame_mutable_acc(frame) =
-            (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
         return false;
       }
       if (PRIMITIVE != second.type) {
@@ -475,8 +472,8 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       result = primitive_equals(&first.pri, &second.pri);
       *frame_mutable_acc(frame) =
           ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_ENTITY
-              : FALSE_ENTITY;
+              ? TRUE_VALUE
+              : FALSE_VALUE;
       break;
     case INSTRUCTION_ID:
       acc = frame_get_acc(frame);
@@ -485,18 +482,17 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
         first = *acc;
         if (IS_OBJECT(lookup) && first.obj == lookup->obj) {
           *frame_mutable_acc(frame) =
-              (EQ == ins->op) ? TRUE_ENTITY : FALSE_ENTITY;
+              (EQ == ins->op) ? TRUE_VALUE : FALSE_VALUE;
           return false;
         }
         const Function *f = class_get_function(
             first.obj->_class, (EQ == ins->op) ? EQ_FN_NAME : NEQ_FN_NAME);
         if (NULL != f) {
-          *frame_mutable_acc(frame) = (lookup == NULL) ? NONE_ENTITY : *lookup;
+          *frame_mutable_acc(frame) = (lookup == NULL) ? NONE_VALUE : *lookup;
           return _call_function_base(frame, scope, f, first.obj, scope);
         }
 
-        *frame_mutable_acc(frame) =
-            (EQ == ins->op) ? FALSE_ENTITY : TRUE_ENTITY;
+        *frame_mutable_acc(frame) = (EQ == ins->op) ? FALSE_VALUE : TRUE_VALUE;
         return false;
       }
       if (NULL != acc && PRIMITIVE != acc->type) {
@@ -510,8 +506,8 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       result = primitive_equals(&acc->pri, &lookup->pri);
       *frame_mutable_acc(frame) =
           ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_ENTITY
-              : FALSE_ENTITY;
+              ? TRUE_VALUE
+              : FALSE_VALUE;
       break;
     case INSTRUCTION_PRIMITIVE:
       acc = frame_get_acc(frame);
@@ -522,8 +518,8 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       result = primitive_equals(&acc->pri, &ins->val);
       *frame_mutable_acc(frame) =
           ((result && (EQ == ins->op)) || (!result && (NEQ == ins->op)))
-              ? TRUE_ENTITY
-              : FALSE_ENTITY;
+              ? TRUE_VALUE
+              : FALSE_VALUE;
       break;
     default:
       FATALF("Invalid arg type=%d for EQ.", ins->type);
@@ -532,8 +528,8 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity *member;
-  Entity tmp;
+  Value *member;
+  Value tmp;
   Object *str;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
@@ -541,17 +537,17 @@ void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       break;
     case INSTRUCTION_ID:
       member = scope_lookup(scope, ins->id, &tmp);
-      *frame_mutable_acc(frame) = (NULL == member) ? NONE_ENTITY : *member;
+      *frame_mutable_acc(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
-      *frame_mutable_acc(frame) = entity_primitive(ins->val);
+      *frame_mutable_acc(frame) = value_primitive(ins->val);
       break;
     case INSTRUCTION_STRING:
       str = ins->op == IRES ? istring_new(frame->parent_isolate->heap, ins->str,
                                           strlen(ins->str))
                             : string_new(frame->parent_isolate->heap, ins->str,
                                          strlen(ins->str));
-      *frame_mutable_acc(frame) = entity_object(str);
+      *frame_mutable_acc(frame) = value_object(str);
       break;
     default:
       FATALF("Invalid arg type=%d for RES.", ins->type);
@@ -559,8 +555,8 @@ void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity *member;
-  Entity tmp;
+  Value *member;
+  Value tmp;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       *frame_mutable_acc(frame) = *frame_peekstack(frame);
@@ -570,7 +566,7 @@ void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       break;
     case INSTRUCTION_ID:
       member = scope_lookup(scope, ins->id, &tmp);
-      *frame_mutable_acc(frame) = (NULL == member) ? NONE_ENTITY : *member;
+      *frame_mutable_acc(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     default:
       FATALF("Invalid arg type=%d for PEEK.", ins->type);
@@ -581,24 +577,24 @@ void _execute_DUP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for DUP.", ins->type);
   }
-  Entity peek = *frame_peekstack(frame);
+  Value peek = *frame_peekstack(frame);
   *frame_pushstack(frame) = peek;
 }
 
 void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   Object *str;
-  Entity *member;
-  Entity tmp;
+  Value *member;
+  Value tmp;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       *frame_pushstack(frame) = *frame_get_acc(frame);
       break;
     case INSTRUCTION_ID:
       member = scope_lookup(scope, ins->id, &tmp);
-      *frame_pushstack(frame) = (NULL == member) ? NONE_ENTITY : *member;
+      *frame_pushstack(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
-      *frame_pushstack(frame) = entity_primitive(ins->val);
+      *frame_pushstack(frame) = value_primitive(ins->val);
       break;
     case INSTRUCTION_STRING:
       // TODO: Maybe precompute the length of the string?
@@ -606,7 +602,7 @@ void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
                                           strlen(ins->str))
                             : string_new(frame->parent_isolate->heap, ins->str,
                                          strlen(ins->str));
-      *frame_pushstack(frame) = entity_object(str);
+      *frame_pushstack(frame) = value_object(str);
       break;
     default:
       FATALF("Invalid arg type=%d for PUSH.", ins->type);
@@ -617,56 +613,56 @@ void _execute_PNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PNIL.", ins->type);
   }
-  *frame_pushstack(frame) = NONE_ENTITY;
+  *frame_pushstack(frame) = NONE_VALUE;
 }
 
 void _execute_RNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RNIL.", ins->type);
   }
-  *frame_mutable_acc(frame) = NONE_ENTITY;
+  *frame_mutable_acc(frame) = NONE_VALUE;
 }
 
 void _execute_PTRU(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PTRU.", ins->type);
   }
-  *frame_pushstack(frame) = TRUE_ENTITY;
+  *frame_pushstack(frame) = TRUE_VALUE;
 }
 
 void _execute_RTRU(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RTRU.", ins->type);
   }
-  *frame_mutable_acc(frame) = TRUE_ENTITY;
+  *frame_mutable_acc(frame) = TRUE_VALUE;
 }
 
 void _execute_PFLS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PFLS.", ins->type);
   }
-  *frame_pushstack(frame) = FALSE_ENTITY;
+  *frame_pushstack(frame) = FALSE_VALUE;
 }
 
 void _execute_RFLS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RFLS.", ins->type);
   }
-  *frame_mutable_acc(frame) = FALSE_ENTITY;
+  *frame_mutable_acc(frame) = FALSE_VALUE;
 }
 
 void _execute_FLD(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for FLD.", ins->type);
   }
-  const Entity *acc = frame_get_acc(frame);
+  const Value *acc = frame_get_acc(frame);
   if (NULL == acc || OBJECT != acc->type) {
     raise_error(frame, scope,
                 "Attempted to set field '%s' on something not an object.",
                 ins->id);
     return;
   }
-  Entity obj = frame_popstack(frame);
+  Value obj = frame_popstack(frame);
   object_set_member(frame->parent_isolate->heap, acc->obj, ins->id, &obj);
 }
 
@@ -691,8 +687,8 @@ void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 void _execute_MSET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity tmp;
-  Entity *mdl = scope_lookup(scope, TMP_MODULE_HOLDER, &tmp);
+  Value tmp;
+  Value *mdl = scope_lookup(scope, TMP_MODULE_HOLDER, &tmp);
   if (!IS_CLASS(mdl, Class_Module)) {
     FATALF("Temp held module must be of type Module.");
   }
@@ -715,7 +711,7 @@ void _execute_GET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for GET.", ins->type);
   }
-  const Entity *e = frame_get_acc(frame);
+  const Value *e = frame_get_acc(frame);
   if (NULL == e || OBJECT != e->type) {
     raise_error(frame, scope, "Attempted to get field '%s' from a %s.", ins->id,
                 (e == NULL || NONE == e->type) ? "None" : "Primtive");
@@ -729,14 +725,14 @@ void _execute_GTSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for GTSH.", ins->type);
   }
-  const Entity *e = frame_get_acc(frame);
+  const Value *e = frame_get_acc(frame);
   if (NULL == e || OBJECT != e->type) {
     raise_error(frame, scope, "Attempted to get field '%s' from a %s.", ins->id,
                 (e == NULL || NONE == e->type) ? "None" : "Primtive");
     return;
   }
-  Entity get_result = object_get_maybe_wrap(e->obj, ins->id,
-                                            frame->parent_isolate->heap, scope);
+  Value get_result = object_get_maybe_wrap(e->obj, ins->id,
+                                           frame->parent_isolate->heap, scope);
   *frame_pushstack(frame) = get_result;
 }
 
@@ -760,7 +756,7 @@ void _execute_blocking(BlockingCallArgs *args) {
   NativeFn native_fn = (NativeFn)args->func->_native_fn;
   *frame_mutable_acc(args->frame) =
       native_fn(args->frame, args->scope, args->self,
-                (Entity *)frame_get_acc(args->frame));
+                (Value *)frame_get_acc(args->frame));
 }
 
 void _execute_blocking_callback(BlockingCallArgs *args) {
@@ -777,7 +773,7 @@ Frame *_maybe_load_module(Frame *frame, Module *module) {
   }
   module->_is_initialized = true;
   if (NULL == frame_get_acc(frame)) {
-    *frame_mutable_acc(frame) = NONE_ENTITY;
+    *frame_mutable_acc(frame) = NONE_VALUE;
   }
   Scope *new_ctx = _execute_as_new_frame(frame, module->_reflection, module, 0);
   isolate_enqueue_frame(frame->parent_isolate, new_ctx->parent_frame);
@@ -811,7 +807,7 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
       Frame *new_frame = isolate_create_unqueued_frame(isolate);
       new_frame->parent_frame = frame;
       *frame_mutable_acc(new_frame) = *frame_get_acc(frame);
-      *frame_mutable_acc(frame) = entity_object(future_create(new_frame));
+      *frame_mutable_acc(frame) = value_object(future_create(new_frame));
       BlockingCallArgs *args =
           _create_blocking_call_args(new_frame, scope, func, self);
       isolate_add_blocking_frame(isolate, new_frame, isolate->vm->blocking_pool,
@@ -821,7 +817,7 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
       return false;
     }
     *frame_mutable_acc(frame) =
-        native_fn(frame, scope, self, (Entity *)frame_get_acc(frame));
+        native_fn(frame, scope, self, (Value *)frame_get_acc(frame));
     return false;
   } else if (func->_is_native2) {
     NativeFunctionHandlerFn native_fn =
@@ -850,7 +846,7 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   }
   if (func->_is_async && frame->parent_isolate->vm->async_enabled) {
     *frame_mutable_acc(frame) =
-        entity_object(future_create(fn_ctx->parent_frame));
+        value_object(future_create(fn_ctx->parent_frame));
     return false;
   }
   FrameSet_insert(&fn_ctx->parent_frame->dependent_frames, frame,
@@ -864,7 +860,7 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
   ASSERT(ins != NULL);
   ASSERT(INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
-  Entity method =
+  Value method =
       object_get_maybe_wrap(obj, ins->id, frame->parent_isolate->heap, scope);
   if (NONE == method.type) {
     raise_error(frame, scope, "Failed to find method '%s' on %s", ins->id,
@@ -893,12 +889,12 @@ bool _call_function(Frame *frame, Scope *scope, Function *func) {
 }
 
 bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity fn;
+  Value fn;
   if (INSTRUCTION_ID == ins->type) {
     if (CLLN == ins->op) {
-      *frame_mutable_acc(frame) = NONE_ENTITY;
+      *frame_mutable_acc(frame) = NONE_VALUE;
     }
-    Entity obj = frame_popstack(frame);
+    Value obj = frame_popstack(frame);
     if (OBJECT != obj.type) {
       const char *type_str = NONE == obj.type                    ? "None"
                              : ptype(&obj.pri) == PRIMITIVE_CHAR ? "Char"
@@ -915,7 +911,7 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       if (NULL == fn_obj) {
         return _call_method(frame, obj.obj, scope, ins);
       }
-      fn = entity_object(fn_obj);
+      fn = value_object(fn_obj);
     } else {
       return _call_method(frame, obj.obj, scope, ins);
     }
@@ -933,18 +929,18 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     Object *obj = heap_new(frame->parent_isolate->heap, class);
     const Function *constructor = class_get_function(class, CONSTRUCTOR_KEY);
     if (NULL == constructor) {
-      *frame_mutable_acc(frame) = entity_object(obj);
+      *frame_mutable_acc(frame) = value_object(obj);
       return false;
     } else {
       if (CLLN == ins->op) {
-        *frame_mutable_acc(frame) = NONE_ENTITY;
+        *frame_mutable_acc(frame) = NONE_VALUE;
       }
       return _call_function_base(frame, scope, constructor, obj, scope);
     }
   }
   if (fn.obj->_class == Class_FunctionRef) {
     if (CLLN == ins->op) {
-      *frame_mutable_acc(frame) = NONE_ENTITY;
+      *frame_mutable_acc(frame) = NONE_VALUE;
     }
     return _call_function_base(frame, scope, function_ref_get_func(fn.obj),
                                function_ref_get_object(fn.obj),
@@ -958,13 +954,13 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
   Function *func = fn.obj->_function_obj;
   if (CLLN == ins->op) {
-    *frame_mutable_acc(frame) = NONE_ENTITY;
+    *frame_mutable_acc(frame) = NONE_VALUE;
   }
   return _call_function(frame, scope, func);
 }
 
 bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  const Entity *acc = frame_get_acc(frame);
+  const Value *acc = frame_get_acc(frame);
   // Only wait for futures.
   if (!IS_CLASS(acc, Class_Future)) {
     return false;
@@ -981,7 +977,7 @@ bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity tmp;
+  Value tmp;
   // if (NULL == task->parent_task) {
   //   return;
   // }
@@ -993,7 +989,7 @@ void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       *frame_mutable_acc(frame) = *scope_lookup(scope, ins->id, &tmp);
       break;
     case INSTRUCTION_PRIMITIVE:
-      *frame_mutable_acc(frame) = entity_primitive(ins->val);
+      *frame_mutable_acc(frame) = value_primitive(ins->val);
       break;
     default:
       FATALF("Invalid arg type=%d for RET.", ins->type);
@@ -1034,7 +1030,7 @@ void _execute_IF(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for IF.", ins->type);
   }
-  const Entity *acc = frame_get_acc(frame);
+  const Value *acc = frame_get_acc(frame);
   bool is_false = IS_FALSE(acc);
   if ((is_false && (IFN == ins->op)) || (!is_false && (IF == ins->op))) {
     scope->ins += ins->val._int_val;
@@ -1044,10 +1040,10 @@ void _execute_IF(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_EXIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE == ins->type) {
     // Implicit exit at the end of a module, which does not set the exit code.
-    *frame_mutable_acc(frame) = entity_primitive(ins->val);
+    *frame_mutable_acc(frame) = value_primitive(ins->val);
   } else {
     // Explicit `exit` statement.
-    const Entity *exit_val = frame_get_acc(frame);
+    const Value *exit_val = frame_get_acc(frame);
     if (IS_INT(exit_val)) {
       vm->exit_code = (int)pint(&exit_val->pri);
     }
@@ -1060,8 +1056,8 @@ void _execute_NOT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for NOT.", ins->type);
   }
-  const Entity *acc = frame_get_acc(frame);
-  *frame_mutable_acc(frame) = IS_FALSE(acc) ? TRUE_ENTITY : FALSE_ENTITY;
+  const Value *acc = frame_get_acc(frame);
+  *frame_mutable_acc(frame) = IS_FALSE(acc) ? TRUE_VALUE : FALSE_VALUE;
 }
 
 void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
@@ -1069,7 +1065,7 @@ void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     FATALF("Invalid ANEW, ID type.");
   }
   Object *array_obj = heap_new(frame->parent_isolate->heap, Class_Array);
-  *frame_mutable_acc(frame) = entity_object(array_obj);
+  *frame_mutable_acc(frame) = value_object(array_obj);
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
@@ -1079,22 +1075,22 @@ void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   int32_t num_args = pint(&ins->val);
   int i;
   for (i = 0; i < num_args; ++i) {
-    Entity e = frame_popstack(frame);
+    Value e = frame_popstack(frame);
     array_add(frame->parent_isolate->heap, array_obj, &e);
   }
 }
 
 bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   Object *arr_obj;
-  const Entity *index = NULL;
-  Entity index_e;
+  const Value *index = NULL;
+  Value index_e;
 
-  Entity arr_entity = frame_popstack(frame);
-  if (OBJECT != arr_entity.type) {
+  Value arr_value = frame_popstack(frame);
+  if (OBJECT != arr_value.type) {
     raise_error(frame, scope, "Invalid array index on non-indexable.");
     return false;
   }
-  arr_obj = arr_entity.obj;
+  arr_obj = arr_value.obj;
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       index = frame_get_acc(frame);
@@ -1107,7 +1103,7 @@ bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
         raise_error(frame, scope, "Invalid array index.");
         return false;
       }
-      index_e = entity_primitive(ins->val);
+      index_e = value_primitive(ins->val);
       index = &index_e;
       break;
     default:
@@ -1162,15 +1158,15 @@ bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
-  Entity arr_entity = frame_popstack(frame);
-  Entity new_val = frame_popstack(frame);
-  const Entity *index = frame_get_acc(frame);
-  if (OBJECT != arr_entity.type) {
+  Value arr_value = frame_popstack(frame);
+  Value new_val = frame_popstack(frame);
+  const Value *index = frame_get_acc(frame);
+  if (OBJECT != arr_value.type) {
     raise_error(frame, scope, "Cannot set index value on non-indexable.");
     return false;
   }
 
-  if (Class_Array == arr_entity.obj->_class) {
+  if (Class_Array == arr_value.obj->_class) {
     if (NULL == index || PRIMITIVE != index->type ||
         PRIMITIVE_INT != ptype(&index->pri)) {
       raise_error(frame, scope, "Cannot index with non-int.");
@@ -1181,19 +1177,19 @@ bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       raise_error(frame, scope, "Array index out of bounds: %d", i_index);
       return false;
     }
-    array_set(frame->parent_isolate->heap, arr_entity.obj, i_index, &new_val);
+    array_set(frame->parent_isolate->heap, arr_value.obj, i_index, &new_val);
     return false;
   }
   const Function *aset_fn =
-      class_get_function(arr_entity.obj->_class, ARRAYLIKE_SET_KEY);
+      class_get_function(arr_value.obj->_class, ARRAYLIKE_SET_KEY);
   if (NULL != aset_fn) {
     Object *args = heap_new(frame->parent_isolate->heap, Class_Tuple);
     args->_internal_obj = tuple_create(2);
     Tuple *t = (Tuple *)args->_internal_obj;
     *tuple_get_mutable(t, 0) = *index;
     *tuple_get_mutable(t, 1) = new_val;
-    *frame_mutable_acc(frame) = entity_object(args);
-    return _call_function_base(frame, scope, aset_fn, arr_entity.obj, scope);
+    *frame_mutable_acc(frame) = value_object(args);
+    return _call_function_base(frame, scope, aset_fn, arr_value.obj, scope);
   }
   raise_error(frame, scope, "Cannot set index value on non-indexable.");
   return false;
@@ -1206,7 +1202,7 @@ void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   uint32_t num_args = pint(&ins->val);
   Object *tuple_obj = heap_new(frame->parent_isolate->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(num_args);
-  *frame_mutable_acc(frame) = entity_object(tuple_obj);
+  *frame_mutable_acc(frame) = value_object(tuple_obj);
   if (INSTRUCTION_NO_ARG == ins->type) {
     return;
   }
@@ -1215,7 +1211,7 @@ void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
   int i;
   for (i = 0; i < num_args; ++i) {
-    Entity e = frame_popstack(frame);
+    Value e = frame_popstack(frame);
     tuple_set(frame->parent_isolate->heap, tuple_obj, i, &e);
   }
 }
@@ -1224,13 +1220,13 @@ void _execute_TLEN(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid TLEN type.");
   }
-  const Entity *e = frame_peekstack(frame);
+  const Value *e = frame_peekstack(frame);
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
-    *frame_mutable_acc(frame) = entity_int(-1);
+    *frame_mutable_acc(frame) = value_int(-1);
     return;
   }
   *frame_mutable_acc(frame) =
-      entity_int(tuple_size((Tuple *)e->obj->_internal_obj));
+      value_int(tuple_size((Tuple *)e->obj->_internal_obj));
 }
 
 void _execute_TGTE(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
@@ -1238,21 +1234,21 @@ void _execute_TGTE(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     raise_error(frame, scope, "Invalid TLEN type.");
     return;
   }
-  const Entity *e = frame_get_acc(frame);
+  const Value *e = frame_get_acc(frame);
 
   int test_len = pint(&ins->val);
   if (1 == test_len) {
     *frame_mutable_acc(frame) =
-        (NULL != e && NONE != e->type) ? TRUE_ENTITY : FALSE_ENTITY;
+        (NULL != e && NONE != e->type) ? TRUE_VALUE : FALSE_VALUE;
     return;
   }
   if (NULL == e || OBJECT != e->type || Class_Tuple != e->obj->_class) {
-    *frame_mutable_acc(frame) = FALSE_ENTITY;
+    *frame_mutable_acc(frame) = FALSE_VALUE;
     return;
   }
   Tuple *t = (Tuple *)e->obj->_internal_obj;
   uint32_t tlen = tuple_size(t);
-  *frame_mutable_acc(frame) = tlen >= test_len ? TRUE_ENTITY : FALSE_ENTITY;
+  *frame_mutable_acc(frame) = tlen >= test_len ? TRUE_VALUE : FALSE_VALUE;
 }
 
 void _execute_TGET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
@@ -1261,12 +1257,12 @@ void _execute_TGET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     return;
   }
   int32_t index = pint(&ins->val);
-  const Entity *e = frame_get_acc(frame);
+  const Value *e = frame_get_acc(frame);
   if (!IS_TUPLE(e)) {
     if (NULL != e && 0 == index) {
       return;
     }
-    *frame_mutable_acc(frame) = entity_int(-1);
+    *frame_mutable_acc(frame) = value_int(-1);
     raise_error(frame, scope, "Attempted to index something not a tuple.");
     return;
   }
@@ -1284,21 +1280,21 @@ void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Weird type for IS.");
   }
-  Entity rhs = frame_popstack(frame);
-  Entity lhs = frame_popstack(frame);
+  Value rhs = frame_popstack(frame);
+  Value lhs = frame_popstack(frame);
   if (OBJECT != rhs.type || Class_Class != rhs.obj->_class) {
     raise_error(frame, scope,
                 "Cannot perform type-check against a non-object type.");
     return;
   }
   if (lhs.type != OBJECT) {
-    *frame_mutable_acc(frame) = FALSE_ENTITY;
+    *frame_mutable_acc(frame) = FALSE_VALUE;
     return;
   }
   if (inherits_from(lhs.obj->_class, rhs.obj->_class_obj)) {
-    *frame_mutable_acc(frame) = TRUE_ENTITY;
+    *frame_mutable_acc(frame) = TRUE_VALUE;
   } else {
-    *frame_mutable_acc(frame) = FALSE_ENTITY;
+    *frame_mutable_acc(frame) = FALSE_VALUE;
   }
 }
 
@@ -1314,7 +1310,7 @@ bool _execute_LMDL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     return false;
   }
   bool result = NULL != _maybe_load_module(frame, module);
-  Entity module_reflection = entity_object(module->_reflection);
+  Value module_reflection = value_object(module->_reflection);
   scope_set(scope, TMP_MODULE_HOLDER, &module_reflection);
   return result;
 }
@@ -1328,7 +1324,7 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 }
 
 void _execute_RAIS(VM *vm, Frame *frame, Scope *scope) {
-  const Entity *err = frame_get_acc(frame);
+  const Value *err = frame_get_acc(frame);
   if (OBJECT != err->type || !inherits_from(err->obj->_class, Class_Error)) {
     raise_error(frame, scope, "raise can only be invoked with an Error().");
     return;
@@ -1360,7 +1356,7 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
   Scope *scope = frame->current;
 
   if (frame->child_frame_has_error) {
-    const Entity *error_e = frame_get_acc(frame);
+    const Value *error_e = frame_get_acc(frame);
     ASSERT(error_e != NULL);
     ASSERT(OBJECT == error_e->type);
     ASSERT(inherits_from(error_e->obj->_class, Class_Error));
@@ -1599,8 +1595,8 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
   Frame *actor_frame = future_get_frame(frame->actor_future);
   Isolate *callee_isolate = actor_frame->parent_isolate;
   SYNCHRONIZED(callee_isolate->heap_access_lock, {
-    *frame_mutable_acc(actor_frame) = entity_copy(
-        frame_get_acc(isolate->current_frame), callee_isolate->heap);
+    *frame_mutable_acc(actor_frame) =
+        value_copy(frame_get_acc(isolate->current_frame), callee_isolate->heap);
   });
 
   actor_frame->state = frame->state;
@@ -1684,12 +1680,12 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
   Frame *isolate_frame = future_get_frame(isolate->future);
 
   if (isolate->keep_alive) {
-    const Entity *actor_result = frame_get_acc(isolate->current_frame);
+    const Value *actor_result = frame_get_acc(isolate->current_frame);
     if (IS_OBJECT(actor_result)) {
       // Must keep actor objects since other isolates assume it will always
       // exist. In the future, there must be a better cleanup process.
       heap_make_root(isolate->heap, actor_result->obj);
-      *frame_mutable_acc(isolate_frame) = entity_object(create_actor_object(
+      *frame_mutable_acc(isolate_frame) = value_object(create_actor_object(
           isolate_frame->parent_isolate->heap, isolate, actor_result->obj));
     } else {
       *frame_mutable_acc(isolate_frame) = *actor_result;
@@ -1697,8 +1693,8 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
   } else {
     SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
       *frame_mutable_acc(isolate_frame) =
-          entity_copy(frame_get_acc(isolate->current_frame),
-                      isolate_frame->parent_isolate->heap);
+          value_copy(frame_get_acc(isolate->current_frame),
+                     isolate_frame->parent_isolate->heap);
     });
   }
   isolate_remove_waiting_frame(isolate_frame->parent_isolate, isolate_frame);
@@ -1747,7 +1743,7 @@ top_of_fn:
 #ifdef DEBUG
     SYNCHRONIZED(vm->isolate_create_lock, {
       fprintf(stdout, "<-- ");
-      entity_print(frame_get_acc(frame), stdout);
+      value_print(frame_get_acc(frame), stdout);
       fprintf(stdout, "\n");
       DEBUGF("TaskState=%s p=%p t=%p c=%p", frame_state_str(frame_state),
              isolate, frame, frame->current);

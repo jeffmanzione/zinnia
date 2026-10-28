@@ -11,7 +11,7 @@ cc_library(
     deps = [
         ":optimizer",
         ":optimizers",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:primitive",
         "//zinnia/program:instruction",
         "//zinnia/program:op",
@@ -42,7 +42,7 @@ cc_library(
     deps = [
         ":optimizer",
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/program:instruction",
         "//zinnia/program:tape",
         "//zinnia/vm:intern",

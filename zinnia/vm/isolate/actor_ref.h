@@ -6,7 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ACTOR_REF_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ACTOR_REF_H_
 
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/vm/isolate/isolates.h"
 
 typedef struct ActorRef_ ActorRef;
@@ -21,6 +21,6 @@ Object *actor_get_object(ActorRef *actor);
 Isolate *actor_get_isolate(ActorRef *actor);
 
 ActorRef *extract_actor_from_obj(Object *actor_obj);
-ActorRef *extract_actor(Entity *actor_entity);
+ActorRef *extract_actor(Value *actor_value);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ACTOR_REF_H_ */

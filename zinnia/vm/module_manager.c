@@ -217,7 +217,7 @@ void add_reflection_to_class_(Heap *heap, Module *module, Class *class) {
   FieldMapIterator fields = class_fields(class);
   for (; FieldMap_has_entry(&fields); FieldMap_next_entry(&fields)) {
     Field *field = FieldMap_mutable_value(&fields);
-    Entity str = entity_object(
+    Value str = value_object(
         istring_new_no_intern(heap, field->name, strlen(field->name)));
     array_add(heap, field_arr, &str);
   }

@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
 

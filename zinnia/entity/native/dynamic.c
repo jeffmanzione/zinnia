@@ -7,12 +7,12 @@
 
 #include "zinnia/util/dll.h"
 
-Entity open_c_lib_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
+Value open_c_lib_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   EXTRACT_TUPLE_ARGS(t, args, 3, frame, ctx);
 
-  const Entity *arg0 = tuple_get(t, 0);
-  const Entity *arg1 = tuple_get(t, 1);
-  const Entity *arg2 = tuple_get(t, 2);
+  const Value *arg0 = tuple_get(t, 0);
+  const Value *arg1 = tuple_get(t, 1);
+  const Value *arg2 = tuple_get(t, 2);
   if (!IS_STRING(arg0)) {
     return raise_error(frame, ctx,
                        "Invalid argument(0) for "
@@ -28,11 +28,11 @@ Entity open_c_lib_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
                        "Invalid argument(2) for "
                        "__open_c_lib: Expected None or String.");
   }
-  char *file_name = entity_string_copy(arg0);
-  char *module_name = entity_string_copy(arg1);
+  char *file_name = value_string_copy(arg0);
+  char *module_name = value_string_copy(arg1);
 
   const bool has_init = !IS_NONE(arg2);
-  char *init_fn_name = has_init ? entity_string_copy(arg2) : NULL;
+  char *init_fn_name = has_init ? value_string_copy(arg2) : NULL;
 
   DlHandle dl = NULL;
   char error_buf[255];
@@ -59,7 +59,7 @@ Entity open_c_lib_(Frame *frame, Scope *ctx, Object *obj, Entity *args) {
   RELEASE(file_name);
   RELEASE(module_name);
   if (has_init) RELEASE(init_fn_name);
-  return entity_object(module->_reflection);
+  return value_object(module->_reflection);
 }
 
 void dynamic_add_native(ModuleManager *mm, Module *dynamic) {

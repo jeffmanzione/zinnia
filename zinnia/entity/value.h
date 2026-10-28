@@ -1,10 +1,10 @@
-// entity.h
+// value.h
 //
 // Created on: May 28, 2020
 //     Author: Jeff Manzione
 
-#ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_ENTITY_H_
-#define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_ENTITY_H_
+#ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_VALUE_H_
+#define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_VALUE_H_
 
 #include <stdio.h>
 
@@ -29,42 +29,42 @@
   ((NULL != e) && (OBJECT == e->type) && (Class_Array == e->obj->_class))
 
 // Contains a primitive, Object, or represents nullptr.
-typedef struct Entity_ Entity;
+typedef struct Value_ Value;
 
-typedef enum { NONE, PRIMITIVE, OBJECT } EntityType;
+typedef enum { NONE, PRIMITIVE, OBJECT } ValueType;
 
-struct Entity_ {
-  EntityType type;
+struct Value_ {
+  ValueType type;
   union {
     Primitive pri;
     Object *obj;
   };
 };
 
-extern Entity NONE_ENTITY;
-extern Entity TRUE_ENTITY;
-extern Entity FALSE_ENTITY;
+extern Value NONE_VALUE;
+extern Value TRUE_VALUE;
+extern Value FALSE_VALUE;
 
 // Gets the entity type from an entity.
-EntityType etype(const Entity *e);
+ValueType etype(const Value *e);
 // Extracts a const Object from an entity.
-const Object *object(const Entity *e);
+const Object *object(const Value *e);
 // Extracts a mutable Object from an entity.
-Object *object_m(Entity *e);
+Object *object_m(Value *e);
 
-Entity entity_char(const int8_t c);
-Entity entity_int(const int64_t i);
-Entity entity_float(const double d);
+Value value_char(const int8_t c);
+Value value_int(const int64_t i);
+Value value_float(const double d);
 
-Entity entity_primitive_ptr(const Primitive *p);
-Entity entity_primitive(Primitive p);
+Value value_primitive_ptr(const Primitive *p);
+Value value_primitive(Primitive p);
 
-void entity_print(const Entity *e, FILE *file);
+void value_print(const Value *e, FILE *file);
 
-Entity entity_none();
+Value value_none();
 
-Entity *object_get(Object *obj, const char field[]);
+Value *object_get(Object *obj, const char field[]);
 
-Entity entity_object(Object *obj);
+Value value_object(Object *obj);
 
-#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_ENTITY_H_ */
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_VALUE_H_ */

@@ -12,7 +12,7 @@ typedef struct Future_ Future;
 
 Object *future_create(Frame *frame);
 bool future_is_complete(Future *f);
-const Entity *future_get_value(Heap *heap, Object *obj);
+const Value *future_get_value(Heap *heap, Object *obj);
 Frame *future_get_frame(Future *f);
 
 void async_add_native(ModuleManager *mm, Module *async);

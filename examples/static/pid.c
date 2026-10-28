@@ -12,7 +12,7 @@ static void current_process_id_(FunctionContext *fn_ctx) {
 #else
   pid = getpid();
 #endif
-  *FunctionContext_mutable_retval(fn_ctx) = entity_int(pid);
+  *FunctionContext_mutable_retval(fn_ctx) = value_int(pid);
 }
 
 void init_pid(ModuleBuilder *builder) {

@@ -13,7 +13,7 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-#define DEFINE_DATA_ARRAY(class_name, type_name, to_entity_fn)                 \
+#define DEFINE_DATA_ARRAY(class_name, type_name, to_value_fn)                  \
   static Class *Class_##class_name = NULL;                                     \
                                                                                \
   DEFINE_ARRAYLIKE(class_name, type_name);                                     \
@@ -24,7 +24,7 @@
     class_name##_delete(obj->_internal_obj);                                   \
   }                                                                            \
                                                                                \
-  type_name _to_##type_name(const Entity *e) {                                 \
+  type_name _to_##type_name(const Value *e) {                                  \
     switch (e->type) {                                                         \
       case NONE:                                                               \
         return 0L;                                                             \
@@ -46,8 +46,8 @@
     return 0;                                                                  \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,    \
-                                     Entity *args) {                           \
+  Value _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,     \
+                                    Value *args) {                             \
     int initial_size;                                                          \
     class_name *arr;                                                           \
     if (NULL == args || IS_NONE(args)) {                                       \
@@ -69,29 +69,29 @@
     } else if (IS_CLASS(args, Class_Array)) {                                  \
       Array *arr2 = (Array *)args->obj->_internal_obj;                         \
       for (int i = 0; i < Array_size(arr2); ++i) {                             \
-        Entity *e = Array_mutable_ref_unchecked(arr2, i);                      \
+        Value *e = Array_mutable_ref_unchecked(arr2, i);                       \
         type_name ie = _to_##type_name(e);                                     \
         class_name##_set(arr, i, ie);                                          \
       }                                                                        \
     } else {                                                                   \
       memset(arr->table, 0x0, sizeof(type_name) * initial_size);               \
     }                                                                          \
-    return entity_object(obj);                                                 \
+    return value_object(obj);                                                  \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_len(Frame *frame, Scope *ctx, Object *obj,            \
-                             Entity *args) {                                   \
-    return entity_int(class_name##_size((class_name *)obj->_internal_obj));    \
+  Value _##class_name##_len(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
+    return value_int(class_name##_size((class_name *)obj->_internal_obj));     \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_index_range(Frame *frame, Scope *ctx,                 \
-                                     class_name *self, Range_ *range) {        \
+  Value _##class_name##_index_range(Frame *frame, Scope *ctx,                  \
+                                    class_name *self, Range_ *range) {         \
     if (range->inc == 1) {                                                     \
       Object *obj = heap_new(frame->parent_isolate->heap, Class_##class_name); \
       size_t new_len = range->end - range->start;                              \
       obj->_internal_obj =                                                     \
           class_name##_create_copy(self->table + range->start, new_len);       \
-      return entity_object(obj);                                               \
+      return value_object(obj);                                                \
     } else {                                                                   \
       if (class_name##_size(self) < range->end || range->start < 0) {          \
         return raise_error(                                                    \
@@ -107,12 +107,12 @@
         class_name##_set(arr, j, class_name##_get_unchecked(self, i));         \
       }                                                                        \
       obj->_internal_obj = arr;                                                \
-      return entity_object(obj);                                               \
+      return value_object(obj);                                                \
     }                                                                          \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,          \
-                               Entity *args) {                                 \
+  Value _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
     ASSERT(args != NULL);                                                      \
     class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
@@ -132,11 +132,11 @@
                          index, class_name##_size(self));                      \
     }                                                                          \
                                                                                \
-    return to_entity_fn(class_name##_get_unchecked(self, index));              \
+    return to_value_fn(class_name##_get_unchecked(self, index));               \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_set_range(Frame *frame, Scope *ctx, class_name *arr,  \
-                                   Range_ *range, const Entity *val) {         \
+  Value _##class_name##_set_range(Frame *frame, Scope *ctx, class_name *arr,   \
+                                  Range_ *range, const Value *val) {           \
     class_name *value = (class_name *)val->obj->_internal_obj;                 \
     size_t expected_len = (range->end - range->start + 1) / range->inc;        \
     if (range->end > class_name##_size(arr) || range->start < 0) {             \
@@ -158,8 +158,8 @@
     return *val;                                                               \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,            \
-                             Entity *args) {                                   \
+  Value _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
     class_name *arr = (class_name *)obj->_internal_obj;                        \
     if (!IS_TUPLE(args)) {                                                     \
       return raise_error(frame, ctx, "Expected tuple input");                  \
@@ -170,8 +170,8 @@
                          "Invalid number of arguments, expected 2, got %d",    \
                          tuple_size(tupl_args));                               \
     }                                                                          \
-    const Entity *index = tuple_get(tupl_args, 0);                             \
-    const Entity *val = tuple_get(tupl_args, 1);                               \
+    const Value *index = tuple_get(tupl_args, 0);                              \
+    const Value *val = tuple_get(tupl_args, 1);                                \
                                                                                \
     if (IS_CLASS(index, Class_Range)) {                                        \
       Range_ *range = (Range_ *)index->obj->_internal_obj;                     \
@@ -192,8 +192,8 @@
     return *val;                                                               \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_to_arr(Frame *frame, Scope *ctx, Object *obj,         \
-                                Entity *args) {                                \
+  Value _##class_name##_to_arr(Frame *frame, Scope *ctx, Object *obj,          \
+                               Value *args) {                                  \
     ASSERT(args != NULL);                                                      \
     class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
@@ -202,13 +202,13 @@
                                                                                \
     for (int i = 0; i < class_name##_size(self); ++i) {                        \
       *Array_set_ref_unchecked(arr, i) =                                       \
-          to_entity_fn(class_name##_get_unchecked(self, i));                   \
+          to_value_fn(class_name##_get_unchecked(self, i));                    \
     }                                                                          \
-    return entity_object(arre);                                                \
+    return value_object(arre);                                                 \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_reversed(Frame *frame, Scope *ctx, Object *obj,       \
-                                  Entity *args) {                              \
+  Value _##class_name##_reversed(Frame *frame, Scope *ctx, Object *obj,        \
+                                 Value *args) {                                \
     ASSERT(args != NULL);                                                      \
     class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
@@ -221,7 +221,7 @@
                        class_name##_get_unchecked(self, i));                   \
     }                                                                          \
     new_obj->_internal_obj = arr;                                              \
-    return entity_object(new_obj);                                             \
+    return value_object(new_obj);                                              \
   }                                                                            \
                                                                                \
   void _##type_name##_swap(type_name *arr, int i, int j) {                     \
@@ -262,8 +262,8 @@
     _##type_name##_sort(arr, pi + 1, high);                                    \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_sorted(Frame *frame, Scope *ctx, Object *obj,         \
-                                Entity *args) {                                \
+  Value _##class_name##_sorted(Frame *frame, Scope *ctx, Object *obj,          \
+                               Value *args) {                                  \
     ASSERT(args != NULL);                                                      \
     class_name *self = (class_name *)obj->_internal_obj;                       \
                                                                                \
@@ -273,17 +273,17 @@
     class_name *arr = class_name##_copy(self);                                 \
     _##type_name##_sort(arr->table, 0, size - 1);                              \
     new_obj->_internal_obj = arr;                                              \
-    return entity_object(new_obj);                                             \
+    return value_object(new_obj);                                              \
   }                                                                            \
                                                                                \
-  void _##class_name##_copy_fn(EntityCopier *copier, Object *src_obj,          \
+  void _##class_name##_copy_fn(ValueCopier *copier, Object *src_obj,           \
                                Object *target_obj) {                           \
     class_name *src = (class_name *)src_obj->_internal_obj;                    \
     target_obj->_internal_obj = class_name##_copy(src);                        \
   }
 
 #define DEFINE_DATA_MATRIX(class_name, array_class_name, type_name,            \
-                           to_entity_fn)                                       \
+                           to_value_fn)                                        \
   static Class *Class_##class_name = NULL;                                     \
                                                                                \
   typedef struct {                                                             \
@@ -308,8 +308,8 @@
     return mat;                                                                \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,    \
-                                     Entity *args) {                           \
+  Value _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,     \
+                                    Value *args) {                             \
     if (IS_TUPLE(args)) {                                                      \
       Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;                    \
       if (2 != tuple_size(tupl_args)) {                                        \
@@ -317,8 +317,8 @@
                            "Invalid number of arguments, expected 2, got %d",  \
                            tuple_size(tupl_args));                             \
       }                                                                        \
-      const Entity *e_dim1 = tuple_get(tupl_args, 0);                          \
-      const Entity *e_dim2 = tuple_get(tupl_args, 1);                          \
+      const Value *e_dim1 = tuple_get(tupl_args, 0);                           \
+      const Value *e_dim2 = tuple_get(tupl_args, 1);                           \
                                                                                \
       if (!IS_INT(e_dim1) || !IS_INT(e_dim2)) {                                \
         return raise_error(frame, ctx, "Invalid input: expected (Int, Int)."); \
@@ -333,7 +333,7 @@
       const size_t dim1 = Array_size(arr);                                     \
       int max_dim2 = 0;                                                        \
       for (int i = 0; i < Array_size(arr); ++i) {                              \
-        Entity *e = Array_mutable_ref_unchecked(arr, i);                       \
+        Value *e = Array_mutable_ref_unchecked(arr, i);                        \
         if (IS_ARRAY(e)) {                                                     \
           max_dim2 =                                                           \
               max(max_dim2, Array_size((Array *)e->obj->_internal_obj));       \
@@ -351,7 +351,7 @@
           _##class_name##_create(dim1, max_dim2, /*clear=*/true);              \
                                                                                \
       for (int i = 0; i < Array_size(arr); ++i) {                              \
-        Entity *e = Array_mutable_ref_unchecked(arr, i);                       \
+        Value *e = Array_mutable_ref_unchecked(arr, i);                        \
         if (IS_ARRAY(e)) {                                                     \
           Array *arri = (Array *)e->obj->_internal_obj;                        \
           for (int j = 0; j < Array_size(arri); ++j) {                         \
@@ -366,16 +366,16 @@
         }                                                                      \
       }                                                                        \
     }                                                                          \
-    return entity_object(obj);                                                 \
+    return value_object(obj);                                                  \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_shape(Frame *frame, Scope *ctx, Object *obj,          \
-                               Entity *args) {                                 \
+  Value _##class_name##_shape(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
-    Entity dim1 = entity_int(mat->dim1);                                       \
-    Entity dim2 = entity_int(mat->dim2);                                       \
+    Value dim1 = value_int(mat->dim1);                                         \
+    Value dim2 = value_int(mat->dim2);                                         \
     Object *shape = tuple_create2(frame->parent_isolate->heap, &dim1, &dim2);  \
-    return entity_object(shape);                                               \
+    return value_object(shape);                                                \
   }                                                                            \
                                                                                \
   size_t _##class_name##_get_dim(const class_name *mat, int dim) {             \
@@ -385,7 +385,7 @@
   int _##class_name##_first_bad_index(const class_name *mat, int dim,          \
                                       const Tuple *dim_indices) {              \
     for (int i = 0; i < tuple_size(dim_indices); ++i) {                        \
-      const Entity *e = tuple_get(dim_indices, i);                             \
+      const Value *e = tuple_get(dim_indices, i);                              \
       if (!IS_INT(e) || pint(&e->pri) < 0 ||                                   \
           pint(&e->pri) >= _##class_name##_get_dim(mat, dim)) {                \
         return i;                                                              \
@@ -405,8 +405,8 @@
     return index >= 0 && index < _##class_name##_get_dim(mat, dim);            \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_compute_indices(                                      \
-      Frame *frame, Scope *ctx, const Entity *arg, const class_name *mat,      \
+  Value _##class_name##_compute_indices(                                       \
+      Frame *frame, Scope *ctx, const Value *arg, const class_name *mat,       \
       int dim, int *dim_index, Tuple **dim_indices, Range_ **dim_range) {      \
     if (IS_INT(arg)) {                                                         \
       *dim_index = pint(&arg->pri);                                            \
@@ -436,7 +436,7 @@
                          "Expected dim%d arg to be an Int, Range, or tuple",   \
                          dim);                                                 \
     }                                                                          \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }                                                                            \
                                                                                \
   type_name _##class_name##_get_value(const class_name *mat, int dim1_index,   \
@@ -454,28 +454,28 @@
     return ceil(1.0 * (range->end - range->start) / range->inc);               \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,          \
-                               Entity *args) {                                 \
+  Value _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
     if (IS_TUPLE(args)) {                                                      \
       Tuple *targs = (Tuple *)args->obj->_internal_obj;                        \
       if (tuple_size(targs) != 2) {                                            \
         return raise_error(frame, ctx, "Expected exactly 2 args");             \
       }                                                                        \
-      const Entity *first = tuple_get(targs, 0);                               \
-      const Entity *second = tuple_get(targs, 1);                              \
+      const Value *first = tuple_get(targs, 0);                                \
+      const Value *second = tuple_get(targs, 1);                               \
                                                                                \
       int dim1_index = -1, dim2_index = -1;                                    \
       Tuple *dim1_indices = NULL, *dim2_indices = NULL;                        \
       Range_ *dim1_range = NULL, *dim2_range = NULL;                           \
                                                                                \
-      const Entity dim1_e = _##class_name##_compute_indices(                   \
+      const Value dim1_e = _##class_name##_compute_indices(                    \
           frame, ctx, first, mat, 1, &dim1_index, &dim1_indices, &dim1_range); \
       if (!IS_NONE(&dim1_e)) {                                                 \
         return dim1_e;                                                         \
       }                                                                        \
                                                                                \
-      const Entity dim2_e = _##class_name##_compute_indices(                   \
+      const Value dim2_e = _##class_name##_compute_indices(                    \
           frame, ctx, second, mat, 2, &dim2_index, &dim2_indices,              \
           &dim2_range);                                                        \
       if (!IS_NONE(&dim2_e)) {                                                 \
@@ -484,7 +484,7 @@
                                                                                \
       if (dim1_index >= 0) {                                                   \
         if (dim2_index >= 0) {                                                 \
-          return to_entity_fn(                                                 \
+          return to_value_fn(                                                  \
               _##class_name##_get_value(mat, dim1_index, dim2_index));         \
         } else if (NULL != dim2_indices) {                                     \
           array_class_name *new_arr;                                           \
@@ -498,7 +498,7 @@
                 _##class_name##_get_value(                                     \
                     mat, dim1_index, pint(&tuple_get(dim2_indices, i)->pri))); \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           array_class_name *new_arr;                                           \
           Object *new_obj =                                                    \
@@ -513,7 +513,7 @@
             array_class_name##_set(                                            \
                 new_arr, j, _##class_name##_get_value(mat, dim1_index, i));    \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       } else if (NULL != dim1_indices) {                                       \
         if (dim2_index >= 0) {                                                 \
@@ -528,7 +528,7 @@
                 _##class_name##_get_value(                                     \
                     mat, pint(&tuple_get(dim1_indices, i)->pri), dim2_index)); \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else if (NULL != dim2_indices) {                                     \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
@@ -545,7 +545,7 @@
                       pint(&tuple_get(dim2_indices, j)->pri)));                \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
@@ -564,7 +564,7 @@
                       mat, pint(&tuple_get(dim1_indices, i)->pri), i2));       \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       } else /* if (NULL != dim1_range) */ {                                   \
         if (dim2_index >= 0) {                                                 \
@@ -581,7 +581,7 @@
             array_class_name##_set(                                            \
                 new_arr, j, _##class_name##_get_value(mat, i, dim2_index));    \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else if (NULL != dim2_indices) {                                     \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
@@ -600,7 +600,7 @@
                       mat, i2, pint(&tuple_get(dim2_indices, i)->pri)));       \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
@@ -620,7 +620,7 @@
                                      _##class_name##_get_value(mat, i, k));    \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       }                                                                        \
     } else if (IS_INT(args)) {                                                 \
@@ -634,7 +634,7 @@
           heap_new(frame->parent_isolate->heap, Class_##array_class_name);     \
       subarr->_internal_obj = array_class_name##_create_copy(                  \
           mat->arr->table + dim1_index * mat->dim2, mat->dim2);                \
-      return entity_object(subarr);                                            \
+      return value_object(subarr);                                             \
     } else if (IS_CLASS(args, Class_Range)) {                                  \
       const Range_ *range = (Range_ *)args->obj->_internal_obj;                \
       if (!_##class_name##_range_is_valid(mat, 1, range)) {                    \
@@ -656,21 +656,21 @@
                mat->arr->table + i * mat->dim2,                                \
                sizeof(type_name) * mat->dim2);                                 \
       }                                                                        \
-      return entity_object(submat_o);                                          \
+      return value_object(submat_o);                                           \
     } else {                                                                   \
       return raise_error(frame, ctx, "Expected tuple arg.");                   \
     }                                                                          \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }                                                                            \
                                                                                \
-  void _##class_name##_add_indices(                                            \
-      Frame *frame, Scope *ctx, const Entity *arg, const class_name *mat,      \
-      int dim, IntArray *indices, Entity *error) {                             \
+  void _##class_name##_add_indices(Frame *frame, Scope *ctx, const Value *arg, \
+                                   const class_name *mat, int dim,             \
+                                   IntArray *indices, Value *error) {          \
     int index = -1;                                                            \
     Tuple *tuple = NULL;                                                       \
     Range_ *range = NULL;                                                      \
-    Entity e = _##class_name##_compute_indices(frame, ctx, arg, mat, dim,      \
-                                               &index, &tuple, &range);        \
+    Value e = _##class_name##_compute_indices(frame, ctx, arg, mat, dim,       \
+                                              &index, &tuple, &range);         \
     if (!IS_NONE(&e)) {                                                        \
       *error = e;                                                              \
       return;                                                                  \
@@ -693,8 +693,8 @@
     }                                                                          \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,            \
-                             Entity *args) {                                   \
+  Value _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
                                                                                \
     if (!IS_TUPLE(args)) {                                                     \
@@ -704,8 +704,8 @@
     if (tuple_size(targs) != 2) {                                              \
       return raise_error(frame, ctx, "Expected exactly 2 args");               \
     }                                                                          \
-    const Entity *lhs = tuple_get(targs, 0);                                   \
-    const Entity *rhs = tuple_get(targs, 1);                                   \
+    const Value *lhs = tuple_get(targs, 0);                                    \
+    const Value *rhs = tuple_get(targs, 1);                                    \
                                                                                \
     if (!IS_TUPLE(lhs)) {                                                      \
       return raise_error(frame, ctx, "Expected tuple lhs");                    \
@@ -724,7 +724,7 @@
     IntArray_init(&dim1_indices);                                              \
     IntArray_init(&dim2_indices);                                              \
                                                                                \
-    Entity error = NONE_ENTITY;                                                \
+    Value error = NONE_VALUE;                                                  \
                                                                                \
     _##class_name##_add_indices(frame, ctx, tuple_get(dims, 0), mat, 1,        \
                                 &dim1_indices, &error);                        \
@@ -760,7 +760,7 @@
     IntArray_finalize(&dim1_indices);                                          \
     IntArray_finalize(&dim2_indices);                                          \
                                                                                \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }
 
 #define INSTALL_DATA_ARRAY(class_name, data)                                   \

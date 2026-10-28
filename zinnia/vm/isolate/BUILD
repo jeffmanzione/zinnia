@@ -73,7 +73,7 @@ cc_library(
     deps = [
         ":isolates",
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity/class:classes",
         "//zinnia/heap",
     ],

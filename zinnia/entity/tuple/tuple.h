@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 
 typedef struct _Tuple Tuple;
 
@@ -18,8 +18,8 @@ void __tuple_delete(Object *obj);
 void __tuple_print(const Object *obj, FILE *out);
 
 Tuple *tuple_create(size_t size);
-Entity *tuple_get_mutable(const Tuple *t, uint32_t index);
-const Entity *tuple_get(const Tuple *t, uint32_t index);
+Value *tuple_get_mutable(const Tuple *t, uint32_t index);
+const Value *tuple_get(const Tuple *t, uint32_t index);
 uint32_t tuple_size(const Tuple *t);
 void tuple_delete(Tuple *t);
 void tuple_print(const Tuple *t, FILE *file);

@@ -5,14 +5,14 @@
 #include "zinnia/entity/native/error.h"
 
 void FunctionContext_init(FunctionContext *fn_ctx, Frame *frame, Scope *ctx,
-                          const Entity *args) {
+                          const Value *args) {
   fn_ctx->frame_ = frame;
   fn_ctx->ctx_ = ctx;
   fn_ctx->args_ = args;
-  fn_ctx->retval_ = NONE_ENTITY;
+  fn_ctx->retval_ = NONE_VALUE;
 }
 
-const Entity *FunctionContext_args(FunctionContext *fn_ctx) {
+const Value *FunctionContext_args(FunctionContext *fn_ctx) {
   return fn_ctx->args_;
 }
 
@@ -24,19 +24,19 @@ void FunctionContext_raise_error(FunctionContext *fn_ctx, const char fmt[],
   va_end(args);
 }
 
-Entity *FunctionContext_mutable_retval(FunctionContext *fn_ctx) {
+Value *FunctionContext_mutable_retval(FunctionContext *fn_ctx) {
   return &fn_ctx->retval_;
 }
 
-void FunctionContext_set_retval(FunctionContext *fn_ctx, Entity *retval) {
+void FunctionContext_set_retval(FunctionContext *fn_ctx, Value *retval) {
   fn_ctx->retval_ = *retval;
 }
 
 void FunctionContext_set_retval_obj(FunctionContext *fn_ctx, Object *retval) {
-  fn_ctx->retval_ = entity_object(retval);
+  fn_ctx->retval_ = value_object(retval);
 }
 
-const Entity *FunctionContext_get_retval(FunctionContext *fn_ctx) {
+const Value *FunctionContext_get_retval(FunctionContext *fn_ctx) {
   return &fn_ctx->retval_;
 }
 
@@ -54,7 +54,7 @@ Object *FunctionContext_create_tuple(FunctionContext *fn_ctx, size_t size,
   va_start(args, size);
 
   for (int i = 0; i < size; i++) {
-    Entity e = va_arg(args, Entity);
+    Value e = va_arg(args, Value);
     tuple_set(heap, t, i, &e);
   }
 

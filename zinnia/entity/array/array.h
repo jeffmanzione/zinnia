@@ -7,10 +7,10 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_ARRAY_ARRAY_H_
 
 #include "c-data-structures/arraylike.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
+#include "zinnia/entity/value.h"
 
-DEFINE_ARRAYLIKE(Array, Entity);
+DEFINE_ARRAYLIKE(Array, Value);
 
 void array_init__(Object *obj);
 void array_delete__(Object *obj);

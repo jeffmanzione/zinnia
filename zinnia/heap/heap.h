@@ -18,8 +18,8 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_HEAP_HEAP_H_
 
 #include "c-data-structures/maplike.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/object.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/util/error.h"
 
 DEFINE_MAPLIKE(ObjectTypeCountMap, Class *, int);
@@ -51,28 +51,27 @@ void heap_inc_edge(Heap *heap, Object *parent, Object *child);
 void heap_dec_edge(Heap *heap, Object *parent, Object *child);
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
-                       const Entity *child);
-Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
-                              const Object *child);
+                       const Value *child);
+Value *object_set_member_obj(Heap *heap, Object *parent, const char key[],
+                             const Object *child);
 
-void array_add(Heap *heap, Object *array, const Entity *child);
-Entity array_remove(Heap *heap, Object *array, int32_t index);
-void array_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+void array_add(Heap *heap, Object *array, const Value *child);
+Value array_remove(Heap *heap, Object *array, int32_t index);
+void array_set(Heap *heap, Object *array, int32_t index, const Value *child);
 Object *array_create(Heap *heap);
 
-void tuple_set(Heap *heap, Object *array, int32_t index, const Entity *child);
+void tuple_set(Heap *heap, Object *array, int32_t index, const Value *child);
 
 Object *tuple_create_empty(Heap *heap, size_t size);
-Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2);
-Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3);
-Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4);
-Object *tuple_create5(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5);
-Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5, Entity *e6);
-Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5, Entity *e6, Entity *e7);
+Object *tuple_create2(Heap *heap, Value *e1, Value *e2);
+Object *tuple_create3(Heap *heap, Value *e1, Value *e2, Value *e3);
+Object *tuple_create4(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4);
+Object *tuple_create5(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5);
+Object *tuple_create6(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5, Value *e6);
+Object *tuple_create7(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5, Value *e6, Value *e7);
 
 typedef struct HeapProfile_ HeapProfile;
 
@@ -86,13 +85,13 @@ void heapprofile_delete(HeapProfile *hp);
  * @brief Struct for creating  deep copies of multiple objects that should share
  * the same deep copies of  objects.
  */
-struct EntityCopier_ {
+struct ValueCopier_ {
   Heap *target;
   /* Map of entities in source to their copies in target.*/
   ObjectCopyMap copy_map;
 };
 
-typedef struct EntityCopier_ EntityCopier;
+typedef struct ValueCopier_ ValueCopier;
 
 /**
  * @brief Initializes an EntityCopier.
@@ -100,14 +99,14 @@ typedef struct EntityCopier_ EntityCopier;
  * @param copier The EntityCopier to initialize.
  * @param target The heap into which copies should be created.
  */
-void entitycopier_init(EntityCopier *copier, Heap *target);
+void valuecopier_init(ValueCopier *copier, Heap *target);
 
 /**
  * @brief Finalizes the EntityCopier, destroying its copy state.
  *
  * @param copier
  */
-void entitycopier_finalize(EntityCopier *copier);
+void valuecopier_finalize(ValueCopier *copier);
 
 /**
  * @brief Creates a copy of an Entity.
@@ -116,7 +115,7 @@ void entitycopier_finalize(EntityCopier *copier);
  * @param e The entity to copy.
  * @return The newly-created entity.
  */
-Entity entitycopier_copy(EntityCopier *copier, const Entity *e);
+Value valuecopier_copy(ValueCopier *copier, const Value *e);
 
 /**
  * @brief Creates a deep copy of an Entity in a Heap and returns it.
@@ -129,14 +128,14 @@ Entity entitycopier_copy(EntityCopier *copier, const Entity *e);
  * @param heap The target heap for the copy.
  * @return The newly-created copy of e in heap.
  */
-Entity entity_copy(const Entity *e, Heap *heap);
+Value value_copy(const Value *e, Heap *heap);
 
-#define BULK_COPY(copier_var_name, target_heap, exp)  \
-  {                                                   \
-    EntityCopier copier_var_name;                     \
-    entitycopier_init(&copier_var_name, target_heap); \
-    exp;                                              \
-    entitycopier_finalize(&copier_var_name);          \
+#define BULK_COPY(copier_var_name, target_heap, exp) \
+  {                                                  \
+    ValueCopier copier_var_name;                     \
+    valuecopier_init(&copier_var_name, target_heap); \
+    exp;                                             \
+    valuecopier_finalize(&copier_var_name);          \
   }
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_HEAP_HEAP_H_ */

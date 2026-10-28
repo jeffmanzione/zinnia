@@ -2,11 +2,11 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_NATIVE_HELPERS_H_
 
 #include "zinnia/entity/array/array.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/error.h"
 #include "zinnia/entity/native/native.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/entity/value.h"
 
 #define EXTRACT_TUPLE_ARGS(var, args, num_args, frame, ctx)                    \
   if (!IS_TUPLE(args)) {                                                       \
@@ -39,10 +39,10 @@
   }                                                                           \
   var = bool_of(&tuple_get(tuple, index)->pri);
 
-#define EXCTRACT_STRING_OR_THROW(str, str_len, entity)  \
+#define EXCTRACT_STRING_OR_THROW(str, str_len, value)   \
   char *str;                                            \
   int str_len;                                          \
-  if (!extract_string(entity, &str, &str_len)) {        \
+  if (!extract_string(value, &str, &str_len)) {         \
     return raise_error(frame, ctx, "Must be a string"); \
   }
 
