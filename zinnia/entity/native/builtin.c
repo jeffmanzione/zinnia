@@ -707,20 +707,36 @@ Entity string_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
       string_new(task->parent_process->heap, str->table, String_size(str)));
 }
 
-// Removes leading and/or trailing whitespace from str.
-static void trim_(String *str, bool left, bool right) {
-  const int size = String_size(str);
-  int start = 0, end = size;
+// Returns a mutable String with the same contents.
+Entity istring_copy_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  IString *istr = (IString *)obj->_internal_obj;
+  return entity_object(
+      string_new(task->parent_process->heap, istr->str, istr->len));
+}
+
+// Sets [*start, *end) to the range of str without leading and/or trailing
+// whitespace.
+static void trim_bounds_(const char *str, int size, bool left, bool right,
+                         int *start, int *end) {
+  *start = 0;
+  *end = size;
   if (left) {
-    while (start < end && is_any_space_(str->table[start])) {
-      ++start;
+    while (*start < *end && is_any_space_(str[*start])) {
+      ++*start;
     }
   }
   if (right) {
-    while (end > start && is_any_space_(str->table[end - 1])) {
-      --end;
+    while (*end > *start && is_any_space_(str[*end - 1])) {
+      --*end;
     }
   }
+}
+
+// Removes leading and/or trailing whitespace from str.
+static void trim_(String *str, bool left, bool right) {
+  const int size = String_size(str);
+  int start, end;
+  trim_bounds_(str->table, size, left, right, &start, &end);
   // Shrink right first so the left shift moves only the kept characters.
   // Shrinking by 0 is invalid.
   if (end < size) {
@@ -744,6 +760,28 @@ Entity string_rtrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
 Entity string_trim_(Task *task, Context *ctx, Object *obj, Entity *args) {
   trim_((String *)obj->_internal_obj, /*left=*/true, /*right=*/true);
   return entity_object(obj);
+}
+
+// IStrings are immutable, so trimming one returns a new String.
+static Entity istring_trim_impl_(Task *task, Object *obj, bool left,
+                                 bool right) {
+  IString *istr = (IString *)obj->_internal_obj;
+  int start, end;
+  trim_bounds_(istr->str, istr->len, left, right, &start, &end);
+  return entity_object(
+      string_new(task->parent_process->heap, istr->str + start, end - start));
+}
+
+Entity istring_ltrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(task, obj, /*left=*/true, /*right=*/false);
+}
+
+Entity istring_rtrim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(task, obj, /*left=*/false, /*right=*/true);
+}
+
+Entity istring_trim_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  return istring_trim_impl_(task, obj, /*left=*/true, /*right=*/true);
 }
 
 Entity string_lshrink_(Task *task, Context *ctx, Object *obj, Entity *args) {
@@ -790,36 +828,75 @@ Entity string_clear_(Task *task, Context *ctx, Object *obj, Entity *args) {
   return entity_object(obj);
 }
 
-Entity string_split_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  String *str = (String *)obj->_internal_obj;
-  if (!IS_STRING(args)) {
-    return raise_error(task, ctx,
-                       "Argument to String.split() must be a String.");
-  }
-  Object *array_obj = array_create(task->parent_process->heap);
+typedef struct {
+  const char *str;
+  int len;
+  const char *delim;
+  int delim_len;
+  int pos;
+  bool done;
+} Splitter_;
 
-  int str_len = String_size(str);
+// Sets [*start, *start + *len) to the next part of the string. Returns false
+// when there are no more parts.
+static bool splitter_next_(Splitter_ *s, int *start, int *len) {
+  if (s->done) {
+    return false;
+  }
+  *start = s->pos;
+  for (int i = s->pos; i + s->delim_len <= s->len; ++i) {
+    if (0 == memcmp(s->str + i, s->delim, s->delim_len)) {
+      *len = i - s->pos;
+      s->pos = i + s->delim_len;
+      return true;
+    }
+  }
+  *len = s->len - s->pos;
+  s->done = true;
+  return true;
+}
+
+// Splits str around each occurrence of the delimiter in args. Empty parts are
+// kept, except trailing ones (so a trailing delimiter adds no part).
+static Entity split_(Task *task, Context *ctx, const char *str, int len,
+                     const Entity *args) {
+  if (!IS_STRING(args)) {
+    return raise_error(task, ctx, "Argument to split() must be a String.");
+  }
   char *delim;
   int delim_len;
   extract_string(args, &delim, &delim_len);
-  int i, last_delim_end = 0;
-  for (i = 0; i < str_len; ++i) {
-    if (0 == strncmp(str->table + i, delim, delim_len)) {
-      Entity part = entity_object(string_new(task->parent_process->heap,
-                                             str->table + last_delim_end,
-                                             i - last_delim_end));
-      array_add(task->parent_process->heap, array_obj, &part);
-      i += delim_len;
-      last_delim_end = i;
+  if (delim_len == 0) {
+    return raise_error(task, ctx, "Argument to split() must not be empty.");
+  }
+  // Count the parts to keep, which excludes trailing empty parts.
+  Splitter_ splitter = {str, len, delim, delim_len, 0, false};
+  int num_parts = 0, num_parts_to_keep = 0, start, part_len;
+  while (splitter_next_(&splitter, &start, &part_len)) {
+    ++num_parts;
+    if (part_len > 0) {
+      num_parts_to_keep = num_parts;
     }
   }
-  if (last_delim_end < str_len - delim_len) {
-    Entity part = entity_object(string_new(task->parent_process->heap,
-                                           str->table + last_delim_end,
-                                           str_len - last_delim_end));
+  Object *array_obj = array_create(task->parent_process->heap);
+  splitter = (Splitter_){str, len, delim, delim_len, 0, false};
+  for (int i = 0; i < num_parts_to_keep; ++i) {
+    splitter_next_(&splitter, &start, &part_len);
+    Entity part = entity_object(
+        string_new(task->parent_process->heap, str + start, part_len));
     array_add(task->parent_process->heap, array_obj, &part);
   }
   return entity_object(array_obj);
+}
+
+Entity string_split_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  String *str = (String *)obj->_internal_obj;
+  return split_(task, ctx, str->table, String_size(str), args);
+}
+
+Entity istring_split_(Task *task, Context *ctx, Object *obj, Entity *args) {
+  IString *istr = (IString *)obj->_internal_obj;
+  return split_(task, ctx, istr->str, istr->len, args);
 }
 
 Entity string_starts_with_(Task *task, Context *ctx, Object *obj,
@@ -1313,13 +1390,11 @@ void builtin_add_istring_(Module *builtin) {
   native_method(Class_IString, global_intern("len"), istring_len_);
   native_method(Class_IString, HASH_KEY, istring_hash_);
   native_method(Class_IString, global_intern("__substr"), istring_substr_);
-  // // native_method(Class_IString, global_intern("copy"), istring_copy_);
-  // // native_method(Class_IString, global_intern("ltrim"), string_ltrim_);
-  // // native_method(Class_IString, global_intern("rtrim"), string_rtrim_);
-  // // native_method(Class_IString, global_intern("trim"), string_trim_);
-  // // native_method(Class_IString, global_intern("lshrink"), string_lshrink_);
-  // // native_method(Class_IString, global_intern("rshrink"), string_rshrink_);
-  // // native_method(Class_IString, global_intern("split"), string_split_);
+  native_method(Class_IString, global_intern("copy"), istring_copy_);
+  native_method(Class_IString, global_intern("ltrim"), istring_ltrim_);
+  native_method(Class_IString, global_intern("rtrim"), istring_rtrim_);
+  native_method(Class_IString, global_intern("trim"), istring_trim_);
+  native_method(Class_IString, global_intern("split"), istring_split_);
   native_method(Class_IString, global_intern("__starts_with"),
                 istring_starts_with_);
   native_method(Class_IString, global_intern("__ends_with"),
