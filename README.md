@@ -105,7 +105,7 @@ for usage.
 ## Testing
 
 ```shell
-bazel test -c opt //...
+bazel test //...
 ```
 
 Tests are written with the `test` library, which raises an error (failing the
