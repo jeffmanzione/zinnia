@@ -5,8 +5,8 @@ import net
 import socket
 
 host = args.host | socket.lookup_local_address()
-web_port = args.web_port | 8080
-api_port = args.api_port | 5000
+web_port = Int(args.web_port | 8080)
+api_port = Int(args.api_port | 5000)
 
 class Favicon {}
 class IndexHtml {}
