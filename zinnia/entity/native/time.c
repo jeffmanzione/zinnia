@@ -7,15 +7,13 @@
 
 #include "zinnia/util/time.h"
 
-#define USEC_PER_SEC 1000 * 1000;
-
 void now_usec_(FunctionContext *fn_ctx) {
   *FunctionContext_mutable_retval(fn_ctx) =
       entity_int(current_usec_since_epoch());
 }
 
 void now_timestamp_(FunctionContext *fn_ctx) {
-  Timestamp ts = current_local_timestamp();
+  Timestamp ts = current_gmt_timestamp();
   Object *t_obj = FunctionContext_create_tuple(
       fn_ctx, 7, entity_int(ts.year), entity_int(ts.month),
       entity_int(ts.day_of_month), entity_int(ts.hour), entity_int(ts.minute),
@@ -61,4 +59,4 @@ void time_add_native(ModuleBuilder *builder) {
                              timestamp_to_micros_);
   ModuleBuilder_add_function(builder, "__micros_to_timestamp",
                              micros_to_timestamp_);
-}
+}

@@ -5,67 +5,85 @@
  *      Author: Jeff
  */
 
+// Exposes timegm() and gmtime_r()/localtime_r() on glibc.
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+
 #include "zinnia/util/time.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef linux
-#include <time.h>
-#endif
-
 #ifdef _WIN32
 #include <windows.h>
 #include <winnt.h>
+// Difference between the Windows epoch (1601-01-01) and the Unix epoch.
 #define DIFF_FROM_EPOCH_USEC (11644473600LL * 1000 * 1000)
+#else
+#include <sys/time.h>
 #endif
 
-int64_t current_usec_since_epoch() {
-  Timestamp ts = current_local_timestamp();
-  return timestamp_to_micros(&ts);
-}
-
-int64_t timestamp_to_micros(const Timestamp *ts) {
-  struct tm tm = {.tm_year = ts->year - 1900,
-                  .tm_mon = ts->month - 1,
-                  .tm_mday = ts->day_of_month,
-                  .tm_hour = ts->hour,
-                  .tm_min = ts->minute,
-                  .tm_sec = ts->second,
-                  .tm_isdst = -1};
-  time_t time = mktime(&tm);
-  int64_t time64 = (time * 1000 + ts->millisecond) * 1000;
-  return time64;
-}
-
-Timestamp micros_to_timestamp(int64_t micros_since_epoch) {
-  int64_t seconds_since_epoch = micros_since_epoch / 1000 / 1000;
-  struct tm *tm = localtime(&seconds_since_epoch);
-  int64_t millis = (micros_since_epoch / 1000) % 1000;
+static Timestamp tm_to_timestamp_(const struct tm *tm, uint16_t millisecond) {
   Timestamp ts = {.year = tm->tm_year + 1900,
                   .month = tm->tm_mon + 1,
                   .day_of_month = tm->tm_mday,
                   .hour = tm->tm_hour,
                   .minute = tm->tm_min,
                   .second = tm->tm_sec,
-                  .millisecond = millis};
+                  .millisecond = millisecond};
   return ts;
 }
 
-Timestamp current_local_timestamp() {
-#ifdef linux
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  Timestamp ts = {.year = tm.tm_year + 1900,
-                  .month = tm.tm_mon + 1,
-                  .day_of_month = tm.tm_mday,
-                  .hour = tm.tm_hour,
-                  .minute = tm.tm_min,
-                  .second = tm.tm_sec,
-                  .millisecond = 0};
-  return ts;
+int64_t current_usec_since_epoch() {
+#ifdef _WIN32
+  FILETIME ft;
+  GetSystemTimeAsFileTime(&ft);
+  ULARGE_INTEGER hundred_nanos = {.LowPart = ft.dwLowDateTime,
+                                  .HighPart = ft.dwHighDateTime};
+  return (int64_t)(hundred_nanos.QuadPart / 10) - DIFF_FROM_EPOCH_USEC;
+#else
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (int64_t)tv.tv_sec * 1000 * 1000 + tv.tv_usec;
 #endif
+}
+
+// Interprets ts as UTC.
+int64_t timestamp_to_micros(const Timestamp *ts) {
+  struct tm tm = {.tm_year = ts->year - 1900,
+                  .tm_mon = ts->month - 1,
+                  .tm_mday = ts->day_of_month,
+                  .tm_hour = ts->hour,
+                  .tm_min = ts->minute,
+                  .tm_sec = ts->second};
+#ifdef _WIN32
+  int64_t seconds = _mkgmtime(&tm);
+#else
+  int64_t seconds = timegm(&tm);
+#endif
+  return (seconds * 1000 + ts->millisecond) * 1000;
+}
+
+// Returns a UTC timestamp.
+Timestamp micros_to_timestamp(int64_t micros_since_epoch) {
+  int64_t millis_since_epoch = micros_since_epoch / 1000;
+  int64_t millis = millis_since_epoch % 1000;
+  if (millis < 0) {
+    millis += 1000;
+  }
+  time_t seconds_since_epoch = (time_t)((millis_since_epoch - millis) / 1000);
+  struct tm tm;
+#ifdef _WIN32
+  gmtime_s(&tm, &seconds_since_epoch);
+#else
+  gmtime_r(&seconds_since_epoch, &tm);
+#endif
+  return tm_to_timestamp_(&tm, (uint16_t)millis);
+}
+
+Timestamp current_local_timestamp() {
 #ifdef _WIN32
   SYSTEMTIME st;
   GetLocalTime(&st);
@@ -77,22 +95,17 @@ Timestamp current_local_timestamp() {
                   .second = st.wSecond,
                   .millisecond = st.wMilliseconds};
   return ts;
+#else
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  time_t t = tv.tv_sec;
+  struct tm tm;
+  localtime_r(&t, &tm);
+  return tm_to_timestamp_(&tm, (uint16_t)(tv.tv_usec / 1000));
 #endif
 }
 
 Timestamp current_gmt_timestamp() {
-#ifdef linux
-  time_t t = time(NULL);
-  struct tm tm = *gmtime(&t);
-  Timestamp ts = {.year = tm.tm_year + 1900,
-                  .month = tm.tm_mon + 1,
-                  .day_of_month = tm.tm_mday,
-                  .hour = tm.tm_hour,
-                  .minute = tm.tm_min,
-                  .second = tm.tm_sec,
-                  .millisecond = 0};
-  return ts;
-#endif
 #ifdef _WIN32
   SYSTEMTIME st;
   GetSystemTime(&st);
@@ -104,6 +117,8 @@ Timestamp current_gmt_timestamp() {
                   .second = st.wSecond,
                   .millisecond = st.wMilliseconds};
   return ts;
+#else
+  return micros_to_timestamp(current_usec_since_epoch());
 #endif
 }
 

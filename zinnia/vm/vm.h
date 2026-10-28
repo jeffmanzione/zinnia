@@ -23,6 +23,8 @@ typedef struct _VM {
   ThreadPool *background_pool;
   HeapConf base_heap_conf;
   bool async_enabled;
+  // Exit code of the program. Set by `exit` or an uncaught error.
+  volatile int exit_code;
 } VM;
 
 ModuleManager *vm_module_manager(VM *vm);
@@ -34,4 +36,4 @@ Entity object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
 
 uint32_t process_collect_garbage(Process *process);
 
-#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_VM_H_ */
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_VM_H_ */

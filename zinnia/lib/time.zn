@@ -18,6 +18,16 @@ function current_timestamp() {
   clock.now_timestamp()
 }
 
+function _pad(n, width) {
+  s = str(n)
+  out = ''
+  for i = s.len(), i < width, i = i + 1 {
+    out.extend('0')
+  }
+  out.extend(s)
+  return out
+}
+
 function timestamp_from_micros(micros) {
   Timestamp(__micros_to_timestamp(micros))
 }
@@ -53,11 +63,9 @@ class Timestamp {
       field millisecond = 0) {}
 
   method to_s() {
-    cat(year, '-',
-        (if month < 10 then '0' else ''), month, '-',
-        (if day_of_month < 10 then '0' else ''), day_of_month, 'T',
-        hour, ':', minute, ':', second,
-        '.', millisecond, 'Z')
+    cat(year, '-', _pad(month, 2), '-', _pad(day_of_month, 2), 'T',
+        _pad(hour, 2), ':', _pad(minute, 2), ':', _pad(second, 2),
+        '.', _pad(millisecond, 3), 'Z')
   }
 
   method to_micros() {

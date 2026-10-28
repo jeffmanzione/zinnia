@@ -312,7 +312,8 @@ int zinniap(int argc, const char *argv[]) {
   }
 
   fprintf(out,
-          "  run_files(&srcs, &src_contents, &init_fns, store);\n"
+          "  const int exit_code =\n"
+          "      run_files(&srcs, &src_contents, &init_fns, store);\n"
           "#ifdef DEBUG\n "
           "  CharPtrArray_finalize(&srcs);\n"
           "  FilePartsArray_finalize(&src_contents);\n"
@@ -322,7 +323,7 @@ int zinniap(int argc, const char *argv[]) {
           "  token_finalize_all();\n"
           "  strings_finalize();\n"
           "#endif \n "
-          "  return EXIT_SUCCESS;\n"
+          "  return exit_code;\n"
           "}\n");
 
 #ifdef DEBUG
@@ -336,4 +337,4 @@ int zinniap(int argc, const char *argv[]) {
 #endif
 
   return EXIT_SUCCESS;
-}
+}

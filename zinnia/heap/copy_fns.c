@@ -44,5 +44,6 @@ void string_copy(EntityCopier *copier, const Object *src_obj,
 
 void istring_copy(EntityCopier *copier, const Object *src_obj,
                   Object *target_obj) {
-  *(IString *)target_obj->_internal_obj = *(IString *)src_obj->_internal_obj;
+  const IString *src = (IString *)src_obj->_internal_obj;
+  istring_init_no_intern__(target_obj, src->str, src->len);
 }

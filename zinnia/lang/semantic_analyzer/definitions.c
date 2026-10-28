@@ -1236,6 +1236,21 @@ int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
   Tape *defaults = tape_create();
   int defaults_ins = 0;
   defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+  if (first->has_default) {
+    // Use the default value if no args were passed.
+    Tape *first_default = tape_create();
+    int first_default_ins = semantic_analyzer_produce(
+        analyzer, first->default_value, first_default);
+    defaults_ins += tape_ins_no_arg(defaults, PUSH, first->arg_name);
+    defaults_ins += tape_ins_int(defaults, TGTE, 1, first->arg_name);
+    defaults_ins +=
+        tape_ins_int(defaults, IF, first_default_ins + 2, first->arg_name);
+    defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+    tape_append(defaults, first_default);
+    defaults_ins += first_default_ins;
+    defaults_ins += tape_ins_int(defaults, JMP, 1, first->arg_name);
+    defaults_ins += tape_ins_no_arg(defaults, RES, first->arg_name);
+  }
   defaults_ins += produce_argument(first, defaults);
   for (i = 1; i < num_args; ++i) {
     const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, i);

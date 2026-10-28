@@ -25,6 +25,11 @@ zinnia_test(
 )
 
 zinnia_test(
+    name = "language_test",
+    main = "language_test.zn",
+)
+
+zinnia_test(
     name = "module_test",
     main = "module_test.zn",
     deps = ["//examples/module:module_srcs"],
