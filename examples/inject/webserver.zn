@@ -21,7 +21,6 @@ class NotFound {}
 
 class ServerProviders : net.BaseHttpProviderSet {
   method init() {
-    super(net.BaseHttpProviderSet).init()
     bind(Host, () -> HOST)
     bind(Port, () -> PORT)
   }
