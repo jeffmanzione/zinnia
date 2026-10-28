@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "zinnia/seed/seed.h"
+#include "zinnia/bundle/bundle.h"
 
 #define NUM_NON_MODULE_ARGS 3
 
@@ -56,8 +56,8 @@ void free_arg_(struct zinnia_module_info *module_info) {
 }
 
 // zinnias
-//   seed_name
-//   out/path/to/seed_name
+//   bundle_name
+//   out/path/to/bundle_name
 //   mod1:path/to/mod1/mod1.zn:zip_path/to/mod1/mod1.zn
 //   mod2:path/to/mod2/mod2.zn:zip_path/to/mod2.mod2.zn:path/to/mod2/mod2.dll:init_mod2
 int main(int argc, const char *argv[]) {
@@ -66,8 +66,8 @@ int main(int argc, const char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  const char *seed_name = argv[1];
-  const char *seed_filepath = argv[2];
+  const char *bundle_name = argv[1];
+  const char *bundle_filepath = argv[2];
 
   // Subtract all non-module args.
   const int num_modules = argc - NUM_NON_MODULE_ARGS;
@@ -79,7 +79,7 @@ int main(int argc, const char *argv[]) {
     read_arg_(argv[NUM_NON_MODULE_ARGS + i], &module_infos[i]);
   }
 
-  create_znseed_file(seed_name, num_modules, module_infos, seed_filepath);
+  create_znbundle_file(bundle_name, num_modules, module_infos, bundle_filepath);
 
 #ifdef DEBUG
   for (int i = 0; i < argc - NUM_NON_MODULE_ARGS; ++i) {

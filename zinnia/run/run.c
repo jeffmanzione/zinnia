@@ -15,6 +15,7 @@
 #include "language-tools/semantic_analyzer/expression_tree.h"
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
 #include "zinnia/alloc/alloc.h"
+#include "zinnia/bundle/bundle.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/module/modules.h"
@@ -23,7 +24,6 @@
 #include "zinnia/entity/value.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/program/optimization/optimize.h"
-#include "zinnia/seed/seed.h"
 #include "zinnia/util/args/commandline.h"
 #include "zinnia/util/args/commandlines.h"
 #include "zinnia/util/args/lib_finder.h"
@@ -72,17 +72,17 @@ int run_files(const CharPtrArray *source_file_names,
     const FileParts *src_content =
         FilePartsArray_get_ref_unchecked(source_contents, i);
 
-    if (src_content->type == FP_FILE_SEED) {
-      ASSERT(src_content->seed_data.content_size > 0);
-      TmpSeedFile tmp_file;
+    if (src_content->type == FP_FILE_BUNDLE) {
+      ASSERT(src_content->bundle_data.content_size > 0);
+      TmpBundleFile tmp_file;
       char error_buf[255];
-      copy_znseed_bytes_to_tmpfile(src_content->seed_data.content_bytes,
-                                   src_content->seed_data.content_size,
-                                   &tmp_file);
-      if (!load_znseed_file(vm, tmp_file.filename, error_buf)) {
+      copy_znbundle_bytes_to_tmpfile(src_content->bundle_data.content_bytes,
+                                     src_content->bundle_data.content_size,
+                                     &tmp_file);
+      if (!load_znbundle_file(vm, tmp_file.filename, error_buf)) {
         FATALF("%s", error_buf);
       }
-      znseed_tmp_finalize(&tmp_file);
+      znbundle_tmp_finalize(&tmp_file);
     } else {
       ModuleBuilderInitFn init_fn =
           (ModuleBuilderInitFn)VoidPtrArray_get_unchecked(init_fns, i);
@@ -134,9 +134,9 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
       for (; fl_has(&iter); fl_inc(&iter)) {
         FileLoc *loc = fl_value(&iter);
         const char *full_path = file_loc_full_path(loc);
-        if (ends_with(full_path, ZNSEED_EXTENSION)) {
+        if (is_bundle_file(full_path)) {
           char error_buf[255];
-          if (!load_znseed_file(vm, full_path, error_buf)) {
+          if (!load_znbundle_file(vm, full_path, error_buf)) {
             FATALF("%s", error_buf);
           }
         } else {
@@ -146,9 +146,9 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
       }
       file_locs_delete(locs);
     } else {
-      if (ends_with(src, ZNSEED_EXTENSION)) {
+      if (is_bundle_file(src)) {
         char error_buf[255];
-        if (!load_znseed_file(vm, src, error_buf)) {
+        if (!load_znbundle_file(vm, src, error_buf)) {
           FATALF("%s", error_buf);
         }
       } else {

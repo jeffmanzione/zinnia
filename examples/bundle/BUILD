@@ -1,5 +1,5 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//zinnia:zinnia.bzl", "zinnia_binary", "zinnia_cc_library", "zinnia_library", "zinnia_seed")
+load("//zinnia:zinnia.bzl", "zinnia_binary", "zinnia_cc_library", "zinnia_library", "zinnia_bundle")
 
 cc_library(
     name = "hello_c",
@@ -23,7 +23,7 @@ zinnia_library(
     srcs = ["greeter.zn"],
 )
 
-zinnia_seed(
+zinnia_bundle(
     name = "hello",
     deps = [
         ":greeter_lib",

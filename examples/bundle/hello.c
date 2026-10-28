@@ -1,4 +1,4 @@
-#include "examples/seed/hello.h"
+#include "examples/bundle/hello.h"
 
 #define GREET_PREFIX "Hello, "
 #define GREET_SUFFIX "!\n"

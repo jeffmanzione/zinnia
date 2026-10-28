@@ -5,9 +5,9 @@ package(
 )
 
 cc_library(
-    name = "seed",
-    srcs = ["seed.c"],
-    hdrs = ["seed.h"],
+    name = "bundle",
+    srcs = ["bundle.c"],
+    hdrs = ["bundle.h"],
     visibility = ["//visibility:public"],
     deps = [
         "//zinnia/util:dll",

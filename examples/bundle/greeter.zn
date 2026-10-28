@@ -1,6 +1,6 @@
 import io
 
-import 'examples/seed/hello' as hello
+import 'examples/bundle/hello' as hello
 
 class Greeter {
   method greet(name) {

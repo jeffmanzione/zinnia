@@ -8,9 +8,9 @@
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
 #include "zinnia/alloc/alloc.h"
+#include "zinnia/bundle/bundle.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/program/optimization/optimize.h"
-#include "zinnia/seed/seed.h"
 #include "zinnia/util/codegen.h"
 #include "zinnia/util/error.h"
 #include "zinnia/util/string_util.h"
@@ -46,8 +46,7 @@ size_t compile_to_string_(const char file_name[], char **target) {
     rewind(assembly_file);
     return getall(assembly_file, target);
 
-  } else if (ends_with(file_name, ".zna") ||
-             ends_with(file_name, ZNSEED_EXTENSION)) {
+  } else if (ends_with(file_name, ".zna") || is_bundle_file(file_name)) {
     FILE *file = FILE_FN(file_name, "rb");
     if (NULL == file) {
       FATALF("File does not exist: %s", file_name);
@@ -120,7 +119,7 @@ char *convert_lib_path_to_var_name_(const char lib_path[]) {
   return var_name;
 }
 
-int zinniap(int argc, const char *argv[]) {
+int zinnia_package(int argc, const char *argv[]) {
   if (0 == strcmp(argv[1], "--version")) {
     printf("%s@%s\n", version_string(), version_timestamp_string());
     return EXIT_SUCCESS;
@@ -185,8 +184,8 @@ int zinniap(int argc, const char *argv[]) {
     char *content = NULL;
     const size_t content_size = compile_to_string_(file_name, &content);
 
-    if (ends_with(file_name, ZNSEED_EXTENSION)) {
-      DEBUGF("Processing seed: %s", file_name);
+    if (is_bundle_file(file_name)) {
+      DEBUGF("Processing bundle: %s", file_name);
       print_data_as_char_array_var(lib_var_name, content, content_size, out);
     } else {
       DEBUGF("Processing source: %s", file_name);
@@ -242,12 +241,12 @@ int zinniap(int argc, const char *argv[]) {
     }
 
     // if (ends_with(file_name, ZNSEED_EXTENSION)) {
-    //   DEBUGF("Processing seed: %s", file_name);
+    //   DEBUGF("Processing bundle: %s", file_name);
     //   continue;
     // }
-    const bool is_seed = ends_with(file_name, ZNSEED_EXTENSION);
+    const bool is_bundle = is_bundle_file(file_name);
 
-    const char *type = is_seed ? "FP_FILE_SEED" : "FP_FILE_SOURCE";
+    const char *type = is_bundle ? "FP_FILE_BUNDLE" : "FP_FILE_SOURCE";
 
     char *dir_path, *file_base, *ext;
     split_path_file(file_name, &dir_path, &file_base, &ext);
@@ -259,10 +258,10 @@ int zinniap(int argc, const char *argv[]) {
     fprintf(out, "  CharPtrArray_push_back(&srcs, \"%s%s.zna\");\n",
             escaped_dir_path, file_base);
 
-    if (is_seed) {
+    if (is_bundle) {
       fprintf(out,
               "  *FilePartsArray_push_back_ref(&src_contents) = (FileParts){ "
-              ".type = %s,\n.seed_data = { .content_bytes = LIB_%s, "
+              ".type = %s,\n.bundle_data = { .content_bytes = LIB_%s, "
               ".content_size = sizeof(LIB_%s)}};\n",
               type, lib_var_name, lib_var_name);
     } else {
@@ -337,4 +336,4 @@ int zinniap(int argc, const char *argv[]) {
 #endif
 
   return EXIT_SUCCESS;
-}
+}

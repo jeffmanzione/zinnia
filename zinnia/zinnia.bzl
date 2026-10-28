@@ -22,10 +22,10 @@ ZinniaLibraryInfo = provider(
     ],
 )
 
-ZinniaSeedInfo = provider(
-    doc = "Contains metadata about zinnia seed.",
+ZinniaBundleInfo = provider(
+    doc = "Contains metadata about zinnia bundle.",
     fields = [
-        "seed_file",
+        "bundle_file",
     ],
 )
 
@@ -161,23 +161,23 @@ def _zinnia_binary_impl(ctx):
         if ZinniaLibraryInfo in dep:
             for src in dep[ZinniaLibraryInfo].srcs.to_list():
                 dep_files.append(src)
-        if ZinniaSeedInfo in dep:
-            dep_files.append(dep[ZinniaSeedInfo].seed_file)
+        if ZinniaBundleInfo in dep:
+            dep_files.append(dep[ZinniaBundleInfo].bundle_file)
 
     src_files = [znmodules_file, main_file] + dep_files
     out_file = ctx.actions.declare_file(ctx.label.name + ".c")
 
-    zinniap_args = [out_file.path] + [file.path for file in src_files]
+    package_args = [out_file.path] + [file.path for file in src_files]
     input_files = src_files
 
     ctx.actions.run(
         outputs = [out_file],
         inputs = input_files,
         executable = compiler_executable,
-        arguments = zinniap_args,
-        mnemonic = "zinniap",
+        arguments = package_args,
+        mnemonic = "ZinniaPackage",
         progress_message = "Running command: %s %s" %
-                           (compiler_executable.path, " ".join(zinniap_args)),
+                           (compiler_executable.path, " ".join(package_args)),
     )
     return [
         DefaultInfo(
@@ -201,7 +201,7 @@ _zinnia_binary = rule(
         ),
         "modules": attr.label_list(),
         "compiler": attr.label(
-            default = Label("//zinnia:zinniap"),
+            default = Label("//zinnia:zinnia-package"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -325,16 +325,16 @@ def zinnia_cc_library(name, src_module, deps = [], cc_deps = [], cc_init_fn = No
         data = data,
     )
 
-def _zinnia_seed_impl(ctx):
-    seed_executable = ctx.attr.seed_executable.files_to_run.executable
+def _zinnia_bundle_impl(ctx):
+    bundle_executable = ctx.attr.bundle_executable.files_to_run.executable
     input_files = []
 
-    seed_name = ctx.label.name
-    seed_file = ctx.actions.declare_file("%s.znseed" % seed_name)
+    bundle_name = ctx.label.name
+    bundle_file = ctx.actions.declare_file("%s.znbundle" % bundle_name)
 
     args = [
-        seed_name,
-        seed_file.path,
+        bundle_name,
+        bundle_file.path,
     ]
 
     for dep in ctx.attr.deps:
@@ -360,28 +360,28 @@ def _zinnia_seed_impl(ctx):
                 input_files.append(src)
 
     ctx.actions.run(
-        outputs = [seed_file],
+        outputs = [bundle_file],
         inputs = input_files,
-        executable = seed_executable,
+        executable = bundle_executable,
         arguments = args,
-        mnemonic = "zinnias",
+        mnemonic = "ZinniaBundle",
         progress_message = "Running command: %s %s" %
-                           (seed_executable.path, " ".join(args)),
+                           (bundle_executable.path, " ".join(args)),
     )
     return [
         DefaultInfo(
-            files = depset([seed_file]),
+            files = depset([bundle_file]),
         ),
-        ZinniaSeedInfo(
-            seed_file = seed_file,
+        ZinniaBundleInfo(
+            bundle_file = bundle_file,
         ),
     ]
 
-_zinnia_seed = rule(
-    implementation = _zinnia_seed_impl,
+_zinnia_bundle = rule(
+    implementation = _zinnia_bundle_impl,
     attrs = {
-        "seed_executable": attr.label(
-            default = Label("//zinnia:zinnias"),
+        "bundle_executable": attr.label(
+            default = Label("//zinnia:zinnia-bundle"),
             executable = True,
             allow_single_file = True,
             cfg = "target",
@@ -390,11 +390,21 @@ _zinnia_seed = rule(
     },
 )
 
-def zinnia_seed(name, deps = []):
-    return _zinnia_seed(
+def zinnia_bundle(name, deps = []):
+    """Bundles zinnia libraries and modules into a .znbundle archive.
+
+    Args:
+        name: Name of the bundle.
+        deps: zinnia_library() and zinnia_cc_library() targets to include.
+    """
+    return _zinnia_bundle(
         name = name,
         deps = deps,
     )
+
+def zinnia_seed(name, deps = []):
+    """Deprecated: use zinnia_bundle()."""
+    return zinnia_bundle(name = name, deps = deps)
 
 def _zinnia_test_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
@@ -407,8 +417,8 @@ def _zinnia_test_impl(ctx):
         if ZinniaLibraryInfo in dep:
             for src in dep[ZinniaLibraryInfo].srcs.to_list():
                 dep_files.append(src)
-        if ZinniaSeedInfo in dep:
-            dep_files.append(dep[ZinniaSeedInfo].seed_file)
+        if ZinniaBundleInfo in dep:
+            dep_files.append(dep[ZinniaBundleInfo].bundle_file)
 
     src_files = [main_file] + dep_files
 

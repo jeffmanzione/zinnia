@@ -14,7 +14,7 @@ cc_library(
         "//zinnia/compile",
         "//zinnia/entity/string:string_helper",
         "//zinnia/program/optimization:optimize",
-        "//zinnia/seed",
+        "//zinnia/bundle",
         "//zinnia/util:error",
         "//zinnia/util:file",
         "//zinnia/util:void_array",
