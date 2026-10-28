@@ -1,0 +1,35 @@
+import net
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class ParseRequestTest {
+  @test.Test
+  method test_parse_request() {
+    r = net.parse_request('GET /a?x=1&y HTTP/1.1\r\nHost: h\r\nUser-Agent: t\r\n\r\n')
+    expect(r.type, 'GET')
+    expect(r.path, '/a')
+    expect(r.params['x'], '1')
+    expect(r.params['y'], '1')
+    expect(r.protocol, 'HTTP')
+    expect(r.version, '1.1')
+    expect(r.get_host(), 'h')
+    expect(r.get_user_agent(), 't')
+  }
+
+  @test.Test
+  method test_header_values_keep_colons() {
+    r = net.parse_request('GET / HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nReferer: http://h:1/p\r\n\r\n')
+    expect(r.get_host(), '127.0.0.1:8080')
+    expect(r.get_header_value('Referer'), 'http://h:1/p')
+  }
+
+  @test.Test
+  method test_skips_header_lines_without_colon() {
+    r = net.parse_request('GET / HTTP/1.1\r\nbogus\r\nHost: h\r\n\r\n')
+    expect(r.get_host(), 'h')
+  }
+}

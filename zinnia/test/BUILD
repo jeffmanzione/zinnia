@@ -30,6 +30,11 @@ zinnia_test(
 )
 
 zinnia_test(
+    name = "net_test",
+    main = "net_test.zn",
+)
+
+zinnia_test(
     name = "module_test",
     main = "module_test.zn",
     deps = ["//examples/module:module_srcs"],
