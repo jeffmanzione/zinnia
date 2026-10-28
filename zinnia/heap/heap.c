@@ -109,13 +109,13 @@ void heap_make_root(Heap *heap, Object *obj) {
 }
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
-                       const Entity *child) {
+                       const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
-  Entity *entry_pos;
+  Value *entry_pos;
   const bool was_insert =
-      EntityMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
+      ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
   ASSERT(entry_pos != NULL);
   const bool old_member_is_obj = !was_insert && OBJECT == etype(entry_pos);
   if (old_member_is_obj && (entry_pos->obj == child->obj)) {
@@ -125,20 +125,20 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
     heap_dec_edge(heap, parent, object_m(entry_pos));
   }
   if (OBJECT == etype(child)) {
-    heap_inc_edge(heap, parent, object_m((Entity *)child));
+    heap_inc_edge(heap, parent, object_m((Value *)child));
   }
   (*entry_pos) = *child;
 }
 
-Entity *object_set_member_obj(Heap *heap, Object *parent, const char key[],
-                              const Object *child) {
+Value *object_set_member_obj(Heap *heap, Object *parent, const char key[],
+                             const Object *child) {
   ASSERT(heap != NULL);
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
-  Entity *entry_pos;
+  Value *entry_pos;
 
   const bool new_insert =
-      EntityMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
+      ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
 
   ASSERT(entry_pos != NULL);
   const bool old_member_is_obj = !new_insert && OBJECT == etype(entry_pos);
@@ -158,8 +158,8 @@ Object *object_create_(Heap *heap, const Class *class) {
   ASSERT(heap != NULL);
   Object *object = (Object *)arena_malloc(&heap->object_arena);
   object->_class = class;
-  EntityMap_init(&object->_members, hash_interned_string,
-                 compare_interned_strings);
+  ValueMap_init(&object->_members, hash_interned_string,
+                compare_interned_strings);
   if (NULL != class->_init_fn) {
     class->_init_fn(object);
   }
@@ -189,11 +189,11 @@ void print_object_summary_(Object *object) {
   } else if (object->_class == Class_IString) {
     printf("\tIString('%.*s', %p)", ((IString *)object->_internal_obj)->len,
            ((IString *)object->_internal_obj)->str, object->_internal_obj);
-  } else if (object->_class == Class_Context) {
+  } else if (object->_class == Class_Scope) {
     printf("\tContext(%p)", object->_internal_obj);
-  } else if (object->_class == Class_Task) {
+  } else if (object->_class == Class_Frame) {
     printf("\tTask(%p)", object->_internal_obj);
-  } else if (object->_class == Class_Process) {
+  } else if (object->_class == Class_Isolate) {
     printf("\tProcess(%p)", object->_internal_obj);
   } else {
     printf("\t%s", object->_class->_name);
@@ -233,7 +233,7 @@ void object_delete_(Object *object, Heap *heap) {
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
   }
-  EntityMap_finalize(&object->_members);
+  ValueMap_finalize(&object->_members);
   arena_free(&heap->object_arena, object);
 }
 
@@ -251,11 +251,11 @@ void heap_dec_edge(Heap *heap, Object *parent, Object *child) {
   mgraph_dec(&heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
 }
 
-void array_add(Heap *heap, Object *array, const Entity *child) {
+void array_add(Heap *heap, Object *array, const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(array != NULL);
   ASSERT(child != NULL);
-  Entity *e = Array_push_back_ref((Array *)array->_internal_obj);
+  Value *e = Array_push_back_ref((Array *)array->_internal_obj);
   *e = *child;
   if (OBJECT != child->type) {
     return;
@@ -264,23 +264,23 @@ void array_add(Heap *heap, Object *array, const Entity *child) {
              (Node *)child->obj->_node_ref);
 }
 
-Entity array_remove(Heap *heap, Object *array, int32_t index) {
+Value array_remove(Heap *heap, Object *array, int32_t index) {
   ASSERT(heap != NULL);
   ASSERT(array != NULL);
   ASSERT(index >= 0);
-  Entity e = Array_remove_unchecked((Array *)array->_internal_obj, index);
+  Value e = Array_remove_unchecked((Array *)array->_internal_obj, index);
   if (OBJECT == e.type) {
     heap_dec_edge(heap, array, e.obj);
   }
   return e;
 }
 
-void array_set(Heap *heap, Object *array, int32_t index, const Entity *child) {
+void array_set(Heap *heap, Object *array, int32_t index, const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(array != NULL);
   ASSERT(child != NULL);
   ASSERT(index >= 0);
-  Entity *e = Array_set_ref_unchecked((Array *)array->_internal_obj, index);
+  Value *e = Array_set_ref_unchecked((Array *)array->_internal_obj, index);
   if (NULL != e && OBJECT == e->type) {
     heap_dec_edge(heap, array, e->obj);
   }
@@ -295,13 +295,13 @@ Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
 
 // This function does not handle overwrites, so references to overwritten
 // members will persist.
-void tuple_set(Heap *heap, Object *tuple, int32_t index, const Entity *child) {
+void tuple_set(Heap *heap, Object *tuple, int32_t index, const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(tuple != NULL);
   ASSERT(child != NULL);
   ASSERT(index >= 0);
   ASSERT(index < tuple_size((Tuple *)tuple->_internal_obj));
-  Entity *e = tuple_get_mutable((Tuple *)tuple->_internal_obj, index);
+  Value *e = tuple_get_mutable((Tuple *)tuple->_internal_obj, index);
   *e = *child;
   if (OBJECT != child->type) {
     return;
@@ -315,7 +315,7 @@ Object *tuple_create_empty(Heap *heap, size_t size) {
   return tuple_obj;
 }
 
-Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
+Object *tuple_create2(Heap *heap, Value *e1, Value *e2) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(2);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -323,7 +323,7 @@ Object *tuple_create2(Heap *heap, Entity *e1, Entity *e2) {
   return tuple_obj;
 }
 
-Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3) {
+Object *tuple_create3(Heap *heap, Value *e1, Value *e2, Value *e3) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -332,8 +332,7 @@ Object *tuple_create3(Heap *heap, Entity *e1, Entity *e2, Entity *e3) {
   return tuple_obj;
 }
 
-Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4) {
+Object *tuple_create4(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(4);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -343,8 +342,8 @@ Object *tuple_create4(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   return tuple_obj;
 }
 
-Object *tuple_create5(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5) {
+Object *tuple_create5(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(5);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -355,8 +354,8 @@ Object *tuple_create5(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   return tuple_obj;
 }
 
-Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5, Entity *e6) {
+Object *tuple_create6(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5, Value *e6) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(6);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -368,8 +367,8 @@ Object *tuple_create6(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   return tuple_obj;
 }
 
-Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
-                      Entity *e4, Entity *e5, Entity *e6, Entity *e7) {
+Object *tuple_create7(Heap *heap, Value *e1, Value *e2, Value *e3, Value *e4,
+                      Value *e5, Value *e6, Value *e7) {
   Object *tuple_obj = heap_new(heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(7);
   tuple_set(heap, tuple_obj, 0, e1);
@@ -382,19 +381,19 @@ Object *tuple_create7(Heap *heap, Entity *e1, Entity *e2, Entity *e3,
   return tuple_obj;
 }
 
-void entitycopier_init(EntityCopier *copier, Heap *target) {
+void valuecopier_init(ValueCopier *copier, Heap *target) {
   ASSERT(copier != NULL);
   ASSERT(target != NULL);
   copier->target = target;
   ObjectCopyMap_init(&copier->copy_map, hash_object_, compare_objects_);
 }
 
-void entitycopier_finalize(EntityCopier *copier) {
+void valuecopier_finalize(ValueCopier *copier) {
   ASSERT(copier != NULL);
   ObjectCopyMap_finalize(&copier->copy_map);
 }
 
-Entity entitycopier_copy(EntityCopier *copier, const Entity *e) {
+Value valuecopier_copy(ValueCopier *copier, const Value *e) {
   ASSERT(copier != NULL);
   ASSERT(e != NULL);
   ASSERT(e != NULL);
@@ -410,7 +409,7 @@ Entity entitycopier_copy(EntityCopier *copier, const Entity *e) {
   Object *cpy =
       ObjectCopyMap_find(&copier->copy_map, obj, sizeof(Object *), NULL);
   if (NULL != cpy) {
-    return entity_object(cpy);
+    return value_object(cpy);
   }
   // Modules and Classes should not be copied.
   // These objects should be treated as effectively immutable (although as of
@@ -427,19 +426,18 @@ Entity entitycopier_copy(EntityCopier *copier, const Entity *e) {
     obj->_class->_copy_fn(copier, obj, cpy);
   }
 
-  EntityMapIterator members;
-  EntityMap_iterator(&members, &obj->_members);
-  for (; EntityMap_has_entry(&members); EntityMap_next_entry(&members)) {
-    Entity member_cpy = entitycopier_copy(copier, EntityMap_value(&members));
-    object_set_member(copier->target, cpy, EntityMap_key(&members),
-                      &member_cpy);
+  ValueMapIterator members;
+  ValueMap_iterator(&members, &obj->_members);
+  for (; ValueMap_has_entry(&members); ValueMap_next_entry(&members)) {
+    Value member_cpy = valuecopier_copy(copier, ValueMap_value(&members));
+    object_set_member(copier->target, cpy, ValueMap_key(&members), &member_cpy);
   }
-  return entity_object(cpy);
+  return value_object(cpy);
 }
 
-Entity entity_copy(const Entity *e, Heap *target) {
-  Entity copy;
-  BULK_COPY(copier, target, { copy = entitycopier_copy(&copier, e); });
+Value value_copy(const Value *e, Heap *target) {
+  Value copy;
+  BULK_COPY(copier, target, { copy = valuecopier_copy(&copier, e); });
   return copy;
 }
 

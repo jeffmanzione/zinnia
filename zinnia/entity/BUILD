@@ -5,9 +5,9 @@ package(
 )
 
 cc_library(
-    name = "entity",
-    srcs = ["entity.c"],
-    hdrs = ["entity.h"],
+    name = "value",
+    srcs = ["value.c"],
+    hdrs = ["value.h"],
     deps = [
         ":object",
         ":primitive",
@@ -21,7 +21,7 @@ cc_library(
     srcs = ["object.c"],
     hdrs = ["object.h"],
     deps = [
-        "//zinnia/program:tape",
+        "//zinnia/program:bytecode",
         "//zinnia/util:dll",
         "//zinnia/util/sync:mutex",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",

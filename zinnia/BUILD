@@ -44,8 +44,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "zinniap",
-    srcs = ["zinniap.c"],
+    name = "zinnia-package",
+    srcs = ["zinnia_package.c"],
     defines = [
         "NDEBUG",
     ],
@@ -54,11 +54,25 @@ cc_binary(
 )
 
 cc_binary(
-    name = "zinnias",
-    srcs = ["zinnias.c"],
+    name = "zinnia-bundle",
+    srcs = ["zinnia_bundle.c"],
     defines = [
         "NDEBUG",
     ],
     visibility = ["//visibility:public"],
-    deps = ["//zinnia/seed"],
+    deps = ["//zinnia/bundle"],
+)
+
+# Deprecated: use zinnia-package.
+alias(
+    name = "zinniap",
+    actual = ":zinnia-package",
+    visibility = ["//visibility:public"],
+)
+
+# Deprecated: use zinnia-bundle.
+alias(
+    name = "zinnias",
+    actual = ":zinnia-bundle",
+    visibility = ["//visibility:public"],
 )

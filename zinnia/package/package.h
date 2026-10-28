@@ -2,6 +2,6 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_PACKAGE_PACKAGE_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_PACKAGE_PACKAGE_H_
 
-int zinniap(int argc, const char *argv[]);
+int zinnia_package(int argc, const char *argv[]);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_PACKAGE_PACKAGE_H_ */

@@ -11,11 +11,11 @@ zinnia_binary(
 )
 
 zinnia_binary(
-    name = "process",
-    main = "process.zn",
+    name = "isolate",
+    main = "isolate.zn",
 )
 
 zinnia_binary(
-    name = "remotes",
-    main = "remotes.zn",
+    name = "actors",
+    main = "actors.zn",
 )

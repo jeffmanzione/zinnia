@@ -9,17 +9,17 @@
 
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/native/native.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/string/string_helper.h"
 #include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/error.h"
 #include "zinnia/vm/intern.h"
-#include "zinnia/vm/process/context.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/process/task.h"
+#include "zinnia/vm/isolate/frame.h"
+#include "zinnia/vm/isolate/isolates.h"
+#include "zinnia/vm/isolate/scope.h"
 
 Class *Class_StackLine;
 
@@ -36,42 +36,42 @@ void error_delete_(Object *obj) {}
 void stackline_init_(Object *obj) { obj->_internal_obj = CNEW(StackLine_); }
 void stackline_delete_(Object *obj) { RELEASE(obj->_internal_obj); }
 
-Entity raise_error_with_object(Task *task, Context *context, Object *err) {
-  context->error = err;
-  *task_mutable_resval(task) = entity_object(err);
-  return entity_object(err);
+Value raise_error_with_object(Frame *frame, Scope *scope, Object *err) {
+  scope->error = err;
+  *frame_mutable_acc(frame) = value_object(err);
+  return value_object(err);
 }
 
-Entity raise_errorv(Task *task, Context *context, const char fmt[],
-                    va_list args) {
+Value raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args) {
   char buffer[1024];
   int num_chars = vsprintf(buffer, fmt, args);
-  Object *error_msg = string_new(task->parent_process->heap, buffer, num_chars);
-  Object *err = error_new(task, context, error_msg);
-  return raise_error_with_object(task, context, err);
+  Object *error_msg =
+      string_new(frame->parent_isolate->heap, buffer, num_chars);
+  Object *err = error_new(frame, scope, error_msg);
+  return raise_error_with_object(frame, scope, err);
 }
 
-Entity raise_error(Task *task, Context *context, const char fmt[], ...) {
+Value raise_error(Frame *frame, Scope *scope, const char fmt[], ...) {
   va_list args;
   va_start(args, fmt);
-  Entity retval = raise_errorv(task, context, fmt, args);
+  Value retval = raise_errorv(frame, scope, fmt, args);
   va_end(args);
   return retval;
 }
 
-Entity native_background_raise_error(Task *task, Context *context,
-                                     const char fmt[], ...) {
+Value native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
+                                  ...) {
   va_list args;
   va_start(args, fmt);
   char buffer[1024];
   int num_chars = vsprintf(buffer, fmt, args);
   va_end(args);
   Object *err;
-  SYNCHRONIZED(task->parent_process->heap_access_lock, {
-    err = error_new(task, context,
-                    string_new(task->parent_process->heap, buffer, num_chars));
+  SYNCHRONIZED(frame->parent_isolate->heap_access_lock, {
+    err = error_new(frame, scope,
+                    string_new(frame->parent_isolate->heap, buffer, num_chars));
   });
-  return raise_error_with_object(task, context, err);
+  return raise_error_with_object(frame, scope, err);
 }
 
 uint32_t stackline_linenum(Object *stackline) {
@@ -88,116 +88,115 @@ Module *stackline_module(Object *stackline) {
   return sl->module;
 }
 
-Entity stackline_module_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value stackline_module_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   if (NULL == sl->module) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_object(sl->module->_reflection);
+  return value_object(sl->module->_reflection);
 }
 
-Entity stackline_function_(Task *task, Context *ctx, Object *obj,
-                           Entity *args) {
+Value stackline_function_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   if (NULL == sl->func) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  return entity_object(sl->func->_reflection);
+  return value_object(sl->func->_reflection);
 }
 
-Entity token_tuple_(Task *task, const Token *token) {
+Value token_tuple_(Frame *frame, const Token *token) {
   if (NULL == token) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
-  Object *tuple_obj = heap_new(task->parent_process->heap, Class_Tuple);
+  Object *tuple_obj = heap_new(frame->parent_isolate->heap, Class_Tuple);
   tuple_obj->_internal_obj = tuple_create(3);
 
-  Entity token_text;
+  Value token_text;
   if (NULL == token->text) {
-    token_text = NONE_ENTITY;
+    token_text = NONE_VALUE;
   } else {
-    token_text = entity_object(
-        string_new(task->parent_process->heap, token->text, token->len));
+    token_text = value_object(
+        string_new(frame->parent_isolate->heap, token->text, token->len));
   }
-  tuple_set(task->parent_process->heap, tuple_obj, 0, &token_text);
-  Entity line = entity_int(token->line);
-  tuple_set(task->parent_process->heap, tuple_obj, 1, &line);
-  Entity col = entity_int(token->col);
-  tuple_set(task->parent_process->heap, tuple_obj, 2, &col);
-  return entity_object(tuple_obj);
+  tuple_set(frame->parent_isolate->heap, tuple_obj, 0, &token_text);
+  Value line = value_int(token->line);
+  tuple_set(frame->parent_isolate->heap, tuple_obj, 1, &line);
+  Value col = value_int(token->col);
+  tuple_set(frame->parent_isolate->heap, tuple_obj, 2, &col);
+  return value_object(tuple_obj);
 }
 
-Entity stackline_token_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value stackline_token_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
-  return token_tuple_(task, sl->error_token);
+  return token_tuple_(frame, sl->error_token);
 }
 
-Entity stackline_source_token_(Task *task, Context *ctx, Object *obj,
-                               Entity *args) {
+Value stackline_source_token_(Frame *frame, Scope *ctx, Object *obj,
+                              Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
-  return token_tuple_(task, sl->source_error_token);
+  return token_tuple_(frame, sl->source_error_token);
 }
 
-Entity stackline_has_source_map_(Task *task, Context *ctx, Object *obj,
-                                 Entity *args) {
+Value stackline_has_source_map_(Frame *frame, Scope *ctx, Object *obj,
+                                Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
-  return NULL == sl->source_error_token ? FALSE_ENTITY : TRUE_ENTITY;
+  return NULL == sl->source_error_token ? FALSE_VALUE : TRUE_VALUE;
 }
 
-Entity stackline_source_linetext_(Task *task, Context *ctx, Object *obj,
-                                  Entity *args) {
+Value stackline_source_linetext_(Frame *frame, Scope *ctx, Object *obj,
+                                 Value *args) {
   StackLine_ *sl = (StackLine_ *)obj->_internal_obj;
   return (NULL == sl->source_linetext)
-             ? NONE_ENTITY
-             : entity_object(string_new(task->parent_process->heap,
-                                        sl->source_linetext,
-                                        strlen(sl->source_linetext)));
+             ? NONE_VALUE
+             : value_object(string_new(frame->parent_isolate->heap,
+                                       sl->source_linetext,
+                                       strlen(sl->source_linetext)));
 }
 
-Entity error_constructor_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value error_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_STRING(args)) {
-    return raise_error(task, ctx, "Error argument is not a String.");
+    return raise_error(frame, ctx, "Error argument is not a String.");
   }
-  object_set_member_obj(task->parent_process->heap, obj,
+  object_set_member_obj(frame->parent_isolate->heap, obj,
                         global_intern("message"), args->obj);
-  Object *stacktrace = heap_new(task->parent_process->heap, Class_Array);
-  Task *t = task;
+  Object *stacktrace = heap_new(frame->parent_isolate->heap, Class_Array);
+  Frame *t = frame;
   while (NULL != t) {
-    Context *c;
-    for (c = t->current; NULL != c; c = c->previous_context) {
-      Object *stackline = heap_new(task->parent_process->heap, Class_StackLine);
+    Scope *c;
+    for (c = t->current; NULL != c; c = c->previous_scope) {
+      Object *stackline =
+          heap_new(frame->parent_isolate->heap, Class_StackLine);
       StackLine_ *sl = (StackLine_ *)stackline->_internal_obj;
       sl->module = c->module;
       sl->func = (Function *)c->func;  // blessed
       const SourceMapping *sm =
-          tape_get_source(c->tape, c->ins - ((c == ctx) ? 0 : 1));
+          bytecode_get_source(c->bytecode, c->ins - ((c == ctx) ? 0 : 1));
       sl->error_token = (Token *)sm->token;                // blessed
       sl->source_error_token = (Token *)sm->source_token;  // blessed
       if (NULL != sl->source_error_token) {
         sl->source_linetext =
-            tape_get_sourceline(c->tape, sl->source_error_token->line);
+            bytecode_get_sourceline(c->bytecode, sl->source_error_token->line);
       } else {
         sl->source_linetext = NULL;
       }
-      Entity sl_e = entity_object(stackline);
-      array_add(task->parent_process->heap, stacktrace, &sl_e);
+      Value sl_e = value_object(stackline);
+      array_add(frame->parent_isolate->heap, stacktrace, &sl_e);
     }
-    t = t->parent_task;
+    t = t->parent_frame;
   }
-  object_set_member_obj(task->parent_process->heap, obj,
+  object_set_member_obj(frame->parent_isolate->heap, obj,
                         global_intern("stacktrace"), stacktrace);
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Object *error_new(Task *task, Context *ctx, Object *error_msg) {
-  Entity error_msg_e = entity_object(error_msg);
-  Object *err = heap_new(task->parent_process->heap, Class_Error);
-  error_constructor_(task, ctx, err, &error_msg_e);
+Object *error_new(Frame *frame, Scope *ctx, Object *error_msg) {
+  Value error_msg_e = value_object(error_msg);
+  Object *err = heap_new(frame->parent_isolate->heap, Class_Error);
+  error_constructor_(frame, ctx, err, &error_msg_e);
   return err;
 }
 
-void stackline_copy_(EntityCopier *copier, Object *src_obj,
-                     Object *target_obj) {
+void stackline_copy_(ValueCopier *copier, Object *src_obj, Object *target_obj) {
   StackLine_ *src = (StackLine_ *)src_obj->_internal_obj;
   StackLine_ *target = (StackLine_ *)target_obj->_internal_obj;
   *target = *src;

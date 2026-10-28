@@ -3,15 +3,15 @@
 
 #include "c-data-structures/stable_maplike.h"
 #include "zinnia/entity/object.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], const char key[], Tape *tape,
-                 DlHandle dl);
+                 const char relative_path[], const char key[],
+                 Bytecode *bytecode, DlHandle dl);
 void module_finalize(Module *module);
 const char *module_name(const Module *const module);
-const Tape *module_tape(const Module *const module);
+const Bytecode *module_bytecode(const Module *const module);
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos, bool is_const, bool is_asyc);

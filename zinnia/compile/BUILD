@@ -12,8 +12,8 @@ cc_library(
     deps = [
         "//zinnia/alloc",
         "//zinnia/lang/parser:lang_parser",
-        "//zinnia/program:tape",
-        "//zinnia/program:tape_binary",
+        "//zinnia/program:bytecode",
+        "//zinnia/program:bytecode_binary",
         "//zinnia/program/optimization:optimize",
         "//zinnia/util:error",
         "//zinnia/util:void_array",

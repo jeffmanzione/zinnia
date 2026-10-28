@@ -12,7 +12,7 @@ cc_library(
         ":native",
         ":native_helpers",
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity:primitive",
         "//zinnia/entity/array",
@@ -27,11 +27,11 @@ cc_library(
         "//zinnia/vm",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process",
-        "//zinnia/vm/process:context",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:remote",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate",
+        "//zinnia/vm/isolate:scope",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:actor_ref",
+        "//zinnia/vm/isolate:frame",
     ],
 )
 
@@ -40,7 +40,7 @@ cc_library(
     srcs = ["native.c"],
     hdrs = ["native.h"],
     deps = [
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity:primitive",
         "//zinnia/entity/class",
@@ -48,7 +48,7 @@ cc_library(
         "//zinnia/entity/function",
         "//zinnia/entity/string",
         "//zinnia/util:error",
-        "//zinnia/vm/process:processes",
+        "//zinnia/vm/isolate:isolates",
     ],
 )
 
@@ -73,7 +73,7 @@ cc_library(
         ":async",
         ":error",
         ":native",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity:primitive",
         "//zinnia/entity/array",
@@ -91,9 +91,9 @@ cc_library(
         "//zinnia/vm",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:remote",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:actor_ref",
+        "//zinnia/vm/isolate:frame",
         "@jeffmanzione_file_utils//file-utils:file_info",
     ],
 )
@@ -102,7 +102,7 @@ cc_library(
     name = "native_helpers",
     hdrs = ["native_helpers.h"],
     deps = [
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity:primitive",
         "//zinnia/entity/native:error",
@@ -142,7 +142,7 @@ cc_library(
     deps = [
         ":native",
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity:primitive",
         "//zinnia/entity/array",
@@ -155,8 +155,8 @@ cc_library(
         "//zinnia/util:error",
         "//zinnia/vm:intern",
         "//zinnia/vm:module_manager",
-        "//zinnia/vm/process:processes",
-        "//zinnia/vm/process:task",
+        "//zinnia/vm/isolate:isolates",
+        "//zinnia/vm/isolate:frame",
     ],
 )
 

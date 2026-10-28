@@ -26,9 +26,9 @@ cc_library(
 )
 
 cc_library(
-    name = "tape",
-    srcs = ["tape.c"],
-    hdrs = ["tape.h"],
+    name = "bytecode",
+    srcs = ["bytecode.c"],
+    hdrs = ["bytecode.h"],
     deps = [
         ":instruction",
         "//zinnia/alloc",
@@ -45,11 +45,11 @@ cc_library(
 )
 
 cc_library(
-    name = "tape_binary",
-    srcs = ["tape_binary.c"],
-    hdrs = ["tape_binary.h"],
+    name = "bytecode_binary",
+    srcs = ["bytecode_binary.c"],
+    hdrs = ["bytecode_binary.h"],
     deps = [
-        ":tape",
+        ":bytecode",
         "//zinnia/program/serialization:buffer",
         "//zinnia/program/serialization:deserialize",
         "//zinnia/program/serialization:serialize",

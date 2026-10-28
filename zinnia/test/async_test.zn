@@ -1,0 +1,130 @@
+import async
+import error
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@async.Actor
+class Counter {
+  field count
+  new() {
+    count = 0
+  }
+  method inc() {
+    count = count + 1
+    return count
+  }
+  method fail() {
+    raise error.Error('intentional')
+  }
+}
+
+@async.RemoteClass
+class OldCounter {
+  field count
+  new() {
+    count = 0
+  }
+  method inc() {
+    count = count + 1
+    return count
+  }
+}
+
+@test.TestClass
+class FutureTest {
+  @test.Test
+  method test_sleep() {
+    result = await async.sleep(0.01)
+    expect(result == None, True)
+  }
+
+  @test.Test
+  method test_all() {
+    f = (x) async -> x * 2
+    expect(await async.all([f(1), f(2), f(3)]), [2, 4, 6])
+  }
+}
+
+@test.TestClass
+class CompleterTest {
+  @test.Test
+  method test_complete_before_await() {
+    c = async.Completer()
+    c.complete(5)
+    expect(c.completed, True)
+    expect(await c.as_future(), 5)
+  }
+
+  @test.Test
+  method test_complete_after_await() {
+    c = async.Completer()
+    () async {
+      await async.sleep(0.01)
+      c.complete('done')
+    }()
+    expect(c.completed, False)
+    expect(await c.as_future(), 'done')
+    expect(c.completed, True)
+  }
+
+  @test.Test
+  method test_complete_without_value() {
+    c = async.Completer()
+    c.complete()
+    result = await c.as_future()
+    expect(result == None, True)
+  }
+
+  @test.Test
+  method test_complete_twice_raises() {
+    c = async.Completer()
+    c.complete(1)
+    test.expect_raises(() -> c.complete(2))
+    expect(await c.as_future(), 1)
+  }
+}
+
+@test.TestClass
+class IsolateTest {
+  @test.Test
+  method test_spawn_isolate() {
+    isolate = async.spawn_isolate(fn: (x) -> x * 2, args: 21)
+    expect(await isolate.start(), 42)
+  }
+
+  @test.Test
+  method test_create_process_alias() {
+    process = async.create_process(fn: (x) -> x + 1, args: 1)
+    expect(await process.start(), 2)
+  }
+}
+
+@test.TestClass
+class ActorTest {
+  @test.Test
+  method test_spawn_actor() {
+    counter = async.spawn_actor(Counter)
+    test.expect_is(counter, CounterProxy)
+    expect(await counter.inc(), 1)
+    expect(await counter.inc(), 2)
+    test.expect_is(counter.target(), ActorRef)
+  }
+
+  @test.Test
+  method test_actor_errors_propagate() {
+    counter = async.spawn_actor(Counter)
+    test.expect_raises(() -> await counter.fail())
+  }
+
+  @test.Test
+  method test_deprecated_aliases() {
+    counter = async.create_remote(OldCounter)
+    test.expect_is(counter, OldCounterProxy)
+    test.expect_is(counter, RemoteOldCounter)
+    expect(await counter.inc(), 1)
+    test.expect_is(counter.remote(), ActorRef)
+  }
+}

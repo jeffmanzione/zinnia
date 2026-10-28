@@ -1,0 +1,44 @@
+import io
+import async
+import error
+
+@async.Actor
+class Test {
+  field count
+  
+  new() {
+    count = 0
+  }
+
+  method inc_count() {
+    count = count + 1
+    return count
+  }
+
+  method cause_error() {
+    raise error.Error('This is intentional!')
+  }
+
+  method to_s() {
+    return 'Test(' + str(count) + ')'
+  }
+}
+
+test = async.spawn_actor(Test)
+
+io.println(await async.all([
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count(),
+    test.inc_count()]))
+
+try {
+  await test.cause_error()
+} catch e {
+  io.errorln(e)
+}
+
+io.println(await test.to_s())

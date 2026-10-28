@@ -11,7 +11,7 @@
 #include "zinnia/util/void_array.h"
 
 typedef struct {
-  enum { FP_FILE_SOURCE, FP_FILE_SEED } type;
+  enum { FP_FILE_SOURCE, FP_FILE_BUNDLE } type;
   union {
     struct {
       const char **parts;
@@ -20,7 +20,7 @@ typedef struct {
     struct {
       const unsigned char *content_bytes;
       size_t content_size;
-    } seed_data;
+    } bundle_data;
   };
 } FileParts;
 
@@ -33,4 +33,4 @@ int run_files(const CharPtrArray *source_file_names,
 
 int zinnia(int argc, const char *argv[]);
 
-#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_RUN_RUN_H_ */
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_RUN_RUN_H_ */

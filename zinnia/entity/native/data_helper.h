@@ -13,277 +13,277 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-#define DEFINE_DATA_ARRAY(class_name, type_name, to_entity_fn)                \
-  static Class *Class_##class_name = NULL;                                    \
-                                                                              \
-  DEFINE_ARRAYLIKE(class_name, type_name);                                    \
-  IMPL_ARRAYLIKE(class_name, type_name);                                      \
-                                                                              \
-  void _##class_name##_init(Object *obj) { obj->_internal_obj = NULL; }       \
-  void _##class_name##_delete(Object *obj) {                                  \
-    class_name##_delete(obj->_internal_obj);                                  \
-  }                                                                           \
-                                                                              \
-  type_name _to_##type_name(const Entity *e) {                                \
-    switch (e->type) {                                                        \
-      case NONE:                                                              \
-        return 0L;                                                            \
-      case OBJECT:                                                            \
-        return (type_name)(uint64_t)e->obj;                                   \
-      case PRIMITIVE:                                                         \
-        switch (ptype(&e->pri)) {                                             \
-          case PRIMITIVE_CHAR:                                                \
-            return (type_name)pchar(&e->pri);                                 \
-          case PRIMITIVE_INT:                                                 \
-            return pint(&e->pri);                                             \
-          case PRIMITIVE_FLOAT:                                               \
-            return (type_name)pfloat(&e->pri);                                \
-          default:                                                            \
-            FATALF("Unknown primitive type");                                 \
-        }                                                                     \
-    }                                                                         \
-    FATALF("Unknown type");                                                   \
-    return 0;                                                                 \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_constructor(Task *task, Context *ctx, Object *obj,   \
-                                     Entity *args) {                          \
-    int initial_size;                                                         \
-    class_name *arr;                                                          \
-    if (NULL == args || IS_NONE(args)) {                                      \
-      initial_size = ARRAY_INITIAL_SIZE;                                      \
-    } else if (IS_INT(args)) {                                                \
-      initial_size = pint(&args->pri);                                        \
-    } else if (IS_CLASS(args, Class_Array)) {                                 \
-      Array *arr = (Array *)args->obj->_internal_obj;                         \
-      initial_size = Array_size(arr);                                         \
-    } else {                                                                  \
-      return raise_error(                                                     \
-          task, ctx,                                                          \
-          "Error argument must either not be present or be an Int");          \
-    }                                                                         \
-    obj->_internal_obj = arr = class_name##_create_capacity(initial_size);    \
-                                                                              \
-    if (IS_INT(args)) {                                                       \
-      class_name##_set(arr, initial_size - 1, 0);                             \
-    } else if (IS_CLASS(args, Class_Array)) {                                 \
-      Array *arr2 = (Array *)args->obj->_internal_obj;                        \
-      for (int i = 0; i < Array_size(arr2); ++i) {                            \
-        Entity *e = Array_mutable_ref_unchecked(arr2, i);                     \
-        type_name ie = _to_##type_name(e);                                    \
-        class_name##_set(arr, i, ie);                                         \
-      }                                                                       \
-    } else {                                                                  \
-      memset(arr->table, 0x0, sizeof(type_name) * initial_size);              \
-    }                                                                         \
-    return entity_object(obj);                                                \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_len(Task *task, Context *ctx, Object *obj,           \
-                             Entity *args) {                                  \
-    return entity_int(class_name##_size((class_name *)obj->_internal_obj));   \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_index_range(Task *task, Context *ctx,                \
-                                     class_name *self, Range_ *range) {       \
-    if (range->inc == 1) {                                                    \
-      Object *obj = heap_new(task->parent_process->heap, Class_##class_name); \
-      size_t new_len = range->end - range->start;                             \
-      obj->_internal_obj =                                                    \
-          class_name##_create_copy(self->table + range->start, new_len);      \
-      return entity_object(obj);                                              \
-    } else {                                                                  \
-      if (class_name##_size(self) < range->end || range->start < 0) {         \
-        return raise_error(                                                   \
-            task, ctx, "Range out of bounds: (%d:%d:%d) vs size=%d",          \
-            range->start, range->end, range->inc, class_name##_size(self));   \
-      }                                                                       \
-      Object *obj = heap_new(task->parent_process->heap, Class_##class_name); \
-      size_t new_len = (range->end - range->start + 1) / range->inc;          \
-      class_name *arr = class_name##_create_capacity(new_len);                \
-      for (int i = range->start, j = 0;                                       \
-           range->inc > 0 ? i < range->end : i > range->end;                  \
-           i += range->inc, ++j) {                                            \
-        class_name##_set(arr, j, class_name##_get_unchecked(self, i));        \
-      }                                                                       \
-      obj->_internal_obj = arr;                                               \
-      return entity_object(obj);                                              \
-    }                                                                         \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_index(Task *task, Context *ctx, Object *obj,         \
-                               Entity *args) {                                \
-    ASSERT(args != NULL);                                                     \
-    class_name *self = (class_name *)obj->_internal_obj;                      \
-                                                                              \
-    if (IS_CLASS(args, Class_Range)) {                                        \
-      Range_ *range = (Range_ *)args->obj->_internal_obj;                     \
-      return _##class_name##_index_range(task, ctx, self, range);             \
-    }                                                                         \
-                                                                              \
-    if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {      \
-      return raise_error(task, ctx, "Bad " #class_name " index");             \
-    }                                                                         \
-                                                                              \
-    int32_t index = pint(&args->pri);                                         \
-                                                                              \
-    if (index < 0 || index >= class_name##_size(self)) {                      \
-      return raise_error(task, ctx, "Index out of bounds: index=%d, size=%d", \
-                         index, class_name##_size(self));                     \
-    }                                                                         \
-                                                                              \
-    return to_entity_fn(class_name##_get_unchecked(self, index));             \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_set_range(Task *task, Context *ctx, class_name *arr, \
-                                   Range_ *range, const Entity *val) {        \
-    class_name *value = (class_name *)val->obj->_internal_obj;                \
-    size_t expected_len = (range->end - range->start + 1) / range->inc;       \
-    if (range->end > class_name##_size(arr) || range->start < 0) {            \
-      return raise_error(task, ctx, "Invalid range: (%d:%d:%d) vs size=%d",   \
-                         range->start, range->end, range->inc,                \
-                         class_name##_size(arr));                             \
-    }                                                                         \
-    if (expected_len != class_name##_size(value)) {                           \
-      return raise_error(                                                     \
-          task, ctx,                                                          \
-          "Mismatch between left-hand and right-hand sizes: LH=%d, RH=%d",    \
-          expected_len, class_name##_size(value));                            \
-    }                                                                         \
-    for (int i = range->start, j = 0;                                         \
-         range->inc > 0 ? i < range->end : i > range->end;                    \
-         i += range->inc, ++j) {                                              \
-      class_name##_set(arr, i, class_name##_get_unchecked(value, j));         \
-    }                                                                         \
-    return *val;                                                              \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_set(Task *task, Context *ctx, Object *obj,           \
-                             Entity *args) {                                  \
-    class_name *arr = (class_name *)obj->_internal_obj;                       \
-    if (!IS_TUPLE(args)) {                                                    \
-      return raise_error(task, ctx, "Expected tuple input");                  \
-    }                                                                         \
-    Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;                     \
-    if (2 != tuple_size(tupl_args)) {                                         \
-      return raise_error(task, ctx,                                           \
-                         "Invalid number of arguments, expected 2, got %d",   \
-                         tuple_size(tupl_args));                              \
-    }                                                                         \
-    const Entity *index = tuple_get(tupl_args, 0);                            \
-    const Entity *val = tuple_get(tupl_args, 1);                              \
-                                                                              \
-    if (IS_CLASS(index, Class_Range)) {                                       \
-      Range_ *range = (Range_ *)index->obj->_internal_obj;                    \
-      if (!IS_CLASS(val, Class_##class_name)) {                               \
-        return raise_error(task, ctx, "Value must be an " #class_name);       \
-      }                                                                       \
-      return _##class_name##_set_range(task, ctx, arr, range, val);           \
-    } else if (IS_INT(index)) {                                               \
-      int indexi = pint(&index->pri);                                         \
-      if (indexi < 0 || indexi >= class_name##_size(arr)) {                   \
-        return raise_error(task, ctx, "Index out of bounds");                 \
-      }                                                                       \
-      type_name ival = _to_##type_name(val);                                  \
-      class_name##_set(arr, pint(&index->pri), ival);                         \
-    } else {                                                                  \
-      return raise_error(task, ctx, "Index must be int or Range.");           \
-    }                                                                         \
-    return *val;                                                              \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_to_arr(Task *task, Context *ctx, Object *obj,        \
-                                Entity *args) {                               \
-    ASSERT(args != NULL);                                                     \
-    class_name *self = (class_name *)obj->_internal_obj;                      \
-                                                                              \
-    Object *arre = array_create(task->parent_process->heap);                  \
-    Array *arr = (Array *)arre->_internal_obj;                                \
-                                                                              \
-    for (int i = 0; i < class_name##_size(self); ++i) {                       \
-      *Array_set_ref_unchecked(arr, i) =                                      \
-          to_entity_fn(class_name##_get_unchecked(self, i));                  \
-    }                                                                         \
-    return entity_object(arre);                                               \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_reversed(Task *task, Context *ctx, Object *obj,      \
-                                  Entity *args) {                             \
-    ASSERT(args != NULL);                                                     \
-    class_name *self = (class_name *)obj->_internal_obj;                      \
-                                                                              \
-    Object *new_obj =                                                         \
-        heap_new(task->parent_process->heap, Class_##class_name);             \
-    int size = class_name##_size(self);                                       \
-    class_name *arr = class_name##_create_capacity(size);                     \
-    for (int i = 0; i < size; ++i) {                                          \
-      class_name##_set(arr, size - i - 1,                                     \
-                       class_name##_get_unchecked(self, i));                  \
-    }                                                                         \
-    new_obj->_internal_obj = arr;                                             \
-    return entity_object(new_obj);                                            \
-  }                                                                           \
-                                                                              \
-  void _##type_name##_swap(type_name *arr, int i, int j) {                    \
-    type_name tmp = arr[i];                                                   \
-    arr[i] = arr[j];                                                          \
-    arr[j] = tmp;                                                             \
-  }                                                                           \
-                                                                              \
-  int _##type_name##_partition(type_name *arr, int low, int high) {           \
-    const int pivot = arr[low];                                               \
-    int i = low - 1, j = high + 1;                                            \
-    while (true) {                                                            \
-      do {                                                                    \
-        ++i;                                                                  \
-      } while (arr[i] < pivot);                                               \
-      do {                                                                    \
-        --j;                                                                  \
-      } while (arr[j] > pivot);                                               \
-      if (i >= j) {                                                           \
-        return j;                                                             \
-      }                                                                       \
-      _##type_name##_swap(arr, i, j);                                         \
-    }                                                                         \
-  }                                                                           \
-                                                                              \
-  int _##type_name##_partition_r(type_name *arr, int low, int high) {         \
-    const int random = low + rand() % (high - low);                           \
-    _##type_name##_swap(arr, random, low);                                    \
-    return _##type_name##_partition(arr, low, high);                          \
-  }                                                                           \
-                                                                              \
-  void _##type_name##_sort(type_name *arr, int low, int high) {               \
-    if (low >= high) {                                                        \
-      return;                                                                 \
-    }                                                                         \
-    const int pi = _##type_name##_partition_r(arr, low, high);                \
-    _##type_name##_sort(arr, low, pi);                                        \
-    _##type_name##_sort(arr, pi + 1, high);                                   \
-  }                                                                           \
-                                                                              \
-  Entity _##class_name##_sorted(Task *task, Context *ctx, Object *obj,        \
-                                Entity *args) {                               \
-    ASSERT(args != NULL);                                                     \
-    class_name *self = (class_name *)obj->_internal_obj;                      \
-                                                                              \
-    Object *new_obj =                                                         \
-        heap_new(task->parent_process->heap, Class_##class_name);             \
-    int size = class_name##_size(self);                                       \
-    class_name *arr = class_name##_copy(self);                                \
-    _##type_name##_sort(arr->table, 0, size - 1);                             \
-    new_obj->_internal_obj = arr;                                             \
-    return entity_object(new_obj);                                            \
-  }                                                                           \
-                                                                              \
-  void _##class_name##_copy_fn(EntityCopier *copier, Object *src_obj,         \
-                               Object *target_obj) {                          \
-    class_name *src = (class_name *)src_obj->_internal_obj;                   \
-    target_obj->_internal_obj = class_name##_copy(src);                       \
+#define DEFINE_DATA_ARRAY(class_name, type_name, to_value_fn)                  \
+  static Class *Class_##class_name = NULL;                                     \
+                                                                               \
+  DEFINE_ARRAYLIKE(class_name, type_name);                                     \
+  IMPL_ARRAYLIKE(class_name, type_name);                                       \
+                                                                               \
+  void _##class_name##_init(Object *obj) { obj->_internal_obj = NULL; }        \
+  void _##class_name##_delete(Object *obj) {                                   \
+    class_name##_delete(obj->_internal_obj);                                   \
+  }                                                                            \
+                                                                               \
+  type_name _to_##type_name(const Value *e) {                                  \
+    switch (e->type) {                                                         \
+      case NONE:                                                               \
+        return 0L;                                                             \
+      case OBJECT:                                                             \
+        return (type_name)(uint64_t)e->obj;                                    \
+      case PRIMITIVE:                                                          \
+        switch (ptype(&e->pri)) {                                              \
+          case PRIMITIVE_CHAR:                                                 \
+            return (type_name)pchar(&e->pri);                                  \
+          case PRIMITIVE_INT:                                                  \
+            return pint(&e->pri);                                              \
+          case PRIMITIVE_FLOAT:                                                \
+            return (type_name)pfloat(&e->pri);                                 \
+          default:                                                             \
+            FATALF("Unknown primitive type");                                  \
+        }                                                                      \
+    }                                                                          \
+    FATALF("Unknown type");                                                    \
+    return 0;                                                                  \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,     \
+                                    Value *args) {                             \
+    int initial_size;                                                          \
+    class_name *arr;                                                           \
+    if (NULL == args || IS_NONE(args)) {                                       \
+      initial_size = ARRAY_INITIAL_SIZE;                                       \
+    } else if (IS_INT(args)) {                                                 \
+      initial_size = pint(&args->pri);                                         \
+    } else if (IS_CLASS(args, Class_Array)) {                                  \
+      Array *arr = (Array *)args->obj->_internal_obj;                          \
+      initial_size = Array_size(arr);                                          \
+    } else {                                                                   \
+      return raise_error(                                                      \
+          frame, ctx,                                                          \
+          "Error argument must either not be present or be an Int");           \
+    }                                                                          \
+    obj->_internal_obj = arr = class_name##_create_capacity(initial_size);     \
+                                                                               \
+    if (IS_INT(args)) {                                                        \
+      class_name##_set(arr, initial_size - 1, 0);                              \
+    } else if (IS_CLASS(args, Class_Array)) {                                  \
+      Array *arr2 = (Array *)args->obj->_internal_obj;                         \
+      for (int i = 0; i < Array_size(arr2); ++i) {                             \
+        Value *e = Array_mutable_ref_unchecked(arr2, i);                       \
+        type_name ie = _to_##type_name(e);                                     \
+        class_name##_set(arr, i, ie);                                          \
+      }                                                                        \
+    } else {                                                                   \
+      memset(arr->table, 0x0, sizeof(type_name) * initial_size);               \
+    }                                                                          \
+    return value_object(obj);                                                  \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_len(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
+    return value_int(class_name##_size((class_name *)obj->_internal_obj));     \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_index_range(Frame *frame, Scope *ctx,                  \
+                                    class_name *self, Range_ *range) {         \
+    if (range->inc == 1) {                                                     \
+      Object *obj = heap_new(frame->parent_isolate->heap, Class_##class_name); \
+      size_t new_len = range->end - range->start;                              \
+      obj->_internal_obj =                                                     \
+          class_name##_create_copy(self->table + range->start, new_len);       \
+      return value_object(obj);                                                \
+    } else {                                                                   \
+      if (class_name##_size(self) < range->end || range->start < 0) {          \
+        return raise_error(                                                    \
+            frame, ctx, "Range out of bounds: (%d:%d:%d) vs size=%d",          \
+            range->start, range->end, range->inc, class_name##_size(self));    \
+      }                                                                        \
+      Object *obj = heap_new(frame->parent_isolate->heap, Class_##class_name); \
+      size_t new_len = (range->end - range->start + 1) / range->inc;           \
+      class_name *arr = class_name##_create_capacity(new_len);                 \
+      for (int i = range->start, j = 0;                                        \
+           range->inc > 0 ? i < range->end : i > range->end;                   \
+           i += range->inc, ++j) {                                             \
+        class_name##_set(arr, j, class_name##_get_unchecked(self, i));         \
+      }                                                                        \
+      obj->_internal_obj = arr;                                                \
+      return value_object(obj);                                                \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
+    ASSERT(args != NULL);                                                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
+                                                                               \
+    if (IS_CLASS(args, Class_Range)) {                                         \
+      Range_ *range = (Range_ *)args->obj->_internal_obj;                      \
+      return _##class_name##_index_range(frame, ctx, self, range);             \
+    }                                                                          \
+                                                                               \
+    if (PRIMITIVE != args->type || PRIMITIVE_INT != ptype(&args->pri)) {       \
+      return raise_error(frame, ctx, "Bad " #class_name " index");             \
+    }                                                                          \
+                                                                               \
+    int32_t index = pint(&args->pri);                                          \
+                                                                               \
+    if (index < 0 || index >= class_name##_size(self)) {                       \
+      return raise_error(frame, ctx, "Index out of bounds: index=%d, size=%d", \
+                         index, class_name##_size(self));                      \
+    }                                                                          \
+                                                                               \
+    return to_value_fn(class_name##_get_unchecked(self, index));               \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_set_range(Frame *frame, Scope *ctx, class_name *arr,   \
+                                  Range_ *range, const Value *val) {           \
+    class_name *value = (class_name *)val->obj->_internal_obj;                 \
+    size_t expected_len = (range->end - range->start + 1) / range->inc;        \
+    if (range->end > class_name##_size(arr) || range->start < 0) {             \
+      return raise_error(frame, ctx, "Invalid range: (%d:%d:%d) vs size=%d",   \
+                         range->start, range->end, range->inc,                 \
+                         class_name##_size(arr));                              \
+    }                                                                          \
+    if (expected_len != class_name##_size(value)) {                            \
+      return raise_error(                                                      \
+          frame, ctx,                                                          \
+          "Mismatch between left-hand and right-hand sizes: LH=%d, RH=%d",     \
+          expected_len, class_name##_size(value));                             \
+    }                                                                          \
+    for (int i = range->start, j = 0;                                          \
+         range->inc > 0 ? i < range->end : i > range->end;                     \
+         i += range->inc, ++j) {                                               \
+      class_name##_set(arr, i, class_name##_get_unchecked(value, j));          \
+    }                                                                          \
+    return *val;                                                               \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
+    class_name *arr = (class_name *)obj->_internal_obj;                        \
+    if (!IS_TUPLE(args)) {                                                     \
+      return raise_error(frame, ctx, "Expected tuple input");                  \
+    }                                                                          \
+    Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;                      \
+    if (2 != tuple_size(tupl_args)) {                                          \
+      return raise_error(frame, ctx,                                           \
+                         "Invalid number of arguments, expected 2, got %d",    \
+                         tuple_size(tupl_args));                               \
+    }                                                                          \
+    const Value *index = tuple_get(tupl_args, 0);                              \
+    const Value *val = tuple_get(tupl_args, 1);                                \
+                                                                               \
+    if (IS_CLASS(index, Class_Range)) {                                        \
+      Range_ *range = (Range_ *)index->obj->_internal_obj;                     \
+      if (!IS_CLASS(val, Class_##class_name)) {                                \
+        return raise_error(frame, ctx, "Value must be an " #class_name);       \
+      }                                                                        \
+      return _##class_name##_set_range(frame, ctx, arr, range, val);           \
+    } else if (IS_INT(index)) {                                                \
+      int indexi = pint(&index->pri);                                          \
+      if (indexi < 0 || indexi >= class_name##_size(arr)) {                    \
+        return raise_error(frame, ctx, "Index out of bounds");                 \
+      }                                                                        \
+      type_name ival = _to_##type_name(val);                                   \
+      class_name##_set(arr, pint(&index->pri), ival);                          \
+    } else {                                                                   \
+      return raise_error(frame, ctx, "Index must be int or Range.");           \
+    }                                                                          \
+    return *val;                                                               \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_to_arr(Frame *frame, Scope *ctx, Object *obj,          \
+                               Value *args) {                                  \
+    ASSERT(args != NULL);                                                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
+                                                                               \
+    Object *arre = array_create(frame->parent_isolate->heap);                  \
+    Array *arr = (Array *)arre->_internal_obj;                                 \
+                                                                               \
+    for (int i = 0; i < class_name##_size(self); ++i) {                        \
+      *Array_set_ref_unchecked(arr, i) =                                       \
+          to_value_fn(class_name##_get_unchecked(self, i));                    \
+    }                                                                          \
+    return value_object(arre);                                                 \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_reversed(Frame *frame, Scope *ctx, Object *obj,        \
+                                 Value *args) {                                \
+    ASSERT(args != NULL);                                                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
+                                                                               \
+    Object *new_obj =                                                          \
+        heap_new(frame->parent_isolate->heap, Class_##class_name);             \
+    int size = class_name##_size(self);                                        \
+    class_name *arr = class_name##_create_capacity(size);                      \
+    for (int i = 0; i < size; ++i) {                                           \
+      class_name##_set(arr, size - i - 1,                                      \
+                       class_name##_get_unchecked(self, i));                   \
+    }                                                                          \
+    new_obj->_internal_obj = arr;                                              \
+    return value_object(new_obj);                                              \
+  }                                                                            \
+                                                                               \
+  void _##type_name##_swap(type_name *arr, int i, int j) {                     \
+    type_name tmp = arr[i];                                                    \
+    arr[i] = arr[j];                                                           \
+    arr[j] = tmp;                                                              \
+  }                                                                            \
+                                                                               \
+  int _##type_name##_partition(type_name *arr, int low, int high) {            \
+    const int pivot = arr[low];                                                \
+    int i = low - 1, j = high + 1;                                             \
+    while (true) {                                                             \
+      do {                                                                     \
+        ++i;                                                                   \
+      } while (arr[i] < pivot);                                                \
+      do {                                                                     \
+        --j;                                                                   \
+      } while (arr[j] > pivot);                                                \
+      if (i >= j) {                                                            \
+        return j;                                                              \
+      }                                                                        \
+      _##type_name##_swap(arr, i, j);                                          \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  int _##type_name##_partition_r(type_name *arr, int low, int high) {          \
+    const int random = low + rand() % (high - low);                            \
+    _##type_name##_swap(arr, random, low);                                     \
+    return _##type_name##_partition(arr, low, high);                           \
+  }                                                                            \
+                                                                               \
+  void _##type_name##_sort(type_name *arr, int low, int high) {                \
+    if (low >= high) {                                                         \
+      return;                                                                  \
+    }                                                                          \
+    const int pi = _##type_name##_partition_r(arr, low, high);                 \
+    _##type_name##_sort(arr, low, pi);                                         \
+    _##type_name##_sort(arr, pi + 1, high);                                    \
+  }                                                                            \
+                                                                               \
+  Value _##class_name##_sorted(Frame *frame, Scope *ctx, Object *obj,          \
+                               Value *args) {                                  \
+    ASSERT(args != NULL);                                                      \
+    class_name *self = (class_name *)obj->_internal_obj;                       \
+                                                                               \
+    Object *new_obj =                                                          \
+        heap_new(frame->parent_isolate->heap, Class_##class_name);             \
+    int size = class_name##_size(self);                                        \
+    class_name *arr = class_name##_copy(self);                                 \
+    _##type_name##_sort(arr->table, 0, size - 1);                              \
+    new_obj->_internal_obj = arr;                                              \
+    return value_object(new_obj);                                              \
+  }                                                                            \
+                                                                               \
+  void _##class_name##_copy_fn(ValueCopier *copier, Object *src_obj,           \
+                               Object *target_obj) {                           \
+    class_name *src = (class_name *)src_obj->_internal_obj;                    \
+    target_obj->_internal_obj = class_name##_copy(src);                        \
   }
 
 #define DEFINE_DATA_MATRIX(class_name, array_class_name, type_name,            \
-                           to_entity_fn)                                       \
+                           to_value_fn)                                        \
   static Class *Class_##class_name = NULL;                                     \
                                                                                \
   typedef struct {                                                             \
@@ -308,20 +308,20 @@
     return mat;                                                                \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_constructor(Task *task, Context *ctx, Object *obj,    \
-                                     Entity *args) {                           \
+  Value _##class_name##_constructor(Frame *frame, Scope *ctx, Object *obj,     \
+                                    Value *args) {                             \
     if (IS_TUPLE(args)) {                                                      \
       Tuple *tupl_args = (Tuple *)args->obj->_internal_obj;                    \
       if (2 != tuple_size(tupl_args)) {                                        \
-        return raise_error(task, ctx,                                          \
+        return raise_error(frame, ctx,                                         \
                            "Invalid number of arguments, expected 2, got %d",  \
                            tuple_size(tupl_args));                             \
       }                                                                        \
-      const Entity *e_dim1 = tuple_get(tupl_args, 0);                          \
-      const Entity *e_dim2 = tuple_get(tupl_args, 1);                          \
+      const Value *e_dim1 = tuple_get(tupl_args, 0);                           \
+      const Value *e_dim2 = tuple_get(tupl_args, 1);                           \
                                                                                \
       if (!IS_INT(e_dim1) || !IS_INT(e_dim2)) {                                \
-        return raise_error(task, ctx, "Invalid input: expected (Int, Int).");  \
+        return raise_error(frame, ctx, "Invalid input: expected (Int, Int)."); \
       }                                                                        \
                                                                                \
       const size_t dim1 = pint(&e_dim1->pri);                                  \
@@ -333,7 +333,7 @@
       const size_t dim1 = Array_size(arr);                                     \
       int max_dim2 = 0;                                                        \
       for (int i = 0; i < Array_size(arr); ++i) {                              \
-        Entity *e = Array_mutable_ref_unchecked(arr, i);                       \
+        Value *e = Array_mutable_ref_unchecked(arr, i);                        \
         if (IS_ARRAY(e)) {                                                     \
           max_dim2 =                                                           \
               max(max_dim2, Array_size((Array *)e->obj->_internal_obj));       \
@@ -342,7 +342,7 @@
               max(max_dim2, array_class_name##_size(                           \
                                 (array_class_name *)e->obj->_internal_obj));   \
         } else {                                                               \
-          return raise_error(task, ctx,                                        \
+          return raise_error(frame, ctx,                                       \
                              "Invalid member of input array at index %d", i);  \
         }                                                                      \
       }                                                                        \
@@ -351,7 +351,7 @@
           _##class_name##_create(dim1, max_dim2, /*clear=*/true);              \
                                                                                \
       for (int i = 0; i < Array_size(arr); ++i) {                              \
-        Entity *e = Array_mutable_ref_unchecked(arr, i);                       \
+        Value *e = Array_mutable_ref_unchecked(arr, i);                        \
         if (IS_ARRAY(e)) {                                                     \
           Array *arri = (Array *)e->obj->_internal_obj;                        \
           for (int j = 0; j < Array_size(arri); ++j) {                         \
@@ -366,16 +366,16 @@
         }                                                                      \
       }                                                                        \
     }                                                                          \
-    return entity_object(obj);                                                 \
+    return value_object(obj);                                                  \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_shape(Task *task, Context *ctx, Object *obj,          \
-                               Entity *args) {                                 \
+  Value _##class_name##_shape(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
-    Entity dim1 = entity_int(mat->dim1);                                       \
-    Entity dim2 = entity_int(mat->dim2);                                       \
-    Object *shape = tuple_create2(task->parent_process->heap, &dim1, &dim2);   \
-    return entity_object(shape);                                               \
+    Value dim1 = value_int(mat->dim1);                                         \
+    Value dim2 = value_int(mat->dim2);                                         \
+    Object *shape = tuple_create2(frame->parent_isolate->heap, &dim1, &dim2);  \
+    return value_object(shape);                                                \
   }                                                                            \
                                                                                \
   size_t _##class_name##_get_dim(const class_name *mat, int dim) {             \
@@ -385,7 +385,7 @@
   int _##class_name##_first_bad_index(const class_name *mat, int dim,          \
                                       const Tuple *dim_indices) {              \
     for (int i = 0; i < tuple_size(dim_indices); ++i) {                        \
-      const Entity *e = tuple_get(dim_indices, i);                             \
+      const Value *e = tuple_get(dim_indices, i);                              \
       if (!IS_INT(e) || pint(&e->pri) < 0 ||                                   \
           pint(&e->pri) >= _##class_name##_get_dim(mat, dim)) {                \
         return i;                                                              \
@@ -405,13 +405,13 @@
     return index >= 0 && index < _##class_name##_get_dim(mat, dim);            \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_compute_indices(                                      \
-      Task *task, Context *ctx, const Entity *arg, const class_name *mat,      \
+  Value _##class_name##_compute_indices(                                       \
+      Frame *frame, Scope *ctx, const Value *arg, const class_name *mat,       \
       int dim, int *dim_index, Tuple **dim_indices, Range_ **dim_range) {      \
     if (IS_INT(arg)) {                                                         \
       *dim_index = pint(&arg->pri);                                            \
       if (!_##class_name##_index_is_valid(mat, dim, *dim_index)) {             \
-        return raise_error(task, ctx,                                          \
+        return raise_error(frame, ctx,                                         \
                            "Dim%d out of bounds: %d, must be in [0, %d)", dim, \
                            *dim_index, _##class_name##_get_dim(mat, dim));     \
       }                                                                        \
@@ -420,22 +420,23 @@
       int bad_index = -1;                                                      \
       if ((bad_index = _##class_name##_first_bad_index(mat, dim,               \
                                                        *dim_indices)) >= 0) {  \
-        return raise_error(task, ctx, "Invalid dim%d index at %d", dim,        \
+        return raise_error(frame, ctx, "Invalid dim%d index at %d", dim,       \
                            bad_index);                                         \
       }                                                                        \
     } else if (IS_CLASS(arg, Class_Range)) {                                   \
       *dim_range = (Range_ *)arg->obj->_internal_obj;                          \
       if (!_##class_name##_range_is_valid(mat, dim, *dim_range)) {             \
         return raise_error(                                                    \
-            task, ctx, "Dim%d out of bounds: (%d:%d:%d), must be in [0, %d)",  \
+            frame, ctx, "Dim%d out of bounds: (%d:%d:%d), must be in [0, %d)", \
             dim, (*dim_range)->start, (*dim_range)->end, (*dim_range)->inc,    \
             _##class_name##_get_dim(mat, dim));                                \
       }                                                                        \
     } else {                                                                   \
-      return raise_error(                                                      \
-          task, ctx, "Expected dim%d arg to be an Int, Range, or tuple", dim); \
+      return raise_error(frame, ctx,                                           \
+                         "Expected dim%d arg to be an Int, Range, or tuple",   \
+                         dim);                                                 \
     }                                                                          \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }                                                                            \
                                                                                \
   type_name _##class_name##_get_value(const class_name *mat, int dim1_index,   \
@@ -453,41 +454,42 @@
     return ceil(1.0 * (range->end - range->start) / range->inc);               \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_index(Task *task, Context *ctx, Object *obj,          \
-                               Entity *args) {                                 \
+  Value _##class_name##_index(Frame *frame, Scope *ctx, Object *obj,           \
+                              Value *args) {                                   \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
     if (IS_TUPLE(args)) {                                                      \
       Tuple *targs = (Tuple *)args->obj->_internal_obj;                        \
       if (tuple_size(targs) != 2) {                                            \
-        return raise_error(task, ctx, "Expected exactly 2 args");              \
+        return raise_error(frame, ctx, "Expected exactly 2 args");             \
       }                                                                        \
-      const Entity *first = tuple_get(targs, 0);                               \
-      const Entity *second = tuple_get(targs, 1);                              \
+      const Value *first = tuple_get(targs, 0);                                \
+      const Value *second = tuple_get(targs, 1);                               \
                                                                                \
       int dim1_index = -1, dim2_index = -1;                                    \
       Tuple *dim1_indices = NULL, *dim2_indices = NULL;                        \
       Range_ *dim1_range = NULL, *dim2_range = NULL;                           \
                                                                                \
-      const Entity dim1_e = _##class_name##_compute_indices(                   \
-          task, ctx, first, mat, 1, &dim1_index, &dim1_indices, &dim1_range);  \
+      const Value dim1_e = _##class_name##_compute_indices(                    \
+          frame, ctx, first, mat, 1, &dim1_index, &dim1_indices, &dim1_range); \
       if (!IS_NONE(&dim1_e)) {                                                 \
         return dim1_e;                                                         \
       }                                                                        \
                                                                                \
-      const Entity dim2_e = _##class_name##_compute_indices(                   \
-          task, ctx, second, mat, 2, &dim2_index, &dim2_indices, &dim2_range); \
+      const Value dim2_e = _##class_name##_compute_indices(                    \
+          frame, ctx, second, mat, 2, &dim2_index, &dim2_indices,              \
+          &dim2_range);                                                        \
       if (!IS_NONE(&dim2_e)) {                                                 \
         return dim2_e;                                                         \
       }                                                                        \
                                                                                \
       if (dim1_index >= 0) {                                                   \
         if (dim2_index >= 0) {                                                 \
-          return to_entity_fn(                                                 \
+          return to_value_fn(                                                  \
               _##class_name##_get_value(mat, dim1_index, dim2_index));         \
         } else if (NULL != dim2_indices) {                                     \
           array_class_name *new_arr;                                           \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##array_class_name);  \
+              heap_new(frame->parent_isolate->heap, Class_##array_class_name); \
           new_obj->_internal_obj = new_arr =                                   \
               array_class_name##_create_capacity(tuple_size(dim2_indices));    \
           for (int i = 0; i < tuple_size(dim2_indices); ++i) {                 \
@@ -496,11 +498,11 @@
                 _##class_name##_get_value(                                     \
                     mat, dim1_index, pint(&tuple_get(dim2_indices, i)->pri))); \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           array_class_name *new_arr;                                           \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##array_class_name);  \
+              heap_new(frame->parent_isolate->heap, Class_##array_class_name); \
           new_obj->_internal_obj = new_arr =                                   \
               array_class_name##_create_capacity(                              \
                   _##class_name##_range_size(dim2_range));                     \
@@ -511,13 +513,13 @@
             array_class_name##_set(                                            \
                 new_arr, j, _##class_name##_get_value(mat, dim1_index, i));    \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       } else if (NULL != dim1_indices) {                                       \
         if (dim2_index >= 0) {                                                 \
           array_class_name *new_arr;                                           \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##array_class_name);  \
+              heap_new(frame->parent_isolate->heap, Class_##array_class_name); \
           new_obj->_internal_obj = new_arr =                                   \
               array_class_name##_create_capacity(tuple_size(dim1_indices));    \
           for (int i = 0; i < tuple_size(dim1_indices); ++i) {                 \
@@ -526,11 +528,11 @@
                 _##class_name##_get_value(                                     \
                     mat, pint(&tuple_get(dim1_indices, i)->pri), dim2_index)); \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else if (NULL != dim2_indices) {                                     \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##class_name);        \
+              heap_new(frame->parent_isolate->heap, Class_##class_name);       \
           new_obj->_internal_obj = new_mat = _##class_name##_create(           \
               tuple_size(dim1_indices), tuple_size(dim2_indices),              \
               /*clear=*/false);                                                \
@@ -543,11 +545,11 @@
                       pint(&tuple_get(dim2_indices, j)->pri)));                \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##class_name);        \
+              heap_new(frame->parent_isolate->heap, Class_##class_name);       \
           new_obj->_internal_obj = new_mat = _##class_name##_create(           \
               tuple_size(dim1_indices),                                        \
               _##class_name##_range_size(dim2_range), /*clear=*/false);        \
@@ -562,13 +564,13 @@
                       mat, pint(&tuple_get(dim1_indices, i)->pri), i2));       \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       } else /* if (NULL != dim1_range) */ {                                   \
         if (dim2_index >= 0) {                                                 \
           array_class_name *new_arr;                                           \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##array_class_name);  \
+              heap_new(frame->parent_isolate->heap, Class_##array_class_name); \
           new_obj->_internal_obj = new_arr =                                   \
               array_class_name##_create_capacity(                              \
                   _##class_name##_range_size(dim1_range));                     \
@@ -579,11 +581,11 @@
             array_class_name##_set(                                            \
                 new_arr, j, _##class_name##_get_value(mat, i, dim2_index));    \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else if (NULL != dim2_indices) {                                     \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##class_name);        \
+              heap_new(frame->parent_isolate->heap, Class_##class_name);       \
           new_obj->_internal_obj = new_mat = _##class_name##_create(           \
               _##class_name##_range_size(dim1_range),                          \
               tuple_size(dim2_indices), /*clear=*/false);                      \
@@ -598,11 +600,11 @@
                       mat, i2, pint(&tuple_get(dim2_indices, i)->pri)));       \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         } else /* (NULL != dim2_range) */ {                                    \
           class_name *new_mat;                                                 \
           Object *new_obj =                                                    \
-              heap_new(task->parent_process->heap, Class_##class_name);        \
+              heap_new(frame->parent_isolate->heap, Class_##class_name);       \
           new_obj->_internal_obj = new_mat = _##class_name##_create(           \
               _##class_name##_range_size(dim1_range),                          \
               _##class_name##_range_size(dim2_range), /*clear=*/false);        \
@@ -618,32 +620,32 @@
                                      _##class_name##_get_value(mat, i, k));    \
             }                                                                  \
           }                                                                    \
-          return entity_object(new_obj);                                       \
+          return value_object(new_obj);                                        \
         }                                                                      \
       }                                                                        \
     } else if (IS_INT(args)) {                                                 \
       const int dim1_index = (int)pint(&args->pri);                            \
       if (!_##class_name##_index_is_valid(mat, 1, dim1_index)) {               \
-        return raise_error(task, ctx,                                          \
+        return raise_error(frame, ctx,                                         \
                            "Index out of bounds: was %d, must be in [0,%d)",   \
                            dim1_index, mat->dim1);                             \
       }                                                                        \
       Object *subarr =                                                         \
-          heap_new(task->parent_process->heap, Class_##array_class_name);      \
+          heap_new(frame->parent_isolate->heap, Class_##array_class_name);     \
       subarr->_internal_obj = array_class_name##_create_copy(                  \
           mat->arr->table + dim1_index * mat->dim2, mat->dim2);                \
-      return entity_object(subarr);                                            \
+      return value_object(subarr);                                             \
     } else if (IS_CLASS(args, Class_Range)) {                                  \
       const Range_ *range = (Range_ *)args->obj->_internal_obj;                \
       if (!_##class_name##_range_is_valid(mat, 1, range)) {                    \
-        return raise_error(task, ctx,                                          \
+        return raise_error(frame, ctx,                                         \
                            "Range out of bounds: (%d:%d:%d) vs size=%d",       \
                            range->start, range->end, range->inc, mat->dim1);   \
       }                                                                        \
       const size_t new_dim1 = _##class_name##_range_size(range);               \
                                                                                \
       Object *submat_o =                                                       \
-          heap_new(task->parent_process->heap, Class_##class_name);            \
+          heap_new(frame->parent_isolate->heap, Class_##class_name);           \
       class_name *submat;                                                      \
       submat_o->_internal_obj = submat =                                       \
           _##class_name##_create(new_dim1, mat->dim2, /*clear=*/false);        \
@@ -654,21 +656,21 @@
                mat->arr->table + i * mat->dim2,                                \
                sizeof(type_name) * mat->dim2);                                 \
       }                                                                        \
-      return entity_object(submat_o);                                          \
+      return value_object(submat_o);                                           \
     } else {                                                                   \
-      return raise_error(task, ctx, "Expected tuple arg.");                    \
+      return raise_error(frame, ctx, "Expected tuple arg.");                   \
     }                                                                          \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }                                                                            \
                                                                                \
-  void _##class_name##_add_indices(                                            \
-      Task *task, Context *ctx, const Entity *arg, const class_name *mat,      \
-      int dim, IntArray *indices, Entity *error) {                             \
+  void _##class_name##_add_indices(Frame *frame, Scope *ctx, const Value *arg, \
+                                   const class_name *mat, int dim,             \
+                                   IntArray *indices, Value *error) {          \
     int index = -1;                                                            \
     Tuple *tuple = NULL;                                                       \
     Range_ *range = NULL;                                                      \
-    Entity e = _##class_name##_compute_indices(task, ctx, arg, mat, dim,       \
-                                               &index, &tuple, &range);        \
+    Value e = _##class_name##_compute_indices(frame, ctx, arg, mat, dim,       \
+                                              &index, &tuple, &range);         \
     if (!IS_NONE(&e)) {                                                        \
       *error = e;                                                              \
       return;                                                                  \
@@ -687,34 +689,34 @@
         IntArray_push_back(indices, i);                                        \
       }                                                                        \
     } else {                                                                   \
-      *error = raise_error(task, ctx, "Invalid dimension type");               \
+      *error = raise_error(frame, ctx, "Invalid dimension type");              \
     }                                                                          \
   }                                                                            \
                                                                                \
-  Entity _##class_name##_set(Task *task, Context *ctx, Object *obj,            \
-                             Entity *args) {                                   \
+  Value _##class_name##_set(Frame *frame, Scope *ctx, Object *obj,             \
+                            Value *args) {                                     \
     const class_name *mat = (class_name *)obj->_internal_obj;                  \
                                                                                \
     if (!IS_TUPLE(args)) {                                                     \
-      return raise_error(task, ctx, "Expected tuple input");                   \
+      return raise_error(frame, ctx, "Expected tuple input");                  \
     }                                                                          \
     Tuple *targs = (Tuple *)args->obj->_internal_obj;                          \
     if (tuple_size(targs) != 2) {                                              \
-      return raise_error(task, ctx, "Expected exactly 2 args");                \
+      return raise_error(frame, ctx, "Expected exactly 2 args");               \
     }                                                                          \
-    const Entity *lhs = tuple_get(targs, 0);                                   \
-    const Entity *rhs = tuple_get(targs, 1);                                   \
+    const Value *lhs = tuple_get(targs, 0);                                    \
+    const Value *rhs = tuple_get(targs, 1);                                    \
                                                                                \
     if (!IS_TUPLE(lhs)) {                                                      \
-      return raise_error(task, ctx, "Expected tuple lhs");                     \
+      return raise_error(frame, ctx, "Expected tuple lhs");                    \
     }                                                                          \
     Tuple *dims = (Tuple *)lhs->obj->_internal_obj;                            \
     if (tuple_size(dims) != 2) {                                               \
-      return raise_error(task, ctx, "Expected lhs to be Tuple(2)");            \
+      return raise_error(frame, ctx, "Expected lhs to be Tuple(2)");           \
     }                                                                          \
                                                                                \
     if (!IS_CLASS(rhs, Class_##class_name)) {                                  \
-      return raise_error(task, ctx, "Expected rhs to be class_name");          \
+      return raise_error(frame, ctx, "Expected rhs to be class_name");         \
     }                                                                          \
     const class_name *rhs_mat = (class_name *)rhs->obj->_internal_obj;         \
                                                                                \
@@ -722,26 +724,26 @@
     IntArray_init(&dim1_indices);                                              \
     IntArray_init(&dim2_indices);                                              \
                                                                                \
-    Entity error = NONE_ENTITY;                                                \
+    Value error = NONE_VALUE;                                                  \
                                                                                \
-    _##class_name##_add_indices(task, ctx, tuple_get(dims, 0), mat, 1,         \
+    _##class_name##_add_indices(frame, ctx, tuple_get(dims, 0), mat, 1,        \
                                 &dim1_indices, &error);                        \
     if (!IS_NONE(&error)) {                                                    \
       return error;                                                            \
     }                                                                          \
     if (rhs_mat->dim1 != IntArray_size(&dim1_indices)) {                       \
-      return raise_error(task, ctx,                                            \
+      return raise_error(frame, ctx,                                           \
                          "Dimension mismatch. lhs dim1=%d, rhs dim1=%d",       \
                          IntArray_size(&dim1_indices), rhs_mat->dim1);         \
     }                                                                          \
                                                                                \
-    _##class_name##_add_indices(task, ctx, tuple_get(dims, 1), mat, 2,         \
+    _##class_name##_add_indices(frame, ctx, tuple_get(dims, 1), mat, 2,        \
                                 &dim2_indices, &error);                        \
     if (!IS_NONE(&error)) {                                                    \
       return error;                                                            \
     }                                                                          \
     if (rhs_mat->dim2 != IntArray_size(&dim2_indices)) {                       \
-      return raise_error(task, ctx,                                            \
+      return raise_error(frame, ctx,                                           \
                          "Dimension mismatch. lhs dim2=%d, rhs dim2=%d",       \
                          IntArray_size(&dim2_indices), rhs_mat->dim2);         \
     }                                                                          \
@@ -758,7 +760,7 @@
     IntArray_finalize(&dim1_indices);                                          \
     IntArray_finalize(&dim2_indices);                                          \
                                                                                \
-    return NONE_ENTITY;                                                        \
+    return NONE_VALUE;                                                         \
   }
 
 #define INSTALL_DATA_ARRAY(class_name, data)                                   \

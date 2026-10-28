@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 #ifdef OS_WINDOWS
-#include <process.h>
+#include <isolate.h>
 #include <windows.h>
 #endif
 

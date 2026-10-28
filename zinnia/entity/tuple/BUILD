@@ -10,7 +10,7 @@ cc_library(
     hdrs = ["tuple.h"],
     deps = [
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/util:error",
     ],
 )

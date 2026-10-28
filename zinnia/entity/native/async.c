@@ -22,7 +22,7 @@
 #include "zinnia/vm/vm.h"
 
 struct Future_ {
-  Task *task;
+  Frame *frame;
   bool _is_complete, _is_result_set;
 };
 
@@ -30,17 +30,17 @@ void future_init_(Object *obj) {
   Future *f = MNEW(Future);
   f->_is_complete = false;
   f->_is_result_set = false;
-  f->task = NULL;
+  f->frame = NULL;
   obj->_internal_obj = f;
 }
 
 void future_delete_(Object *obj) { RELEASE(obj->_internal_obj); }
 
-Object *future_create(Task *task) {
-  Heap *heap = task->parent_process->heap;
+Object *future_create(Frame *frame) {
+  Heap *heap = frame->parent_isolate->heap;
   Object *future_obj = heap_new(heap, Class_Future);
   Future *future = (Future *)future_obj->_internal_obj;
-  future->task = task;
+  future->frame = frame;
   return future_obj;
 }
 
@@ -49,25 +49,25 @@ bool future_is_complete(Future *f) {
     return true;
   }
   f->_is_complete =
-      (f->task->state == TASK_COMPLETE) || (f->task->state == TASK_ERROR);
+      (f->frame->state == FRAME_COMPLETE) || (f->frame->state == FRAME_ERROR);
   return f->_is_complete;
 }
 
-Entity future_value_(Task *task, Context *ctx, Object *obj, Entity *args) {
-  Object *f_obj = heap_new(task->parent_process->heap, Class_Future);
+Value future_value_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Object *f_obj = heap_new(frame->parent_isolate->heap, Class_Future);
   Future *f = (Future *)f_obj->_internal_obj;
   f->_is_complete = true;
   f->_is_result_set = true;
-  object_set_member(task->parent_process->heap, f_obj, RESULT_VAL, args);
-  return entity_object(f_obj);
+  object_set_member(frame->parent_isolate->heap, f_obj, RESULT_VAL, args);
+  return value_object(f_obj);
 }
 
-const Entity *future_get_value(Heap *heap, Object *obj) {
+const Value *future_get_value(Heap *heap, Object *obj) {
   ASSERT(obj != NULL);
   ASSERT(obj->_class == Class_Future);
   Future *f = (Future *)obj->_internal_obj;
   if (!f->_is_result_set) {
-    const Entity *result = task_get_resval(f->task);
+    const Value *result = frame_get_acc(f->frame);
     object_set_member(heap, obj, RESULT_VAL, result);
     f->_is_result_set = true;
     return result;
@@ -75,33 +75,67 @@ const Entity *future_get_value(Heap *heap, Object *obj) {
   return object_get(obj, RESULT_VAL);
 }
 
-Task *future_get_task(Future *f) { return f->task; }
+Frame *future_get_frame(Future *f) { return f->frame; }
 
-Entity create_process_(Task *task, Context *ctx, Object *obj, Entity *args) {
+// Returns a future that completes when __complete_future() is called on it.
+Value completer_future_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  // The frame never runs; it only holds the result and the frames waiting on
+  // it.
+  Frame *pending = isolate_create_unqueued_frame(frame->parent_isolate);
+  return value_object(future_create(pending));
+}
+
+// Completes a future from __completer_future() with a value, waking the frames
+// awaiting it.
+Value complete_future_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  EXTRACT_TUPLE_ARGS(tuple, args, 2, frame, ctx);
+  const Value *future_value = tuple_get(tuple, 0);
+  if (!IS_CLASS(future_value, Class_Future)) {
+    return raise_error(frame, ctx, "__complete_future expects (Future, ANY).");
+  }
+  Future *future = (Future *)future_value->obj->_internal_obj;
+  if (future_is_complete(future)) {
+    return raise_error(frame, ctx, "Future is already complete.");
+  }
+  const Value *result = tuple_get(tuple, 1);
+  Isolate *isolate = frame->parent_isolate;
+  object_set_member(isolate->heap, future_value->obj, RESULT_VAL, result);
+  future->_is_result_set = true;
+  future->_is_complete = true;
+
+  Frame *pending = future->frame;
+  *frame_mutable_acc(pending) = *result;
+  pending->state = FRAME_COMPLETE;
+  isolate_mark_frame_complete(isolate, pending);
+  isolate_wake_dependent_frames(isolate, pending, /*should_push=*/false);
+  return NONE_VALUE;
+}
+
+Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
     return raise_error(
-        task, ctx,
-        "Cannot call __create_process with something other than (Function, "
+        frame, ctx,
+        "Cannot call __spawn_isolate with something other than (Function, "
         "ANY, ANY).");
   }
 
-  EXTRACT_TUPLE_ARGS(tuple, args, 3, task, ctx);
+  EXTRACT_TUPLE_ARGS(tuple, args, 3, frame, ctx);
 
-  const Entity *fn = tuple_get(tuple, 0);
-  const Entity *fn_args = tuple_get(tuple, 1);
-  const Entity *is_remote_arg = tuple_get(tuple, 2);
+  const Value *fn = tuple_get(tuple, 0);
+  const Value *fn_args = tuple_get(tuple, 1);
+  const Value *keep_alive_arg = tuple_get(tuple, 2);
   if (!IS_OBJECT(fn) || !(inherits_from(fn->obj->_class, Class_Function) ||
                           IS_CLASS(fn, Class_FunctionRef))) {
-    return raise_error(task, ctx,
-                       "__create_processes expects (Function, ANY, ANY).");
+    return raise_error(frame, ctx,
+                       "__spawn_isolate expects (Function, ANY, ANY).");
   }
 
-  VM *vm = task->parent_process->vm;
-  Process *new_process = vm_create_process(vm);
-  new_process->is_remote = !IS_NONE(is_remote_arg);
-  Task *new_task = process_create_task(new_process);
-  new_task->parent_task = task;
-  Context *new_ctx;
+  VM *vm = frame->parent_isolate->vm;
+  Isolate *new_isolate = vm_create_isolate(vm);
+  new_isolate->keep_alive = !IS_NONE(keep_alive_arg);
+  Frame *new_frame = isolate_create_frame(new_isolate);
+  new_frame->parent_frame = frame;
+  Scope *new_ctx;
 
   const Function *f;
   Object *self;
@@ -112,39 +146,37 @@ Entity create_process_(Task *task, Context *ctx, Object *obj, Entity *args) {
     f = function_ref_get_func(fn->obj);
     self = function_ref_get_object(fn->obj);
   } else {
-    return raise_error(task, ctx,
-                       "__create_processes expects (Function, ANY).");
+    return raise_error(frame, ctx, "__spawn_isolate expects (Function, ANY).");
   }
 
-  BULK_COPY(copier, new_process->heap, {
-    Entity self_e = entity_object(self);
-    self = entitycopier_copy(&copier, &self_e).obj;
+  BULK_COPY(copier, new_isolate->heap, {
+    Value self_e = value_object(self);
+    self = valuecopier_copy(&copier, &self_e).obj;
     new_ctx =
-        task_create_context(new_task, self, (Module *)f->_module, f->_ins_pos);
-    *task_mutable_resval(new_task) = entitycopier_copy(&copier, fn_args);
+        frame_create_scope(new_frame, self, (Module *)f->_module, f->_ins_pos);
+    *frame_mutable_acc(new_frame) = valuecopier_copy(&copier, fn_args);
   });
 
-  context_set_function(new_ctx, f);
+  scope_set_function(new_ctx, f);
 
   // Ensures that the remote task does not end while it is still accessible.
-  if (new_process->is_remote) {
-    new_process->remote_non_daemon_task =
-        process_create_unqueued_task(new_process);
-    process_insert_waiting_task(new_process,
-                                new_process->remote_non_daemon_task);
+  if (new_isolate->keep_alive) {
+    new_isolate->keep_alive_frame = isolate_create_unqueued_frame(new_isolate);
+    isolate_insert_waiting_frame(new_isolate, new_isolate->keep_alive_frame);
   }
 
-  return entity_object(new_process->_reflection);
+  return value_object(new_isolate->_reflection);
 }
 
-Entity sleep__(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value sleep__(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   double sleep_duration_sec = 0;
   if (IS_INT(args)) {
     sleep_duration_sec = pint(&args->pri);
   } else if (IS_FLOAT(args)) {
     sleep_duration_sec = pfloat(&args->pri);
   } else {
-    return raise_error(task, ctx, "sleep() expected to be called with number.");
+    return raise_error(frame, ctx,
+                       "sleep() expected to be called with number.");
   }
 #if defined(OS_WINDOWS)
   // Accepts millis as an unsigned long instead of double seconds.
@@ -152,65 +184,66 @@ Entity sleep__(Task *task, Context *ctx, Object *obj, Entity *args) {
 #else
   sleep(sleep_duration_sec);
 #endif
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity validate_remote_call_(Task *current_task, Context *current_ctx,
-                             Entity *args) {
+Value validate_actor_call_(Frame *current_frame, Scope *current_ctx,
+                           Value *args) {
   if (!IS_CLASS(args, Class_Tuple)) {
-    return raise_error(current_task, current_ctx,
-                       "Cannot call __remote_call with something other than "
+    return raise_error(current_frame, current_ctx,
+                       "Cannot call __actor_call with something other than "
                        "(Remote, String, args).");
   }
 
-  EXTRACT_TUPLE_ARGS(tuple, args, 3, current_task, current_ctx);
+  EXTRACT_TUPLE_ARGS(tuple, args, 3, current_frame, current_ctx);
 
-  const Entity *remote_entity = tuple_get(tuple, 0);
-  if (!IS_CLASS(remote_entity, Class_Remote)) {
-    return raise_error(current_task, current_ctx,
-                       "__remote_call expects (Remote, String, args).");
+  const Value *actor_value = tuple_get(tuple, 0);
+  if (!IS_CLASS(actor_value, Class_ActorRef)) {
+    return raise_error(current_frame, current_ctx,
+                       "__actor_call expects (ActorRef, String, args).");
   }
 
-  const Entity *fn_name_entity = tuple_get(tuple, 1);
-  if (!IS_STRING(fn_name_entity)) {
-    return raise_error(current_task, current_ctx,
-                       "__remote_call expects (Remote, String, args).");
+  const Value *fn_name_value = tuple_get(tuple, 1);
+  if (!IS_STRING(fn_name_value)) {
+    return raise_error(current_frame, current_ctx,
+                       "__actor_call expects (ActorRef, String, args).");
   }
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity create_future_for_task_(Task *current_task, Task *remote_task) {
-  Task *new_task = process_create_unqueued_task(current_task->parent_process);
-  new_task->parent_task = current_task;
+Value create_future_for_frame_(Frame *current_frame, Frame *actor_frame) {
+  Frame *new_frame =
+      isolate_create_unqueued_frame(current_frame->parent_isolate);
+  new_frame->parent_frame = current_frame;
 
-  Object *future_obj = future_create(new_task);
-  remote_task->remote_future = (Future *)future_obj->_internal_obj;
+  Object *future_obj = future_create(new_frame);
+  actor_frame->actor_future = (Future *)future_obj->_internal_obj;
 
-  process_insert_waiting_task(current_task->parent_process, new_task);
+  isolate_insert_waiting_frame(current_frame->parent_isolate, new_frame);
 
-  return entity_object(future_obj);
+  return value_object(future_obj);
 }
 
-Entity remote_call_(Task *current_task, Context *current_ctx, Object *obj,
-                    Entity *args) {
-  Entity error = validate_remote_call_(current_task, current_ctx, args);
+Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
+                  Value *args) {
+  Value error = validate_actor_call_(current_frame, current_ctx, args);
   if (NONE != error.type) {
     return error;
   }
 
   const Tuple *tuple = (Tuple *)args->obj->_internal_obj;
-  const Entity *remote_entity = tuple_get(tuple, 0);
-  const Entity *fn_name_entity = tuple_get(tuple, 1);
-  const Entity *fn_args = tuple_get(tuple, 2);
+  const Value *actor_value = tuple_get(tuple, 0);
+  const Value *fn_name_value = tuple_get(tuple, 1);
+  const Value *fn_args = tuple_get(tuple, 2);
 
-  Remote *remote = extract_remote_from_obj(remote_entity->obj);
-  Process *remote_process = remote_get_process(remote);
-  Object *remote_object = remote_get_object(remote);
+  ActorRef *actor = extract_actor_from_obj(actor_value->obj);
+  Isolate *actor_isolate = actor_get_isolate(actor);
+  Object *actor_object = actor_get_object(actor);
 
-  const char *fn_name = intern_entity(fn_name_entity);
+  const char *fn_name = intern_value(fn_name_value);
 
-  Entity fn =
-      object_get_maybe_wrap(remote_object, fn_name, remote_process->heap, NULL);
+  Value fn =
+      object_get_maybe_wrap(actor_object, fn_name, actor_isolate->heap, NULL);
 
   const Function *f;
   if (IS_CLASS(&fn, Class_Function)) {
@@ -218,39 +251,42 @@ Entity remote_call_(Task *current_task, Context *current_ctx, Object *obj,
   } else if (IS_CLASS(&fn, Class_FunctionRef)) {
     f = function_ref_get_func(fn.obj);
   } else {
-    return raise_error(current_task, current_ctx,
-                       "Could not find method '%s' on remote object.", fn_name);
+    return raise_error(current_frame, current_ctx,
+                       "Could not find method '%s' on actor.", fn_name);
   }
 
-  Task *remote_task = process_create_unqueued_task(remote_process);
+  Frame *actor_frame = isolate_create_unqueued_frame(actor_isolate);
   // NOTE: This is a reference to a task in another heap.
-  remote_task->parent_task = current_task;
+  actor_frame->parent_frame = current_frame;
 
-  Context *remote_ctx = task_create_context(remote_task, remote_object,
-                                            (Module *)f->_module, f->_ins_pos);
+  Scope *actor_ctx = frame_create_scope(actor_frame, actor_object,
+                                        (Module *)f->_module, f->_ins_pos);
 
   // printf("context=%p, task=%p\n", remote_ctx->_reflection,
   //        remote_task->_reflection);
 
-  context_set_function(remote_ctx, f);
+  scope_set_function(actor_ctx, f);
 
-  SYNCHRONIZED(current_task->parent_process->heap_access_lock, {
-    SYNCHRONIZED(remote_process->heap_access_lock, {
-      *task_mutable_resval(remote_task) =
-          entity_copy(fn_args, remote_process->heap);
+  SYNCHRONIZED(current_frame->parent_isolate->heap_access_lock, {
+    SYNCHRONIZED(actor_isolate->heap_access_lock, {
+      *frame_mutable_acc(actor_frame) =
+          value_copy(fn_args, actor_isolate->heap);
     });
   });
 
-  process_enqueue_task(remote_process, remote_task);
-  Entity future_entity = create_future_for_task_(current_task, remote_task);
-  condition_broadcast(remote_process->task_wait_cond);
-  return future_entity;
+  isolate_enqueue_frame(actor_isolate, actor_frame);
+  Value future_value = create_future_for_frame_(current_frame, actor_frame);
+  condition_broadcast(actor_isolate->frame_wait_cond);
+  return future_value;
 }
 
 void async_add_native(ModuleManager *mm, Module *async) {
   Class_Future = native_class(async, FUTURE_NAME, future_init_, future_delete_);
   native_function(async, VALUE_KEY, future_value_);
-  native_function(async, global_intern("__create_process"), create_process_);
-  native_background_function(async, global_intern("__sleep"), sleep__);
-  native_function(async, global_intern("__remote_call"), remote_call_);
+  native_function(async, global_intern("__spawn_isolate"), spawn_isolate_);
+  native_blocking_function(async, global_intern("__sleep"), sleep__);
+  native_function(async, global_intern("__actor_call"), actor_call_);
+  native_function(async, global_intern("__completer_future"),
+                  completer_future_);
+  native_function(async, global_intern("__complete_future"), complete_future_);
 }

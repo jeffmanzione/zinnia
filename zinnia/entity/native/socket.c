@@ -21,8 +21,8 @@ static char *LOCAL_ADDRESS_ERROR_MESSAGES[] = {
     "inet_ntop() call failed",
 };
 
-Entity SocketHandle_constructor_(Task *task, Context *ctx, Object *obj,
-                                 Entity *args);
+Value SocketHandle_constructor_(Frame *frame, Scope *ctx, Object *obj,
+                                Value *args);
 
 void Socket_init_(Object *obj) {}
 void Socket_delete_(Object *obj) {
@@ -36,9 +36,8 @@ void SocketHandle_delete_(Object *obj) {
   sockethandle_delete((SocketHandle *)obj->_internal_obj);
 }
 
-Entity Socket_constructor_(Task *task, Context *ctx, Object *obj,
-                           Entity *args) {
-  EXTRACT_TUPLE_ARGS(tuple, args, 6, task, ctx);
+Value Socket_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  EXTRACT_TUPLE_ARGS(tuple, args, 6, frame, ctx);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t domain, tuple, 0);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t type, tuple, 1);
   EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t protocol, tuple, 2);
@@ -53,100 +52,99 @@ Entity Socket_constructor_(Task *task, Context *ctx, Object *obj,
   obj->_internal_obj = socket;
   if (is_server) {
     if (!socket_is_valid(socket)) {
-      return raise_error(task, ctx, "Invalid socket.");
+      return raise_error(frame, ctx, "Invalid socket.");
     }
     if (SOCKET_ERROR == socket_bind(socket)) {
-      return raise_error(task, ctx, "Could not bind to socket.");
+      return raise_error(frame, ctx, "Could not bind to socket.");
     }
     if (SOCKET_ERROR == socket_listen(socket, port)) {
-      return raise_error(task, ctx, "Could not listen to socket.");
+      return raise_error(frame, ctx, "Could not listen to socket.");
     }
   }
-  return entity_object(obj);
+  return value_object(obj);
 }
 
-Entity Socket_close_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value Socket_close_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return raise_error(frame, ctx, "Weird Socket error.");
   }
   socket_close(socket);
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity Socket_accept_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value Socket_accept_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
   }
   SocketHandle *sh = socket_accept(socket);
   Object *socket_handle =
-      native_background_new(task->parent_process, Class_SocketHandle);
+      native_blocking_new(frame->parent_isolate, Class_SocketHandle);
   socket_handle->_internal_obj = sh;
-  return entity_object(socket_handle);
+  return value_object(socket_handle);
 }
 
-Entity Socket_host_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value Socket_host_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return raise_error(frame, ctx, "Weird Socket error.");
   }
 
   char host_buf[INET_ADDRSTRLEN];
   const AddressLookupStatus status = socket_address(socket, host_buf);
 
   if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
-    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
                        LOCAL_ADDRESS_ERROR_MESSAGES[status]);
   }
 
-  return entity_object(string_new(task->parent_process->heap, host_buf,
-                                  strnlen(host_buf, INET_ADDRSTRLEN)));
+  return value_object(string_new(frame->parent_isolate->heap, host_buf,
+                                 strnlen(host_buf, INET_ADDRSTRLEN)));
 }
 
-Entity Socket_port_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value Socket_port_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return raise_error(frame, ctx, "Weird Socket error.");
   }
 
   int port;
   const AddressLookupStatus status = socket_port(socket, &port);
 
   if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
-    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
                        LOCAL_ADDRESS_ERROR_MESSAGES[status]);
   }
 
-  return entity_int(port);
+  return value_int(port);
 }
 
-Entity Socket_connect_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value Socket_connect_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Socket *socket = (Socket *)obj->_internal_obj;
   if (NULL == socket) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
   }
   SocketHandle *sh = socket_connect(socket);
   Object *socket_handle =
-      native_background_new(task->parent_process, Class_SocketHandle);
+      native_blocking_new(frame->parent_isolate, Class_SocketHandle);
   socket_handle->_internal_obj = sh;
-  return entity_object(socket_handle);
+  return value_object(socket_handle);
 }
 
-Entity SocketHandle_close_(Task *task, Context *ctx, Object *obj,
-                           Entity *args) {
+Value SocketHandle_close_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
   if (NULL == sh) {
-    return raise_error(task, ctx, "Weird Socket error.");
+    return raise_error(frame, ctx, "Weird Socket error.");
   }
   sockethandle_close(sh);
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity SocketHandle_send_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value SocketHandle_send_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
   if (NULL == sh) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
   }
 
   char *msg;
@@ -155,7 +153,7 @@ Entity SocketHandle_send_(Task *task, Context *ctx, Object *obj, Entity *args) {
 
   if (is_string) {
     sockethandle_send(sh, msg, msg_len);
-    return NONE_ENTITY;
+    return NONE_VALUE;
   } else if (IS_CLASS(args, Class_Array)) {
     Array *arr = args->obj->_internal_obj;
     int i, arr_len = Array_size(arr);
@@ -165,59 +163,59 @@ Entity SocketHandle_send_(Task *task, Context *ctx, Object *obj, Entity *args) {
       const bool is_string =
           extract_string(Array_get_ref_unchecked(arr, i), &msg, &msg_len);
       if (!is_string) {
-        return native_background_raise_error(
-            task, ctx, "Cannot send non-string at index %d.", i);
+        return native_blocking_raise_error(
+            frame, ctx, "Cannot send non-string at index %d.", i);
       }
       sockethandle_send(sh, msg, msg_len);
     }
-    return NONE_ENTITY;
+    return NONE_VALUE;
   } else {
-    return native_background_raise_error(task, ctx, "Cannot send non-string.");
+    return native_blocking_raise_error(frame, ctx, "Cannot send non-string.");
   }
 }
 
-Entity SocketHandle_receive_(Task *task, Context *ctx, Object *obj,
-                             Entity *args) {
+Value SocketHandle_receive_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
   SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
   if (NULL == sh) {
-    return native_background_raise_error(task, ctx, "Weird Socket error.");
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
   }
 
   char buf[BUFFER_SIZE];
   const int32_t chars_received = sockethandle_receive(sh, buf, BUFFER_SIZE);
   if (chars_received == 0) {
-    return NONE_ENTITY;
+    return NONE_VALUE;
   }
   if (chars_received < 0) {
-    return native_background_raise_error(
-        task, ctx, "Invalid connection. recv() returned %d", chars_received);
+    return native_blocking_raise_error(
+        frame, ctx, "Invalid connection. recv() returned %d", chars_received);
   }
-  return entity_object(
-      native_background_string_new(task->parent_process, buf, chars_received));
+  return value_object(
+      native_blocking_string_new(frame->parent_isolate, buf, chars_received));
 }
 
-Entity init_sockets_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value init_sockets_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   sockets_init();
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity cleanup_sockets_(Task *task, Context *ctx, Object *obj, Entity *args) {
+Value cleanup_sockets_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   sockets_cleanup();
-  return NONE_ENTITY;
+  return NONE_VALUE;
 }
 
-Entity lookup_local_address_(Task *task, Context *ctx, Object *obj,
-                             Entity *args) {
+Value lookup_local_address_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
   char buf[INET_ADDRSTRLEN];
   const AddressLookupStatus status = local_ip_address(buf);
 
   if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
-    return raise_error(task, ctx, "Failed to look up local address. Error: %s",
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
                        LOCAL_ADDRESS_ERROR_MESSAGES[status]);
   }
 
-  return entity_object(string_new(task->parent_process->heap, buf,
-                                  strnlen(buf, INET_ADDRSTRLEN)));
+  return value_object(string_new(frame->parent_isolate->heap, buf,
+                                 strnlen(buf, INET_ADDRSTRLEN)));
 }
 
 void socket_add_native(ModuleManager *mm, Module *socket) {
@@ -227,10 +225,10 @@ void socket_add_native(ModuleManager *mm, Module *socket) {
                   lookup_local_address_);
   Class_SocketHandle = native_class(socket, global_intern("SocketHandle"),
                                     SocketHandle_init_, SocketHandle_delete_);
-  native_background_method(Class_SocketHandle, global_intern("send"),
-                           SocketHandle_send_);
-  native_background_method(Class_SocketHandle, global_intern("receive"),
-                           SocketHandle_receive_);
+  native_blocking_method(Class_SocketHandle, global_intern("send"),
+                         SocketHandle_send_);
+  native_blocking_method(Class_SocketHandle, global_intern("receive"),
+                         SocketHandle_receive_);
   native_method(Class_SocketHandle, global_intern("close"),
                 SocketHandle_close_);
 
@@ -239,9 +237,8 @@ void socket_add_native(ModuleManager *mm, Module *socket) {
   native_method(Class_Socket, global_intern("new"), Socket_constructor_);
   native_method(Class_Socket, global_intern("host"), Socket_host_);
   native_method(Class_Socket, global_intern("port"), Socket_port_);
-  native_background_method(Class_Socket, global_intern("accept"),
-                           Socket_accept_);
-  native_background_method(Class_Socket, global_intern("connect"),
-                           Socket_connect_);
+  native_blocking_method(Class_Socket, global_intern("accept"), Socket_accept_);
+  native_blocking_method(Class_Socket, global_intern("connect"),
+                         Socket_connect_);
   native_method(Class_Socket, global_intern("close"), Socket_close_);
 }

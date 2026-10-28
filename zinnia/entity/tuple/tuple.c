@@ -11,12 +11,12 @@
 #include <stdio.h>
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
 #include "zinnia/util/error.h"
 
 struct _Tuple {
   size_t size;
-  Entity *table;
+  Value *table;
 };
 
 void tuple_print(const Tuple *t, FILE *file);
@@ -40,18 +40,18 @@ void __tuple_print(const Object *obj, FILE *out) {
 Tuple *tuple_create(size_t size) {
   Tuple *t = CNEW(Tuple);
   t->size = size;
-  t->table = MNEW_ARR(Entity, size);
+  t->table = MNEW_ARR(Value, size);
   return t;
 }
 
-Entity *tuple_get_mutable(const Tuple *t, uint32_t index) {
+Value *tuple_get_mutable(const Tuple *t, uint32_t index) {
   ASSERT(t != NULL);
   ASSERT(index >= 0);
   ASSERT(index < t->size);
   return t->table + index;
 }
 
-const Entity *tuple_get(const Tuple *t, uint32_t index) {
+const Value *tuple_get(const Tuple *t, uint32_t index) {
   return tuple_get_mutable(t, index);
 }
 
@@ -72,11 +72,11 @@ void tuple_print(const Tuple *t, FILE *file) {
   ASSERT(file != NULL);
   fprintf(file, "(");
   if (t->size > 0) {
-    entity_print(tuple_get(t, 0), file);
+    value_print(tuple_get(t, 0), file);
     int i;
     for (i = 1; i < t->size; ++i) {
       fprintf(file, ", ");
-      entity_print(tuple_get(t, i), file);
+      value_print(tuple_get(t, i), file);
     }
   }
   fprintf(file, ")");

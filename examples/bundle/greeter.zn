@@ -1,0 +1,9 @@
+import io
+
+import 'examples/bundle/hello' as hello
+
+class Greeter {
+  method greet(name) {
+    io.print(hello.produce_greeting(name))
+  }
+}

@@ -29,11 +29,11 @@ Class *Class_IString;
 Class *Class_Tuple;
 Class *Class_Range;
 Class *Class_Error;
-Class *Class_Process;
-Class *Class_Task;
-Class *Class_Context;
+Class *Class_Isolate;
+Class *Class_Frame;
+Class *Class_Scope;
 Class *Class_Future;
-Class *Class_Remote;
+Class *Class_ActorRef;
 
 void builtin_classes(Heap *heap, Module *builtin) {
   Class_Object = module_add_class(builtin, OBJECT_NAME, NULL);
@@ -47,11 +47,11 @@ void builtin_classes(Heap *heap, Module *builtin) {
   Class_IString = module_add_class(builtin, ISTRING_NAME, Class_Object);
   Class_Tuple = module_add_class(builtin, TUPLE_NAME, Class_Object);
   Class_Error = NULL;
-  Class_Process = NULL;
-  Class_Task = NULL;
-  Class_Context = NULL;
+  Class_Isolate = NULL;
+  Class_Frame = NULL;
+  Class_Scope = NULL;
   Class_Future = NULL;
-  Class_Remote = NULL;
+  Class_ActorRef = NULL;
 
   Class_Object->_super = NULL;
   Class_Object->_reflection = heap_new(heap, Class_Class);

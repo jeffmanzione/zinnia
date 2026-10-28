@@ -9,36 +9,36 @@
 #include <stdio.h>
 
 void sin_impl(FunctionContext *fn_ctx) {
-  const Entity *args = FunctionContext_args(fn_ctx);
+  const Value *args = FunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     FunctionContext_raise_error(
         fn_ctx, "sin() takes exactly 1 primitive type argument.");
     return;
   }
   const double r = float_of(&args->pri);
-  *FunctionContext_mutable_retval(fn_ctx) = entity_float(sin(r));
+  *FunctionContext_mutable_retval(fn_ctx) = value_float(sin(r));
 }
 
 void cos_impl(FunctionContext *fn_ctx) {
-  const Entity *args = FunctionContext_args(fn_ctx);
+  const Value *args = FunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     FunctionContext_raise_error(
         fn_ctx, "cos() takes exactly 1 primitive type argument.");
     return;
   }
   const double r = float_of(&args->pri);
-  *FunctionContext_mutable_retval(fn_ctx) = entity_float(cos(r));
+  *FunctionContext_mutable_retval(fn_ctx) = value_float(cos(r));
 }
 
 void tan_impl(FunctionContext *fn_ctx) {
-  const Entity *args = FunctionContext_args(fn_ctx);
+  const Value *args = FunctionContext_args(fn_ctx);
   if (NULL == args || PRIMITIVE != args->type) {
     FunctionContext_raise_error(
         fn_ctx, "tan() takes exactly 1 primitive type argument.");
     return;
   }
   const double r = float_of(&args->pri);
-  *FunctionContext_mutable_retval(fn_ctx) = entity_float(tan(r));
+  *FunctionContext_mutable_retval(fn_ctx) = value_float(tan(r));
 }
 
 void init_custom(ModuleBuilder *builder) {

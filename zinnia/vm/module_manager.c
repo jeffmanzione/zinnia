@@ -24,8 +24,8 @@
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
+#include "zinnia/program/bytecode_binary.h"
 #include "zinnia/program/optimization/optimize.h"
-#include "zinnia/program/tape_binary.h"
 #include "zinnia/util/file.h"
 #include "zinnia/vm/intern.h"
 
@@ -139,43 +139,43 @@ ModuleInfo *create_moduleinfo_(ModuleManager *mm, const char module_name[],
 
 const char *module_info_file_name(ModuleInfo *mi) { return mi->file_path; }
 
-ModuleInfo *modulemanager_hydrate_(ModuleManager *mm, Tape *tape,
+ModuleInfo *modulemanager_hydrate_(ModuleManager *mm, Bytecode *bytecode,
                                    ModuleInfo *module_info) {
   ASSERT(mm != NULL);
-  ASSERT(tape != NULL);
+  ASSERT(bytecode != NULL);
   ASSERT(module_info != NULL);
 
   Module *module = &module_info->module;
-  module_init(module, tape_module_name(tape), module_info->file_path,
-              module_info->relative_file_path, module_info->key, tape,
+  module_init(module, bytecode_module_name(bytecode), module_info->file_path,
+              module_info->relative_file_path, module_info->key, bytecode,
               module_info->dl);
 
-  FunctionRefMapIOIterator funcs = tape_functions(tape);
+  FunctionRefMapIOIterator funcs = bytecode_functions(bytecode);
   for (; FunctionRefMap_io_has_next(&funcs); FunctionRefMap_io_next(&funcs)) {
     FunctionRef *fref = FunctionRefMap_io_mutable_value(&funcs);
     module_add_function(module, fref->name, fref->index, fref->is_const,
                         fref->is_async);
   }
 
-  ClassRefMapIOIterator classes = tape_classes(tape);
-  VoidPtrArray classes_to_process;
-  VoidPtrArray_init(&classes_to_process);
+  ClassRefMapIOIterator classes = bytecode_classes(bytecode);
+  VoidPtrArray classes_to_isolate;
+  VoidPtrArray_init(&classes_to_isolate);
   // Map waiting_for_class;
   // map_init_default(&waiting_for_class);
   for (; ClassRefMap_io_has_next(&classes); ClassRefMap_io_next(&classes)) {
     ClassRef *cref = ClassRefMap_io_mutable_value(&classes);
     if (!hydrate_class_(module, cref)) {
-      *VoidPtrArray_push_back_ref(&classes_to_process) = cref;
+      *VoidPtrArray_push_back_ref(&classes_to_isolate) = cref;
     }
   }
-  while (VoidPtrArray_size(&classes_to_process) > 0) {
+  while (VoidPtrArray_size(&classes_to_isolate) > 0) {
     ClassRef *cref =
-        (ClassRef *)VoidPtrArray_pop_front_unchecked(&classes_to_process);
+        (ClassRef *)VoidPtrArray_pop_front_unchecked(&classes_to_isolate);
     if (!hydrate_class_(module, cref)) {
-      *VoidPtrArray_push_back_ref(&classes_to_process) = cref;
+      *VoidPtrArray_push_back_ref(&classes_to_isolate) = cref;
     }
   }
-  VoidPtrArray_finalize(&classes_to_process);
+  VoidPtrArray_finalize(&classes_to_isolate);
   // map_finalize(&waiting_for_class);
   return module_info;
 }
@@ -217,7 +217,7 @@ void add_reflection_to_class_(Heap *heap, Module *module, Class *class) {
   FieldMapIterator fields = class_fields(class);
   for (; FieldMap_has_entry(&fields); FieldMap_next_entry(&fields)) {
     Field *field = FieldMap_mutable_value(&fields);
-    Entity str = entity_object(
+    Value str = value_object(
         istring_new_no_intern(heap, field->name, strlen(field->name)));
     array_add(heap, field_arr, &str);
   }
@@ -272,17 +272,18 @@ Module *read_zn_(ModuleManager *mm, ModuleInfo *module_info) {
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
     ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
-    Tape *tape = tape_create();
-    semantic_analyzer_produce(&sa, etree, tape);
-    tape_set_body(tape, fi);
+    Bytecode *bytecode = bytecode_create();
+    semantic_analyzer_produce(&sa, etree, bytecode);
+    bytecode_set_body(bytecode, fi);
 
     if (etree->type != rule_file_level_statement_list) {
-      tape_ins_int(tape, EXIT, 0, token_create(TOKEN_WORD, 0, 0, "", 0));
+      bytecode_ins_int(bytecode, EXIT, 0,
+                       token_create(TOKEN_WORD, 0, 0, "", 0));
     }
 
-    if (NULL == tape_module_name(tape)) {
-      tape_module(
-          tape,
+    if (NULL == bytecode_module_name(bytecode)) {
+      bytecode_module(
+          bytecode,
           token_create(TOKEN_WORD, 0, 0, module_info->module_name_from_file,
                        strlen(module_info->module_name_from_file)));
     }
@@ -295,8 +296,8 @@ Module *read_zn_(ModuleManager *mm, ModuleInfo *module_info) {
 
     TokenArray_finalize(&tokens);
 
-    tape = optimize(tape);
-    modulemanager_hydrate_(mm, tape, module_info);
+    bytecode = optimize(bytecode);
+    modulemanager_hydrate_(mm, bytecode, module_info);
     module_info->fi = fi;
     return &module_info->module;
   }
@@ -308,9 +309,9 @@ Module *read_zna_(ModuleManager *mm, ModuleInfo *module_info) {
   TokenArray_init(&tokens);
   lexer_tokenize(fi, &tokens);
 
-  Tape *tape = tape_create();
-  tape_read(tape, &tokens);
-  modulemanager_hydrate_(mm, tape, module_info);
+  Bytecode *bytecode = bytecode_create();
+  bytecode_read(bytecode, &tokens);
+  modulemanager_hydrate_(mm, bytecode, module_info);
   module_info->fi = fi;
 
   TokenArray_finalize(&tokens);
@@ -322,9 +323,9 @@ Module *read_znb_(ModuleManager *mm, ModuleInfo *module_info) {
   if (NULL == file) {
     FATALF("Cannot open file '%s'. Exiting...", module_info->file_path);
   }
-  Tape *tape = tape_create();
-  tape_read_binary(tape, file);
-  modulemanager_hydrate_(mm, tape, module_info);
+  Bytecode *bytecode = bytecode_create();
+  bytecode_read_binary(bytecode, file);
+  modulemanager_hydrate_(mm, bytecode, module_info);
   return &module_info->module;
 }
 
@@ -530,11 +531,11 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
   ASSERT(mm != NULL);
   ASSERT(m != NULL);
   ASSERT(new_classes != NULL);
-  Tape *tape = (Tape *)m->_tape;  // bless
+  Bytecode *bytecode = (Bytecode *)m->_bytecode;  // bless
 
-  ClassRefMapIOIterator classes = tape_classes(tape);
-  ClassRefPtrArray classes_to_process;
-  ClassRefPtrArray_init(&classes_to_process);
+  ClassRefMapIOIterator classes = bytecode_classes(bytecode);
+  ClassRefPtrArray classes_to_isolate;
+  ClassRefPtrArray_init(&classes_to_isolate);
 
   for (; ClassRefMap_io_has_next(&classes); ClassRefMap_io_next(&classes)) {
     ClassRef *cref = ClassRefMap_io_mutable_value(&classes);
@@ -547,18 +548,18 @@ void modulemanager_update_module(ModuleManager *mm, Module *m,
       ClassPtrMap_insert(new_classes, cref->name, sizeof(char *), c);
       add_reflection_to_class_(mm->_heap, m, c);
     } else {
-      ClassRefPtrArray_push_back(&classes_to_process, cref);
+      ClassRefPtrArray_push_back(&classes_to_isolate, cref);
     }
   }
-  while (ClassRefPtrArray_size(&classes_to_process) > 0) {
-    ClassRef *cref = ClassRefPtrArray_pop_front_unchecked(&classes_to_process);
+  while (ClassRefPtrArray_size(&classes_to_isolate) > 0) {
+    ClassRef *cref = ClassRefPtrArray_pop_front_unchecked(&classes_to_isolate);
     Class *c = (Class *)module_lookup_class(m, cref->name);  // bless
     if (hydrate_class_(m, cref)) {
       c = (Class *)module_lookup_class(m, cref->name);  // bless
       ClassPtrMap_insert(new_classes, cref->name, sizeof(char *), c);
       add_reflection_to_class_(mm->_heap, m, c);
     } else {
-      ClassRefPtrArray_push_back(&classes_to_process, cref);
+      ClassRefPtrArray_push_back(&classes_to_isolate, cref);
     }
   }
 }

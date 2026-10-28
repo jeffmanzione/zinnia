@@ -3,17 +3,17 @@
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/class.h"
 #include "zinnia/entity/function/function.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/error.h"
 
 void module_init(Module *module, const char name[], const char full_path[],
-                 const char relative_path[], const char key[], Tape *tape,
-                 DlHandle dl) {
+                 const char relative_path[], const char key[],
+                 Bytecode *bytecode, DlHandle dl) {
   module->_name = name;
   module->_full_path = full_path;
   module->_relative_path = relative_path;
   module->_key = key;
-  module->_tape = tape;
+  module->_bytecode = bytecode;
   module->_reflection = NULL;
   module->_is_initialized = false;
   module->dl = dl;
@@ -43,15 +43,17 @@ void module_finalize(Module *module) {
     function_finalize(function);
   }
   FunctionMap_finalize(&module->_functions);
-  if (module->_tape != NULL) {
-    tape_delete((Tape *)module->_tape);  // Bless
+  if (module->_bytecode != NULL) {
+    bytecode_delete((Bytecode *)module->_bytecode);  // Bless
   }
   mutex_close(module->_write_mutex);
 }
 
 const char *module_name(const Module *const module) { return module->_name; }
 
-const Tape *module_tape(const Module *const module) { return module->_tape; }
+const Bytecode *module_bytecode(const Module *const module) {
+  return module->_bytecode;
+}
 
 Function *module_add_function(Module *module, const char name[],
                               uint32_t ins_pos, bool is_const, bool is_async) {

@@ -306,95 +306,95 @@ void delete_class(SemanticAnalyzer *analyzer, ClassDef *class) {
 }
 
 int produce_constructor(SemanticAnalyzer *analyzer, const ClassDef *class,
-                        Tape *tape) {
+                        Bytecode *bytecode) {
   int num_ins = 0;
 
   if (class->has_constructor) {
-    num_ins += tape_label(tape, class->constructor.fn_name);
+    num_ins += bytecode_label(bytecode, class->constructor.fn_name);
   } else {
-    num_ins += tape_label_text(tape, CONSTRUCTOR_KEY);
+    num_ins += bytecode_label_text(bytecode, CONSTRUCTOR_KEY);
   }
 
   int num_fields = FieldDefArray_size(&class->fields);
   if (num_fields > 0) {
-    num_ins += tape_ins_no_arg(tape, PUSH, class->def.name.token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, class->def.name.token);
     int i;
     for (i = 0; i < num_fields; ++i) {
       const FieldDef *field =
           FieldDefArray_get_ref_unchecked(&class->fields, i);
-      num_ins += tape_ins_no_arg(tape, PNIL, field->name);
-      num_ins += tape_ins_text(tape, RES, SELF, field->name);
-      num_ins += tape_ins(tape, FLD, field->name);
+      num_ins += bytecode_ins_no_arg(bytecode, PNIL, field->name);
+      num_ins += bytecode_ins_text(bytecode, RES, SELF, field->name);
+      num_ins += bytecode_ins(bytecode, FLD, field->name);
     }
-    num_ins += tape_ins_no_arg(tape, RES, class->def.name.token);
+    num_ins += bytecode_ins_no_arg(bytecode, RES, class->def.name.token);
   }
 
   if (class->has_constructor && class->constructor.has_args) {
-    num_ins += produce_arguments(analyzer, &class->constructor.args, tape);
+    num_ins += produce_arguments(analyzer, &class->constructor.args, bytecode);
   }
 
   if (class->has_constructor) {
     const FunctionDef *func = &class->constructor;
-    num_ins += semantic_analyzer_produce(analyzer, func->body, tape);
-    num_ins += tape_ins_text(tape, RES, SELF, func->fn_name);
+    num_ins += semantic_analyzer_produce(analyzer, func->body, bytecode);
+    num_ins += bytecode_ins_text(bytecode, RES, SELF, func->fn_name);
     // TODO: Uncomment when const is implemented.
     // if (func->is_const) {
     //   num_ins += tape_ins_no_arg(tape, CNST, func->const_token);
     // }
-    num_ins += tape_ins_no_arg(tape, RET, func->def_token);
+    num_ins += bytecode_ins_no_arg(bytecode, RET, func->def_token);
   } else {
-    num_ins += tape_ins_text(tape, RES, SELF, class->def.name.token);
-    num_ins += tape_ins_no_arg(tape, RET, class->def.name.token);
+    num_ins += bytecode_ins_text(bytecode, RES, SELF, class->def.name.token);
+    num_ins += bytecode_ins_no_arg(bytecode, RET, class->def.name.token);
   }
   return num_ins;
 }
 
 int produce_static(SemanticAnalyzer *analyzer, const ClassDef *class,
-                   const StaticDef *sta, Tape *tape) {
+                   const StaticDef *sta, Bytecode *bytecode) {
   int num_ins = 0;
-  num_ins += semantic_analyzer_produce(analyzer, sta->value, tape);
-  num_ins += tape_ins_no_arg(tape, PUSH, sta->static_token);
-  num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins(tape, FLD, sta->name);
+  num_ins += semantic_analyzer_produce(analyzer, sta->value, bytecode);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, sta->static_token);
+  num_ins += bytecode_ins(bytecode, RES, class->def.name.token);
+  num_ins += bytecode_ins(bytecode, FLD, sta->name);
   return num_ins;
 }
 
 int produce_statics(SemanticAnalyzer *analyzer, const ClassDef *class,
-                    Tape *tape) {
+                    Bytecode *bytecode) {
   int num_ins = 0;
   int num_statics = StaticDefArray_size(&class->statics);
   for (int i = 0; i < num_statics; ++i) {
     const StaticDef *sta = StaticDefArray_get_ref_unchecked(&class->statics, i);
-    num_ins += produce_static(analyzer, class, sta, tape);
+    num_ins += produce_static(analyzer, class, sta, bytecode);
   }
   return num_ins;
 }
 
 int produce_class(SemanticAnalyzer *analyzer, const ClassDef *class,
-                  Tape *tape) {
+                  Bytecode *bytecode) {
   int num_ins = 0;
   if (ClassNameArray_size(&class->def.parent_classes) > 1) {
     FATALF("Cannot have more than one super class.");
   }
-  num_ins += tape_class(tape, class->def.name.token);
+  num_ins += bytecode_class(bytecode, class->def.name.token);
   // Fields
   FieldDefArrayIterator fields;
   FieldDefArray_iterator(&fields, &class->fields);
   for (; FieldDefArray_has_next(&fields); FieldDefArray_next(&fields)) {
     const FieldDef *f = FieldDefArray_value(&fields);
-    tape_field(tape, f->name->text);
+    bytecode_field(bytecode, f->name->text);
   }
   // Constructor
   if (class->has_constructor || FieldDefArray_size(&class->fields) > 0) {
-    num_ins += produce_constructor(analyzer, class, tape);
+    num_ins += produce_constructor(analyzer, class, bytecode);
   }
   int i, num_methods = FunctionDefArray_size(&class->methods);
   for (i = 0; i < num_methods; ++i) {
     const FunctionDef *func =
         FunctionDefArray_get_ref_unchecked(&class->methods, i);
-    num_ins += produce_function(analyzer, func, tape);
+    num_ins += produce_function(analyzer, func, bytecode);
   }
-  num_ins += tape_endclass(tape, class->def.name.token);
+  num_ins += bytecode_endclass(bytecode, class->def.name.token);
   return num_ins;
 }
 
@@ -654,118 +654,118 @@ DELETE_IMPL(file_level_statement_list, SemanticAnalyzer *analyzer) {
 
 int produce_function_annotation(SemanticAnalyzer *analyzer,
                                 const FunctionDef *func,
-                                const Annotation *annot, Tape *tape) {
+                                const Annotation *annot, Bytecode *bytecode) {
   int num_ins = 0;
 
   if (NULL != annot->prefix) {
-    num_ins += tape_ins(tape, RES, annot->prefix);
-    num_ins += tape_ins(tape, GTSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, RES, annot->prefix);
+    num_ins += bytecode_ins(bytecode, GTSH, annot->class_name);
   } else {
-    num_ins += tape_ins(tape, PUSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, PUSH, annot->class_name);
   }
   if (annot->has_args) {
-    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
-    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, bytecode);
+    num_ins += bytecode_ins_no_arg(bytecode, CALL, annot->class_name);
   } else {
-    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+    num_ins += bytecode_ins_no_arg(bytecode, CLLN, annot->class_name);
   }
   // For call to annotate.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
   // For call to add_annotation.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
 
-  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
-  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
-  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
-  num_ins += tape_ins(tape, RES, func->fn_name);
-  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_text(bytecode, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, IF, 2, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, JMP, 2, annot->class_name);
+  num_ins += bytecode_ins(bytecode, RES, func->fn_name);
+  num_ins += bytecode_ins_text(bytecode, CALL, ANNOTATE_KEY, annot->class_name);
 
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
-  num_ins += tape_ins(tape, RES, func->fn_name);
-  num_ins += tape_ins_no_arg(tape, PUSH, func->fn_name);
-  num_ins += tape_ins_int(tape, PEEK, 2, func->fn_name);
-  num_ins += tape_ins_text(tape, CALL, global_intern("add_annotation"),
-                           annot->class_name);
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
+  num_ins += bytecode_ins(bytecode, RES, func->fn_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, func->fn_name);
+  num_ins += bytecode_ins_int(bytecode, PEEK, 2, func->fn_name);
+  num_ins += bytecode_ins_text(bytecode, CALL, global_intern("add_annotation"),
+                               annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
 
   return num_ins;
 }
 
 int produce_method_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
                               const FunctionDef *func, const Annotation *annot,
-                              Tape *tape) {
+                              Bytecode *bytecode) {
   int num_ins = 0;
 
   if (NULL != annot->prefix) {
-    num_ins += tape_ins(tape, RES, annot->prefix);
-    num_ins += tape_ins(tape, GTSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, RES, annot->prefix);
+    num_ins += bytecode_ins(bytecode, GTSH, annot->class_name);
   } else {
-    num_ins += tape_ins(tape, PUSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, PUSH, annot->class_name);
   }
   if (annot->has_args) {
-    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
-    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, bytecode);
+    num_ins += bytecode_ins_no_arg(bytecode, CALL, annot->class_name);
   } else {
-    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+    num_ins += bytecode_ins_no_arg(bytecode, CLLN, annot->class_name);
   }
   // For call to annotate.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
   // For call to add_annotation.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
 
-  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
-  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
-  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
-  num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins(tape, GET, func->fn_name);
-  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_text(bytecode, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, IF, 2, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, JMP, 2, annot->class_name);
+  num_ins += bytecode_ins(bytecode, RES, class->def.name.token);
+  num_ins += bytecode_ins(bytecode, GET, func->fn_name);
+  num_ins += bytecode_ins_text(bytecode, CALL, ANNOTATE_KEY, annot->class_name);
 
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
-  num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins(tape, GET, func->fn_name);
-  num_ins += tape_ins_no_arg(tape, PUSH, func->fn_name);
-  num_ins += tape_ins_int(tape, PEEK, 2, func->fn_name);
-  num_ins += tape_ins_text(tape, CALL, global_intern("add_annotation"),
-                           annot->class_name);
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
+  num_ins += bytecode_ins(bytecode, RES, class->def.name.token);
+  num_ins += bytecode_ins(bytecode, GET, func->fn_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, func->fn_name);
+  num_ins += bytecode_ins_int(bytecode, PEEK, 2, func->fn_name);
+  num_ins += bytecode_ins_text(bytecode, CALL, global_intern("add_annotation"),
+                               annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
 
   return num_ins;
 }
 
 int produce_class_annotation(SemanticAnalyzer *analyzer, const ClassDef *class,
-                             const Annotation *annot, Tape *tape) {
+                             const Annotation *annot, Bytecode *bytecode) {
   int num_ins = 0;
 
   if (NULL != annot->prefix) {
-    num_ins += tape_ins(tape, RES, annot->prefix);
-    num_ins += tape_ins(tape, GTSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, RES, annot->prefix);
+    num_ins += bytecode_ins(bytecode, GTSH, annot->class_name);
   } else {
-    num_ins += tape_ins(tape, PUSH, annot->class_name);
+    num_ins += bytecode_ins(bytecode, PUSH, annot->class_name);
   }
   if (annot->has_args) {
-    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, tape);
-    num_ins += tape_ins_no_arg(tape, CALL, annot->class_name);
+    num_ins += semantic_analyzer_produce(analyzer, annot->args_tuple, bytecode);
+    num_ins += bytecode_ins_no_arg(bytecode, CALL, annot->class_name);
   } else {
-    num_ins += tape_ins_no_arg(tape, CLLN, annot->class_name);
+    num_ins += bytecode_ins_no_arg(bytecode, CLLN, annot->class_name);
   }
   // For call to annotate.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
   // For call to add_annotation.
-  num_ins += tape_ins_no_arg(tape, PUSH, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, PUSH, annot->class_name);
 
-  num_ins += tape_ins_text(tape, GET, ANNOTATE_KEY, annot->class_name);
-  num_ins += tape_ins_int(tape, IF, 2, annot->class_name);
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
-  num_ins += tape_ins_int(tape, JMP, 2, annot->class_name);
-  num_ins += tape_ins(tape, RES, class->def.name.token);
-  num_ins += tape_ins_text(tape, CALL, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_text(bytecode, GET, ANNOTATE_KEY, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, IF, 2, annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
+  num_ins += bytecode_ins_int(bytecode, JMP, 2, annot->class_name);
+  num_ins += bytecode_ins(bytecode, RES, class->def.name.token);
+  num_ins += bytecode_ins_text(bytecode, CALL, ANNOTATE_KEY, annot->class_name);
 
-  num_ins += tape_ins_no_arg(tape, RES, annot->class_name);
-  num_ins += tape_ins(tape, PUSH, class->def.name.token);
-  num_ins += tape_ins_text(tape, CALL, global_intern("add_annotation"),
-                           annot->class_name);
+  num_ins += bytecode_ins_no_arg(bytecode, RES, annot->class_name);
+  num_ins += bytecode_ins(bytecode, PUSH, class->def.name.token);
+  num_ins += bytecode_ins_text(bytecode, CALL, global_intern("add_annotation"),
+                               annot->class_name);
 
   return num_ins;
 }
@@ -788,7 +788,7 @@ static bool super_is_known_(const ModuleDef *module, const ClassName *super) {
 }
 
 static int produce_superclasses_(const ModuleDef *module, bool known_supers,
-                                 Tape *tape) {
+                                 Bytecode *bytecode) {
   int num_ins = 0;
   for (int i = 0; i < ClassDefArray_size(&module->classes); ++i) {
     const ClassDef *class =
@@ -801,38 +801,38 @@ static int produce_superclasses_(const ModuleDef *module, bool known_supers,
     if (super_is_known_(module, super) != known_supers) {
       continue;
     }
-    num_ins += tape_ins(tape, PUSH, class->def.name.token);
+    num_ins += bytecode_ins(bytecode, PUSH, class->def.name.token);
 
     if (NULL != super->module) {
-      num_ins += tape_ins(tape, RES, super->module);
-      num_ins += tape_ins(tape, GET, super->token);
+      num_ins += bytecode_ins(bytecode, RES, super->module);
+      num_ins += bytecode_ins(bytecode, GET, super->token);
     } else {
-      num_ins += tape_ins(tape, RES, super->token);
+      num_ins += bytecode_ins(bytecode, RES, super->token);
     }
 
-    num_ins +=
-        tape_ins_text(tape, CALL, global_intern("$__set_super"), super->token);
+    num_ins += bytecode_ins_text(bytecode, CALL, global_intern("$__set_super"),
+                                 super->token);
   }
   return num_ins;
 }
 
 int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
-                       Tape *tape) {
+                       Bytecode *bytecode) {
   int num_ins = 0;
   if (module->name.is_named) {
-    num_ins += tape_module(tape, module->name.module_name);
+    num_ins += bytecode_module(bytecode, module->name.module_name);
   }
   int i;
   // Imports
   for (i = 0; i < ImportArray_size(&module->imports); ++i) {
     const Import *import = ImportArray_get_ref_unchecked(&module->imports, i);
-    num_ins += tape_ins(tape, LMDL, import->src_name);
-    num_ins += tape_ins(
-        tape, MSET,
+    num_ins += bytecode_ins(bytecode, LMDL, import->src_name);
+    num_ins += bytecode_ins(
+        bytecode, MSET,
         (NULL == import->use_name) ? import->src_name : import->use_name);
   }
   // Superclasses defined in this module or another module.
-  num_ins += produce_superclasses_(module, /*known_supers=*/true, tape);
+  num_ins += produce_superclasses_(module, /*known_supers=*/true, bytecode);
   // Function annotations
   for (i = 0; i < FunctionDefArray_size(&module->functions); ++i) {
     const FunctionDef *func =
@@ -841,7 +841,7 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
     AnnotationArray_iterator(&annots, &func->annots);
     for (; AnnotationArray_has_next(&annots); AnnotationArray_next(&annots)) {
       num_ins += produce_function_annotation(
-          analyzer, func, AnnotationArray_value(&annots), tape);
+          analyzer, func, AnnotationArray_value(&annots), bytecode);
     }
   }
   // Class annotations
@@ -855,49 +855,49 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
       AnnotationArray_iterator(&annots, &func->annots);
       for (; AnnotationArray_has_next(&annots); AnnotationArray_next(&annots)) {
         num_ins += produce_method_annotation(
-            analyzer, class, func, AnnotationArray_value(&annots), tape);
+            analyzer, class, func, AnnotationArray_value(&annots), bytecode);
       }
     }
 
     AnnotationArrayIterator annots;
     AnnotationArray_iterator(&annots, &class->annots);
     for (; AnnotationArray_has_next(&annots); AnnotationArray_next(&annots)) {
-      num_ins += produce_class_annotation(analyzer, class,
-                                          AnnotationArray_value(&annots), tape);
+      num_ins += produce_class_annotation(
+          analyzer, class, AnnotationArray_value(&annots), bytecode);
     }
   }
   // Remaining superclasses, which may have been created by annotations.
-  num_ins += produce_superclasses_(module, /*known_supers=*/false, tape);
+  num_ins += produce_superclasses_(module, /*known_supers=*/false, bytecode);
   // Statics
   for (i = 0; i < ClassDefArray_size(&module->classes); ++i) {
     const ClassDef *class =
         ClassDefArray_get_ref_unchecked(&module->classes, i);
-    num_ins += produce_statics(analyzer, class, tape);
+    num_ins += produce_statics(analyzer, class, bytecode);
   }
   // Statements
   for (i = 0; i < ExpressionTreeArray_size(&module->statements); ++i) {
     ExpressionTree *statement =
         ExpressionTreeArray_get_unchecked(&module->statements, i);
-    num_ins += semantic_analyzer_produce(analyzer, statement, tape);
+    num_ins += semantic_analyzer_produce(analyzer, statement, bytecode);
   }
-  num_ins += tape_ins_int(tape, EXIT, 0,
-                          module->name.module_token == NULL
-                              ? token_create(TOKEN_INTEGER, -1, -1, "0", 1)
-                              : module->name.module_token);
+  num_ins += bytecode_ins_int(bytecode, EXIT, 0,
+                              module->name.module_token == NULL
+                                  ? token_create(TOKEN_INTEGER, -1, -1, "0", 1)
+                                  : module->name.module_token);
   for (i = 0; i < ClassDefArray_size(&module->classes); ++i) {
     const ClassDef *class =
         ClassDefArray_get_ref_unchecked(&module->classes, i);
-    num_ins += produce_class(analyzer, class, tape);
+    num_ins += produce_class(analyzer, class, bytecode);
   }
   for (i = 0; i < FunctionDefArray_size(&module->functions); ++i) {
     const FunctionDef *func =
         FunctionDefArray_get_ref_unchecked(&module->functions, i);
-    num_ins += produce_function(analyzer, func, tape);
+    num_ins += produce_function(analyzer, func, bytecode);
   }
   return num_ins;
 }
 
 PRODUCE_IMPL(file_level_statement_list, SemanticAnalyzer *analyzer,
-             Tape *target) {
+             Bytecode *target) {
   return produce_module_def(analyzer, &file_level_statement_list->def, target);
 }

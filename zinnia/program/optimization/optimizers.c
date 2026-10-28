@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/entity.h"
+#include "zinnia/entity/value.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/program/optimization/optimizer.h"
-#include "zinnia/program/tape.h"
 #include "zinnia/vm/intern.h"
 
 Instruction for_op_(Op op) {
@@ -30,12 +30,12 @@ bool overwrites_res_(Op op) {
   return false;
 }
 
-void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_ResPush(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if ((RES == first->op || IRES == first->op) &&
         INSTRUCTION_NO_ARG != first->type && PUSH == second->op &&
         INSTRUCTION_NO_ARG == second->type &&
@@ -47,12 +47,12 @@ void optimizer_ResPush(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_SetRes(OptimizeHelper *oh, const Tape *const tape, int start,
-                      int end) {
+void optimizer_SetRes(OptimizeHelper *oh, const Bytecode *const bytecode,
+                      int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if ((SET == first->op || LET == first->op) &&
         INSTRUCTION_ID == first->type && RES == second->op &&
         INSTRUCTION_ID == second->type &&
@@ -63,12 +63,12 @@ void optimizer_SetRes(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_SetPush(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_SetPush(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if ((SET == first->op || LET == first->op) &&
         INSTRUCTION_ID == first->type && PUSH == second->op &&
         INSTRUCTION_ID == second->type &&
@@ -79,12 +79,12 @@ void optimizer_SetPush(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_GetPush(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_GetPush(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (GET == first->op && INSTRUCTION_NO_ARG != first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -94,12 +94,12 @@ void optimizer_GetPush(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_JmpRes(OptimizeHelper *oh, const Tape *const tape, int start,
-                      int end) {
+void optimizer_JmpRes(OptimizeHelper *oh, const Bytecode *const bytecode,
+                      int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (SET != first->op || JMP != second->op) {
       continue;
     }
@@ -107,8 +107,8 @@ void optimizer_JmpRes(OptimizeHelper *oh, const Tape *const tape, int start,
     if (jmp_val >= 0) {
       continue;
     }
-    const Instruction *jump_to_parent = tape_get(tape, i + jmp_val - 1);
-    const Instruction *jump_to = tape_get(tape, i + jmp_val);
+    const Instruction *jump_to_parent = bytecode_get(bytecode, i + jmp_val - 1);
+    const Instruction *jump_to = bytecode_get(bytecode, i + jmp_val);
     if (SET != jump_to_parent->op || jump_to_parent->id != first->id ||
         RES != jump_to->op || INSTRUCTION_ID != jump_to->type ||
         first->id != jump_to->id) {  // same pointer because string interning
@@ -118,12 +118,12 @@ void optimizer_JmpRes(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_PushRes(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_PushRes(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PUSH != first->op || RES != second->op || first->type != second->type ||
         NULL != IntIntMap_find_ref(&oh->i_gotos, i, sizeof(int))) {
       continue;
@@ -145,12 +145,12 @@ void optimizer_PushRes(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_ResPush2(OptimizeHelper *oh, const Tape *const tape, int start,
-                        int end) {
+void optimizer_ResPush2(OptimizeHelper *oh, const Bytecode *const bytecode,
+                        int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (RES == first->op && INSTRUCTION_NO_ARG == first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -160,12 +160,12 @@ void optimizer_ResPush2(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_RetRet(OptimizeHelper *oh, const Tape *const tape, int start,
-                      int end) {
+void optimizer_RetRet(OptimizeHelper *oh, const Bytecode *const bytecode,
+                      int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (RET == first->op && INSTRUCTION_NO_ARG == first->type &&
         RET == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -174,12 +174,12 @@ void optimizer_RetRet(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_PeekRes(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_PeekRes(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PEEK == first->op && (RES == second->op || TLEN == second->op) &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
       o_Remove(oh, i - 1);
@@ -187,12 +187,12 @@ void optimizer_PeekRes(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_PeekPush(OptimizeHelper *oh, const Tape *const tape, int start,
-                        int end) {
+void optimizer_PeekPush(OptimizeHelper *oh, const Bytecode *const bytecode,
+                        int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PEEK == first->op && INSTRUCTION_NO_ARG == first->type &&
         PUSH == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -202,11 +202,11 @@ void optimizer_PeekPush(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_GroupStatics(OptimizeHelper *oh, const Tape *const tape,
+void optimizer_GroupStatics(OptimizeHelper *oh, const Bytecode *const bytecode,
                             int start, int end) {}
 
-void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
-                         int end) {
+void optimizer_Increment(OptimizeHelper *oh, const Bytecode *const bytecode,
+                         int start, int end) {
   //  push  a
   //  push  1
   //  add
@@ -214,10 +214,10 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
 
   int i;
   for (i = start + 3; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 3);
-    const Instruction *second = tape_get(tape, i - 2);
-    const Instruction *third = tape_get(tape, i - 1);
-    const Instruction *fourth = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 3);
+    const Instruction *second = bytecode_get(bytecode, i - 2);
+    const Instruction *third = bytecode_get(bytecode, i - 1);
+    const Instruction *fourth = bytecode_get(bytecode, i);
     if (PUSH == first->op && INSTRUCTION_ID == first->type &&
         PUSH == second->op && INSTRUCTION_PRIMITIVE == second->type &&
         PRIMITIVE_INT == ptype(&second->val) && 1 == pint(&second->val) &&
@@ -239,9 +239,9 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
   //  set   i
 
   for (i = start + 2; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 2);
-    const Instruction *second = tape_get(tape, i - 1);
-    const Instruction *third = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 2);
+    const Instruction *second = bytecode_get(bytecode, i - 1);
+    const Instruction *third = bytecode_get(bytecode, i);
     if (RES == first->op && INSTRUCTION_ID == first->type &&
         (ADD == second->op || SUB == second->op) &&
         INSTRUCTION_PRIMITIVE == second->type &&
@@ -258,12 +258,12 @@ void optimizer_Increment(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_SetEmpty(OptimizeHelper *oh, const Tape *const tape, int start,
-                        int end) {
+void optimizer_SetEmpty(OptimizeHelper *oh, const Bytecode *const bytecode,
+                        int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (TGET == first->op && INSTRUCTION_PRIMITIVE == first->type &&
         (SET == second->op || LET == second->op) &&
         INSTRUCTION_ID == second->type && 0 == strncmp(second->id, "_", 2) &&
@@ -274,12 +274,12 @@ void optimizer_SetEmpty(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_PushResEmpty(OptimizeHelper *oh, const Tape *const tape,
+void optimizer_PushResEmpty(OptimizeHelper *oh, const Bytecode *const bytecode,
                             int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PUSH == first->op && INSTRUCTION_NO_ARG == first->type &&
         RES == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -289,12 +289,12 @@ void optimizer_PushResEmpty(OptimizeHelper *oh, const Tape *const tape,
   }
 }
 
-void optimizer_PeekPeek(OptimizeHelper *oh, const Tape *const tape, int start,
-                        int end) {
+void optimizer_PeekPeek(OptimizeHelper *oh, const Bytecode *const bytecode,
+                        int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PEEK == first->op && INSTRUCTION_NO_ARG == first->type &&
         PEEK == second->op && INSTRUCTION_NO_ARG == second->type &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
@@ -303,12 +303,12 @@ void optimizer_PeekPeek(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_PushRes2(OptimizeHelper *oh, const Tape *const tape, int start,
-                        int end) {
+void optimizer_PushRes2(OptimizeHelper *oh, const Bytecode *const bytecode,
+                        int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (PUSH == first->op && RES == second->op && first->type == second->type &&
         first->type == INSTRUCTION_NO_ARG &&
         NULL == IntIntMap_find_ref(&oh->i_gotos, i, sizeof(int))) {
@@ -339,13 +339,13 @@ bool is_math_op(Op op) {
 // Run after ResPush.
 // Consider allowing second param to be ID. Would need to add to
 // execute_INSTRUCTION_ID.
-void optimizer_SimpleMath(OptimizeHelper *oh, const Tape *const tape, int start,
-                          int end) {
+void optimizer_SimpleMath(OptimizeHelper *oh, const Bytecode *const bytecode,
+                          int start, int end) {
   int i;
   for (i = start + 2; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 2);
-    const Instruction *second = tape_get(tape, i - 1);
-    const Instruction *third = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 2);
+    const Instruction *second = bytecode_get(bytecode, i - 1);
+    const Instruction *third = bytecode_get(bytecode, i);
     if (PUSH == first->op && PUSH == second->op && is_math_op(third->op) &&
         (second->type == INSTRUCTION_PRIMITIVE ||
          second->type == INSTRUCTION_ID) &&
@@ -362,11 +362,11 @@ void optimizer_SimpleMath(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_Nil(OptimizeHelper *oh, const Tape *const tape, int start,
-                   int end) {
+void optimizer_Nil(OptimizeHelper *oh, const Bytecode *const bytecode,
+                   int start, int end) {
   int i;
   for (i = start; i < end; i++) {
-    const Instruction *insc = tape_get(tape, i);
+    const Instruction *insc = bytecode_get(bytecode, i);
     if (RES != insc->op && PUSH != insc->op) {
       continue;
     }
@@ -377,12 +377,12 @@ void optimizer_Nil(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
-                       int end) {
+void optimizer_ResAidx(OptimizeHelper *oh, const Bytecode *const bytecode,
+                       int start, int end) {
   int i;
   for (i = start + 1; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 1);
-    const Instruction *second = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 1);
+    const Instruction *second = bytecode_get(bytecode, i);
     if (RES == first->op &&
         (INSTRUCTION_ID == first->type ||
          INSTRUCTION_PRIMITIVE == first->type) &&
@@ -394,7 +394,7 @@ void optimizer_ResAidx(OptimizeHelper *oh, const Tape *const tape, int start,
   }
 }
 
-void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
+void optimizer_StringConcat(OptimizeHelper *oh, const Bytecode *const bytecode,
                             int start, int end) {
   // START:
   //   push STR
@@ -407,9 +407,9 @@ void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
 
   int i;
   for (i = start + 2; i < end; i++) {
-    const Instruction *first = tape_get(tape, i - 2);
-    const Instruction *second = tape_get(tape, i - 1);
-    const Instruction *third = tape_get(tape, i);
+    const Instruction *first = bytecode_get(bytecode, i - 2);
+    const Instruction *second = bytecode_get(bytecode, i - 1);
+    const Instruction *third = bytecode_get(bytecode, i);
     if (PUSH == first->op && INSTRUCTION_STRING == first->type &&
         PUSH == second->op && INSTRUCTION_STRING == second->type &&
         ADD == third->op && INSTRUCTION_NO_ARG == third->type &&
@@ -422,9 +422,9 @@ void optimizer_StringConcat(OptimizeHelper *oh, const Tape *const tape,
 
       int j;
       for (j = i + 3; j < end; j += 3) {
-        const Instruction *push1 = tape_get(tape, j - 2);
-        const Instruction *push2 = tape_get(tape, j - 1);
-        const Instruction *add = tape_get(tape, j);
+        const Instruction *push1 = bytecode_get(bytecode, j - 2);
+        const Instruction *push2 = bytecode_get(bytecode, j - 1);
+        const Instruction *add = bytecode_get(bytecode, j);
         if (PUSH == push1->op && INSTRUCTION_NO_ARG == push1->type &&
             PUSH == push2->op && INSTRUCTION_STRING == push2->type &&
             ADD == add->op && INSTRUCTION_NO_ARG == add->type &&

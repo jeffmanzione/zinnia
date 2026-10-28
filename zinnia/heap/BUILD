@@ -10,7 +10,7 @@ cc_library(
     hdrs = ["heap.h"],
     deps = [
         "//zinnia/alloc",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity/array",
         "//zinnia/entity/class:classes_def",
@@ -27,7 +27,7 @@ cc_library(
     hdrs = ["copy_fns.h"],
     deps = [
         ":heap",
-        "//zinnia/entity",
+        "//zinnia/entity:value",
         "//zinnia/entity:object",
         "//zinnia/entity/array",
         "//zinnia/entity/string",

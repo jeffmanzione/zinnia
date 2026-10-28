@@ -24,7 +24,7 @@ typedef enum {
   ArgKey__OPTIMIZE,
   ArgKey__LIB_LOCATION,
   Argkey__MINIMIZE,
-  ArgKey__MAX_PROCESS_OBJECT_COUNT,
+  ArgKey__MAX_ISOLATE_OBJECT_COUNT,
   ArgKey__ASYNC,
   ArgKey__VERSION,
   ArgKey__END,

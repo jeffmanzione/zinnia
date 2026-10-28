@@ -17,32 +17,32 @@
 #include "zinnia/lang/lexer/lang_lexer.h"
 #endif
 
-Entity load_class_from_text_(Task *task, Context *ctx, Object *obj,
-                             Entity *args) {
-  EXTRACT_TUPLE_ARGS(t, args, 2, task, ctx);
+Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
+  EXTRACT_TUPLE_ARGS(t, args, 2, frame, ctx);
 
-  const Entity *arg0 = tuple_get(t, 0);
-  const Entity *arg1 = tuple_get(t, 1);
+  const Value *arg0 = tuple_get(t, 0);
+  const Value *arg1 = tuple_get(t, 1);
   if (!IS_CLASS(arg0, Class_Module)) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Invalid argument(0) for "
                        "__load_class_from_text: Expected type Module.");
   }
   Module *m = arg0->obj->_module_obj;
 
   if (!IS_STRING(arg1)) {
-    return raise_error(task, ctx,
+    return raise_error(frame, ctx,
                        "Invalid argument(1) for "
                        "__load_class_from_text: Expected type String.");
   }
 
-  char *c_str_text = entity_string_copy(arg1);
+  char *c_str_text = value_string_copy(arg1);
   SFILE *file = sfile_open(c_str_text);
 
-  Tape *tape = (Tape *)m->_tape;  // bless
+  Bytecode *bytecode = (Bytecode *)m->_bytecode;  // bless
   FileInfo *fi = file_info_sfile(file);
   FileInfo *module_fi = (FileInfo *)modulemanager_get_fileinfo(
-      vm_module_manager(task->parent_process->vm), m);
+      vm_module_manager(frame->parent_isolate->vm), m);
   file_info_append(module_fi, fi);
   fi = module_fi;
 
@@ -61,7 +61,7 @@ Entity load_class_from_text_(Task *task, Context *ctx, Object *obj,
   semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
   ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
-  semantic_analyzer_produce(&sa, etree, tape);
+  semantic_analyzer_produce(&sa, etree, bytecode);
 
   semantic_analyzer_delete(&sa, etree);
   semantic_analyzer_finalize(&sa);
@@ -74,12 +74,12 @@ Entity load_class_from_text_(Task *task, Context *ctx, Object *obj,
   ClassPtrMap new_classes;
   ClassPtrMap_init(&new_classes, hash_interned_string,
                    compare_interned_strings);
-  modulemanager_update_module(vm_module_manager(task->parent_process->vm), m,
+  modulemanager_update_module(vm_module_manager(frame->parent_isolate->vm), m,
                               &new_classes);
 
   if (1 != ClassPtrMap_size(&new_classes)) {
     RELEASE(c_str_text);
-    return raise_error(task, ctx, "Weird error adding a new class.");
+    return raise_error(frame, ctx, "Weird error adding a new class.");
   }
 
   ClassPtrMapIterator iter;
@@ -90,7 +90,7 @@ Entity load_class_from_text_(Task *task, Context *ctx, Object *obj,
 
   RELEASE(c_str_text);
 
-  return entity_object(new_class->_reflection);
+  return value_object(new_class->_reflection);
 }
 
 void classes_add_native(ModuleManager *mm, Module *classes) {

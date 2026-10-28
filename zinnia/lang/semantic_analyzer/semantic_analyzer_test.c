@@ -9,7 +9,7 @@
 #include "zinnia/lang/lexer/lang_lexer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
-#include "zinnia/program/tape.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/util/error.h"
 #include "zinnia/util/void_array.h"
 #include "zinnia/vm/intern.h"
@@ -46,13 +46,13 @@ int main(int argc, const char *args[]) {
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
     ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
 
-    Tape *tape = tape_create();
+    Bytecode *bytecode = bytecode_create();
     Token token = {.text = global_intern("TEST")};
-    tape_module(tape, &token);
-    semantic_analyzer_produce(&sa, etree, tape);
-    tape_write(tape, stdout, /* minimize */ false);
+    bytecode_module(bytecode, &token);
+    semantic_analyzer_produce(&sa, etree, bytecode);
+    bytecode_write(bytecode, stdout, /* minimize */ false);
 
-    tape_delete(tape);
+    bytecode_delete(bytecode);
 
     semantic_analyzer_delete(&sa, etree);
     semantic_analyzer_finalize(&sa);

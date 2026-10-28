@@ -15,15 +15,15 @@
 #include "language-tools/semantic_analyzer/expression_tree.h"
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
 #include "zinnia/alloc/alloc.h"
+#include "zinnia/bundle/bundle.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/entity.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/string/string_helper.h"
+#include "zinnia/entity/value.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/program/optimization/optimize.h"
-#include "zinnia/program/tape.h"
-#include "zinnia/seed/seed.h"
 #include "zinnia/util/args/commandline.h"
 #include "zinnia/util/args/commandlines.h"
 #include "zinnia/util/args/lib_finder.h"
@@ -31,10 +31,10 @@
 #include "zinnia/util/sync/constants.h"
 #include "zinnia/util/sync/thread.h"
 #include "zinnia/vm/intern.h"
+#include "zinnia/vm/isolate/frame.h"
+#include "zinnia/vm/isolate/isolate.h"
+#include "zinnia/vm/isolate/isolates.h"
 #include "zinnia/vm/module_manager.h"
-#include "zinnia/vm/process/process.h"
-#include "zinnia/vm/process/processes.h"
-#include "zinnia/vm/process/task.h"
 #include "zinnia/vm/virtual_machine.h"
 
 IMPL_ARRAYLIKE(FilePartsArray, FileParts);
@@ -60,10 +60,10 @@ int run_files(const CharPtrArray *source_file_names,
 
   const char *lib_location =
       argstore_lookup_string(store, ArgKey__LIB_LOCATION);
-  uint32_t max_process_object_count =
-      argstore_lookup_int(store, ArgKey__MAX_PROCESS_OBJECT_COUNT);
+  uint32_t max_isolate_object_count =
+      argstore_lookup_int(store, ArgKey__MAX_ISOLATE_OBJECT_COUNT);
   bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
-  VM *vm = vm_create(lib_location, max_process_object_count, async_enabled);
+  VM *vm = vm_create(lib_location, max_isolate_object_count, async_enabled);
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = NULL;
 
@@ -72,17 +72,17 @@ int run_files(const CharPtrArray *source_file_names,
     const FileParts *src_content =
         FilePartsArray_get_ref_unchecked(source_contents, i);
 
-    if (src_content->type == FP_FILE_SEED) {
-      ASSERT(src_content->seed_data.content_size > 0);
-      TmpSeedFile tmp_file;
+    if (src_content->type == FP_FILE_BUNDLE) {
+      ASSERT(src_content->bundle_data.content_size > 0);
+      TmpBundleFile tmp_file;
       char error_buf[255];
-      copy_znseed_bytes_to_tmpfile(src_content->seed_data.content_bytes,
-                                   src_content->seed_data.content_size,
-                                   &tmp_file);
-      if (!load_znseed_file(vm, tmp_file.filename, error_buf)) {
+      copy_znbundle_bytes_to_tmpfile(src_content->bundle_data.content_bytes,
+                                     src_content->bundle_data.content_size,
+                                     &tmp_file);
+      if (!load_znbundle_file(vm, tmp_file.filename, error_buf)) {
         FATALF("%s", error_buf);
       }
-      znseed_tmp_finalize(&tmp_file);
+      znbundle_tmp_finalize(&tmp_file);
     } else {
       ModuleBuilderInitFn init_fn =
           (ModuleBuilderInitFn)VoidPtrArray_get_unchecked(init_fns, i);
@@ -93,16 +93,16 @@ int run_files(const CharPtrArray *source_file_names,
       if (NULL == main_module) {
         main_module = modulemanager_load(mm, module_info);
         main_module->_is_initialized = true;
-        object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                          MAIN_KEY, &TRUE_ENTITY);
+        object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
+                          MAIN_KEY, &TRUE_VALUE);
       }
     }
   }
 
-  set_args_(vm_main_process(vm)->heap, store);
-  Task *task = process_create_task(vm_main_process(vm));
-  task_create_context(task, main_module->_reflection, main_module, 0);
-  process_run(vm_main_process(vm));
+  set_args_(vm_main_isolate(vm)->heap, store);
+  Frame *frame = isolate_create_frame(vm_main_isolate(vm));
+  frame_create_scope(frame, main_module->_reflection, main_module, 0);
+  isolate_run(vm_main_isolate(vm));
   const int exit_code = vm->exit_code;
 
 #ifdef DEBUG
@@ -117,10 +117,10 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
 
   const char *lib_location =
       argstore_lookup_string(store, ArgKey__LIB_LOCATION);
-  uint32_t max_process_object_count =
-      argstore_lookup_int(store, ArgKey__MAX_PROCESS_OBJECT_COUNT);
+  uint32_t max_isolate_object_count =
+      argstore_lookup_int(store, ArgKey__MAX_ISOLATE_OBJECT_COUNT);
   bool async_enabled = argstore_lookup_bool(store, ArgKey__ASYNC);
-  VM *vm = vm_create(lib_location, max_process_object_count, async_enabled);
+  VM *vm = vm_create(lib_location, max_isolate_object_count, async_enabled);
   ModuleManager *mm = vm_module_manager(vm);
   Module *main_module = NULL;
 
@@ -134,9 +134,9 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
       for (; fl_has(&iter); fl_inc(&iter)) {
         FileLoc *loc = fl_value(&iter);
         const char *full_path = file_loc_full_path(loc);
-        if (ends_with(full_path, ZNSEED_EXTENSION)) {
+        if (is_bundle_file(full_path)) {
           char error_buf[255];
-          if (!load_znseed_file(vm, full_path, error_buf)) {
+          if (!load_znbundle_file(vm, full_path, error_buf)) {
             FATALF("%s", error_buf);
           }
         } else {
@@ -146,9 +146,9 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
       }
       file_locs_delete(locs);
     } else {
-      if (ends_with(src, ZNSEED_EXTENSION)) {
+      if (is_bundle_file(src)) {
         char error_buf[255];
-        if (!load_znseed_file(vm, src, error_buf)) {
+        if (!load_znbundle_file(vm, src, error_buf)) {
           FATALF("%s", error_buf);
         }
       } else {
@@ -156,17 +156,17 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
         if (NULL == main_module) {
           main_module = modulemanager_load(mm, module_info);
           main_module->_is_initialized = true;
-          object_set_member(vm_main_process(vm)->heap, main_module->_reflection,
-                            MAIN_KEY, &TRUE_ENTITY);
+          object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
+                            MAIN_KEY, &TRUE_VALUE);
         }
       }
     }
   }
 
-  set_args_(vm_main_process(vm)->heap, store);
-  Task *task = process_create_task(vm_main_process(vm));
-  task_create_context(task, main_module->_reflection, main_module, 0);
-  process_run(vm_main_process(vm));
+  set_args_(vm_main_isolate(vm)->heap, store);
+  Frame *frame = isolate_create_frame(vm_main_isolate(vm));
+  frame_create_scope(frame, main_module->_reflection, main_module, 0);
+  isolate_run(vm_main_isolate(vm));
   const int exit_code = vm->exit_code;
 
 #ifdef DEBUG
@@ -194,4 +194,4 @@ int zinnia(int argc, const char *argv[]) {
 #endif
 
   return exit_code;
-}
+}

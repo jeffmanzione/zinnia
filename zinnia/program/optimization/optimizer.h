@@ -10,8 +10,8 @@
 
 #include "c-data-structures/arraylike.h"
 #include "c-data-structures/maplike.h"
+#include "zinnia/program/bytecode.h"
 #include "zinnia/program/instruction.h"
-#include "zinnia/program/tape.h"
 
 DEFINE_MAPLIKE(IntIntMap, int, int);
 DEFINE_MAPLIKE(IntCharPtrMap, int, char *);
@@ -33,14 +33,14 @@ typedef struct {
 DEFINE_ARRAYLIKE(AdjustmentArray, Adjustment);
 
 typedef struct {
-  const Tape *tape;
+  const Bytecode *bytecode;
   IntIntMap i_to_adj, i_gotos, inserts;
   IntToFunctionRefMap i_to_refs;
   IntToCharPtrArrayMap i_to_class_starts, i_to_class_ends;
   AdjustmentArray adjustments;
 } OptimizeHelper;
 
-typedef void (*Optimizer)(OptimizeHelper *, const Tape *, int, int);
+typedef void (*Optimizer)(OptimizeHelper *, const Bytecode *, int, int);
 
 void o_Remove(OptimizeHelper *oh, int index);
 void o_Replace(OptimizeHelper *oh, int index, Instruction ins);

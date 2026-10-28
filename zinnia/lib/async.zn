@@ -7,37 +7,51 @@ function sleep(duration_sec) {
   __sleep(duration_sec)
 }
 
-; Returns a newly-spawned process that executes [fn] with arguments [args].
-function create_process({fn, args=None, is_remote=False}) {
-  __create_process(fn, args, is_remote)
+; Returns a newly-spawned isolate that executes [fn] with arguments [args].
+;
+; An isolate runs on its own thread with its own heap; [args] are deep-copied
+; into it. Call start() on the result to run it, which returns a future to the
+; result of [fn]. If [keep_alive] is True, the isolate keeps running after [fn]
+; returns so that it can serve actor calls (see spawn_actor()).
+function spawn_isolate({fn, args=None, keep_alive=False}) {
+  __spawn_isolate(fn, args, keep_alive)
 }
 
-; Returns a remote instance of [cls] with arguments [args] that can control
-; the concrete instance of [cls] in a newly-spawned process.
+; Deprecated: use spawn_isolate().
+function create_process({fn, args=None, is_remote=False}) {
+  spawn_isolate(fn: fn, args: args, keep_alive: is_remote)
+}
+
+; Returns a proxy to a new instance of [cls], constructed with [args], that
+; lives in a newly-spawned isolate.
 ;
-; The remote class returned controls the actual class in a separate process.
-; Calls to the remote class return a future to the result of the execution of
-; work that is executed on the concrete class in the spawned process.
+; Calls to the proxy return a future to the result of calling the method on
+; the actual instance in the spawned isolate.
 ;
-; Throws an error if [cls] is not annotated with [RemoteClass].
-; 
+; Throws an error if [cls] is not annotated with [Actor].
+;
 ; Example:
 ; ```
-; @async.RemoteClass
+; @async.Actor
 ; class Test {
 ;   new(field n) {}
 ;   method mult_n(num) num * n
 ; }
-; remote_instance = async.create_remote(Test, 5)
-; io.println(await remote_instance.mult_n(6)) /* Prints '30\n' */
-; ``` 
-function create_remote(cls, args=None) {
-  remote_class = _get_remote_class(cls)
-  process = create_process(
+; test = async.spawn_actor(Test, 5)
+; io.println(await test.mult_n(6)) /* Prints '30\n' */
+; ```
+function spawn_actor(cls, args=None) {
+  proxy_class = _get_proxy_class(cls)
+  isolate = spawn_isolate(
       fn: (cls, args) -> cls(args),
       args: (cls, args),
-      is_remote: True)
-  return remote_class(await process.start())
+      keep_alive: True)
+  return proxy_class(await isolate.start())
+}
+
+; Deprecated: use spawn_actor().
+function create_remote(cls, args=None) {
+  spawn_actor(cls, args)
 }
 
 ; Represents the state of an asynchronous piece of work.
@@ -62,28 +76,24 @@ class Future {
 ; io.println(await completer.as_future())
 ; ```
 class Completer {
-  field completed, _value
+  field completed, _future
 
   new() {
     completed = False
-    _value = None
+    _future = __completer_future()
   }
 
-  ; Completes the future with the value [v].
-  method complete(v) {
-    _value = v
+  ; Completes the future with the value [v], resuming anything awaiting it.
+  ;
+  ; Raises an error if the completer was already completed.
+  method complete(v=None) {
+    __complete_future(_future, v)
     completed = True
   }
 
-  ; Returns a future to the completed value.
+  ; Returns the future, which completes when complete() is called.
   method as_future() {
-    if completed {
-      return value(_value)
-    }
-    return () async {
-      while ~(() -> completed)() {}
-      return _value
-    }()
+    return _future
   }
 }
 
@@ -92,36 +102,50 @@ function all(futures) async {
   futures.map((f) -> await f)
 }
 
-; Generates a new class named ['Remote' + cls.name()] that allows comunication
-; from parent to child processes.
-class RemoteClass {
+; Makes a class usable as an actor with spawn_actor().
+;
+; Generates a proxy class named [cls.name() + 'Proxy'] whose methods send calls
+; to an instance of [cls] in another isolate and return futures to the results.
+; The proxy's target() returns the underlying ActorRef.
+class Actor {
   method annotate(cls) {
-    remote_class = classes.factory.create_class(
-        cat('Remote', cls.name()),
+    proxy_class = classes.factory.create_class(
+        cat(cls.name(), 'Proxy'),
         cls.module())
-    remote_class.get_constructor().with_parameter('remote_object', True)
+    proxy_class.get_constructor().with_parameter('actor_ref', True)
     cls.methods().each((m) {
       method_name = m.name()
       if method_name == 'new' {
         return
       }
-      remote_class.add_method(method_name)
+      proxy_class.add_method(method_name)
           .with_parameter('args')
           .with_statement(cat(
-              'return async.__remote_call(remote_object, i\'',
+              'return async.__actor_call(actor_ref, i\'',
               method_name,
               '\', args)'))
     })
-    remote_class.add_method('remote')
-        .with_statement('return remote_object')
-    return remote_class.build()
+    proxy_class.add_method('target')
+        .with_statement('return actor_ref')
+    ; Deprecated: use target().
+    proxy_class.add_method('remote')
+        .with_statement('return actor_ref')
+    proxy_class = proxy_class.build()
+    ; Deprecated: the proxy class was previously named ['Remote' + cls.name()].
+    cls.module().$set(cat('Remote', cls.name()), proxy_class)
+    return proxy_class
   }
 }
 
-function _get_remote_class(cls) {
-  remote = cls.module().$get('Remote' + cls.name())
-  if ~remote {
-    raise error.Error('Could not find remote class for ' + cls.name() + '.')
+; Deprecated: use Actor.
+class RemoteClass : Actor {}
+
+function _get_proxy_class(cls) {
+  proxy_class = cls.module().$get(cls.name() + 'Proxy')
+  if ~proxy_class {
+    raise error.Error(cat(
+        'Could not find proxy class for ', cls.name(),
+        '. Is it annotated with @async.Actor?'))
   }
-  return remote
+  return proxy_class
 }

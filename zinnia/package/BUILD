@@ -13,7 +13,7 @@ cc_library(
         "//zinnia/alloc",
         "//zinnia/compile",
         "//zinnia/program/optimization:optimize",
-        "//zinnia/seed",
+        "//zinnia/bundle",
         "//zinnia/util:codegen",
         "//zinnia/util:error",
         "//zinnia/util:file",
