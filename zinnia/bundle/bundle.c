@@ -200,7 +200,6 @@ void *open_dll_from_bundle_(znbundle_t *bundle,
   if (tmp_fd < 0) {
     sprintf(error_buf, "Failed to create tmp file: %s", tmp_filename);
     free(tmp_filename);
-    unlink(tmp_filename);
     return NULL;
   }
 
