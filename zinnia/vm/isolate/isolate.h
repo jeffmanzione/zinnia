@@ -31,6 +31,12 @@ void isolate_delete_frame(Isolate *isolate, Frame *frame);
 
 // Requeues the waiting frames that depend on [frame], passing them its result.
 // Frames are pushed to the front of the queue if [should_push].
+// Posts a call to an actor in this isolate from another thread and wakes the
+// isolate to set it up and run it.
+void isolate_post_actor_call(Isolate *isolate, void *actor_call);
+// Returns the oldest posted actor call, or NULL if there are none.
+void *isolate_pop_actor_call(Isolate *isolate);
+bool isolate_has_actor_calls(Isolate *isolate);
 // Enqueues a frame from another thread and wakes the isolate to run it.
 void isolate_enqueue_frame_and_wake(Isolate *isolate, Frame *frame);
 // Makes waiting_frame wait on frame unless frame is already complete. Returns

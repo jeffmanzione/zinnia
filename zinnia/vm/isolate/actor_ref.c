@@ -13,8 +13,8 @@ struct ActorRef_ {
   Isolate *actor_isolate;
 };
 
-void actor_init__(ActorRef *actor, Isolate *actor_isolate,
-                  Object *actor_object) {
+void actor_init_ref(ActorRef *actor, Isolate *actor_isolate,
+                    Object *actor_object) {
   actor->actor_isolate = actor_isolate;
   actor->actor_object = actor_object;
 }
@@ -22,7 +22,8 @@ void actor_init__(ActorRef *actor, Isolate *actor_isolate,
 Object *create_actor_object(Heap *heap, Isolate *actor_isolate,
                             Object *actor_object) {
   Object *object = heap_new(heap, Class_ActorRef);
-  actor_init__((ActorRef *)object->_internal_obj, actor_isolate, actor_object);
+  actor_init_ref((ActorRef *)object->_internal_obj, actor_isolate,
+                 actor_object);
   return object;
 }
 

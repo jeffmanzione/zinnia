@@ -418,8 +418,9 @@ void vm_delete(VM *vm) {
   IsolateArrayIterator iter;
   IsolateArray_iterator(&iter, &vm->isolates);
   for (; IsolateArray_has_next(&iter); IsolateArray_next(&iter)) {
-    Isolate *proc = IsolateArray_mutable_value(&iter);
-    isolate_finalize(proc);
+    Isolate *isolate = *IsolateArray_mutable_value(&iter);
+    isolate_finalize(isolate);
+    RELEASE(isolate);
   }
   IsolateArray_finalize(&vm->isolates);
   mutex_close(vm->isolate_create_lock);
@@ -1570,7 +1571,7 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
   Isolate *callee_isolate = actor_frame->parent_isolate;
   SYNCHRONIZED(callee_isolate->heap_access_lock, {
     *frame_mutable_acc(actor_frame) =
-        value_copy(frame_get_acc(isolate->current_frame), callee_isolate->heap);
+        value_copy(frame_get_acc(frame), callee_isolate->heap);
   });
 
   actor_frame->state = frame->state;
@@ -1594,7 +1595,8 @@ bool _isolate_is_done(Isolate *isolate) {
   CRITICAL(isolate->frame_waiting_cs, {
     SYNCHRONIZED(isolate->frame_queue_lock, {
       if (FrameSet_size(&isolate->waiting_frames) == 0 &&
-          FrameArray_size(&isolate->queued_frames) == 0) {
+          FrameArray_size(&isolate->queued_frames) == 0 &&
+          VoidPtrArray_is_empty(&isolate->actor_calls)) {
         is_done = true;
       }
     });
@@ -1614,6 +1616,7 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
         should_broadcast =
             FrameSet_size(&isolate->waiting_frames) == 1 &&
             FrameArray_size(&isolate->queued_frames) == 0 &&
+            VoidPtrArray_is_empty(&isolate->actor_calls) &&
             FrameSet_contains(&isolate->waiting_frames,
                               isolate->keep_alive_frame, sizeof(Frame *));
       } else if (FrameSet_size(&isolate->waiting_frames) == 0 &&
@@ -1634,8 +1637,10 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
       // Must keep actor objects since other isolates assume it will always
       // exist. In the future, there must be a better cleanup process.
       heap_make_root(isolate->heap, actor_result->obj);
-      *frame_mutable_acc(isolate_frame) = value_object(create_actor_object(
-          isolate_frame->parent_isolate->heap, isolate, actor_result->obj));
+      SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
+        *frame_mutable_acc(isolate_frame) = value_object(create_actor_object(
+            isolate_frame->parent_isolate->heap, isolate, actor_result->obj));
+      });
     } else {
       *frame_mutable_acc(isolate_frame) = *actor_result;
     }
@@ -1676,6 +1681,7 @@ void isolate_run(Isolate *isolate) {
   VM *vm = isolate->vm;
   Frame *frame;
 top_of_fn:
+  actor_receive_calls(isolate);
   while (NULL != (frame = isolate_pop_frame(isolate))) {
     isolate->current_frame = frame;
     FrameState frame_state;
@@ -1713,6 +1719,7 @@ top_of_fn:
           &isolate->waiting_blocking_work);
       threadpool_execute_work(vm->blocking_pool, w);
     }
+    actor_receive_calls(isolate);
   }
 
   if (isolate_maybe_collect_garbage(isolate)) {
@@ -1736,7 +1743,8 @@ top_of_fn:
   CRITICAL(isolate->frame_waiting_cs, {
     while (FrameSet_size(&isolate->waiting_frames) != 0 &&
            FrameSet_size(&isolate->waiting_frames) == waiting_frame_count &&
-           isolate_queue_size(isolate) == 0) {
+           isolate_queue_size(isolate) == 0 &&
+           VoidPtrArray_is_empty(&isolate->actor_calls)) {
       condition_wait(isolate->frame_wait_cond);
     }
   });

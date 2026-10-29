@@ -17,6 +17,10 @@ bool future_is_error(Future *f);
 const Value *future_get_value(Heap *heap, Object *obj);
 Frame *future_get_frame(Future *f);
 
+// Sets up and enqueues the calls other isolates posted to actors in isolate.
+// Must be called on isolate's thread.
+void actor_receive_calls(Isolate *isolate);
+
 void async_add_native(ModuleManager *mm, Module *async);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_ENTITY_NATIVE_ASYNC_H_ */

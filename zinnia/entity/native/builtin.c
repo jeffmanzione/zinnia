@@ -1345,6 +1345,13 @@ void actor_init_(Object *obj) { create_actor_on_object(obj); }
 
 void actor_delete_(Object *obj) { actor_delete(extract_actor_from_obj(obj)); }
 
+// Copies refer to the same actor, so ActorRefs can be passed to other isolates.
+void actor_copy_(ValueCopier *copier, Object *src_obj, Object *target_obj) {
+  ActorRef *src = extract_actor_from_obj(src_obj);
+  actor_init_ref(extract_actor_from_obj(target_obj), actor_get_isolate(src),
+                 actor_get_object(src));
+}
+
 Value actor_isolate_(Frame *current_frame, Scope *current_ctx, Object *obj,
                      Value *args) {
   ActorRef *actor = extract_actor_from_obj(obj);
@@ -1427,6 +1434,7 @@ void builtin_add_isolate_(Module *builtin) {
   Class_Scope = native_class(builtin, SCOPE_NAME, scope_init_, scope_delete_);
   Class_ActorRef =
       native_class(builtin, ACTOR_REF_CLASS_NAME, actor_init_, actor_delete_);
+  Class_ActorRef->_copy_fn = (ObjCopyFn)actor_copy_;
   native_method(Class_ActorRef, global_intern("isolate"), actor_isolate_);
 }
 

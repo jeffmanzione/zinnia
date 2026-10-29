@@ -5,14 +5,16 @@
 
 #include "zinnia/vm/vm.h"
 
+#include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/vm/isolate/isolate.h"
 #include "zinnia/vm/isolate/scope.h"
 
-IMPL_ARRAYLIKE(IsolateArray, Isolate);
+IMPL_ARRAYLIKE(IsolateArray, Isolate *);
 
 Isolate *create_isolate_no_reflection(VM *vm) {
-  Isolate *isolate = IsolateArray_push_back_ref(&vm->isolates);
+  Isolate *isolate = MNEW(Isolate);
+  IsolateArray_push_back(&vm->isolates, isolate);
   isolate_init(isolate, &vm->base_heap_conf);
   isolate->vm = vm;
   return isolate;
@@ -210,9 +212,10 @@ uint32_t isolate_collect_garbage(Isolate *isolate) {
   ASSERT(isolate != NULL);
   uint32_t deleted_nodes_count;
 
+  // frame_waiting_cs is always taken before frame_queue_lock.
   SYNCHRONIZED(isolate->heap_access_lock, {
-    SYNCHRONIZED(isolate->frame_queue_lock, {
-      CRITICAL(isolate->frame_waiting_cs, {
+    CRITICAL(isolate->frame_waiting_cs, {
+      SYNCHRONIZED(isolate->frame_queue_lock, {
         delete_completed_frames_(isolate);
 
         frame_inc_all_scope_(isolate, isolate->current_frame);
