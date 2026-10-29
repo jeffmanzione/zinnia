@@ -139,9 +139,36 @@ void isolate_insert_waiting_frame(Isolate *isolate, Frame *frame) {
 }
 
 void isolate_remove_waiting_frame(Isolate *isolate, Frame *frame) {
+  // Wakes the isolate, which may be waiting for its waiting frames to change.
   CRITICAL(isolate->frame_waiting_cs, {
     FrameSet_remove(&isolate->waiting_frames, frame, sizeof(Frame *));
+    condition_broadcast(isolate->frame_wait_cond);
   });
+}
+
+void isolate_enqueue_frame_and_wake(Isolate *isolate, Frame *frame) {
+  // Holds the wait lock so the isolate cannot miss the wakeup between checking
+  // its queue and waiting.
+  CRITICAL(isolate->frame_waiting_cs, {
+    isolate_enqueue_frame(isolate, frame);
+    condition_broadcast(isolate->frame_wait_cond);
+  });
+}
+
+bool isolate_wait_on_frame(Frame *frame, Frame *waiting_frame) {
+  bool is_waiting = false;
+  // Holds the lock that completing the frame wakes its dependents under, so
+  // the frame cannot complete between the check and the registration.
+  CRITICAL(frame->parent_isolate->frame_waiting_cs, {
+    if (FRAME_COMPLETE != frame->state && FRAME_ERROR != frame->state) {
+      FrameSet_insert(&frame->dependent_frames, waiting_frame,
+                      sizeof(Frame *));
+      isolate_insert_waiting_frame(waiting_frame->parent_isolate,
+                                   waiting_frame);
+      is_waiting = true;
+    }
+  });
+  return is_waiting;
 }
 
 void isolate_mark_frame_complete(Isolate *isolate, Frame *frame) {
@@ -173,25 +200,30 @@ void isolate_delete_frame(Isolate *isolate, Frame *frame) {
 
 void isolate_wake_dependent_frames(Isolate *isolate, Frame *frame,
                                    bool should_push) {
-  FrameSetIterator dependent_frames;
-  FrameSet_iterator(&dependent_frames, &frame->dependent_frames);
-  for (; FrameSet_has_next(&dependent_frames);
-       FrameSet_next(&dependent_frames)) {
-    Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
-    // Only requeue parent task if it is waiting.
-    if (FRAME_WAITING != dependent_frame->state) {
-      continue;
-    } else if (FRAME_ERROR == frame->state) {
-      dependent_frame->child_frame_has_error = true;
+  // Frames in other threads may register as dependents (see
+  // isolate_wait_on_frame()) while this frame completes.
+  CRITICAL(frame->parent_isolate->frame_waiting_cs, {
+    FrameSetIterator dependent_frames;
+    FrameSet_iterator(&dependent_frames, &frame->dependent_frames);
+    for (; FrameSet_has_next(&dependent_frames);
+         FrameSet_next(&dependent_frames)) {
+      Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
+      // Only requeue parent task if it is waiting.
+      if (FRAME_WAITING != dependent_frame->state) {
+        continue;
+      } else if (FRAME_ERROR == frame->state) {
+        dependent_frame->child_frame_has_error = true;
+      }
+      Isolate *dependent_isolate = dependent_frame->parent_isolate;
+      *frame_mutable_acc(dependent_frame) = *frame_get_acc(frame);
+      CRITICAL(dependent_isolate->frame_waiting_cs, {
+        if (should_push) {
+          isolate_push_frame(dependent_isolate, dependent_frame);
+        } else {
+          isolate_enqueue_frame(dependent_isolate, dependent_frame);
+        }
+        isolate_remove_waiting_frame(dependent_isolate, dependent_frame);
+      });
     }
-    *frame_mutable_acc(dependent_frame) = *frame_get_acc(frame);
-    if (should_push) {
-      isolate_push_frame(dependent_frame->parent_isolate, dependent_frame);
-    } else {
-      isolate_enqueue_frame(dependent_frame->parent_isolate, dependent_frame);
-    }
-    isolate_remove_waiting_frame(dependent_frame->parent_isolate,
-                                 dependent_frame);
-    condition_broadcast(isolate->frame_wait_cond);
-  }
+  });
 }

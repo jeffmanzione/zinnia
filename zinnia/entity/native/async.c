@@ -280,9 +280,9 @@ Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
     });
   });
 
-  isolate_enqueue_frame(actor_isolate, actor_frame);
+  // The future must exist before the actor frame can run and complete it.
   Value future_value = create_future_for_frame_(current_frame, actor_frame);
-  condition_broadcast(actor_isolate->frame_wait_cond);
+  isolate_enqueue_frame_and_wake(actor_isolate, actor_frame);
   return future_value;
 }
 
@@ -295,4 +295,4 @@ void async_add_native(ModuleManager *mm, Module *async) {
   native_function(async, global_intern("__completer_future"),
                   completer_future_);
   native_function(async, global_intern("__complete_future"), complete_future_);
-}
+}

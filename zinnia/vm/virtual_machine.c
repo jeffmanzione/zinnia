@@ -924,9 +924,10 @@ bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     return false;
   }
   Future *future = (Future *)acc->obj->_internal_obj;
-  if (!future_is_complete(future)) {
-    FrameSet_insert(&future_get_frame(future)->dependent_frames, frame,
-                    sizeof(Frame *));
+  // The future's frame may complete on another thread, so registering as a
+  // dependent must happen atomically with checking that it is not complete.
+  if (!future_is_complete(future) &&
+      isolate_wait_on_frame(future_get_frame(future), frame)) {
     return true;
   }
   const Value *result = future_get_value(frame->parent_isolate->heap, acc->obj);
@@ -1590,8 +1591,8 @@ void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
 bool _isolate_is_done(Isolate *isolate) {
   bool is_done = false;
 
-  SYNCHRONIZED(isolate->frame_queue_lock, {
-    CRITICAL(isolate->frame_waiting_cs, {
+  CRITICAL(isolate->frame_waiting_cs, {
+    SYNCHRONIZED(isolate->frame_queue_lock, {
       if (FrameSet_size(&isolate->waiting_frames) == 0 &&
           FrameArray_size(&isolate->queued_frames) == 0) {
         is_done = true;
@@ -1607,8 +1608,8 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
   }
   bool should_broadcast = false;
 
-  SYNCHRONIZED(isolate->frame_queue_lock, {
-    CRITICAL(isolate->frame_waiting_cs, {
+  CRITICAL(isolate->frame_waiting_cs, {
+    SYNCHRONIZED(isolate->frame_queue_lock, {
       if (isolate->keep_alive) {
         should_broadcast =
             FrameSet_size(&isolate->waiting_frames) == 1 &&
@@ -1692,7 +1693,11 @@ top_of_fn:
 #endif
     switch (frame_state) {
       case FRAME_WAITING:
-        isolate_insert_waiting_frame(isolate, frame);
+        // Frames waiting on a future are already registered as waiting, and
+        // may even have been woken already.
+        if (WAITING_ON_FUTURE != frame->wait_reason) {
+          isolate_insert_waiting_frame(isolate, frame);
+        }
         break;
       case FRAME_ERROR:
         _isolate_handle_error(isolate, frame);
