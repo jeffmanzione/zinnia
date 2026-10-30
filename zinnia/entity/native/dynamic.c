@@ -52,10 +52,15 @@ Value open_c_lib_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
     return raise_error(frame, ctx, error_buf);
   }
 
-  ModuleManager *mm = vm_module_manager(frame->parent_isolate->vm);
-  mm_register_dynamic_module(mm, module_name, dl, init_fn);
-  // Forces module to be loaded eagerly.
-  Module *module = modulemanager_lookup(mm, module_name);
+  VM *vm = frame->parent_isolate->vm;
+  ModuleManager *mm = vm_module_manager(vm);
+  Module *module;
+  // Modules are shared, with reflections in the main isolate's heap.
+  SYNCHRONIZED(vm->main->heap_access_lock, {
+    mm_register_dynamic_module(mm, module_name, dl, init_fn);
+    // Forces module to be loaded eagerly.
+    module = modulemanager_lookup(mm, module_name);
+  });
   RELEASE(file_name);
   RELEASE(module_name);
   if (has_init) RELEASE(init_fn_name);

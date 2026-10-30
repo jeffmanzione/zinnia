@@ -23,6 +23,7 @@ cc_library(
     deps = [
         "//zinnia/program:bytecode",
         "//zinnia/util:dll",
+        "//zinnia/util:void_array",
         "//zinnia/util/sync:mutex",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",

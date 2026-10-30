@@ -1,0 +1,32 @@
+import async
+import dynamic
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+def load(name) {
+  lib = dynamic.import_c_library(
+    file_name: './examples/dynamic/_custom.dll',
+    module_name: name)
+  return lib.dlcall(i'sin_impl', 0.0)
+}
+
+@test.TestClass
+class DynamicTest {
+  @test.Test
+  method test_import_c_library() {
+    expect(load('custom_main'), 0)
+  }
+
+  @test.Test
+  method test_import_c_library_from_isolates() {
+    isolates = []
+    for i=0, i<8, i=i+1 {
+      isolates.append(
+          async.spawn_isolate(fn: load, args: cat('custom', i)).start())
+    }
+    expect(await async.all(isolates), [0, 0, 0, 0, 0, 0, 0, 0])
+  }
+}

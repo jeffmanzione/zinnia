@@ -138,7 +138,7 @@ Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
 
   VM *vm = frame->parent_isolate->vm;
   Isolate *new_isolate = vm_create_isolate(vm);
-  new_isolate->keep_alive = !IS_NONE(keep_alive_arg);
+  new_isolate->keep_alive = IS_TRUE(keep_alive_arg);
   // The frame has no parent_frame since the caller's frames belong to another
   // thread.
   Frame *new_frame = isolate_create_frame(new_isolate);
@@ -223,7 +223,7 @@ Value validate_actor_call_(Frame *current_frame, Scope *current_ctx,
 // An isolate's heap, frames and scopes are only ever touched on its own
 // thread, so the caller only copies the args into a heap owned by the call and
 // posts it to the actor's isolate, which sets up the call itself (see
-// actor_receive_calls()).
+// actor_receive_call_()).
 typedef struct {
   // In the actor's heap. Only dereferenced on the actor's thread.
   Object *actor_object;
@@ -234,6 +234,8 @@ typedef struct {
   // The future the caller holds for the result.
   Future *future;
 } ActorCall;
+
+void actor_receive_call_(Isolate *isolate, void *data);
 
 Object *create_future_for_actor_call_(Frame *current_frame) {
   Frame *new_frame =
@@ -273,13 +275,13 @@ Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
 
   Object *future_obj = create_future_for_actor_call_(current_frame);
   call->future = (Future *)future_obj->_internal_obj;
-  isolate_post_actor_call(actor_isolate, call);
+  isolate_post_message(actor_isolate, actor_receive_call_, call);
   return value_object(future_obj);
 }
 
-// Sets up the frame for a call posted to an actor in isolate. Must be called
-// on isolate's thread while holding its heap lock.
-Frame *actor_receive_call_(Isolate *isolate, ActorCall *call) {
+// Sets up and enqueues the frame for a call posted to an actor in isolate.
+void actor_receive_call_(Isolate *isolate, void *data) {
+  ActorCall *call = (ActorCall *)data;
   Frame *actor_frame = isolate_create_unqueued_frame(isolate);
   // Completing the frame completes the caller's future. The frame has no
   // parent_frame since the caller's frames belong to another thread.
@@ -307,19 +309,9 @@ Frame *actor_receive_call_(Isolate *isolate, ActorCall *call) {
     raise_error(actor_frame, actor_ctx, "Could not find method '%s' on actor.",
                 call->fn_name);
   }
-  return actor_frame;
-}
-
-void actor_receive_calls(Isolate *isolate) {
-  ActorCall *call;
-  while (NULL != (call = (ActorCall *)isolate_pop_actor_call(isolate))) {
-    Frame *actor_frame;
-    SYNCHRONIZED(isolate->heap_access_lock,
-                 { actor_frame = actor_receive_call_(isolate, call); });
-    isolate_enqueue_frame(isolate, actor_frame);
-    heap_delete(call->args_heap);
-    RELEASE(call);
-  }
+  isolate_enqueue_frame(isolate, actor_frame);
+  heap_delete(call->args_heap);
+  RELEASE(call);
 }
 
 void async_add_native(ModuleManager *mm, Module *async) {

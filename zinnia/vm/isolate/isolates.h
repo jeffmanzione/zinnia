@@ -22,6 +22,10 @@ typedef struct _VM VM;
 typedef struct __Scope Scope;
 typedef struct __Frame Frame;
 typedef struct __Isolate Isolate;
+
+// Handles a message posted to isolate. Runs on isolate's thread while holding
+// its heap lock.
+typedef void (*IsolateMessageHandler)(Isolate *isolate, void *data);
 typedef struct Future_ Future;
 
 uint32_t hash_frame(const Frame *tsk, uint32_t size);
@@ -61,6 +65,8 @@ typedef enum {
   WAITING_TO_START,
   WAITING_ON_FN_CALL,
   WAITING_ON_FUTURE,
+  // Waiting for the main isolate to initialize a module.
+  WAITING_ON_MODULE,
 } WaitReason;
 
 struct __Frame {
@@ -83,6 +89,8 @@ struct __Frame {
   Object *_reflection;
 
   Future *actor_future;
+  // The module whose top-level code this frame runs, if any.
+  Module *initializing_module;
 };
 
 struct __Isolate {
@@ -111,10 +119,10 @@ struct __Isolate {
   ThreadHandle thread;  // Null if main thread.
 
   VoidPtrArray waiting_blocking_work;
-  // Calls from other isolates to an actor in this one, guarded by
-  // frame_waiting_cs. Other isolates must never touch this isolate's heap, so
-  // calls are only set up on this isolate's thread.
-  VoidPtrArray actor_calls;
+  // IsolateMessages posted by other threads, guarded by frame_waiting_cs.
+  // Other isolates must never touch this isolate's heap, so they post work
+  // that needs it here to be done on this isolate's thread.
+  VoidPtrArray messages;
 
   Future *future;
   bool keep_alive;

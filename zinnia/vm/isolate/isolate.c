@@ -6,6 +6,7 @@
 #include "zinnia/vm/isolate/isolate.h"
 
 #include "rzalloc/rzalloc.h"
+#include "zinnia/alloc/alloc.h"
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/util/sync/mutex.h"
 #include "zinnia/vm/isolate/frame.h"
@@ -28,7 +29,7 @@ void isolate_init(Isolate *isolate, HeapConf *conf) {
   FrameSet_init(&isolate->blocking_frames, hash_frame, compare_frames);
   isolate->_reflection = NULL;
   VoidPtrArray_init(&isolate->waiting_blocking_work);
-  VoidPtrArray_init(&isolate->actor_calls);
+  VoidPtrArray_init(&isolate->messages);
   isolate->future = NULL;
   isolate->keep_alive = false;
   isolate->keep_alive_frame = NULL;
@@ -72,7 +73,7 @@ void isolate_finalize(Isolate *isolate) {
   critical_section_delete(isolate->frame_waiting_cs);
   mutex_close(isolate->frame_complete_lock);
   VoidPtrArray_finalize(&isolate->waiting_blocking_work);
-  VoidPtrArray_finalize(&isolate->actor_calls);
+  VoidPtrArray_finalize(&isolate->messages);
 }
 
 void frame_add_reflection_(Isolate *isolate, Frame *frame) {
@@ -148,29 +149,37 @@ void isolate_remove_waiting_frame(Isolate *isolate, Frame *frame) {
   });
 }
 
-void isolate_post_actor_call(Isolate *isolate, void *actor_call) {
+typedef struct {
+  IsolateMessageHandler handler;
+  void *data;
+} IsolateMessage;
+
+void isolate_post_message(Isolate *isolate, IsolateMessageHandler handler,
+                          void *data) {
+  IsolateMessage *message = MNEW(IsolateMessage);
+  message->handler = handler;
+  message->data = data;
   CRITICAL(isolate->frame_waiting_cs, {
-    VoidPtrArray_push_back(&isolate->actor_calls, actor_call);
+    VoidPtrArray_push_back(&isolate->messages, message);
     condition_broadcast(isolate->frame_wait_cond);
   });
 }
 
-void *isolate_pop_actor_call(Isolate *isolate) {
-  void *actor_call = NULL;
-  CRITICAL(isolate->frame_waiting_cs, {
-    if (!VoidPtrArray_is_empty(&isolate->actor_calls)) {
-      actor_call = VoidPtrArray_pop_front_unchecked(&isolate->actor_calls);
+void isolate_handle_messages(Isolate *isolate) {
+  for (;;) {
+    IsolateMessage *message = NULL;
+    CRITICAL(isolate->frame_waiting_cs, {
+      if (!VoidPtrArray_is_empty(&isolate->messages)) {
+        message = VoidPtrArray_pop_front_unchecked(&isolate->messages);
+      }
+    });
+    if (NULL == message) {
+      return;
     }
-  });
-  return actor_call;
-}
-
-bool isolate_has_actor_calls(Isolate *isolate) {
-  bool has_actor_calls;
-  CRITICAL(isolate->frame_waiting_cs, {
-    has_actor_calls = !VoidPtrArray_is_empty(&isolate->actor_calls);
-  });
-  return has_actor_calls;
+    SYNCHRONIZED(isolate->heap_access_lock,
+                 { message->handler(isolate, message->data); });
+    RELEASE(message);
+  }
 }
 
 void isolate_enqueue_frame_and_wake(Isolate *isolate, Frame *frame) {

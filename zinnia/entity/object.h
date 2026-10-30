@@ -15,6 +15,7 @@
 #include "memory-wrapper/memory_graph.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
+#include "zinnia/util/void_array.h"
 #include "zinnia/util/sync/mutex.h"
 
 typedef struct Object_ Object;
@@ -76,7 +77,11 @@ struct Module_ {
   const Bytecode *_bytecode;
   ClassMap _classes;
   FunctionMap _functions;
-  bool _is_initialized;
+  // A ModuleInitState. Use module_init_state() and module_set_init_state().
+  volatile int32_t _init_state;
+  // Pending frames in other isolates to complete once the main isolate has
+  // initialized this module. Only touched on the main isolate's thread.
+  VoidPtrArray _init_waiters;
   Mutex _write_mutex;
 
   const char *_full_path;

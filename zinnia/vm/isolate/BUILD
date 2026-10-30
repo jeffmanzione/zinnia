@@ -28,6 +28,7 @@ cc_library(
     deps = [
         ":isolates",
         ":frame",
+        "//zinnia/alloc",
         "//zinnia/util/sync:critical_section",
         "//zinnia/util/sync:mutex",
         "@jeffmanzione_rzalloc//rzalloc",
