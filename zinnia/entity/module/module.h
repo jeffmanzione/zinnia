@@ -11,6 +11,8 @@ typedef enum {
   // Its top-level code is running on the main isolate.
   MODULE_INITIALIZING,
   MODULE_INITIALIZED,
+  // Its top-level code raised _init_error.
+  MODULE_FAILED,
 } ModuleInitState;
 
 // Safe to call from any isolate's thread. Once it returns

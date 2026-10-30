@@ -33,6 +33,9 @@ void isolate_init(Isolate *isolate, HeapConf *conf) {
   isolate->future = NULL;
   isolate->keep_alive = false;
   isolate->keep_alive_frame = NULL;
+  isolate->start_frame = NULL;
+  isolate->result = NONE_VALUE;
+  isolate->failed = false;
 }
 
 void isolate_finalize(Isolate *isolate) {

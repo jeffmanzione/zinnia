@@ -127,6 +127,11 @@ struct __Isolate {
   Future *future;
   bool keep_alive;
   Frame *keep_alive_frame;
+  // The frame running the function the isolate was spawned with, and its
+  // result (or error, if failed) once it completes, which completes future.
+  Frame *start_frame;
+  Value result;
+  bool failed;
 };
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_ISOLATES_H_ */

@@ -751,12 +751,61 @@ void _complete_module_init_request(Frame *pending) {
                                 /*should_push=*/false);
 }
 
+typedef struct {
+  // In the isolate the failure is posted to.
+  Frame *pending;
+  // Owned by the failure. Holds a copy of the module's error.
+  Heap *error_heap;
+  Value error;
+} ModuleInitFailure;
+
+// Handles a ModuleInitFailure posted to the isolate that requested the module,
+// raising the module's error in the frames waiting on it.
+void _receive_module_init_failure(Isolate *isolate, void *data) {
+  ModuleInitFailure *failure = (ModuleInitFailure *)data;
+  Frame *pending = failure->pending;
+  *frame_mutable_acc(pending) = value_copy(&failure->error, isolate->heap);
+  pending->state = FRAME_ERROR;
+  isolate_mark_frame_complete(isolate, pending);
+  isolate_wake_dependent_frames(isolate, pending, /*should_push=*/false);
+  heap_delete(failure->error_heap);
+  RELEASE(failure);
+}
+
+// Fails a request with module's error. Called on the main isolate's thread.
+void _fail_module_init_request(Isolate *main, Module *module, Frame *pending) {
+  ModuleInitFailure *failure = MNEW(ModuleInitFailure);
+  failure->pending = pending;
+  HeapConf heap_conf = main->vm->base_heap_conf;
+  failure->error_heap = heap_create(&heap_conf);
+  Value error = value_object(module->_init_error);
+  // Copied to a heap of its own, since only the requesting isolate may write
+  // to its heap.
+  failure->error = value_copy(&error, failure->error_heap);
+  heap_make_root(failure->error_heap, failure->error.obj);
+  isolate_post_message(pending->parent_isolate, _receive_module_init_failure,
+                       failure);
+}
+
 // Called on the main isolate's thread when module's init frame completes.
-void _finish_module_init(Module *module) {
-  module_set_init_state(module, MODULE_INITIALIZED);
+void _finish_module_init(Module *module, Frame *init_frame) {
+  Isolate *main = init_frame->parent_isolate;
+  const Value *result = frame_get_acc(init_frame);
+  const bool failed = FRAME_ERROR == init_frame->state && IS_OBJECT(result);
+  if (failed) {
+    module->_init_error = result->obj;
+    SYNCHRONIZED(main->heap_access_lock,
+                 { heap_make_root(main->heap, module->_init_error); });
+  }
+  module_set_init_state(module, failed ? MODULE_FAILED : MODULE_INITIALIZED);
   while (!VoidPtrArray_is_empty(&module->_init_waiters)) {
-    _complete_module_init_request(
-        (Frame *)VoidPtrArray_pop_back_unchecked(&module->_init_waiters));
+    Frame *pending =
+        (Frame *)VoidPtrArray_pop_back_unchecked(&module->_init_waiters);
+    if (failed) {
+      _fail_module_init_request(main, module, pending);
+    } else {
+      _complete_module_init_request(pending);
+    }
   }
 }
 
@@ -788,6 +837,9 @@ void _receive_module_init_request(Isolate *main, void *data) {
     case MODULE_INITIALIZED:
       _complete_module_init_request(request->pending);
       break;
+    case MODULE_FAILED:
+      _fail_module_init_request(main, request->module, request->pending);
+      break;
     case MODULE_UNINITIALIZED:
       _start_module_init(main, NULL, request->module);
       // Fallthrough.
@@ -804,13 +856,20 @@ void _receive_module_init_request(Isolate *main, void *data) {
 // A module whose initialization has started is ready, since its own top-level
 // code calls into it, including from isolates it spawns (e.g., an actor of a
 // class it defines), which must not wait on it.
+//
+// Other isolates get the error of a module whose initialization failed. The
+// main isolate's frames, one of which already got it, do not.
 ModuleWait _maybe_init_module(Frame *frame, Module *module) {
   // The fast path: no locking once initialization has started.
-  if (MODULE_UNINITIALIZED != module_init_state(module)) {
+  const ModuleInitState state = module_init_state(module);
+  if (MODULE_INITIALIZING == state || MODULE_INITIALIZED == state) {
     return MODULE_READY;
   }
   Isolate *isolate = frame->parent_isolate;
   Isolate *main = vm_main_isolate(isolate->vm);
+  if (MODULE_FAILED == state && isolate == main) {
+    return MODULE_READY;
+  }
   if (isolate == main) {
     FrameSet_insert(&_start_module_init(main, frame, module)->dependent_frames,
                     frame, sizeof(Frame *));
@@ -878,7 +937,8 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   scope_set_function(fn_ctx, func);
   ModuleWait module_wait =
       _maybe_init_module(fn_ctx->parent_frame, (Module *)self->_class->_module);
-  if (MODULE_WAIT_ON_INIT_FRAME == module_wait && !func->_is_async) {
+  if (MODULE_WAIT_ON_INIT_FRAME == module_wait) {
+    // Runs once the module is initialized, whether or not it is async.
     fn_ctx->parent_frame->state = FRAME_WAITING;
     isolate_insert_waiting_frame(fn_ctx->parent_frame->parent_isolate,
                                  fn_ctx->parent_frame);
@@ -1681,10 +1741,25 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
                        /*should_push=*/should_push);
 }
 
+// Keeps the result of a spawned isolate's start frame until the isolate is done
+// and passes it to its future.
+void _isolate_keep_result(Isolate *isolate, Frame *frame) {
+  isolate->result = *frame_get_acc(frame);
+  isolate->failed = FRAME_ERROR == frame->state;
+  if (IS_OBJECT(&isolate->result)) {
+    // The frame may be deleted before the isolate is done.
+    SYNCHRONIZED(isolate->heap_access_lock,
+                 { heap_make_root(isolate->heap, isolate->result.obj); });
+  }
+}
+
 void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
+  if (frame == frame->parent_isolate->start_frame) {
+    _isolate_keep_result(frame->parent_isolate, frame);
+  }
   isolate_mark_frame_complete(isolate, frame);
   if (NULL != frame->initializing_module) {
-    _finish_module_init(frame->initializing_module);
+    _finish_module_init(frame->initializing_module, frame);
   }
   if (NULL != frame->actor_future) {
     _mark_actor_frame_complete(isolate, frame, should_push);
@@ -1734,8 +1809,8 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
 void _isolate_broadcast_to_parent(Isolate *isolate) {
   Frame *isolate_frame = future_get_frame(isolate->future);
 
-  if (isolate->keep_alive) {
-    const Value *actor_result = frame_get_acc(isolate->current_frame);
+  if (isolate->keep_alive && !isolate->failed) {
+    const Value *actor_result = &isolate->result;
     if (IS_OBJECT(actor_result)) {
       // Must keep actor objects since other isolates assume it will always
       // exist. In the future, there must be a better cleanup process.
@@ -1750,20 +1825,31 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
   } else {
     SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
       *frame_mutable_acc(isolate_frame) =
-          value_copy(frame_get_acc(isolate->current_frame),
-                     isolate_frame->parent_isolate->heap);
+          value_copy(&isolate->result, isolate_frame->parent_isolate->heap);
     });
   }
   isolate_remove_waiting_frame(isolate_frame->parent_isolate, isolate_frame);
-  isolate_frame->state = FRAME_COMPLETE;
+  // Raises the error in the frames awaiting the isolate.
+  isolate_frame->state = isolate->failed ? FRAME_ERROR : FRAME_COMPLETE;
+  isolate->future = NULL;
   _mark_frame_complete(isolate_frame->parent_isolate, isolate_frame,
                        /*should_push=*/false);
+  if (isolate->failed && isolate->keep_alive) {
+    // There is no actor to keep alive.
+    isolate_remove_waiting_frame(isolate, isolate->keep_alive_frame);
+  }
 }
 
 void _isolate_handle_error(Isolate *isolate, Frame *frame) {
   if (NULL == frame->parent_frame ||
       frame->parent_isolate != frame->parent_frame->parent_isolate) {
     if (NULL != frame->actor_future) {
+      _mark_frame_complete(isolate, frame, /*should_push=*/true);
+      return;
+    }
+    if ((frame == isolate->start_frame && NULL != isolate->future) ||
+        NULL != frame->initializing_module) {
+      // The error is raised in the frames awaiting the isolate or module.
       _mark_frame_complete(isolate, frame, /*should_push=*/true);
       return;
     }

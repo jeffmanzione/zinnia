@@ -40,6 +40,7 @@ void module_init(Module *module, const char name[], const char full_path[],
   module->_reflection = NULL;
   module->_init_state = MODULE_UNINITIALIZED;
   VoidPtrArray_init(&module->_init_waiters);
+  module->_init_error = NULL;
   module->dl = dl;
 
   ClassMap_init(&module->_classes, hash_interned_string,
