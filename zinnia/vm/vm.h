@@ -12,7 +12,9 @@
 #include "zinnia/vm/isolate/isolates.h"
 #include "zinnia/vm/module_manager.h"
 
-DEFINE_ARRAYLIKE(IsolateArray, Isolate);
+// Holds pointers since frames, actors and threads keep pointers to isolates,
+// which must not move when the array grows.
+DEFINE_ARRAYLIKE(IsolateArray, Isolate *);
 
 typedef struct _VM {
   ModuleManager mm;

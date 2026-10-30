@@ -139,8 +139,9 @@ Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   VM *vm = frame->parent_isolate->vm;
   Isolate *new_isolate = vm_create_isolate(vm);
   new_isolate->keep_alive = !IS_NONE(keep_alive_arg);
+  // The frame has no parent_frame since the caller's frames belong to another
+  // thread.
   Frame *new_frame = isolate_create_frame(new_isolate);
-  new_frame->parent_frame = frame;
   Scope *new_ctx;
 
   const Function *f;
@@ -217,17 +218,31 @@ Value validate_actor_call_(Frame *current_frame, Scope *current_ctx,
   return NONE_VALUE;
 }
 
-Value create_future_for_frame_(Frame *current_frame, Frame *actor_frame) {
+// A call to a method on an actor in another isolate.
+//
+// An isolate's heap, frames and scopes are only ever touched on its own
+// thread, so the caller only copies the args into a heap owned by the call and
+// posts it to the actor's isolate, which sets up the call itself (see
+// actor_receive_calls()).
+typedef struct {
+  // In the actor's heap. Only dereferenced on the actor's thread.
+  Object *actor_object;
+  const char *fn_name;  // Interned.
+  // Owned by the call. Holds the copy of args.
+  Heap *args_heap;
+  Value args;
+  // The future the caller holds for the result.
+  Future *future;
+} ActorCall;
+
+Object *create_future_for_actor_call_(Frame *current_frame) {
   Frame *new_frame =
       isolate_create_unqueued_frame(current_frame->parent_isolate);
   new_frame->parent_frame = current_frame;
 
   Object *future_obj = future_create(new_frame);
-  actor_frame->actor_future = (Future *)future_obj->_internal_obj;
-
   isolate_insert_waiting_frame(current_frame->parent_isolate, new_frame);
-
-  return value_object(future_obj);
+  return future_obj;
 }
 
 Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
@@ -244,46 +259,67 @@ Value actor_call_(Frame *current_frame, Scope *current_ctx, Object *obj,
 
   ActorRef *actor = extract_actor_from_obj(actor_value->obj);
   Isolate *actor_isolate = actor_get_isolate(actor);
-  Object *actor_object = actor_get_object(actor);
 
-  const char *fn_name = intern_value(fn_name_value);
+  ActorCall *call = MNEW(ActorCall);
+  call->actor_object = actor_get_object(actor);
+  call->fn_name = intern_value(fn_name_value);
+  HeapConf heap_conf = current_frame->parent_isolate->vm->base_heap_conf;
+  call->args_heap = heap_create(&heap_conf);
+  // This frame's isolate holds its own heap lock while running it.
+  call->args = value_copy(fn_args, call->args_heap);
+  if (OBJECT == call->args.type) {
+    heap_make_root(call->args_heap, call->args.obj);
+  }
 
-  Value fn =
-      object_get_maybe_wrap(actor_object, fn_name, actor_isolate->heap, NULL);
+  Object *future_obj = create_future_for_actor_call_(current_frame);
+  call->future = (Future *)future_obj->_internal_obj;
+  isolate_post_actor_call(actor_isolate, call);
+  return value_object(future_obj);
+}
 
-  const Function *f;
+// Sets up the frame for a call posted to an actor in isolate. Must be called
+// on isolate's thread while holding its heap lock.
+Frame *actor_receive_call_(Isolate *isolate, ActorCall *call) {
+  Frame *actor_frame = isolate_create_unqueued_frame(isolate);
+  // Completing the frame completes the caller's future. The frame has no
+  // parent_frame since the caller's frames belong to another thread.
+  actor_frame->actor_future = call->future;
+
+  Value fn = object_get_maybe_wrap(call->actor_object, call->fn_name,
+                                   isolate->heap, NULL);
+  const Function *f = NULL;
   if (IS_CLASS(&fn, Class_Function)) {
     f = fn.obj->_function_obj;
   } else if (IS_CLASS(&fn, Class_FunctionRef)) {
     f = function_ref_get_func(fn.obj);
-  } else {
-    return raise_error(current_frame, current_ctx,
-                       "Could not find method '%s' on actor.", fn_name);
   }
 
-  Frame *actor_frame = isolate_create_unqueued_frame(actor_isolate);
-  // NOTE: This is a reference to a task in another heap.
-  actor_frame->parent_frame = current_frame;
+  if (NULL != f) {
+    Scope *actor_ctx = frame_create_scope(actor_frame, call->actor_object,
+                                          (Module *)f->_module, f->_ins_pos);
+    scope_set_function(actor_ctx, f);
+    *frame_mutable_acc(actor_frame) = value_copy(&call->args, isolate->heap);
+  } else {
+    // Fails the caller's future with the error once the frame runs.
+    Scope *actor_ctx =
+        frame_create_scope(actor_frame, call->actor_object,
+                           (Module *)call->actor_object->_class->_module, 0);
+    raise_error(actor_frame, actor_ctx, "Could not find method '%s' on actor.",
+                call->fn_name);
+  }
+  return actor_frame;
+}
 
-  Scope *actor_ctx = frame_create_scope(actor_frame, actor_object,
-                                        (Module *)f->_module, f->_ins_pos);
-
-  // printf("context=%p, task=%p\n", remote_ctx->_reflection,
-  //        remote_task->_reflection);
-
-  scope_set_function(actor_ctx, f);
-
-  SYNCHRONIZED(current_frame->parent_isolate->heap_access_lock, {
-    SYNCHRONIZED(actor_isolate->heap_access_lock, {
-      *frame_mutable_acc(actor_frame) =
-          value_copy(fn_args, actor_isolate->heap);
-    });
-  });
-
-  // The future must exist before the actor frame can run and complete it.
-  Value future_value = create_future_for_frame_(current_frame, actor_frame);
-  isolate_enqueue_frame_and_wake(actor_isolate, actor_frame);
-  return future_value;
+void actor_receive_calls(Isolate *isolate) {
+  ActorCall *call;
+  while (NULL != (call = (ActorCall *)isolate_pop_actor_call(isolate))) {
+    Frame *actor_frame;
+    SYNCHRONIZED(isolate->heap_access_lock,
+                 { actor_frame = actor_receive_call_(isolate, call); });
+    isolate_enqueue_frame(isolate, actor_frame);
+    heap_delete(call->args_heap);
+    RELEASE(call);
+  }
 }
 
 void async_add_native(ModuleManager *mm, Module *async) {

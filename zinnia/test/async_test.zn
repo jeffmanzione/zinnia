@@ -21,6 +21,17 @@ class Counter {
   }
 }
 
+@async.Actor
+class Relay {
+  new() {}
+  method inc_other(other, n) {
+    for i=0, i<n, i=i+1 {
+      await other.inc()
+    }
+    return n
+  }
+}
+
 @async.RemoteClass
 class OldCounter {
   field count
@@ -141,6 +152,38 @@ class ActorTest {
     f = counter.fail()
     await async.sleep(0.1)
     test.expect_raises(() -> await f)
+  }
+
+  @test.Test
+  method test_concurrent_calls() {
+    counter = async.spawn_actor(Counter)
+    calls = []
+    for i=0, i<50, i=i+1 {
+      calls.append(counter.inc())
+    }
+    results = await async.all(calls)
+    expect(results.len(), 50)
+    expect(await counter.inc(), 51)
+  }
+
+  @test.Test
+  method test_actors_calling_each_other() {
+    a = async.spawn_actor(Counter)
+    b = async.spawn_actor(Counter)
+    a_relay = async.spawn_actor(Relay)
+    b_relay = async.spawn_actor(Relay)
+    expect(
+        await async.all([a_relay.inc_other(b, 20), b_relay.inc_other(a, 20)]),
+        [20, 20])
+    expect(await a.inc(), 21)
+    expect(await b.inc(), 21)
+  }
+
+  @test.Test
+  method test_missing_method_fails_future() {
+    counter = async.spawn_actor(Counter)
+    test.expect_raises(
+        () -> await async.__actor_call(counter.target(), 'missing', None))
   }
 
   @test.Test

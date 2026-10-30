@@ -28,6 +28,7 @@ void isolate_init(Isolate *isolate, HeapConf *conf) {
   FrameSet_init(&isolate->blocking_frames, hash_frame, compare_frames);
   isolate->_reflection = NULL;
   VoidPtrArray_init(&isolate->waiting_blocking_work);
+  VoidPtrArray_init(&isolate->actor_calls);
   isolate->future = NULL;
   isolate->keep_alive = false;
   isolate->keep_alive_frame = NULL;
@@ -71,6 +72,7 @@ void isolate_finalize(Isolate *isolate) {
   critical_section_delete(isolate->frame_waiting_cs);
   mutex_close(isolate->frame_complete_lock);
   VoidPtrArray_finalize(&isolate->waiting_blocking_work);
+  VoidPtrArray_finalize(&isolate->actor_calls);
 }
 
 void frame_add_reflection_(Isolate *isolate, Frame *frame) {
@@ -146,6 +148,31 @@ void isolate_remove_waiting_frame(Isolate *isolate, Frame *frame) {
   });
 }
 
+void isolate_post_actor_call(Isolate *isolate, void *actor_call) {
+  CRITICAL(isolate->frame_waiting_cs, {
+    VoidPtrArray_push_back(&isolate->actor_calls, actor_call);
+    condition_broadcast(isolate->frame_wait_cond);
+  });
+}
+
+void *isolate_pop_actor_call(Isolate *isolate) {
+  void *actor_call = NULL;
+  CRITICAL(isolate->frame_waiting_cs, {
+    if (!VoidPtrArray_is_empty(&isolate->actor_calls)) {
+      actor_call = VoidPtrArray_pop_front_unchecked(&isolate->actor_calls);
+    }
+  });
+  return actor_call;
+}
+
+bool isolate_has_actor_calls(Isolate *isolate) {
+  bool has_actor_calls;
+  CRITICAL(isolate->frame_waiting_cs, {
+    has_actor_calls = !VoidPtrArray_is_empty(&isolate->actor_calls);
+  });
+  return has_actor_calls;
+}
+
 void isolate_enqueue_frame_and_wake(Isolate *isolate, Frame *frame) {
   // Holds the wait lock so the isolate cannot miss the wakeup between checking
   // its queue and waiting.
@@ -161,8 +188,7 @@ bool isolate_wait_on_frame(Frame *frame, Frame *waiting_frame) {
   // the frame cannot complete between the check and the registration.
   CRITICAL(frame->parent_isolate->frame_waiting_cs, {
     if (FRAME_COMPLETE != frame->state && FRAME_ERROR != frame->state) {
-      FrameSet_insert(&frame->dependent_frames, waiting_frame,
-                      sizeof(Frame *));
+      FrameSet_insert(&frame->dependent_frames, waiting_frame, sizeof(Frame *));
       isolate_insert_waiting_frame(waiting_frame->parent_isolate,
                                    waiting_frame);
       is_waiting = true;

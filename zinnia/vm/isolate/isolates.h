@@ -111,6 +111,10 @@ struct __Isolate {
   ThreadHandle thread;  // Null if main thread.
 
   VoidPtrArray waiting_blocking_work;
+  // Calls from other isolates to an actor in this one, guarded by
+  // frame_waiting_cs. Other isolates must never touch this isolate's heap, so
+  // calls are only set up on this isolate's thread.
+  VoidPtrArray actor_calls;
 
   Future *future;
   bool keep_alive;

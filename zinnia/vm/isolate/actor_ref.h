@@ -14,6 +14,8 @@ typedef struct ActorRef_ ActorRef;
 Object *create_actor_object(Heap *heap, Isolate *actor_isolate,
                             Object *actor_object);
 void create_actor_on_object(Object *obj);
+void actor_init_ref(ActorRef *actor, Isolate *actor_isolate,
+                    Object *actor_object);
 
 void actor_delete(ActorRef *actor);
 

@@ -372,17 +372,17 @@ ArgStore *commandline_parse_args(ArgConfig *config, int argc,
     double_dash_index = argc;
   }
 
-  if (config->allow_compiler_args_and_sources || sources_index >= 0) {
-    const int num_sources = double_dash_index - sources_index;
-    const char **sources_start = argv + sources_index;
-    parse_sources_(num_sources, sources_start, &store->src_files);
-  }
-
   if (config->allow_compiler_args_and_sources && sources_index < 0) {
     fprintf(stderr, "ERROR: No sources.\n");
     FATALF(
         "Could not parse arguments. Format: zinnia [-abc] d.zn e.zn [-- "
         "--arg1 --noarg2 --arg3=5]");
+  }
+
+  if (sources_index >= 0) {
+    const int num_sources = double_dash_index - sources_index;
+    const char **sources_start = argv + sources_index;
+    parse_sources_(num_sources, sources_start, &store->src_files);
   }
 
   return store;
