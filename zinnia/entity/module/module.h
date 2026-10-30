@@ -6,6 +6,20 @@
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
 
+typedef enum {
+  MODULE_UNINITIALIZED = 0,
+  // Its top-level code is running on the main isolate.
+  MODULE_INITIALIZING,
+  MODULE_INITIALIZED,
+} ModuleInitState;
+
+// Safe to call from any isolate's thread. Once it returns
+// MODULE_INITIALIZED, everything the module's initialization wrote is
+// visible to the caller.
+ModuleInitState module_init_state(const Module *module);
+// Only called on the main isolate's thread.
+void module_set_init_state(Module *module, ModuleInitState state);
+
 void module_init(Module *module, const char name[], const char full_path[],
                  const char relative_path[], const char key[],
                  Bytecode *bytecode, DlHandle dl);

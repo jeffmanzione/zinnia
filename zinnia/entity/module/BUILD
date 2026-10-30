@@ -16,6 +16,7 @@ cc_library(
         "//zinnia/heap",
         "//zinnia/program:bytecode",
         "//zinnia/util:dll",
+        "//zinnia/util:platform",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
     ],
 )

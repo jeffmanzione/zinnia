@@ -12,6 +12,7 @@ cc_library(
     deps = [
         "//zinnia/alloc",
         "//zinnia/compile",
+        "//zinnia/entity/module",
         "//zinnia/entity/string:string_helper",
         "//zinnia/program/optimization:optimize",
         "//zinnia/bundle",

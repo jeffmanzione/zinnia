@@ -22,6 +22,7 @@ static const char *_wait_reasons[] = {
     "WAITING_TO_START",
     "WAITING_ON_FN_CALL",
     "WAITING_ON_FUTURE",
+    "WAITING_ON_MODULE",
 };
 
 const char *wait_reason_str(WaitReason reason) { return _wait_reasons[reason]; }
@@ -37,6 +38,7 @@ void frame_init(Frame *frame) {
   frame->_reflection = NULL;
   frame->is_finalized = false;
   frame->actor_future = NULL;
+  frame->initializing_module = NULL;
 }
 
 void frame_finalize(Frame *frame) {

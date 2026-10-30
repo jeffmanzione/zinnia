@@ -5,6 +5,29 @@
 #include "zinnia/entity/function/function.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/error.h"
+#include "zinnia/util/platform.h"
+
+#ifdef OS_WINDOWS
+#include <windows.h>
+#endif
+
+ModuleInitState module_init_state(const Module *module) {
+#ifdef OS_WINDOWS
+  return (ModuleInitState)InterlockedCompareExchange(
+      (volatile LONG *)&module->_init_state, 0, 0);
+#else
+  return (ModuleInitState)__atomic_load_n(&module->_init_state,
+                                          __ATOMIC_ACQUIRE);
+#endif
+}
+
+void module_set_init_state(Module *module, ModuleInitState state) {
+#ifdef OS_WINDOWS
+  InterlockedExchange((volatile LONG *)&module->_init_state, state);
+#else
+  __atomic_store_n(&module->_init_state, state, __ATOMIC_RELEASE);
+#endif
+}
 
 void module_init(Module *module, const char name[], const char full_path[],
                  const char relative_path[], const char key[],
@@ -15,7 +38,8 @@ void module_init(Module *module, const char name[], const char full_path[],
   module->_key = key;
   module->_bytecode = bytecode;
   module->_reflection = NULL;
-  module->_is_initialized = false;
+  module->_init_state = MODULE_UNINITIALIZED;
+  VoidPtrArray_init(&module->_init_waiters);
   module->dl = dl;
 
   ClassMap_init(&module->_classes, hash_interned_string,
@@ -47,6 +71,7 @@ void module_finalize(Module *module) {
     bytecode_delete((Bytecode *)module->_bytecode);  // Bless
   }
   mutex_close(module->_write_mutex);
+  VoidPtrArray_finalize(&module->_init_waiters);
 }
 
 const char *module_name(const Module *const module) { return module->_name; }

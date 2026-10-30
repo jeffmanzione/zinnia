@@ -18,6 +18,7 @@
 #include "zinnia/bundle/bundle.h"
 #include "zinnia/compile/compile.h"
 #include "zinnia/entity/class/classes_def.h"
+#include "zinnia/entity/module/module.h"
 #include "zinnia/entity/module/modules.h"
 #include "zinnia/entity/object.h"
 #include "zinnia/entity/string/string_helper.h"
@@ -92,7 +93,7 @@ int run_files(const CharPtrArray *source_file_names,
 
       if (NULL == main_module) {
         main_module = modulemanager_load(mm, module_info);
-        main_module->_is_initialized = true;
+        module_set_init_state(main_module, MODULE_INITIALIZED);
         object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
                           MAIN_KEY, &TRUE_VALUE);
       }
@@ -155,7 +156,7 @@ int run(const SourceNameSet *source_files, ArgStore *store) {
         ModuleInfo *module_info = mm_register_module(mm, src, src, NULL, -1);
         if (NULL == main_module) {
           main_module = modulemanager_load(mm, module_info);
-          main_module->_is_initialized = true;
+          module_set_init_state(main_module, MODULE_INITIALIZED);
           object_set_member(vm_main_isolate(vm)->heap, main_module->_reflection,
                             MAIN_KEY, &TRUE_VALUE);
         }

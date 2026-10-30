@@ -40,6 +40,12 @@ zinnia_test(
 )
 
 zinnia_test(
+    name = "dynamic_test",
+    data = ["//examples/dynamic:_custom.dll"],
+    main = "dynamic_test.zn",
+)
+
+zinnia_test(
     name = "module_test",
     main = "module_test.zn",
     deps = ["//examples/module:module_srcs"],

@@ -64,7 +64,6 @@ bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-bool _execute_LMDL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 
 #define MATH_OP(op, symbol)                                             \
@@ -726,19 +725,106 @@ void _execute_blocking_callback(BlockingCallArgs *args) {
   RELEASE(args);
 }
 
-Frame *_maybe_load_module(Frame *frame, Module *module) {
-  if (module->_is_initialized) {
-    return NULL;
+// Modules are shared by all isolates, and a module's top-level values are
+// members of its reflection, which lives in the main isolate's heap. So a
+// module's top-level code always runs on the main isolate, and other isolates
+// wait for it.
+typedef enum {
+  // The module is initialized or its initialization has started.
+  MODULE_READY,
+  // frame waits on the module's init frame, in the same isolate.
+  MODULE_WAIT_ON_INIT_FRAME,
+  // frame waits for the main isolate to initialize the module.
+  MODULE_WAIT_ON_MAIN_ISOLATE,
+} ModuleWait;
+
+typedef struct {
+  Module *module;
+  // Completed once the module is initialized. In the requesting isolate.
+  Frame *pending;
+} ModuleInitRequest;
+
+void _complete_module_init_request(Frame *pending) {
+  pending->state = FRAME_COMPLETE;
+  isolate_mark_frame_complete(pending->parent_isolate, pending);
+  isolate_wake_dependent_frames(pending->parent_isolate, pending,
+                                /*should_push=*/false);
+}
+
+// Called on the main isolate's thread when module's init frame completes.
+void _finish_module_init(Module *module) {
+  module_set_init_state(module, MODULE_INITIALIZED);
+  while (!VoidPtrArray_is_empty(&module->_init_waiters)) {
+    _complete_module_init_request(
+        (Frame *)VoidPtrArray_pop_back_unchecked(&module->_init_waiters));
   }
-  module->_is_initialized = true;
-  if (NULL == frame_get_acc(frame)) {
-    *frame_mutable_acc(frame) = NONE_VALUE;
+}
+
+// Enqueues a frame on the main isolate that runs module's top-level code.
+// frame, if not NULL, is the main isolate frame that needs the module.
+Frame *_start_module_init(Isolate *main, Frame *frame, Module *module) {
+  module_set_init_state(module, MODULE_INITIALIZING);
+  Frame *init_frame;
+  if (NULL == frame) {
+    init_frame = isolate_create_unqueued_frame(main);
+    frame_create_scope(init_frame, module->_reflection, module, 0);
+    *frame_mutable_acc(init_frame) = NONE_VALUE;
+  } else {
+    if (NULL == frame_get_acc(frame)) {
+      *frame_mutable_acc(frame) = NONE_VALUE;
+    }
+    init_frame = _execute_as_new_frame(frame, module->_reflection, module, 0)
+                     ->parent_frame;
   }
-  Scope *new_ctx = _execute_as_new_frame(frame, module->_reflection, module, 0);
-  isolate_enqueue_frame(frame->parent_isolate, new_ctx->parent_frame);
-  FrameSet_insert(&new_ctx->parent_frame->dependent_frames, frame,
-                  sizeof(Frame *));
-  return new_ctx->parent_frame;
+  init_frame->initializing_module = module;
+  isolate_enqueue_frame(main, init_frame);
+  return init_frame;
+}
+
+// Handles a ModuleInitRequest posted to the main isolate.
+void _receive_module_init_request(Isolate *main, void *data) {
+  ModuleInitRequest *request = (ModuleInitRequest *)data;
+  switch (module_init_state(request->module)) {
+    case MODULE_INITIALIZED:
+      _complete_module_init_request(request->pending);
+      break;
+    case MODULE_UNINITIALIZED:
+      _start_module_init(main, NULL, request->module);
+      // Fallthrough.
+    case MODULE_INITIALIZING:
+      VoidPtrArray_push_back(&request->module->_init_waiters, request->pending);
+      break;
+  }
+  RELEASE(request);
+}
+
+// Makes frame wait for module to be initialized, if it is not yet. module must
+// be loaded.
+//
+// A module whose initialization has started is ready, since its own top-level
+// code calls into it, including from isolates it spawns (e.g., an actor of a
+// class it defines), which must not wait on it.
+ModuleWait _maybe_init_module(Frame *frame, Module *module) {
+  // The fast path: no locking once initialization has started.
+  if (MODULE_UNINITIALIZED != module_init_state(module)) {
+    return MODULE_READY;
+  }
+  Isolate *isolate = frame->parent_isolate;
+  Isolate *main = vm_main_isolate(isolate->vm);
+  if (isolate == main) {
+    FrameSet_insert(&_start_module_init(main, frame, module)->dependent_frames,
+                    frame, sizeof(Frame *));
+    return MODULE_WAIT_ON_INIT_FRAME;
+  }
+  Frame *pending = isolate_create_unqueued_frame(isolate);
+  // Passed back to frame when it is woken.
+  *frame_mutable_acc(pending) = *frame_get_acc(frame);
+  isolate_wait_on_frame(pending, frame);
+  ModuleInitRequest *request = MNEW(ModuleInitRequest);
+  request->module = module;
+  request->pending = pending;
+  isolate_post_message(main, _receive_module_init_request, request);
+  return MODULE_WAIT_ON_MAIN_ISOLATE;
 }
 
 BlockingCallArgs *_create_blocking_call_args(Frame *frame, Scope *scope,
@@ -790,13 +876,14 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   Scope *fn_ctx = _execute_as_new_frame(frame, self, (Module *)func->_module,
                                         func->_ins_pos);
   scope_set_function(fn_ctx, func);
-  Frame *module_main_frame =
-      _maybe_load_module(fn_ctx->parent_frame, (Module *)self->_class->_module);
-  if (NULL != module_main_frame && !func->_is_async) {
+  ModuleWait module_wait =
+      _maybe_init_module(fn_ctx->parent_frame, (Module *)self->_class->_module);
+  if (MODULE_WAIT_ON_INIT_FRAME == module_wait && !func->_is_async) {
     fn_ctx->parent_frame->state = FRAME_WAITING;
     isolate_insert_waiting_frame(fn_ctx->parent_frame->parent_isolate,
                                  fn_ctx->parent_frame);
-  } else {
+  } else if (MODULE_WAIT_ON_MAIN_ISOLATE != module_wait) {
+    // Already waiting otherwise.
     isolate_enqueue_frame(fn_ctx->parent_frame->parent_isolate,
                           fn_ctx->parent_frame);
   }
@@ -1263,21 +1350,26 @@ void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-bool _execute_LMDL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+ModuleWait _execute_LMDL(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type && INSTRUCTION_STRING != ins->type) {
     FATALF("Weird type for LMDL.");
   }
-  Module *module = modulemanager_lookup(
-      &vm->mm, ins->type == INSTRUCTION_ID ? ins->id : ins->str);
+  Module *module;
+  // Loading allocates the module's reflection in the main isolate's heap.
+  SYNCHRONIZED(vm_main_isolate(vm)->heap_access_lock, {
+    module = modulemanager_lookup(
+        &vm->mm, ins->type == INSTRUCTION_ID ? ins->id : ins->str);
+  });
   if (NULL == module) {
     raise_error(frame, scope, "Module '%s' not found.",
                 ins->type == INSTRUCTION_ID ? ins->id : ins->str);
-    return false;
+    return MODULE_READY;
   }
-  bool result = NULL != _maybe_load_module(frame, module);
+  ModuleWait module_wait = _maybe_init_module(frame, module);
   Value module_reflection = value_object(module->_reflection);
   scope_set(scope, TMP_MODULE_HOLDER, &module_reflection);
-  return result;
+  return module_wait;
 }
 
 bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
@@ -1529,11 +1621,19 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         _execute_RAIS(vm, frame, scope);
         break;
       case LMDL:
-        if (_execute_LMDL(vm, frame, scope, ins)) {
-          frame->state = FRAME_WAITING;
-          frame->wait_reason = WAITING_ON_FN_CALL;
-          scope->ins++;
-          goto end_of_loop;
+        switch (_execute_LMDL(vm, frame, scope, ins)) {
+          case MODULE_READY:
+            break;
+          case MODULE_WAIT_ON_INIT_FRAME:
+            frame->state = FRAME_WAITING;
+            frame->wait_reason = WAITING_ON_FN_CALL;
+            scope->ins++;
+            goto end_of_loop;
+          case MODULE_WAIT_ON_MAIN_ISOLATE:
+            frame->state = FRAME_WAITING;
+            frame->wait_reason = WAITING_ON_MODULE;
+            scope->ins++;
+            goto end_of_loop;
         }
         break;
       case WAIT:
@@ -1583,6 +1683,9 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
 
 void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
   isolate_mark_frame_complete(isolate, frame);
+  if (NULL != frame->initializing_module) {
+    _finish_module_init(frame->initializing_module);
+  }
   if (NULL != frame->actor_future) {
     _mark_actor_frame_complete(isolate, frame, should_push);
   }
@@ -1596,7 +1699,7 @@ bool _isolate_is_done(Isolate *isolate) {
     SYNCHRONIZED(isolate->frame_queue_lock, {
       if (FrameSet_size(&isolate->waiting_frames) == 0 &&
           FrameArray_size(&isolate->queued_frames) == 0 &&
-          VoidPtrArray_is_empty(&isolate->actor_calls)) {
+          VoidPtrArray_is_empty(&isolate->messages)) {
         is_done = true;
       }
     });
@@ -1616,7 +1719,7 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
         should_broadcast =
             FrameSet_size(&isolate->waiting_frames) == 1 &&
             FrameArray_size(&isolate->queued_frames) == 0 &&
-            VoidPtrArray_is_empty(&isolate->actor_calls) &&
+            VoidPtrArray_is_empty(&isolate->messages) &&
             FrameSet_contains(&isolate->waiting_frames,
                               isolate->keep_alive_frame, sizeof(Frame *));
       } else if (FrameSet_size(&isolate->waiting_frames) == 0 &&
@@ -1681,7 +1784,7 @@ void isolate_run(Isolate *isolate) {
   VM *vm = isolate->vm;
   Frame *frame;
 top_of_fn:
-  actor_receive_calls(isolate);
+  isolate_handle_messages(isolate);
   while (NULL != (frame = isolate_pop_frame(isolate))) {
     isolate->current_frame = frame;
     FrameState frame_state;
@@ -1701,7 +1804,8 @@ top_of_fn:
       case FRAME_WAITING:
         // Frames waiting on a future are already registered as waiting, and
         // may even have been woken already.
-        if (WAITING_ON_FUTURE != frame->wait_reason) {
+        if (WAITING_ON_FUTURE != frame->wait_reason &&
+            WAITING_ON_MODULE != frame->wait_reason) {
           isolate_insert_waiting_frame(isolate, frame);
         }
         break;
@@ -1719,7 +1823,7 @@ top_of_fn:
           &isolate->waiting_blocking_work);
       threadpool_execute_work(vm->blocking_pool, w);
     }
-    actor_receive_calls(isolate);
+    isolate_handle_messages(isolate);
   }
 
   if (isolate_maybe_collect_garbage(isolate)) {
@@ -1744,7 +1848,7 @@ top_of_fn:
     while (FrameSet_size(&isolate->waiting_frames) != 0 &&
            FrameSet_size(&isolate->waiting_frames) == waiting_frame_count &&
            isolate_queue_size(isolate) == 0 &&
-           VoidPtrArray_is_empty(&isolate->actor_calls)) {
+           VoidPtrArray_is_empty(&isolate->messages)) {
       condition_wait(isolate->frame_wait_cond);
     }
   });
