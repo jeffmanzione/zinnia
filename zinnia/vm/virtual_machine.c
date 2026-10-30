@@ -751,12 +751,61 @@ void _complete_module_init_request(Frame *pending) {
                                 /*should_push=*/false);
 }
 
+typedef struct {
+  // In the isolate the failure is posted to.
+  Frame *pending;
+  // Owned by the failure. Holds a copy of the module's error.
+  Heap *error_heap;
+  Value error;
+} ModuleInitFailure;
+
+// Handles a ModuleInitFailure posted to the isolate that requested the module,
+// raising the module's error in the frames waiting on it.
+void _receive_module_init_failure(Isolate *isolate, void *data) {
+  ModuleInitFailure *failure = (ModuleInitFailure *)data;
+  Frame *pending = failure->pending;
+  *frame_mutable_acc(pending) = value_copy(&failure->error, isolate->heap);
+  pending->state = FRAME_ERROR;
+  isolate_mark_frame_complete(isolate, pending);
+  isolate_wake_dependent_frames(isolate, pending, /*should_push=*/false);
+  heap_delete(failure->error_heap);
+  RELEASE(failure);
+}
+
+// Fails a request with module's error. Called on the main isolate's thread.
+void _fail_module_init_request(Isolate *main, Module *module, Frame *pending) {
+  ModuleInitFailure *failure = MNEW(ModuleInitFailure);
+  failure->pending = pending;
+  HeapConf heap_conf = main->vm->base_heap_conf;
+  failure->error_heap = heap_create(&heap_conf);
+  Value error = value_object(module->_init_error);
+  // Copied to a heap of its own, since only the requesting isolate may write
+  // to its heap.
+  failure->error = value_copy(&error, failure->error_heap);
+  heap_make_root(failure->error_heap, failure->error.obj);
+  isolate_post_message(pending->parent_isolate, _receive_module_init_failure,
+                       failure);
+}
+
 // Called on the main isolate's thread when module's init frame completes.
-void _finish_module_init(Module *module) {
-  module_set_init_state(module, MODULE_INITIALIZED);
+void _finish_module_init(Module *module, Frame *init_frame) {
+  Isolate *main = init_frame->parent_isolate;
+  const Value *result = frame_get_acc(init_frame);
+  const bool failed = FRAME_ERROR == init_frame->state && IS_OBJECT(result);
+  if (failed) {
+    module->_init_error = result->obj;
+    SYNCHRONIZED(main->heap_access_lock,
+                 { heap_make_root(main->heap, module->_init_error); });
+  }
+  module_set_init_state(module, failed ? MODULE_FAILED : MODULE_INITIALIZED);
   while (!VoidPtrArray_is_empty(&module->_init_waiters)) {
-    _complete_module_init_request(
-        (Frame *)VoidPtrArray_pop_back_unchecked(&module->_init_waiters));
+    Frame *pending =
+        (Frame *)VoidPtrArray_pop_back_unchecked(&module->_init_waiters);
+    if (failed) {
+      _fail_module_init_request(main, module, pending);
+    } else {
+      _complete_module_init_request(pending);
+    }
   }
 }
 
@@ -788,6 +837,9 @@ void _receive_module_init_request(Isolate *main, void *data) {
     case MODULE_INITIALIZED:
       _complete_module_init_request(request->pending);
       break;
+    case MODULE_FAILED:
+      _fail_module_init_request(main, request->module, request->pending);
+      break;
     case MODULE_UNINITIALIZED:
       _start_module_init(main, NULL, request->module);
       // Fallthrough.
@@ -804,13 +856,20 @@ void _receive_module_init_request(Isolate *main, void *data) {
 // A module whose initialization has started is ready, since its own top-level
 // code calls into it, including from isolates it spawns (e.g., an actor of a
 // class it defines), which must not wait on it.
+//
+// Other isolates get the error of a module whose initialization failed. The
+// main isolate's frames, one of which already got it, do not.
 ModuleWait _maybe_init_module(Frame *frame, Module *module) {
   // The fast path: no locking once initialization has started.
-  if (MODULE_UNINITIALIZED != module_init_state(module)) {
+  const ModuleInitState state = module_init_state(module);
+  if (MODULE_INITIALIZING == state || MODULE_INITIALIZED == state) {
     return MODULE_READY;
   }
   Isolate *isolate = frame->parent_isolate;
   Isolate *main = vm_main_isolate(isolate->vm);
+  if (MODULE_FAILED == state && isolate == main) {
+    return MODULE_READY;
+  }
   if (isolate == main) {
     FrameSet_insert(&_start_module_init(main, frame, module)->dependent_frames,
                     frame, sizeof(Frame *));
@@ -1700,7 +1759,7 @@ void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
   }
   isolate_mark_frame_complete(isolate, frame);
   if (NULL != frame->initializing_module) {
-    _finish_module_init(frame->initializing_module);
+    _finish_module_init(frame->initializing_module, frame);
   }
   if (NULL != frame->actor_future) {
     _mark_actor_frame_complete(isolate, frame, should_push);
@@ -1788,8 +1847,9 @@ void _isolate_handle_error(Isolate *isolate, Frame *frame) {
       _mark_frame_complete(isolate, frame, /*should_push=*/true);
       return;
     }
-    if (frame == isolate->start_frame && NULL != isolate->future) {
-      // The error is raised in the frames awaiting the isolate.
+    if ((frame == isolate->start_frame && NULL != isolate->future) ||
+        NULL != frame->initializing_module) {
+      // The error is raised in the frames awaiting the isolate or module.
       _mark_frame_complete(isolate, frame, /*should_push=*/true);
       return;
     }

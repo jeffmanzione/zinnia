@@ -82,6 +82,9 @@ struct Module_ {
   // Pending frames in other isolates to complete once the main isolate has
   // initialized this module. Only touched on the main isolate's thread.
   VoidPtrArray _init_waiters;
+  // The error its top-level code raised, if MODULE_FAILED. In the main
+  // isolate's heap.
+  Object *_init_error;
   Mutex _write_mutex;
 
   const char *_full_path;

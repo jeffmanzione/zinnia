@@ -227,10 +227,10 @@ class ActorTest {
   }
 
   @test.Test
-  method test_missing_method_fails_future() {
+  method test_missing_method_raises() {
     counter = async.spawn_actor(Counter)
     test.expect_raises(
-        () -> await async.__actor_call(counter.target(), 'missing', None))
+        () -> async.__actor_call(counter.target(), 'missing', None))
   }
 
   @test.Test
