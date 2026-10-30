@@ -878,7 +878,8 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   scope_set_function(fn_ctx, func);
   ModuleWait module_wait =
       _maybe_init_module(fn_ctx->parent_frame, (Module *)self->_class->_module);
-  if (MODULE_WAIT_ON_INIT_FRAME == module_wait && !func->_is_async) {
+  if (MODULE_WAIT_ON_INIT_FRAME == module_wait) {
+    // Runs once the module is initialized, whether or not it is async.
     fn_ctx->parent_frame->state = FRAME_WAITING;
     isolate_insert_waiting_frame(fn_ctx->parent_frame->parent_isolate,
                                  fn_ctx->parent_frame);
@@ -1681,7 +1682,22 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
                        /*should_push=*/should_push);
 }
 
+// Keeps the result of a spawned isolate's start frame until the isolate is done
+// and passes it to its future.
+void _isolate_keep_result(Isolate *isolate, Frame *frame) {
+  isolate->result = *frame_get_acc(frame);
+  isolate->failed = FRAME_ERROR == frame->state;
+  if (IS_OBJECT(&isolate->result)) {
+    // The frame may be deleted before the isolate is done.
+    SYNCHRONIZED(isolate->heap_access_lock,
+                 { heap_make_root(isolate->heap, isolate->result.obj); });
+  }
+}
+
 void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
+  if (frame == frame->parent_isolate->start_frame) {
+    _isolate_keep_result(frame->parent_isolate, frame);
+  }
   isolate_mark_frame_complete(isolate, frame);
   if (NULL != frame->initializing_module) {
     _finish_module_init(frame->initializing_module);
@@ -1734,8 +1750,8 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
 void _isolate_broadcast_to_parent(Isolate *isolate) {
   Frame *isolate_frame = future_get_frame(isolate->future);
 
-  if (isolate->keep_alive) {
-    const Value *actor_result = frame_get_acc(isolate->current_frame);
+  if (isolate->keep_alive && !isolate->failed) {
+    const Value *actor_result = &isolate->result;
     if (IS_OBJECT(actor_result)) {
       // Must keep actor objects since other isolates assume it will always
       // exist. In the future, there must be a better cleanup process.
@@ -1750,20 +1766,30 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
   } else {
     SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
       *frame_mutable_acc(isolate_frame) =
-          value_copy(frame_get_acc(isolate->current_frame),
-                     isolate_frame->parent_isolate->heap);
+          value_copy(&isolate->result, isolate_frame->parent_isolate->heap);
     });
   }
   isolate_remove_waiting_frame(isolate_frame->parent_isolate, isolate_frame);
-  isolate_frame->state = FRAME_COMPLETE;
+  // Raises the error in the frames awaiting the isolate.
+  isolate_frame->state = isolate->failed ? FRAME_ERROR : FRAME_COMPLETE;
+  isolate->future = NULL;
   _mark_frame_complete(isolate_frame->parent_isolate, isolate_frame,
                        /*should_push=*/false);
+  if (isolate->failed && isolate->keep_alive) {
+    // There is no actor to keep alive.
+    isolate_remove_waiting_frame(isolate, isolate->keep_alive_frame);
+  }
 }
 
 void _isolate_handle_error(Isolate *isolate, Frame *frame) {
   if (NULL == frame->parent_frame ||
       frame->parent_isolate != frame->parent_frame->parent_isolate) {
     if (NULL != frame->actor_future) {
+      _mark_frame_complete(isolate, frame, /*should_push=*/true);
+      return;
+    }
+    if (frame == isolate->start_frame && NULL != isolate->future) {
+      // The error is raised in the frames awaiting the isolate.
       _mark_frame_complete(isolate, frame, /*should_push=*/true);
       return;
     }

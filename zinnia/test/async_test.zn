@@ -22,6 +22,30 @@ class Counter {
 }
 
 @async.Actor
+class FailsToConstruct {
+  new() {
+    raise error.Error('intentional')
+  }
+  method get() {
+    return 1
+  }
+}
+
+def raise_error(x) {
+  raise error.Error(x)
+}
+
+def side_task() async {
+  await async.sleep(0.05)
+  return 'side'
+}
+
+def start_side_task(x) {
+  side_task()
+  return x
+}
+
+@async.Actor
 class Relay {
   new() {}
   method inc_other(other, n) {
@@ -129,6 +153,18 @@ class IsolateTest {
   }
 
   @test.Test
+  method test_spawn_isolate_error_propagates() {
+    isolate = async.spawn_isolate(fn: raise_error, args: 'intentional')
+    test.expect_raises(() -> await isolate.start())
+  }
+
+  @test.Test
+  method test_spawn_isolate_returns_start_function_result() {
+    isolate = async.spawn_isolate(fn: start_side_task, args: 'result')
+    expect(await isolate.start(), 'result')
+  }
+
+  @test.Test
   method test_create_process_alias() {
     process = async.create_process(fn: (x) -> x + 1, args: 1)
     expect(await process.start(), 2)
@@ -144,6 +180,11 @@ class ActorTest {
     expect(await counter.inc(), 1)
     expect(await counter.inc(), 2)
     test.expect_is(counter.target(), ActorRef)
+  }
+
+  @test.Test
+  method test_actor_constructor_error_propagates() {
+    test.expect_raises(() -> async.spawn_actor(FailsToConstruct))
   }
 
   @test.Test

@@ -142,6 +142,7 @@ Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   // The frame has no parent_frame since the caller's frames belong to another
   // thread.
   Frame *new_frame = isolate_create_frame(new_isolate);
+  new_isolate->start_frame = new_frame;
   Scope *new_ctx;
 
   const Function *f;
