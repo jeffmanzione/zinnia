@@ -138,7 +138,7 @@ Value spawn_isolate_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
 
   VM *vm = frame->parent_isolate->vm;
   Isolate *new_isolate = vm_create_isolate(vm);
-  new_isolate->keep_alive = !IS_NONE(keep_alive_arg);
+  new_isolate->keep_alive = IS_TRUE(keep_alive_arg);
   // The frame has no parent_frame since the caller's frames belong to another
   // thread.
   Frame *new_frame = isolate_create_frame(new_isolate);

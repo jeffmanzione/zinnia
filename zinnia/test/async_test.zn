@@ -123,6 +123,12 @@ class IsolateTest {
   }
 
   @test.Test
+  method test_spawn_isolate_returns_objects() {
+    isolate = async.spawn_isolate(fn: (x) -> [x, cat(x, '!')], args: 'hi')
+    expect(await isolate.start(), ['hi', 'hi!'])
+  }
+
+  @test.Test
   method test_create_process_alias() {
     process = async.create_process(fn: (x) -> x + 1, args: 1)
     expect(await process.start(), 2)
