@@ -710,18 +710,28 @@ typedef struct {
   Object *self;
 } BlockingCallArgs;
 
+// Runs on a thread of the blocking pool.
 void _execute_blocking(BlockingCallArgs *args) {
   NativeFn native_fn = (NativeFn)args->func->_native_fn;
-  *frame_mutable_acc(args->frame) =
-      native_fn(args->frame, args->scope, args->self,
-                (Value *)frame_get_acc(args->frame));
+  native_set_blocking_frame(args->frame);
+  Value result = native_fn(args->frame, args->scope, args->self,
+                           (Value *)frame_get_acc(args->frame));
+  native_set_blocking_frame(NULL);
+  Isolate *isolate = args->frame->parent_isolate;
+  SYNCHRONIZED(isolate->heap_access_lock,
+               { *frame_mutable_acc(args->frame) = result; });
 }
 
+// Runs on a thread of the blocking pool.
 void _execute_blocking_callback(BlockingCallArgs *args) {
-  isolate_remove_blocking_frame(args->frame->parent_isolate, args->frame);
-  args->frame->state = FRAME_COMPLETE;
-  _mark_frame_complete(args->frame->parent_isolate, args->frame,
-                       /*should_push=*/false);
+  Isolate *isolate = args->frame->parent_isolate;
+  // Holds the heap lock so the isolate's garbage collector cannot run while
+  // the frame, and its result, are in none of the isolate's frame sets.
+  SYNCHRONIZED(isolate->heap_access_lock, {
+    isolate_remove_blocking_frame(isolate, args->frame);
+    args->frame->state = FRAME_COMPLETE;
+    _mark_frame_complete(isolate, args->frame, /*should_push=*/false);
+  });
   RELEASE(args);
 }
 
@@ -1729,16 +1739,17 @@ void _mark_actor_frame_complete(Isolate *isolate, Frame *frame,
                                 bool should_push) {
   Frame *actor_frame = future_get_frame(frame->actor_future);
   Isolate *callee_isolate = actor_frame->parent_isolate;
+  // Holds the heap lock until the result reaches the frames waiting on it, so
+  // the caller's garbage collector cannot delete it while actor_frame is in
+  // none of the caller's frame sets.
   SYNCHRONIZED(callee_isolate->heap_access_lock, {
     *frame_mutable_acc(actor_frame) =
         value_copy(frame_get_acc(frame), callee_isolate->heap);
+    actor_frame->state = frame->state;
+    isolate_remove_waiting_frame(callee_isolate, actor_frame);
+    _mark_frame_complete(callee_isolate, actor_frame,
+                         /*should_push=*/should_push);
   });
-
-  actor_frame->state = frame->state;
-
-  isolate_remove_waiting_frame(callee_isolate, actor_frame);
-  _mark_frame_complete(callee_isolate, actor_frame,
-                       /*should_push=*/should_push);
 }
 
 // Keeps the result of a spawned isolate's start frame until the isolate is done
@@ -1757,7 +1768,6 @@ void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
   if (frame == frame->parent_isolate->start_frame) {
     _isolate_keep_result(frame->parent_isolate, frame);
   }
-  isolate_mark_frame_complete(isolate, frame);
   if (NULL != frame->initializing_module) {
     _finish_module_init(frame->initializing_module, frame);
   }
@@ -1765,6 +1775,9 @@ void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
     _mark_actor_frame_complete(isolate, frame, should_push);
   }
   isolate_wake_dependent_frames(isolate, frame, should_push);
+  // Last, since the frame's isolate deletes completed frames when it collects
+  // garbage, which can be on another thread than this one.
+  isolate_mark_frame_complete(isolate, frame);
 }
 
 bool _isolate_is_done(Isolate *isolate) {
@@ -1808,32 +1821,30 @@ bool _isolate_should_broadcast_to_parent(Isolate *isolate) {
 
 void _isolate_broadcast_to_parent(Isolate *isolate) {
   Frame *isolate_frame = future_get_frame(isolate->future);
-
-  if (isolate->keep_alive && !isolate->failed) {
-    const Value *actor_result = &isolate->result;
-    if (IS_OBJECT(actor_result)) {
-      // Must keep actor objects since other isolates assume it will always
-      // exist. In the future, there must be a better cleanup process.
-      heap_make_root(isolate->heap, actor_result->obj);
-      SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
-        *frame_mutable_acc(isolate_frame) = value_object(create_actor_object(
-            isolate_frame->parent_isolate->heap, isolate, actor_result->obj));
-      });
-    } else {
-      *frame_mutable_acc(isolate_frame) = *actor_result;
-    }
-  } else {
-    SYNCHRONIZED(isolate_frame->parent_isolate->heap_access_lock, {
-      *frame_mutable_acc(isolate_frame) =
-          value_copy(&isolate->result, isolate_frame->parent_isolate->heap);
-    });
+  Isolate *parent = isolate_frame->parent_isolate;
+  const Value *result = &isolate->result;
+  const bool is_actor =
+      isolate->keep_alive && !isolate->failed && IS_OBJECT(result);
+  if (is_actor) {
+    // Must keep actor objects since other isolates assume it will always
+    // exist. In the future, there must be a better cleanup process.
+    SYNCHRONIZED(isolate->heap_access_lock,
+                 { heap_make_root(isolate->heap, result->obj); });
   }
-  isolate_remove_waiting_frame(isolate_frame->parent_isolate, isolate_frame);
-  // Raises the error in the frames awaiting the isolate.
-  isolate_frame->state = isolate->failed ? FRAME_ERROR : FRAME_COMPLETE;
-  isolate->future = NULL;
-  _mark_frame_complete(isolate_frame->parent_isolate, isolate_frame,
-                       /*should_push=*/false);
+  // Holds the heap lock until the result reaches the frames waiting on it, so
+  // the parent's garbage collector cannot delete it while isolate_frame is in
+  // none of the parent's frame sets.
+  SYNCHRONIZED(parent->heap_access_lock, {
+    *frame_mutable_acc(isolate_frame) =
+        is_actor ? value_object(
+                       create_actor_object(parent->heap, isolate, result->obj))
+                 : value_copy(result, parent->heap);
+    isolate_remove_waiting_frame(parent, isolate_frame);
+    // Raises the error in the frames awaiting the isolate.
+    isolate_frame->state = isolate->failed ? FRAME_ERROR : FRAME_COMPLETE;
+    isolate->future = NULL;
+    _mark_frame_complete(parent, isolate_frame, /*should_push=*/false);
+  });
   if (isolate->failed && isolate->keep_alive) {
     // There is no actor to keep alive.
     isolate_remove_waiting_frame(isolate, isolate->keep_alive_frame);

@@ -70,6 +70,7 @@ Value native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
   SYNCHRONIZED(frame->parent_isolate->heap_access_lock, {
     err = error_new(frame, scope,
                     string_new(frame->parent_isolate->heap, buffer, num_chars));
+    native_pin_blocking_object(frame->parent_isolate, err);
   });
   return raise_error_with_object(frame, scope, err);
 }
