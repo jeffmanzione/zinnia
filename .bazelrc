@@ -1,6 +1,2 @@
 common --registry=https://bcr.bazel.build
 common --registry=https://raw.githubusercontent.com/jeffmanzione/bazel-registry/refs/heads/main/
-# GCC 15 defaults to C23, in which a declaration such as `f()` takes no
-# arguments, which breaks dependencies that call such functions with some.
-build --conlyopt=-std=gnu17
-build --host_conlyopt=-std=gnu17
