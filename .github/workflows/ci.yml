@@ -15,16 +15,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Bazel caches the C++ toolchain it configures for the installed compiler,
+      # whose include paths break the build once the runner's compiler changes.
+      - name: Get compiler version
+        id: compiler
+        run: echo "version=$(gcc -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Bazel
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/bazel
             ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel') }}-${{ github.sha }}
+          key: bazel-${{ runner.os }}-gcc${{ steps.compiler.outputs.version }}-${{ hashFiles('.bazelversion', 'MODULE.bazel') }}-${{ github.sha }}
           restore-keys: |
-            bazel-${{ runner.os }}-${{ hashFiles('.bazelversion', 'MODULE.bazel') }}-
-            bazel-${{ runner.os }}-
+            bazel-${{ runner.os }}-gcc${{ steps.compiler.outputs.version }}-${{ hashFiles('.bazelversion', 'MODULE.bazel') }}-
+            bazel-${{ runner.os }}-gcc${{ steps.compiler.outputs.version }}-
 
       # Bazelisk is preinstalled as `bazel` and uses the version in .bazelversion.
       - name: Build
