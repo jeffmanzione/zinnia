@@ -9,6 +9,21 @@
 
 #include "zinnia/entity/class/classes_def.h"
 #include "zinnia/entity/string/string.h"
+#include "zinnia/util/platform.h"
+
+#ifdef OS_WINDOWS
+static __declspec(thread) Frame *blocking_frame_ = NULL;
+#else
+static __thread Frame *blocking_frame_ = NULL;
+#endif
+
+void native_set_blocking_frame(Frame *frame) { blocking_frame_ = frame; }
+
+void native_pin_blocking_object(Isolate *isolate, Object *obj) {
+  if (NULL != blocking_frame_ && blocking_frame_->parent_isolate == isolate) {
+    heap_inc_edge(isolate->heap, blocking_frame_->_reflection, obj);
+  }
+}
 
 Function *native_method(Class *class, const char name[], NativeFn native_fn) {
   Function *fn = class_add_function(class, name, 0, false, false);
@@ -51,8 +66,10 @@ Class *native_class(Module *module, const char name[], ObjInitFn init_fn,
 
 Object *native_blocking_new(Isolate *isolate, Class *class) {
   Object *object;
-  SYNCHRONIZED(isolate->heap_access_lock,
-               { object = heap_new(isolate->heap, class); });
+  SYNCHRONIZED(isolate->heap_access_lock, {
+    object = heap_new(isolate->heap, class);
+    native_pin_blocking_object(isolate, object);
+  });
   return object;
 }
 
