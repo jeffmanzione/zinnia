@@ -7,10 +7,8 @@
 #include "zinnia/vm/vm.h"
 
 #define ZNBUNDLE_EXTENSION ".znbundle"
-// Deprecated: bundles were previously called seeds.
-#define ZNSEED_EXTENSION ".znseed"
 
-// Returns whether filepath names a bundle (.znbundle or legacy .znseed).
+// Returns whether filepath names a bundle (.znbundle).
 bool is_bundle_file(const char filepath[]);
 
 struct zinnia_module_info {

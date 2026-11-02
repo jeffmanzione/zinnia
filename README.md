@@ -13,7 +13,7 @@ It supports compilation of programs to the following outputs:
 - **Intermediate language** (.zna): An intermediate program representation of the source that is optimized.
 - **Bytecode** (.znb): A bytecode representation of the program.
 - **Bundle** (.znbundle): Archives of modules (and native libraries) that can be
-  unpacked by Zinnia at runtime. The older .znseed extension is still accepted.
+  unpacked by Zinnia at runtime.
 
 .zna, .znb, and .znbundle files can be run by the `zinnia` executable.
 
@@ -45,8 +45,8 @@ git clone https://github.com/jeffmanzione/zinnia.git && cd zinnia
 args=(
     //zinnia          # Runner
     //zinnia:zinniac  # Compiler
-    //zinnia:zinnia-package  # Packager (formerly zinniap)
-    //zinnia:zinnia-bundle   # Bundler (formerly zinnias)
+    //zinnia:zinnia-package  # Packager
+    //zinnia:zinnia-bundle   # Bundler
 )
 # Build above binaries
 bazel build -c opt "${args[@]}"
@@ -96,8 +96,7 @@ module, or `1` if the program raises an uncaught error.
 - `zinnia_library`: Compiles .zn sources to .zna and .znb files.
 - `zinnia_binary`: Packages a program into a native executable.
 - `zinnia_cc_library`: Statically links a C library into a program as a module.
-- `zinnia_bundle`: Bundles modules into a .znbundle archive (formerly
-  `zinnia_seed`).
+- `zinnia_bundle`: Bundles modules into a .znbundle archive.
 - `zinnia_test`: Runs a program as a test, which passes if the program exits
   with code `0`.
 
