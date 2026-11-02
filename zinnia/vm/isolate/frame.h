@@ -6,7 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 
-#include "zinnia/entity/value.h"
+#include "zinnia/value/value.h"
 #include "zinnia/vm/isolate/isolates.h"
 
 const char *frame_state_str(FrameState state);

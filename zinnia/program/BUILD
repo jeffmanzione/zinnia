@@ -11,7 +11,7 @@ cc_library(
     deps = [
         ":op",
         "//zinnia/alloc",
-        "//zinnia/entity:primitive",
+        "//zinnia/value:primitive",
         "//zinnia/util:error",
         "//zinnia/util:string_util",
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",

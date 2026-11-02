@@ -6,7 +6,7 @@
 #include "zinnia/vm/isolate/actor_ref.h"
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/class/classes_def.h"
+#include "zinnia/value/class/classes_def.h"
 
 struct ActorRef_ {
   Object *actor_object;

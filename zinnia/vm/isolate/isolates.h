@@ -9,14 +9,14 @@
 #include "c-data-structures/arraylike.h"
 #include "c-data-structures/setlike.h"
 #include "rzalloc/rzalloc.h"
-#include "zinnia/entity/module/module.h"
-#include "zinnia/entity/object.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/sync/critical_section.h"
 #include "zinnia/util/sync/mutex.h"
 #include "zinnia/util/sync/thread.h"
 #include "zinnia/util/sync/threadpool.h"
+#include "zinnia/value/module/module.h"
+#include "zinnia/value/object.h"
 
 typedef struct _VM VM;
 typedef struct __Scope Scope;

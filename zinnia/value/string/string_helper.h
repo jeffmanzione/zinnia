@@ -1,0 +1,21 @@
+// string_helper.h
+//
+// Created on: Oct 5, 2020
+//     Author: Jeff Manzione
+
+#ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_STRING_STRING_HELPER_H_
+#define COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_STRING_STRING_HELPER_H_
+
+#include "zinnia/heap/heap.h"
+#include "zinnia/value/object.h"
+
+Object *string_new(Heap *heap, const char src[], size_t len);
+Object *istring_new(Heap *heap, const char src[], size_t len);
+Object *istring_new_no_intern(Heap *heap, const char src[], size_t len);
+bool extract_string(const Value *e, char **raw_str, int *len);
+bool extract_string_obj(const Object *obj, char **raw_str, int *len);
+char *value_string_copy(const Value *e);
+const char *intern_value(const Value *e);
+int value_string_len(const Value *e);
+
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_STRING_STRING_HELPER_H_ */

@@ -5,11 +5,11 @@
 
 #include "zinnia/vm/isolate/scope.h"
 
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/function/function.h"
-#include "zinnia/entity/module/modules.h"
-#include "zinnia/entity/object.h"
 #include "zinnia/program/bytecode.h"
+#include "zinnia/value/class/classes_def.h"
+#include "zinnia/value/function/function.h"
+#include "zinnia/value/module/modules.h"
+#include "zinnia/value/object.h"
 #include "zinnia/vm/intern.h"
 #include "zinnia/vm/isolate/isolates.h"
 
@@ -100,7 +100,7 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
     // allocated by a different heap from the object. This needs to be resolved.
     //
     // if (f->_is_anon) {
-    //   *tmp = entity_object(f_ref);
+    //   *tmp = value_object(f_ref);
     //   return tmp;
     // } else {
     //   return object_set_member_obj(task->parent_process->heap, ctx->self.obj,

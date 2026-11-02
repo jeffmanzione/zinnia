@@ -9,10 +9,10 @@
 #include "c-data-structures/maplike.h"
 #include "c-data-structures/stable_maplike.h"
 #include "file-utils/file_info.h"
-#include "zinnia/entity/module/module.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
+#include "zinnia/value/module/module.h"
 
 typedef const char *(*InternFn)(const char *);
 

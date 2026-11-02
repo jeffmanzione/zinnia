@@ -11,16 +11,16 @@
 // and target heaps, the following must occur in the specified order:
 //   1. The soure and target heaps must be locked.
 //   2. The object from the source heap must be DEEPLY copied in the target heap
-//      using entity_copy().
+//      using value_copy().
 //   3. Locks are released.
 
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_HEAP_HEAP_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_HEAP_HEAP_H_
 
 #include "c-data-structures/maplike.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/value.h"
 #include "zinnia/util/error.h"
+#include "zinnia/value/object.h"
+#include "zinnia/value/value.h"
 
 DEFINE_MAPLIKE(ObjectTypeCountMap, Class *, int);
 DEFINE_MAPLIKE(ObjectCopyMap, Object *, Object *);
@@ -87,44 +87,44 @@ void heapprofile_delete(HeapProfile *hp);
  */
 struct ValueCopier_ {
   Heap *target;
-  /* Map of entities in source to their copies in target.*/
+  /* Map of values in source to their copies in target.*/
   ObjectCopyMap copy_map;
 };
 
 typedef struct ValueCopier_ ValueCopier;
 
 /**
- * @brief Initializes an EntityCopier.
+ * @brief Initializes a ValueCopier.
  *
- * @param copier The EntityCopier to initialize.
+ * @param copier The ValueCopier to initialize.
  * @param target The heap into which copies should be created.
  */
 void valuecopier_init(ValueCopier *copier, Heap *target);
 
 /**
- * @brief Finalizes the EntityCopier, destroying its copy state.
+ * @brief Finalizes the ValueCopier, destroying its copy state.
  *
  * @param copier
  */
 void valuecopier_finalize(ValueCopier *copier);
 
 /**
- * @brief Creates a copy of an Entity.
+ * @brief Creates a copy of a Value.
  *
- * @param copier The EntityCopier to create the copy.
- * @param e The entity to copy.
- * @return The newly-created entity.
+ * @param copier The ValueCopier to create the copy.
+ * @param e The value to copy.
+ * @return The newly-created value.
  */
 Value valuecopier_copy(ValueCopier *copier, const Value *e);
 
 /**
- * @brief Creates a deep copy of an Entity in a Heap and returns it.
+ * @brief Creates a deep copy of a Value in a Heap and returns it.
  *
  * This is only for use when copying one object. If multiple objects are being
  * copied and they should share the same underlying deep copies, then
- * EntityCopier should be used instead.
+ * ValueCopier should be used instead.
  *
- * @param e The entity to be copied.
+ * @param e The value to be copied.
  * @param heap The target heap for the copy.
  * @return The newly-created copy of e in heap.
  */

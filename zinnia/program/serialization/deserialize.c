@@ -5,9 +5,9 @@
 
 #include "zinnia/program/serialization/deserialize.h"
 
-#include "zinnia/entity/primitive.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/util/error.h"
+#include "zinnia/value/primitive.h"
 
 #define deserialize_type(file, type, p) \
   deserialize_bytes(file, sizeof(type), ((char *)p), sizeof(type))

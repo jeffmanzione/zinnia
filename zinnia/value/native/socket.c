@@ -1,0 +1,244 @@
+// socket.c
+//
+// Created on: Jan 27, 2019
+//     Author: Jeff Manzione
+
+#include "zinnia/value/native/socket.h"
+
+#include "zinnia/util/socket.h"
+
+#define BUFFER_SIZE 4096
+#define SOCKET_ERROR (-1)
+
+static Class *Class_SocketHandle;
+static Class *Class_Socket;
+
+static char *LOCAL_ADDRESS_ERROR_MESSAGES[] = {
+    "OK",
+    "socket() call failed",
+    "connect() call failed",
+    "getsocketname() call failed",
+    "inet_ntop() call failed",
+};
+
+Value SocketHandle_constructor_(Frame *frame, Scope *ctx, Object *obj,
+                                Value *args);
+
+void Socket_init_(Object *obj) {}
+void Socket_delete_(Object *obj) {
+  socket_delete((Socket *)obj->_internal_obj);
+}
+void SocketHandle_init_(Object *obj) {}
+void SocketHandle_delete_(Object *obj) {
+  if (NULL == obj->_internal_obj) {
+    return;
+  }
+  sockethandle_delete((SocketHandle *)obj->_internal_obj);
+}
+
+Value Socket_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  EXTRACT_TUPLE_ARGS(tuple, args, 6, frame, ctx);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t domain, tuple, 0);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t type, tuple, 1);
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t protocol, tuple, 2);
+  EXCTRACT_STRING_OR_THROW(host, host_len, tuple_get(tuple, 3));
+  EXTRACT_INT_AT_INDEX_OR_THROW(const int64_t port, tuple, 4);
+  EXTRACT_BOOL_AT_INDEX_OR_THROW(const bool is_server, tuple, 5);
+
+  const uint64_t address = socket_inet_address(host, host_len);
+
+  Socket *socket = socket_create(domain, type, protocol, address, port);
+
+  obj->_internal_obj = socket;
+  if (is_server) {
+    if (!socket_is_valid(socket)) {
+      return raise_error(frame, ctx, "Invalid socket.");
+    }
+    if (SOCKET_ERROR == socket_bind(socket)) {
+      return raise_error(frame, ctx, "Could not bind to socket.");
+    }
+    if (SOCKET_ERROR == socket_listen(socket, port)) {
+      return raise_error(frame, ctx, "Could not listen to socket.");
+    }
+  }
+  return value_object(obj);
+}
+
+Value Socket_close_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(frame, ctx, "Weird Socket error.");
+  }
+  socket_close(socket);
+  return NONE_VALUE;
+}
+
+Value Socket_accept_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
+  }
+  SocketHandle *sh = socket_accept(socket);
+  Object *socket_handle =
+      native_blocking_new(frame->parent_isolate, Class_SocketHandle);
+  socket_handle->_internal_obj = sh;
+  return value_object(socket_handle);
+}
+
+Value Socket_host_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(frame, ctx, "Weird Socket error.");
+  }
+
+  char host_buf[INET_ADDRSTRLEN];
+  const AddressLookupStatus status = socket_address(socket, host_buf);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return value_object(string_new(frame->parent_isolate->heap, host_buf,
+                                 strnlen(host_buf, INET_ADDRSTRLEN)));
+}
+
+Value Socket_port_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return raise_error(frame, ctx, "Weird Socket error.");
+  }
+
+  int port;
+  const AddressLookupStatus status = socket_port(socket, &port);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return value_int(port);
+}
+
+Value Socket_connect_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  Socket *socket = (Socket *)obj->_internal_obj;
+  if (NULL == socket) {
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
+  }
+  SocketHandle *sh = socket_connect(socket);
+  Object *socket_handle =
+      native_blocking_new(frame->parent_isolate, Class_SocketHandle);
+  socket_handle->_internal_obj = sh;
+  return value_object(socket_handle);
+}
+
+Value SocketHandle_close_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
+  if (NULL == sh) {
+    return raise_error(frame, ctx, "Weird Socket error.");
+  }
+  sockethandle_close(sh);
+  return NONE_VALUE;
+}
+
+Value SocketHandle_send_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
+  if (NULL == sh) {
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
+  }
+
+  char *msg;
+  int msg_len;
+  const bool is_string = extract_string(args, &msg, &msg_len);
+
+  if (is_string) {
+    sockethandle_send(sh, msg, msg_len);
+    return NONE_VALUE;
+  } else if (IS_CLASS(args, Class_Array)) {
+    Array *arr = args->obj->_internal_obj;
+    int i, arr_len = Array_size(arr);
+    for (i = 0; i < arr_len; ++i) {
+      char *msg;
+      int msg_len;
+      const bool is_string =
+          extract_string(Array_get_ref_unchecked(arr, i), &msg, &msg_len);
+      if (!is_string) {
+        return native_blocking_raise_error(
+            frame, ctx, "Cannot send non-string at index %d.", i);
+      }
+      sockethandle_send(sh, msg, msg_len);
+    }
+    return NONE_VALUE;
+  } else {
+    return native_blocking_raise_error(frame, ctx, "Cannot send non-string.");
+  }
+}
+
+Value SocketHandle_receive_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
+  SocketHandle *sh = (SocketHandle *)obj->_internal_obj;
+  if (NULL == sh) {
+    return native_blocking_raise_error(frame, ctx, "Weird Socket error.");
+  }
+
+  char buf[BUFFER_SIZE];
+  const int32_t chars_received = sockethandle_receive(sh, buf, BUFFER_SIZE);
+  if (chars_received == 0) {
+    return NONE_VALUE;
+  }
+  if (chars_received < 0) {
+    return native_blocking_raise_error(
+        frame, ctx, "Invalid connection. recv() returned %d", chars_received);
+  }
+  return value_object(
+      native_blocking_string_new(frame->parent_isolate, buf, chars_received));
+}
+
+Value init_sockets_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  sockets_init();
+  return NONE_VALUE;
+}
+
+Value cleanup_sockets_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  sockets_cleanup();
+  return NONE_VALUE;
+}
+
+Value lookup_local_address_(Frame *frame, Scope *ctx, Object *obj,
+                            Value *args) {
+  char buf[INET_ADDRSTRLEN];
+  const AddressLookupStatus status = local_ip_address(buf);
+
+  if (status != ADDRESS_LOOKUP_STATUS_SUCCESS) {
+    return raise_error(frame, ctx, "Failed to look up local address. Error: %s",
+                       LOCAL_ADDRESS_ERROR_MESSAGES[status]);
+  }
+
+  return value_object(string_new(frame->parent_isolate->heap, buf,
+                                 strnlen(buf, INET_ADDRSTRLEN)));
+}
+
+void socket_add_native(ModuleManager *mm, Module *socket) {
+  native_function(socket, global_intern("__init"), init_sockets_);
+  native_function(socket, global_intern("__cleanup"), cleanup_sockets_);
+  native_function(socket, global_intern("__lookup_local_address"),
+                  lookup_local_address_);
+  Class_SocketHandle = native_class(socket, global_intern("SocketHandle"),
+                                    SocketHandle_init_, SocketHandle_delete_);
+  native_blocking_method(Class_SocketHandle, global_intern("send"),
+                         SocketHandle_send_);
+  native_blocking_method(Class_SocketHandle, global_intern("receive"),
+                         SocketHandle_receive_);
+  native_method(Class_SocketHandle, global_intern("close"),
+                SocketHandle_close_);
+
+  Class_Socket = native_class(socket, global_intern("Socket"), Socket_init_,
+                              Socket_delete_);
+  native_method(Class_Socket, global_intern("new"), Socket_constructor_);
+  native_method(Class_Socket, global_intern("host"), Socket_host_);
+  native_method(Class_Socket, global_intern("port"), Socket_port_);
+  native_blocking_method(Class_Socket, global_intern("accept"), Socket_accept_);
+  native_blocking_method(Class_Socket, global_intern("connect"),
+                         Socket_connect_);
+  native_method(Class_Socket, global_intern("close"), Socket_close_);
+}

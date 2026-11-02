@@ -6,9 +6,9 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_SCOPE_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_SCOPE_H_
 
-#include "zinnia/entity/module/module.h"
-#include "zinnia/entity/object.h"
 #include "zinnia/program/instruction.h"
+#include "zinnia/value/module/module.h"
+#include "zinnia/value/object.h"
 #include "zinnia/vm/isolate/isolates.h"
 
 void scope_init(Scope *ctx, Object *self, Module *module,

@@ -7,8 +7,8 @@
 
 #include "rzalloc/rzalloc.h"
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/class/classes_def.h"
 #include "zinnia/util/sync/mutex.h"
+#include "zinnia/value/class/classes_def.h"
 #include "zinnia/vm/isolate/frame.h"
 #include "zinnia/vm/isolate/isolates.h"
 

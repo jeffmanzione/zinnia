@@ -9,11 +9,11 @@
 
 #include "rzalloc/rzalloc.h"
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/array/array.h"
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/string/string.h"
-#include "zinnia/entity/tuple/tuple.h"
+#include "zinnia/value/array/array.h"
+#include "zinnia/value/class/classes_def.h"
+#include "zinnia/value/object.h"
+#include "zinnia/value/string/string.h"
+#include "zinnia/value/tuple/tuple.h"
 
 IMPL_MAPLIKE(ObjectTypeCountMap, Class *, int);
 IMPL_MAPLIKE(ObjectCopyMap, Object *, Object *);
@@ -203,8 +203,8 @@ void print_object_summary_(Object *object) {
   // KL_iter members = keyedlist_iter(&object->_members);
   // for (; kl_has(&members); kl_inc(&members)) {
   //   const Member *member = (Member *)kl_value(&members);
-  // if (NULL != member && OBJECT == member->entity.type) {
-  //   printf("\t\t%s(%p)\n", (char *)kl_key(&members), member->entity.obj);
+  // if (NULL != member && OBJECT == member->value.type) {
+  //   printf("\t\t%s(%p)\n", (char *)kl_key(&members), member->value.obj);
   // }
   // }
   // fflush(stdout);

@@ -7,9 +7,9 @@
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_PROGRAM_SERIALIZATION_SERIALIZE_H_
 
 #include "c-data-structures/maplike.h"
-#include "zinnia/entity/primitive.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/program/serialization/buffer.h"
+#include "zinnia/value/primitive.h"
 
 DEFINE_MAPLIKE(StringIndexMap, char *, int);
 

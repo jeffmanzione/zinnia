@@ -5,9 +5,9 @@
 
 #include "zinnia/vm/isolate/frame.h"
 
-#include "zinnia/entity/class/classes_def.h"
 #include "zinnia/heap/heap.h"
 #include "zinnia/util/error.h"
+#include "zinnia/value/class/classes_def.h"
 #include "zinnia/vm/isolate/isolates.h"
 #include "zinnia/vm/isolate/scope.h"
 
