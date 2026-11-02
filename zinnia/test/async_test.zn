@@ -31,16 +31,16 @@ class FailsToConstruct {
   }
 }
 
-def raise_error(x) {
+function raise_error(x) {
   raise error.Error(x)
 }
 
-def side_task() async {
+function side_task() async {
   await async.sleep(0.05)
   return 'side'
 }
 
-def start_side_task(x) {
+function start_side_task(x) {
   side_task()
   return x
 }
