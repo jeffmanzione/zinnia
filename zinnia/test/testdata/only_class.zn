@@ -1,0 +1,3 @@
+class OnlyClass {
+  method value() 42
+}

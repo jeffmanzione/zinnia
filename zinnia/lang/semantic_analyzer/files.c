@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "zinnia/lang/lexer/lang_lexer.h"
@@ -590,16 +591,20 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
   }
 }
 
+static void module_def_init_(ModuleDef *module_def) {
+  ModuleName module_name = {
+      .is_named = false, .module_token = NULL, .module_name = NULL};
+  module_def->name = module_name;
+  ImportArray_init(&module_def->imports);
+  ClassDefArray_init(&module_def->classes);
+  FunctionDefArray_init(&module_def->functions);
+  ExpressionTreeArray_init(&module_def->statements);
+}
+
 ModuleDef populate_module_def(SemanticAnalyzer *analyzer,
                               const SyntaxTree *stree) {
   ModuleDef module_def;
-  ModuleName module_name = {
-      .is_named = false, .module_token = NULL, .module_name = NULL};
-  module_def.name = module_name;
-  ImportArray_init(&module_def.imports);
-  ClassDefArray_init(&module_def.classes);
-  FunctionDefArray_init(&module_def.functions);
-  ExpressionTreeArray_init(&module_def.statements);
+  module_def_init_(&module_def);
 
   populate_fi_statement(analyzer, CHILD_SYNTAX_AT(stree, 0), &module_def);
   const SyntaxTree *cur = CHILD_SYNTAX_AT(stree, 1);
@@ -612,6 +617,30 @@ ModuleDef populate_module_def(SemanticAnalyzer *analyzer,
     cur = CHILD_SYNTAX_AT(cur, 1);
   }
   return module_def;
+}
+
+ExpressionTree *populate_file(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree) {
+  const bool is_empty = NULL == stree->rule_fn;
+  if (!is_empty && !IS_SYNTAX(stree, rule_module_statement) &&
+      !IS_SYNTAX(stree, rule_import_statement) &&
+      !IS_SYNTAX(stree, rule_class_definition_no_annotation) &&
+      !IS_SYNTAX(stree, rule_class_definition_with_annotation) &&
+      !IS_SYNTAX(stree, rule_function_definition)) {
+    // A statement list, or a lone statement that can be populated directly.
+    return semantic_analyzer_populate(analyzer, stree);
+  }
+  ExpressionTree *etree = malloc(sizeof(ExpressionTree));
+  etree->type = rule_file_level_statement_list;
+  etree->rule_name = "file_level_statement_list";
+  Expression_file_level_statement_list *file =
+      calloc(1, sizeof(Expression_file_level_statement_list));
+  module_def_init_(&file->def);
+  if (!is_empty) {
+    populate_fi_statement(analyzer, stree, &file->def);
+  }
+  etree->expression = file;
+  return etree;
 }
 
 POPULATE_IMPL(file_level_statement_list, const SyntaxTree *stree,

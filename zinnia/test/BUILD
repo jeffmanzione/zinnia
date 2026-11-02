@@ -48,7 +48,10 @@ zinnia_test(
 zinnia_test(
     name = "module_test",
     main = "module_test.zn",
-    deps = ["//examples/module:module_srcs"],
+    deps = [
+        "//examples/module:module_srcs",
+        "//zinnia/test/testdata:single_statement_modules",
+    ],
 )
 
 zinnia_test(
