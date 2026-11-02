@@ -11,18 +11,14 @@ function jsonify(value) {
   return str(value)
 }
 
-; A single backslash. ('\\ ' sidesteps a lexer bug with a literal ending in an
-; escaped backslash.)
-self._BACKSLASH = '\\ '.substr(0, 1)
-
 function _jsonify_string(s) {
   out = '"'
   for i=0, i < s.len(), i=i+1 {
     c = str(s[i])
     if c == '"' {
       out.extend('\\"')
-    } else if c == _BACKSLASH {
-      out.extend(_BACKSLASH).extend(_BACKSLASH)
+    } else if c == '\\' {
+      out.extend('\\\\')
     } else if c == '\n' {
       out.extend('\\n')
     } else if c == '\r' {

@@ -54,6 +54,8 @@ class JsonTest {
   @test.Test
   method test_jsonify_escapes_strings() {
     expect(json.jsonify('say "hi"\n'), '"say \\"hi\\"\\n"')
+    expect(json.jsonify('a\\b'), '"a\\\\b"')
+    expect(json.jsonify('\\'), '"\\\\"')
   }
   @test.Test
   method test_jsonify_tuple() {
