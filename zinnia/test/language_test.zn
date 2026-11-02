@@ -265,4 +265,36 @@ class LanguageFixesTest {
     expect(-7 % 3, -1)
     expect(1.0 / 4, 0.25)
   }
+
+  @test.Test
+  method test_empty_methods_and_functions_exist() {
+    expect(EmptyMethods().a(), None)
+    expect(EmptyMethods().b(), None)
+    expect(empty_fn1(), None)
+    expect(empty_fn2(), None)
+    expect(EmptyMethods.methods().len(), 2)
+  }
+
+  @test.Test
+  method test_annotation_on_empty_method() {
+    expect(Annotated.methods()[0].annotations[0].value, 7)
+  }
+}
+
+class EmptyMethods {
+  method a() {}
+  method b() {}
+}
+
+function empty_fn1() {}
+function empty_fn2() {}
+
+class Tag {
+  new(field value) {}
+  method annotate(_) {}
+}
+
+class Annotated {
+  @Tag(7)
+  method m() {}
 }

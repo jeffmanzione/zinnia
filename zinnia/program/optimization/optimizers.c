@@ -168,7 +168,10 @@ void optimizer_RetRet(OptimizeHelper *oh, const Bytecode *const bytecode,
     const Instruction *second = bytecode_get(bytecode, i);
     if (RET == first->op && INSTRUCTION_NO_ARG == first->type &&
         RET == second->op && INSTRUCTION_NO_ARG == second->type &&
-        NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int))) {
+        NULL == IntIntMap_find_ref(&oh->i_gotos, i - 1, sizeof(int)) &&
+        // The second RET may be the whole body of an empty function.
+        NULL == IntToFunctionRefMap_find(&oh->i_to_refs, i, sizeof(int),
+                                         NULL)) {
       o_Remove(oh, i);
     }
   }
