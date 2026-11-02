@@ -93,6 +93,12 @@ DEFINE_EXPRESSION_WITH_PRODUCER(postfix_expression, Bytecode) {
   PostfixArray suffixes;
 };
 
+// |x|, which evaluates to x.len().
+DEFINE_EXPRESSION_WITH_PRODUCER(length_expression, Bytecode) {
+  Token *token;
+  ExpressionTree *exp;
+};
+
 DEFINE_EXPRESSION_WITH_PRODUCER(range_expression, Bytecode) {
   Token *token;
   uint32_t num_args;
@@ -457,5 +463,12 @@ typedef struct {
 DEFINE_EXPRESSION_WITH_PRODUCER(file_level_statement_list, Bytecode) {
   ModuleDef def;
 };
+
+// Populates the syntax tree for a whole file, which is parsed with
+// rule_file_level_statement_list as its root. The parser returns a lone
+// statement's own tree when the file has only one statement, and an unmatched
+// tree when it has none, so those are wrapped in a file_level_statement_list.
+ExpressionTree *populate_file(SemanticAnalyzer *analyzer,
+                              const SyntaxTree *stree);
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_LANG_SEMANTIC_ANALYZER_DEFINITIONS_H_*/

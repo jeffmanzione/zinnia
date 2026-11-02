@@ -5,6 +5,7 @@
 
 #include "zinnia/vm/virtual_machine.h"
 
+#include <math.h>
 #include <stdarg.h>
 
 #include "zinnia/alloc/alloc.h"
@@ -66,35 +67,56 @@ void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
 
-#define MATH_OP(op, symbol)                                             \
-  Primitive _execute_primitive_##op(const Primitive *p1,                \
-                                    const Primitive *p2) {              \
-    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
-      FATALF("Op not valid for bool types.");                           \
-    }                                                                   \
-    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) { \
-      return primitive_float(float_of(p1) symbol float_of(p2));         \
-    }                                                                   \
-    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {     \
-      return primitive_int(int_of(p1) symbol int_of(p2));               \
-    }                                                                   \
-    return primitive_int(char_of(p1) symbol char_of(p2));               \
+#define MATH_OP(op, symbol)                                                   \
+  Primitive _execute_primitive_##op(const Primitive *p1, const Primitive *p2, \
+                                    const char **error) {                     \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {         \
+      *error = "Operator '" #symbol "' is not valid for Bool values.";        \
+      return primitive_int(0);                                                \
+    }                                                                         \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {       \
+      return primitive_float(float_of(p1) symbol float_of(p2));               \
+    }                                                                         \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {           \
+      return primitive_int(int_of(p1) symbol int_of(p2));                     \
+    }                                                                         \
+    return primitive_int(char_of(p1) symbol char_of(p2));                     \
   }
 
-#define MATH_OP_INT(op, symbol)                                         \
-  Primitive _execute_primitive_##op(const Primitive *p1,                \
-                                    const Primitive *p2) {              \
-    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
-      FATALF("Op not valid for bool types.");                           \
-    }                                                                   \
-    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) { \
-      FATALF("Op not valid for float types.");                          \
-    }                                                                   \
-    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {     \
-      return primitive_int(int_of(p1) symbol int_of(p2));               \
-    }                                                                   \
-    return primitive_int(char_of(p1) symbol char_of(p2));               \
+#define MATH_OP_INT(op, symbol)                                               \
+  Primitive _execute_primitive_##op(const Primitive *p1, const Primitive *p2, \
+                                    const char **error) {                     \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {         \
+      *error = "Operator '" #symbol "' is not valid for Bool values.";        \
+      return primitive_int(0);                                                \
+    }                                                                         \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {       \
+      *error = "Operator '" #symbol "' is not valid for Float values.";       \
+      return primitive_int(0);                                                \
+    }                                                                         \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {           \
+      return primitive_int(int_of(p1) symbol int_of(p2));                     \
+    }                                                                         \
+    return primitive_int(char_of(p1) symbol char_of(p2));                     \
   }
+
+typedef Primitive (*PrimitiveOpFn)(const Primitive *, const Primitive *,
+                                   const char **);
+
+// Applies [fn] to [p1] and [p2], storing the result in the accumulator.
+// Raises an error and returns false if the operation is invalid.
+static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
+                                         PrimitiveOpFn fn, const Primitive *p1,
+                                         const Primitive *p2) {
+  const char *error = NULL;
+  const Primitive result = fn(p1, p2, &error);
+  if (NULL != error) {
+    raise_error(frame, scope, "%s", error);
+    return false;
+  }
+  *frame_mutable_acc(frame) = value_primitive(result);
+  return true;
+}
 
 #define PRIMITIVE_OP(op, symbol, math_fn)                                      \
   math_fn;                                                                     \
@@ -116,8 +138,11 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
                       #op);                                                    \
           return;                                                              \
         }                                                                      \
-        *frame_mutable_acc(frame) =                                            \
-            value_primitive(_execute_primitive_##op(&first.pri, &second.pri)); \
+        if (!_execute_primitive_into_acc_(frame, scope,                        \
+                                          _execute_primitive_##op, &first.pri, \
+                                          &second.pri)) {                      \
+          return;                                                              \
+        }                                                                      \
         break;                                                                 \
       case INSTRUCTION_ID:                                                     \
         acc = frame_get_acc(frame);                                            \
@@ -132,8 +157,11 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
                       #op);                                                    \
           return;                                                              \
         }                                                                      \
-        *frame_mutable_acc(frame) =                                            \
-            value_primitive(_execute_primitive_##op(&acc->pri, &lookup->pri)); \
+        if (!_execute_primitive_into_acc_(frame, scope,                        \
+                                          _execute_primitive_##op, &acc->pri,  \
+                                          &lookup->pri)) {                     \
+          return;                                                              \
+        }                                                                      \
         break;                                                                 \
       case INSTRUCTION_PRIMITIVE:                                              \
         acc = frame_get_acc(frame);                                            \
@@ -142,82 +170,128 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
                       #op);                                                    \
           return;                                                              \
         }                                                                      \
-        *frame_mutable_acc(frame) =                                            \
-            value_primitive(_execute_primitive_##op(&acc->pri, &ins->val));    \
+        if (!_execute_primitive_into_acc_(frame, scope,                        \
+                                          _execute_primitive_##op, &acc->pri,  \
+                                          &ins->val)) {                        \
+          return;                                                              \
+        }                                                                      \
         break;                                                                 \
       default:                                                                 \
         FATALF("Invalid arg type=%d for " #op ".", ins->type);                 \
     }                                                                          \
   }
 
-#define PRIMITIVE_BOOL_OP(op, symbol, math_fn)                            \
-  math_fn;                                                                \
-  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                  \
-                     const Instruction *ins) {                            \
-    const Value *acc, *lookup;                                            \
-    Value first, second, tmp;                                             \
-    Primitive result;                                                     \
-    switch (ins->type) {                                                  \
-      case INSTRUCTION_NO_ARG:                                            \
-        second = frame_popstack(frame);                                   \
-        if (PRIMITIVE != second.type) {                                   \
-          raise_error(frame, scope, "RHS for op '%s' must be primitive.", \
-                      #op);                                               \
-          return;                                                         \
-        }                                                                 \
-        first = frame_popstack(frame);                                    \
-        if (PRIMITIVE != first.type) {                                    \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.", \
-                      #op);                                               \
-          return;                                                         \
-        }                                                                 \
-        result = _execute_primitive_##op(&first.pri, &second.pri);        \
-        *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
-        break;                                                            \
-      case INSTRUCTION_ID:                                                \
-        acc = frame_get_acc(frame);                                       \
-        if (NULL != acc && PRIMITIVE != acc->type) {                      \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.", \
-                      #op);                                               \
-          return;                                                         \
-        }                                                                 \
-        lookup = scope_lookup(scope, ins->id, &tmp);                      \
-        if ((NULL == lookup) ||                                           \
-            (NULL != lookup && PRIMITIVE != lookup->type)) {              \
-          raise_error(frame, scope, "RHS for op '%s' must be primitive.", \
-                      #op);                                               \
-          return;                                                         \
-        }                                                                 \
-        result = _execute_primitive_##op(&acc->pri, &lookup->pri);        \
-        *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
-        break;                                                            \
-      case INSTRUCTION_PRIMITIVE:                                         \
-        acc = frame_get_acc(frame);                                       \
-        if (NULL != acc && PRIMITIVE != acc->type) {                      \
-          raise_error(frame, scope, "LHS for op '%s' must be primitive.", \
-                      #op);                                               \
-          return;                                                         \
-        }                                                                 \
-        result = _execute_primitive_##op(&acc->pri, &ins->val);           \
-        *frame_mutable_acc(frame) =                                       \
-            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;              \
-        break;                                                            \
-      default:                                                            \
-        FATALF("Invalid arg type=%d for " #op ".", ins->type);            \
-    }                                                                     \
+#define PRIMITIVE_BOOL_OP(op, symbol, math_fn)                             \
+  math_fn;                                                                 \
+  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                   \
+                     const Instruction *ins) {                             \
+    const Value *acc, *lookup;                                             \
+    Value first, second, tmp;                                              \
+    Primitive result;                                                      \
+    const char *error = NULL;                                              \
+    switch (ins->type) {                                                   \
+      case INSTRUCTION_NO_ARG:                                             \
+        second = frame_popstack(frame);                                    \
+        if (PRIMITIVE != second.type) {                                    \
+          raise_error(frame, scope, "RHS for op '%s' must be primitive.",  \
+                      #op);                                                \
+          return;                                                          \
+        }                                                                  \
+        first = frame_popstack(frame);                                     \
+        if (PRIMITIVE != first.type) {                                     \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",  \
+                      #op);                                                \
+          return;                                                          \
+        }                                                                  \
+        result = _execute_primitive_##op(&first.pri, &second.pri, &error); \
+        if (NULL != error) {                                               \
+          raise_error(frame, scope, "%s", error);                          \
+          return;                                                          \
+        }                                                                  \
+        *frame_mutable_acc(frame) =                                        \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;               \
+        break;                                                             \
+      case INSTRUCTION_ID:                                                 \
+        acc = frame_get_acc(frame);                                        \
+        if (NULL != acc && PRIMITIVE != acc->type) {                       \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",  \
+                      #op);                                                \
+          return;                                                          \
+        }                                                                  \
+        lookup = scope_lookup(scope, ins->id, &tmp);                       \
+        if ((NULL == lookup) ||                                            \
+            (NULL != lookup && PRIMITIVE != lookup->type)) {               \
+          raise_error(frame, scope, "RHS for op '%s' must be primitive.",  \
+                      #op);                                                \
+          return;                                                          \
+        }                                                                  \
+        result = _execute_primitive_##op(&acc->pri, &lookup->pri, &error); \
+        if (NULL != error) {                                               \
+          raise_error(frame, scope, "%s", error);                          \
+          return;                                                          \
+        }                                                                  \
+        *frame_mutable_acc(frame) =                                        \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;               \
+        break;                                                             \
+      case INSTRUCTION_PRIMITIVE:                                          \
+        acc = frame_get_acc(frame);                                        \
+        if (NULL != acc && PRIMITIVE != acc->type) {                       \
+          raise_error(frame, scope, "LHS for op '%s' must be primitive.",  \
+                      #op);                                                \
+          return;                                                          \
+        }                                                                  \
+        result = _execute_primitive_##op(&acc->pri, &ins->val, &error);    \
+        if (NULL != error) {                                               \
+          raise_error(frame, scope, "%s", error);                          \
+          return;                                                          \
+        }                                                                  \
+        *frame_mutable_acc(frame) =                                        \
+            int_of(&result) == 0 ? FALSE_VALUE : TRUE_VALUE;               \
+        break;                                                             \
+      default:                                                             \
+        FATALF("Invalid arg type=%d for " #op ".", ins->type);             \
+    }                                                                      \
   }
 
 PRIMITIVE_OP(ADD, +, MATH_OP(ADD, +));
 PRIMITIVE_OP(SUB, -, MATH_OP(SUB, -));
 PRIMITIVE_OP(MULT, *, MATH_OP(MULT, *));
-PRIMITIVE_OP(DIV, /, MATH_OP(DIV, /));
+Primitive _execute_primitive_DIV(const Primitive *p1, const Primitive *p2,
+                                 const char **error) {
+  if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {
+    *error = "Operator '/' is not valid for Bool values.";
+    return primitive_int(0);
+  }
+  if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {
+    return primitive_float(float_of(p1) / float_of(p2));
+  }
+  if (0 == int_of(p2)) {
+    *error = "Division by zero.";
+    return primitive_int(0);
+  }
+  return primitive_int(int_of(p1) / int_of(p2));
+}
+PRIMITIVE_OP(DIV, /, );
 PRIMITIVE_BOOL_OP(LT, <, MATH_OP(LT, <));
 PRIMITIVE_BOOL_OP(GT, >, MATH_OP(GT, >));
 PRIMITIVE_BOOL_OP(LTE, <=, MATH_OP(LTE, <=));
 PRIMITIVE_BOOL_OP(GTE, >=, MATH_OP(GTE, >=));
-PRIMITIVE_OP(MOD, %, MATH_OP_INT(MOD, %));
+Primitive _execute_primitive_MOD(const Primitive *p1, const Primitive *p2,
+                                 const char **error) {
+  if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {
+    *error = "Operator '%' is not valid for Bool values.";
+    return primitive_int(0);
+  }
+  if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {
+    return primitive_float(fmod(float_of(p1), float_of(p2)));
+  }
+  if (0 == int_of(p2)) {
+    *error = "Modulo by zero.";
+    return primitive_int(0);
+  }
+  return primitive_int(int_of(p1) % int_of(p2));
+}
+PRIMITIVE_OP(MOD, %, );
 PRIMITIVE_OP(AND, &&, MATH_OP_INT(AND, &&));
 PRIMITIVE_OP(OR, ||, MATH_OP_INT(OR, ||));
 PRIMITIVE_OP(BAND, &, MATH_OP_INT(BAND, &));
@@ -275,6 +349,11 @@ void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   Value *stored = scope_lookup(scope, ins->id, &tmp);
   if (NULL == stored || NONE == stored->type || OBJECT == stored->type) {
     raise_error(frame, scope, "Can only increment a primitive.");
+    return;
+  }
+  if (scope_is_const(scope, ins->id)) {
+    raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+    return;
   }
   switch (ptype(&stored->pri)) {
     case PRIMITIVE_CHAR:
@@ -637,10 +716,25 @@ void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
-      scope_set(scope, ins->id, frame_get_acc(scope->parent_frame));
+      if (!scope_set(scope, ins->id, frame_get_acc(scope->parent_frame))) {
+        raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+      }
       break;
     default:
       FATALF("Invalid arg type=%d for SET.", ins->type);
+  }
+}
+
+void _execute_SETC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+  switch (ins->type) {
+    case INSTRUCTION_ID:
+      if (!scope_let_const(scope, ins->id,
+                           frame_get_acc(scope->parent_frame))) {
+        raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+      }
+      break;
+    default:
+      FATALF("Invalid arg type=%d for SETC.", ins->type);
   }
 }
 
@@ -1552,6 +1646,9 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         break;
       case SET:
         _execute_SET(vm, frame, scope, ins);
+        break;
+      case SETC:
+        _execute_SETC(vm, frame, scope, ins);
         break;
       case MSET:
         _execute_MSET(vm, frame, scope, ins);

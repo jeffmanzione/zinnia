@@ -1,0 +1,72 @@
+import io
+import struct
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class StructTest {
+  @test.Test
+  method test_map_in_with_falsy_values() {
+    m = {'f': False, 'n': None, 'z': 0}
+    expect('f' in m, True)
+    expect('n' in m, True)
+    expect('z' in m, True)
+    expect('x' in m, False)
+  }
+
+  @test.Test
+  method test_map_get_or_default() {
+    m = {'f': False}
+    expect(m.get_or_default('f', 'd'), False)
+    expect(m.get_or_default('x', 'd'), 'd')
+    expect(m.get_or_else('x', k -> k + '!'), 'x!')
+  }
+
+  @test.Test
+  method test_set_in() {
+    s = struct.Set()
+    s.insert(False)
+    s.insert(3)
+    expect(False in s, True)
+    expect(3 in s, True)
+    expect(4 in s, False)
+    s.remove(3)
+    expect(3 in s, False)
+  }
+
+  @test.Test
+  method test_cache_clear() {
+    c = struct.Cache()
+    expect(c.get('k', k -> 'v1'), 'v1')
+    expect(c.get('k', k -> 'v2'), 'v1')
+    c.clear('k')
+    expect(c.get('k', k -> 'v3'), 'v3')
+    c.clear()
+    expect(c.get('k', k -> 'v4'), 'v4')
+  }
+
+  @test.Test
+  method test_cache_caches_falsy_values() {
+    calls = [0]
+    c = struct.Cache()
+    factory = (k) {
+      calls[0] = calls[0] + 1
+      return False
+    }
+    expect(c.get('k', factory), False)
+    expect(c.get('k', factory), False)
+    expect(calls[0], 1)
+  }
+
+  @test.Test
+  method test_loading_cache_clear() {
+    lc = struct.LoadingCache(factory: k -> k + '!')
+    expect(lc.get('a'), 'a!')
+    lc.clear('a')
+    lc.clear()
+    expect(lc.get('a'), 'a!')
+  }
+}

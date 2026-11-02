@@ -50,6 +50,11 @@ struct __Scope {
 
   Object *error;
   int32_t catch_ins;
+
+  // Interned names of the variables declared const in this scope, or NULL.
+  const char **const_ids;
+  uint16_t num_const_ids;
+  uint16_t const_ids_capacity;
 };
 
 typedef enum {

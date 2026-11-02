@@ -176,7 +176,13 @@ relational_expression1 ->
     AND(token:SYMBOL_GTHANEQ, rule:relational_expression),
     E
   );
-relational_expression -> AND(rule:in_expression, rule:relational_expression1);
+is_expression ->
+  OR(
+    AND(rule:in_expression, token:KEYWORD_IS, rule:in_expression),
+    rule:in_expression
+  );
+
+relational_expression -> AND(rule:is_expression, rule:relational_expression1);
 
 equality_expression1 ->
   OR(
@@ -201,17 +207,12 @@ or_expression1 ->
   );
 or_expression -> AND(rule:and_expression, rule:or_expression1);
 
-is_expression ->
-  OR(
-    AND(rule:or_expression, token:KEYWORD_IS, rule:or_expression),
-    rule:or_expression
-  );
 
 conditional_expression ->
   OR(
     AND(
       token:KEYWORD_IF,
-      rule:is_expression,
+      rule:or_expression,
       OPTIONAL(token:KEYWORD_THEN),
       rule:conditional_expression,
       token:KEYWORD_ELSE,
@@ -219,11 +220,11 @@ conditional_expression ->
     ),
     AND(
       token:KEYWORD_IF,
-      rule:is_expression,
+      rule:or_expression,
       OPTIONAL(token:KEYWORD_THEN),
       rule:conditional_expression
     ),
-    rule:is_expression
+    rule:or_expression
   );
 
 const_assignment_expression -> AND(token:KEYWORD_CONST, rule:identifier);
@@ -407,12 +408,6 @@ try_statement ->
 
 jump_statement ->
   OR(
-    AND(
-      token:KEYWORD_RETURN,
-      token:SYMBOL_LPAREN,
-      rule:tuple_expression,
-      token:SYMBOL_RPAREN
-    ),
     AND(
       token:KEYWORD_RETURN,
       rule:tuple_expression

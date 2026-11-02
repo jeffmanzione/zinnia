@@ -3,6 +3,9 @@ import test
 import 'examples/module/one/one'
 import 'examples/module/one/two/two'
 import 'examples/module/one/two/three/three'
+import 'zinnia/test/testdata/only_class'
+import 'zinnia/test/testdata/only_comment'
+import 'zinnia/test/testdata/only_function'
 
 self.expect = test.expect
 
@@ -23,5 +26,12 @@ class ModuleTest {
   @test.Test
   method test_module3() {
     expect(three.THREE, 3)
+  }
+
+  @test.Test
+  method test_single_statement_modules() {
+    expect(only_class.OnlyClass().value(), 42)
+    expect(only_function.only_function(), 7)
+    expect(only_comment.name(), 'only_comment')
   }
 }

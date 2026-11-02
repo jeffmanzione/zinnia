@@ -1,3 +1,4 @@
+import error
 import data
 import io
 import test
@@ -285,5 +286,13 @@ class MatrixTest {
         [15, 16, 17, 18, 19]
       ]))
     )
+  }
+
+  @test.Test
+  method test_set_single() {
+    mat[1, 2] = 42
+    expect(mat[1, 2], 42)
+    expect(mat[1, 1], 6)
+    test.expect_raises(() { mat[4, 0] = 1 }, error.Error)
   }
 }

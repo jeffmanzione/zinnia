@@ -20,7 +20,14 @@ const Instruction *scope_ins(Scope *ctx);
 void scope_set_function(Scope *ctx, const Function *func);
 Value *scope_lookup(Scope *ctx, const char id[], Value *tmp);
 void scope_let(Scope *ctx, const char id[], const Value *e);
-void scope_set(Scope *ctx, const char id[], const Value *e);
+// Assigns [e] to the variable [id], wherever it is defined. Returns false
+// without assigning if that variable is const.
+bool scope_set(Scope *ctx, const char id[], const Value *e);
+// Defines [id] in this scope as a const with the value [e]. Returns false
+// without assigning if [id] is already a const in this scope.
+bool scope_let_const(Scope *ctx, const char id[], const Value *e);
+// Returns true if [id] resolves to a const variable from this scope.
+bool scope_is_const(Scope *ctx, const char id[]);
 
 Scope *frame_get_scope_for_index(Frame *frame, uint32_t index);
 

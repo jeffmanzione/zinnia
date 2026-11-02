@@ -270,7 +270,7 @@ Module *read_zn_(ModuleManager *mm, ModuleInfo *module_info) {
   } else {
     SemanticAnalyzer sa;
     semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
-    ExpressionTree *etree = semantic_analyzer_populate(&sa, stree);
+    ExpressionTree *etree = populate_file(&sa, stree);
 
     Bytecode *bytecode = bytecode_create();
     semantic_analyzer_produce(&sa, etree, bytecode);

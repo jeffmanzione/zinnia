@@ -61,7 +61,7 @@ class Injector {
       } else if ~provider {
         result = _provide_class(constructed_map, key)
       } else {
-        raise error.Error('Expected provider as a Function or Class but was ' + str(cls))
+        raise error.Error('Expected provider as a Function or Class but was ' + str(provider))
       }
       if _is_singleton(key) {
         keys_to_singletons[key] = result
@@ -78,7 +78,7 @@ class Injector {
     if key is Provider {
       return () { get(key.key) }
     }
-    raise error.Error('Expected key or class but was ' + str(cls))
+    raise error.Error('Expected key or class but was ' + str(key))
   }
   method _is_singleton(key) {
     if key.cls.all_annotations().has(a -> a is Singleton) {

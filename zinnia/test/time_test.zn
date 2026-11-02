@@ -184,4 +184,34 @@ class TimerTest {
     t.reset()
     expect(t.elapsed_usec(), [])
   }
-}
+
+  @test.Test
+  method test_Date_add_months_across_years() {
+    expect(time.Date(2023, 12, 15).add_months(1), time.Date(2024, 1, 15))
+    expect(time.Date(2023, 5, 15).add_months(25), time.Date(2025, 6, 15))
+    expect(time.Date(2024, 1, 15).add_months(-2), time.Date(2023, 11, 15))
+    expect(time.Date(2024, 1, 15).add_months(-13), time.Date(2022, 12, 15))
+  }
+
+  @test.Test
+  method test_Date_add_months_clamps_day() {
+    expect(time.Date(2024, 1, 31).add_months(1), time.Date(2024, 2, 29))
+    expect(time.Date(2023, 1, 31).add_months(1), time.Date(2023, 2, 28))
+    expect(time.Date(2024, 3, 31).add_months(1), time.Date(2024, 4, 30))
+  }
+
+  @test.Test
+  method test_Date_add_years_leap_day() {
+    expect(time.Date(2024, 2, 29).add_years(1), time.Date(2025, 2, 28))
+    expect(time.Date(2024, 2, 29).add_years(4), time.Date(2028, 2, 29))
+  }
+
+  @test.Test
+  method test_days_in_month() {
+    expect(time.days_in_month(2024, 2), 29)
+    expect(time.days_in_month(1900, 2), 28)
+    expect(time.days_in_month(2000, 2), 29)
+    expect(time.days_in_month(2023, 4), 30)
+    expect(time.days_in_month(2023, 12), 31)
+  }
+}

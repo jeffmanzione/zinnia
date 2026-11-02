@@ -182,3 +182,119 @@ class ErrorPropagationTest {
   }
 }
 
+function paren_and(a) {
+  return (a > 1) and (a < 5)
+}
+
+function paren_mult(a) {
+  return (a + 1) * 2
+}
+
+function paren_tuple() {
+  return (1, 2)
+}
+
+@test.TestClass
+class LanguageFixesTest {
+  @test.Test
+  method test_const() {
+    const c = 5
+    expect(c, 5)
+    test.expect_raises(() {
+      c = 6
+    }, error.Error)
+    expect(c, 5)
+  }
+
+  @test.Test
+  method test_const_in_nested_scope() {
+    f = () {
+      const k = 1
+      k = 2
+    }
+    test.expect_raises(f, error.Error)
+  }
+
+  @test.Test
+  method test_const_increment() {
+    const n = 1
+    test.expect_raises(() {
+      n = n + 1
+    }, error.Error)
+    expect(n, 1)
+  }
+
+  @test.Test
+  method test_length_expression() {
+    a = [1, 2, 3]
+    expect(|a|, 3)
+    expect(|'hello'|, 5)
+    expect(|(1, 2)|, 2)
+    expect(|a| + 1, 4)
+    expect(3 | 4, 7)
+  }
+
+  @test.Test
+  method test_return_starting_with_parens() {
+    expect(paren_and(3), True)
+    expect(paren_and(7), False)
+    expect(paren_mult(3), 8)
+    expect(paren_tuple(), (1, 2))
+  }
+
+  @test.Test
+  method test_is_binds_tighter_than_or() {
+    a = [1]
+    expect(a is Array or a is Tuple, True)
+    expect(a is Tuple or a is Array, True)
+    expect(a is Tuple and a is Array, False)
+    expect(a is Array == True, True)
+  }
+
+  @test.Test
+  method test_arithmetic_errors_are_catchable() {
+    test.expect_raises(() -> True + 1, error.Error)
+    test.expect_raises(() -> 1.5 & 1, error.Error)
+    test.expect_raises(() -> 1 / 0, error.Error)
+    test.expect_raises(() -> 5 % 0, error.Error)
+  }
+
+  @test.Test
+  method test_float_modulo() {
+    expect(7.5 % 2, 1.5)
+    expect(-7 % 3, -1)
+    expect(1.0 / 4, 0.25)
+  }
+
+  @test.Test
+  method test_empty_methods_and_functions_exist() {
+    expect(EmptyMethods().a(), None)
+    expect(EmptyMethods().b(), None)
+    expect(empty_fn1(), None)
+    expect(empty_fn2(), None)
+    expect(EmptyMethods.methods().len(), 2)
+  }
+
+  @test.Test
+  method test_annotation_on_empty_method() {
+    expect(Annotated.methods()[0].annotations[0].value, 7)
+  }
+}
+
+class EmptyMethods {
+  method a() {}
+  method b() {}
+}
+
+function empty_fn1() {}
+function empty_fn2() {}
+
+class Tag {
+  new(field value) {}
+  method annotate(_) {}
+}
+
+class Annotated {
+  @Tag(7)
+  method m() {}
+}

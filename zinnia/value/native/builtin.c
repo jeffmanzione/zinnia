@@ -272,6 +272,18 @@ Value _Bool_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return FALSE_VALUE;
 }
 
+Value is_int_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return (NULL != args && IS_INT(args)) ? TRUE_VALUE : FALSE_VALUE;
+}
+
+Value is_float_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return (NULL != args && IS_FLOAT(args)) ? TRUE_VALUE : FALSE_VALUE;
+}
+
+Value is_bool_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  return (NULL != args && IS_BOOL(args)) ? TRUE_VALUE : FALSE_VALUE;
+}
+
 Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
                                Scope *ctx) {
   Object *fn_ref = heap_new(frame->parent_isolate->heap, Class_FunctionRef);
@@ -1448,6 +1460,9 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_function(builtin, global_intern("Int"), Int_);
   native_function(builtin, global_intern("Float"), Float_);
   native_function(builtin, global_intern("Bool"), _Bool_);
+  native_function(builtin, global_intern("is_int"), is_int_);
+  native_function(builtin, global_intern("is_float"), is_float_);
+  native_function(builtin, global_intern("is_bool"), is_bool_);
   native_function(builtin, global_intern("__stringify"), stringify_);
   native_function(builtin, global_intern("__tuple"), tuple_);
   native_function(builtin, global_intern("color"), color_);

@@ -48,9 +48,18 @@ class Map {
     }
     return None
   }
-  ; Returns the value associated with k, if there is one, otherwise None.
+  ; Returns True if the map contains an entry with key k.
   method __in__(k) {
-    self[k]
+    entries = table[_hash(k)]
+    if ~entries {
+      return False
+    }
+    for i=0, i<entries.len(), i=i+1 {
+      if k == entries[i][0] {
+        return True
+      }
+    }
+    return False
   }
   ; Removes the entry in the set with the given key k.
   method remove(k) {
@@ -70,18 +79,16 @@ class Map {
     return None
   }
   method get_or_default(k, d) {
-    v = self[k]
-    if ~v {
-      return d
+    if k in self {
+      return self[k]
     }
-    return v
+    return d
   }
   method get_or_else(k, fn) {
-    v = self[k]
-    if ~v {
-      return fn(k)
+    if k in self {
+      return self[k]
     }
-    return v
+    return fn(k)
   }
   method put_if_absent(k, v) {
     if ~(k in self) {
@@ -147,10 +154,10 @@ class Cache {
     map = Map(sz)
   }
   method get(k, factory, default=None) {
-    v = map[k]
-    if v {
-      return v
+    if k in map {
+      return map[k]
     }
+    v = None
     try {
       v = factory(k)
     } catch e {
@@ -159,8 +166,13 @@ class Cache {
     map[k] = v
     return v
   }
-  method clear(k) {
-    map[k] = None
+  ; Removes the cached value for k, or every cached value if k is None.
+  method clear(k=None) {
+    if k == None {
+      map = Map(map.sz)
+    } else {
+      map.remove(k)
+    }
   }
 }
 
@@ -170,8 +182,8 @@ class LoadingCache {
     cache.get(k, factory) 
   }
 
-  method clear() {
-    cache.clear()
+  method clear(k=None) {
+    cache.clear(k)
   }
 }
 
@@ -189,7 +201,7 @@ class Set {
   method remove(k) {
     map.remove(k)
   }
-  ; Return k if k is in the Set, otherwise None.
+  ; Returns True if k is in the Set.
   method __in__(k) {
     k in map
   }

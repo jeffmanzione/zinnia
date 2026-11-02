@@ -1,0 +1,43 @@
+import io
+import math
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+function near(a, b) {
+  d = a - b
+  return d < math.EPSILON and d > -math.EPSILON
+}
+
+@test.TestClass
+class MathTest {
+  @test.Test
+  method test_accepts_ints() {
+    expect(math.sqrt(16), 4.0)
+    expect(math.pow(2, 10), 1024.0)
+    expect(math.floor(2), 2.0)
+  }
+
+  @test.Test
+  method test_abs() {
+    expect(math.abs(-3), 3)
+    expect(math.abs(3), 3)
+    expect(math.abs(-3.5), 3.5)
+  }
+
+  @test.Test
+  method test_mod() {
+    expect(math.mod(7, 3), 1)
+    expect(math.mod(7.5, 2), 1.5)
+    expect(math.div(7, 2), (3, 1))
+  }
+
+  @test.Test
+  method test_log() {
+    expect(near(math.log10(1000), 3.0), True)
+    expect(near(math.ln(math.E), 1.0), True)
+    expect(near(math.log(8, 2), 3.0), True)
+  }
+}

@@ -8,18 +8,34 @@ self.ERROR = FileWriter(i'__STDERR__', True)
 class _FileInternal {
   field file
   new(fn, rw, a, binary) {
-    mode = cat(rw)
+    ; Appending opens with 'a' since 'w' truncates the file.
+    mode = cat(if a then i'a' else rw)
     if binary {
       mode.extend('b')
-    }
-    if a {
-      mode.extend(i'+')
     }
     file = __File(fn, mode)
   }
   method gets(n) await file.__gets(n)
   method getline() await file.__getline()
   method getall() await file.__getall()
+  ; Returns the remaining lines of the file, without line terminators.
+  method getlines() {
+    lines = []
+    while True {
+      line = getline()
+      if ~line {
+        return lines
+      }
+      ; Strip the line terminator.
+      if line.ends_with('\n') {
+        line = line.substr(0, line.len() - 1)
+      }
+      if line.ends_with('\r') {
+        line = line.substr(0, line.len() - 1)
+      }
+      lines.append(line)
+    }
+  }
   method puts(s) await file.__puts(s)
   method close() await file.__close()
 }

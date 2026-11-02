@@ -18,6 +18,7 @@ bool should_escape_(char c) {
     case '\"':
     case '\n':
     case '\r':
+    case '\t':
     case '\\':
       return true;
     default:
@@ -94,7 +95,7 @@ int unescape(const char str[], char **target) {
           REALLOC(unescaped_str, char,
                   (unescaped_buffer_sz += DEFAULT_ESCAPED_STRING_SZ));
     }
-    if (c == '\\') {
+    if (c == '\\' && '\0' != *(ptr + 1)) {
       ptr++;
       unescaped_str[unescaped_len++] = unescape_char_(*ptr);
     } else {

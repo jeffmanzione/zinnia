@@ -1,3 +1,4 @@
+import error
 import io
 import test
 
@@ -38,5 +39,19 @@ class StrfmtTest {
     expect(strfmt('text-%v-%f-%d-%b', 1, 1, 1, 1), 'text-1-1-1-True')
     expect(strfmt('text-%v-%f-%d-%b', True, True, True, True), 'text-True-1-1-True')
     expect(strfmt('text-%v-%f-%d-%b', False, False, False, False), 'text-False-0-0-False')
+  }
+  @test.Test
+  method test_percent_escape() {
+    expect(strfmt('100%%'), '100%')
+    expect(strfmt('%v%%', 5), '5%')
+    expect(strfmt('%%%v', 5), '%5')
+  }
+  @test.Test
+  method test_format_only() {
+    expect(strfmt('text'), 'text')
+  }
+  @test.Test
+  method test_missing_argument() {
+    test.expect_raises(() -> strfmt('%v %v', 1), error.Error)
   }
 }

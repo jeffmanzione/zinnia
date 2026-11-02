@@ -715,6 +715,22 @@
       return raise_error(frame, ctx, "Expected lhs to be Tuple(2)");           \
     }                                                                          \
                                                                                \
+    /* Assigning a single element, e.g., mat[1, 2] = 5. */                     \
+    if (IS_PRIMITIVE(rhs) && IS_INT(tuple_get(dims, 0)) &&                     \
+        IS_INT(tuple_get(dims, 1))) {                                          \
+      const int dim1_index = (int)pint(&tuple_get(dims, 0)->pri);              \
+      const int dim2_index = (int)pint(&tuple_get(dims, 1)->pri);              \
+      if (!_##class_name##_index_is_valid(mat, 1, dim1_index) ||               \
+          !_##class_name##_index_is_valid(mat, 2, dim2_index)) {               \
+        return raise_error(frame, ctx,                                         \
+                           "Index out of bounds: (%d, %d) vs shape (%d, %d)",  \
+                           dim1_index, dim2_index, mat->dim1, mat->dim2);      \
+      }                                                                        \
+      _##class_name##_set_value(mat, dim1_index, dim2_index,                   \
+                                _to_##type_name(rhs));                         \
+      return NONE_VALUE;                                                       \
+    }                                                                          \
+                                                                               \
     if (!IS_CLASS(rhs, Class_##class_name)) {                                  \
       return raise_error(frame, ctx, "Expected rhs to be class_name");         \
     }                                                                          \
