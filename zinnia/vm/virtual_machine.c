@@ -275,6 +275,11 @@ void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   Value *stored = scope_lookup(scope, ins->id, &tmp);
   if (NULL == stored || NONE == stored->type || OBJECT == stored->type) {
     raise_error(frame, scope, "Can only increment a primitive.");
+    return;
+  }
+  if (scope_is_const(scope, ins->id)) {
+    raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+    return;
   }
   switch (ptype(&stored->pri)) {
     case PRIMITIVE_CHAR:
@@ -637,10 +642,25 @@ void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
-      scope_set(scope, ins->id, frame_get_acc(scope->parent_frame));
+      if (!scope_set(scope, ins->id, frame_get_acc(scope->parent_frame))) {
+        raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+      }
       break;
     default:
       FATALF("Invalid arg type=%d for SET.", ins->type);
+  }
+}
+
+void _execute_SETC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+  switch (ins->type) {
+    case INSTRUCTION_ID:
+      if (!scope_let_const(scope, ins->id,
+                           frame_get_acc(scope->parent_frame))) {
+        raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
+      }
+      break;
+    default:
+      FATALF("Invalid arg type=%d for SETC.", ins->type);
   }
 }
 
@@ -1552,6 +1572,9 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         break;
       case SET:
         _execute_SET(vm, frame, scope, ins);
+        break;
+      case SETC:
+        _execute_SETC(vm, frame, scope, ins);
         break;
       case MSET:
         _execute_MSET(vm, frame, scope, ins);

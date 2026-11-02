@@ -93,6 +93,12 @@ DEFINE_EXPRESSION_WITH_PRODUCER(postfix_expression, Bytecode) {
   PostfixArray suffixes;
 };
 
+// |x|, which evaluates to x.len().
+DEFINE_EXPRESSION_WITH_PRODUCER(length_expression, Bytecode) {
+  Token *token;
+  ExpressionTree *exp;
+};
+
 DEFINE_EXPRESSION_WITH_PRODUCER(range_expression, Bytecode) {
   Token *token;
   uint32_t num_args;

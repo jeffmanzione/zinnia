@@ -39,7 +39,10 @@ void populate_class_def(ClassSignature *def, const SyntaxTree *stree) {
                         .module = CHILD_SYNTAX_AT(parent_class, 0)->token};
       *ClassNameArray_push_back_ref(&def->parent_classes) = name;
     } else {
-      FATALF("Multiple inheritance no longer supported.");
+      FATALF(
+          "Line %d: class '%s' has more than one parent class, but a class "
+          "may only have one.",
+          def->name.token->line + 1, def->name.token->text);
     }
   } else {
     FATALF("Unknown class name composition.");

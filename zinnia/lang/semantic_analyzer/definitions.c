@@ -34,6 +34,7 @@ REGISTRATION_FN(semantic_analyzer_init_fn) {
   REGISTER_EXPRESSION_WITH_PRODUCER(primary_expression_no_constants);
   REGISTER_EXPRESSION_WITH_PRODUCER(postfix_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(range_expression);
+  REGISTER_EXPRESSION_WITH_PRODUCER(length_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(unary_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(multiplicative_expression);
   REGISTER_EXPRESSION_WITH_PRODUCER(additive_expression);
@@ -530,6 +531,28 @@ UnaryType unary_token_to_type(const Token *token) {
       FATALF("Unknown unary: %s", token->text);
   }
   return Unary_unknown;
+}
+
+POPULATE_IMPL(length_expression, const SyntaxTree *stree,
+              SemanticAnalyzer *analyzer) {
+  ASSERT(CHILD_HAS_TOKEN(stree, 0));
+  length_expression->token = CHILD_SYNTAX_AT(stree, 0)->token;
+  length_expression->exp =
+      semantic_analyzer_populate(analyzer, CHILD_SYNTAX_AT(stree, 1));
+}
+
+DELETE_IMPL(length_expression, SemanticAnalyzer *analyzer) {
+  semantic_analyzer_delete(analyzer, length_expression->exp);
+}
+
+PRODUCE_IMPL(length_expression, SemanticAnalyzer *analyzer, Bytecode *target) {
+  int num_ins = 0;
+  num_ins +=
+      semantic_analyzer_produce(analyzer, length_expression->exp, target);
+  num_ins += bytecode_ins_no_arg(target, PUSH, length_expression->token);
+  num_ins += bytecode_ins_text(target, CLLN, global_intern("len"),
+                               length_expression->token);
+  return num_ins;
 }
 
 POPULATE_IMPL(unary_expression, const SyntaxTree *stree,

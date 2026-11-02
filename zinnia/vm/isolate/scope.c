@@ -5,6 +5,7 @@
 
 #include "zinnia/vm/isolate/scope.h"
 
+#include "zinnia/alloc/alloc.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/value/class/classes_def.h"
 #include "zinnia/value/function/function.h"
@@ -30,10 +31,28 @@ void scope_init(Scope *ctx, Object *self, Module *module,
   ctx->error = NULL;
   ctx->catch_ins = -1;
   ctx->previous_scope = NULL;
+  ctx->const_ids = NULL;
+  ctx->num_const_ids = 0;
+  ctx->const_ids_capacity = 0;
   scope_add_reflection_(ctx);
 }
 
-void scope_finalize(Scope *ctx) { ASSERT(ctx != NULL); }
+void scope_finalize(Scope *ctx) {
+  ASSERT(ctx != NULL);
+  if (NULL != ctx->const_ids) {
+    RELEASE(ctx->const_ids);
+    ctx->const_ids = NULL;
+  }
+}
+
+static bool scope_is_const_(const Scope *ctx, const char id[]) {
+  for (int i = 0; i < ctx->num_const_ids; ++i) {
+    if (ctx->const_ids[i] == id) {
+      return true;
+    }
+  }
+  return false;
+}
 
 const Instruction *scope_ins(Scope *ctx) {
   ASSERT(ctx != NULL);
@@ -161,14 +180,46 @@ void scope_let(Scope *ctx, const char id[], const Value *e) {
   object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
 }
 
-void scope_set(Scope *ctx, const char id[], const Value *e) {
+bool scope_is_const(Scope *ctx, const char id[]) {
+  for (Scope *s = ctx; NULL != s; s = s->previous_scope) {
+    if (NULL != object_get(s->_reflection, id)) {
+      return scope_is_const_(s, id);
+    }
+  }
+  return false;
+}
+
+bool scope_let_const(Scope *ctx, const char id[], const Value *e) {
+  ASSERT(ctx != NULL);
+  ASSERT(id != NULL);
+  ASSERT(e != NULL);
+  if (scope_is_const_(ctx, id)) {
+    return false;
+  }
+  if (ctx->num_const_ids == ctx->const_ids_capacity) {
+    ctx->const_ids_capacity =
+        (0 == ctx->const_ids_capacity) ? 4 : ctx->const_ids_capacity * 2;
+    ctx->const_ids =
+        (NULL == ctx->const_ids)
+            ? MNEW_ARR(const char *, ctx->const_ids_capacity)
+            : REALLOC(ctx->const_ids, const char *, ctx->const_ids_capacity);
+  }
+  ctx->const_ids[ctx->num_const_ids++] = id;
+  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+  return true;
+}
+
+bool scope_set(Scope *ctx, const char id[], const Value *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
   Value *member = NULL;
   if (NULL != object_get(ctx->_reflection, id)) {
+    if (scope_is_const_(ctx, id)) {
+      return false;
+    }
     object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
-    return;
+    return true;
   }
   Scope *parent_scope = ctx->previous_scope;
   while (NULL != parent_scope &&
@@ -176,15 +227,19 @@ void scope_set(Scope *ctx, const char id[], const Value *e) {
     parent_scope = parent_scope->previous_scope;
   }
   if (NULL != member) {
+    if (scope_is_const_(parent_scope, id)) {
+      return false;
+    }
     object_set_member(scope_heap_(parent_scope), parent_scope->_reflection, id,
                       e);
-    return;
+    return true;
   }
   if (NULL != object_get(ctx->self.obj, id)) {
     object_set_member(scope_heap_(ctx), ctx->self.obj, id, e);
-    return;
+    return true;
   }
   object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+  return true;
 }
 
 void scope_set_function(Scope *ctx, const Function *func) { ctx->func = func; }
