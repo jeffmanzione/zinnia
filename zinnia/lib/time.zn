@@ -1,3 +1,5 @@
+import math
+
 self.MILLIS_PER_SECOND = 1000
 self.NANOS_PER_MILLI = 1000
 
@@ -38,6 +40,21 @@ function date_from_timestamp(timestamp) {
 
 function current_date() {
   current_timestamp().to_date()
+}
+
+function is_leap_year(year) {
+  return year % 400 == 0 or (year % 4 == 0 and year % 100 != 0)
+}
+
+; Returns the number of days in [month] (1-12) of [year].
+function days_in_month(year, month) {
+  if month == 2 {
+    return if is_leap_year(year) then 29 else 28
+  }
+  if month == 4 or month == 6 or month == 9 or month == 11 {
+    return 30
+  }
+  return 31
 }
 
 function date_from_days_since_epoch(days) {
@@ -127,15 +144,26 @@ class Date {
     date_from_days_since_epoch(get_days_since_epoch() + days)
   }
 
+  ; Adds [months] (which may be negative), clamping the day to the last day
+  ; of the resulting month, e.g., 2024-01-31 + 1 month = 2024-02-29.
   method add_months(months) {
-    new_month = month + months
-    Date(year + (new_month - 1) / 12,
-         (if new_month > 12 then new_month - 12 else new_month),
-         day_of_month)
+    total = year * 12 + (month - 1) + months
+    new_year = total / 12
+    new_month = total % 12
+    if new_month < 0 {
+      new_month = new_month + 12
+      new_year = new_year - 1
+    }
+    new_month = new_month + 1
+    Date(new_year, new_month,
+         math.min([day_of_month, days_in_month(new_year, new_month)]))
   }
 
+  ; Adds [years], clamping Feb 29 to Feb 28 in non-leap years.
   method add_years(years) {
-    Date(year + years, month, day_of_month)
+    new_year = year + years
+    Date(new_year, month,
+         math.min([day_of_month, days_in_month(new_year, month)]))
   }
 
   method to_timestamp() {

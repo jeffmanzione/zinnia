@@ -1,0 +1,102 @@
+import error
+import io
+import test
+
+self.expect = test.expect
+self.expect_raises = test.expect_raises
+
+test.Tester().test(self)
+
+@test.TestClass
+class BuiltinTest {
+  @test.Test
+  method test_negative_float_literal() {
+    expect(-3.0 + 1.0, -2.0)
+    expect(-2.5 * 2, -5.0)
+    x = 2.5
+    expect(-x, -2.5)
+  }
+
+  @test.Test
+  method test_hash_at_module_level() {
+    expect(hash(5), 5)
+    expect(hash(i'abc'), hash(i'abc'))
+  }
+
+  @test.Test
+  method test_sort_is_ascending() {
+    expect(sort([3, 1, 2]), [1, 2, 3])
+    expect(sort(['b', 'c', 'a']), ['a', 'b', 'c'])
+    expect(sort([3, 1, 2], (a, b) -> b - a), [3, 2, 1])
+    expect(sort([]), [])
+  }
+
+  @test.Test
+  method test_range_len() {
+    r = 0:10:3
+    expect(r.len(), 4)
+    r = 0:9:3
+    expect(r.len(), 3)
+    r = 0:3
+    expect(r.len(), 3)
+    r = 0:0
+    expect(r.len(), 0)
+    neg = -1
+    r = 5:0:neg
+    expect(r.len(), 5)
+  }
+
+  @test.Test
+  method test_range_iteration() {
+    values = []
+    for (_, v) in 0:10:3 {
+      values.append(v)
+    }
+    expect(values, [0, 3, 6, 9])
+    values = []
+    neg = -2
+    for (_, v) in 6:0:neg {
+      values.append(v)
+    }
+    expect(values, [6, 4, 2])
+  }
+
+  @test.Test
+  method test_range_in() {
+    r = 0:10:3
+    expect(9 in r, True)
+    expect(10 in r, False)
+    expect(4 in r, False)
+    expect(-3 in r, False)
+    expect(0 in r, True)
+  }
+
+  @test.Test
+  method test_range_index() {
+    r = 0:10:3
+    expect(r[3], 9)
+    expect_raises(() -> r[4], error.Error)
+    expect_raises(() -> r[-1], error.Error)
+  }
+
+  @test.Test
+  method test_tuple_and_array_neq() {
+    t = (1, 2)
+    expect(t != [1, 2], True)
+    expect([1, 2] != t, True)
+    expect(t != (1, 2), False)
+    expect([1, 2] != [1, 2], False)
+    expect([1, 2] != [1, 2, 3], True)
+    expect([1, 2] != None, True)
+  }
+
+  @test.Test
+  method test_type_predicates() {
+    expect(is_int(1), True)
+    expect(is_int(1.0), False)
+    expect(is_float(1.0), True)
+    expect(is_bool(True), True)
+    expect(is_bool(1), False)
+    expect(is_bool(None), False)
+  }
+}

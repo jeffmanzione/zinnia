@@ -92,6 +92,16 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
     return member;
   }
   const Function *f = class_get_function(ctx->self.obj->_class, id);
+  // Generic methods inherited from Object (e.g., Object.hash()) and, in
+  // module-level code, methods of the module object itself would otherwise
+  // shadow module members and builtins with the same name (e.g., hash()). Only
+  // fall back to them when nothing else matches.
+  const Function *deferred_module_fn = NULL;
+  if (NULL != f && (Class_Object == f->_parent_class ||
+                    ctx->self.obj == ctx->module->_reflection)) {
+    deferred_module_fn = f;
+    f = NULL;
+  }
   if (NULL != f) {
     Object *f_ref = wrap_function_in_ref(f, ctx->self.obj,
                                          frame->parent_isolate->heap, ctx);
@@ -134,6 +144,11 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
   obj = module_lookup(Module_builtin, id);
   if (NULL != obj) {
     *tmp = value_object(obj);
+    return tmp;
+  }
+  if (NULL != deferred_module_fn) {
+    *tmp = value_object(wrap_function_in_ref(deferred_module_fn, ctx->self.obj,
+                                             frame->parent_isolate->heap, ctx));
     return tmp;
   }
   return NULL;

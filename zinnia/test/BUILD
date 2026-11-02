@@ -65,3 +65,23 @@ zinnia_test(
     name = "string_test",
     main = "string_test.zn",
 )
+
+zinnia_test(
+    name = "builtin_test",
+    main = "builtin_test.zn",
+)
+
+zinnia_test(
+    name = "io_test",
+    main = "io_test.zn",
+)
+
+zinnia_test(
+    name = "math_test",
+    main = "math_test.zn",
+)
+
+zinnia_test(
+    name = "struct_test",
+    main = "struct_test.zn",
+)

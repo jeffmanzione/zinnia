@@ -19,7 +19,7 @@ class IndexIterator : Iterator {
     } else if args is Tuple {
       (indexable, start, end) = args
     } else {
-      raise error.Error(concat('Strange input: ', args))
+      raise error.Error(cat('Strange input: ', args))
     }
     i = -1
     index = start - 1
@@ -73,7 +73,7 @@ function _partition(seq, l, h, cmp) {
   pivot = seq[h]
   i = l - 1
   for j = l, j < h, j = j + 1 {
-    if cmp(seq[j], pivot) > 0 {
+    if cmp(seq[j], pivot) < 0 {
       i = i + 1
       tmp = seq[i]
       seq[i] = seq[j]

@@ -45,5 +45,18 @@ class JsonTest {
         '{"f1":true,"f2":"Cat"}'
     )
   }
-   
+  @test.Test
+  method test_jsonify_ints_are_not_bools() {
+    expect(json.jsonify(1), '1')
+    expect(json.jsonify(0), '0')
+    expect(json.jsonify([1, 0, True]), '[1,0,true]')
+  }
+  @test.Test
+  method test_jsonify_escapes_strings() {
+    expect(json.jsonify('say "hi"\n'), '"say \\"hi\\"\\n"')
+  }
+  @test.Test
+  method test_jsonify_tuple() {
+    expect(json.jsonify((1, 'a')), '[1,"a"]')
+  }
 }

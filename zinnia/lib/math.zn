@@ -52,7 +52,7 @@ function max(sequence) {
 ; function floor(x) {}
 
 ; Returns the logarithm of the specified value [x] with base [base].
-function log(x, base=math.E) {
+function log(x, base=E) {
   __log(x, base)
 }
 

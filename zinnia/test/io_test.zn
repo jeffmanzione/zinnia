@@ -1,0 +1,38 @@
+import io
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+@test.TestClass
+class IoTest {
+  @test.Test
+  method test_write_append_and_getlines() {
+    file_name = 'io_test.txt'
+    fw = io.FileWriter(file_name)
+    fw.writeln('one')
+    fw.close()
+    fw = io.FileWriter(file_name, True)
+    fw.writeln('two')
+    fw.close()
+    fr = io.FileReader(file_name)
+    expect(fr.getlines(), ['one', 'two'])
+    fr.close()
+  }
+
+  @test.Test
+  method test_overwrite() {
+    file_name = 'io_test2.txt'
+    fw = io.FileWriter(file_name)
+    fw.write('first')
+    fw.close()
+    fw = io.FileWriter(file_name)
+    fw.write('second')
+    fw.close()
+    fr = io.FileReader(file_name)
+    expect(fr.getall(), 'second')
+    fr.close()
+  }
+}
+

@@ -3,39 +3,66 @@ import struct
 function jsonify(value) {
   if value == None {
     return i'null'
-  } else if value == True {
-    return i'true'
-  } else if value == False {
-    return i'false'
+  } else if is_bool(value) {
+    return if value then i'true' else i'false'
   } else if value is Object {
     return _jsonify_object(value)
   }
   return str(value)
 }
 
+; A single backslash. ('\\ ' sidesteps a lexer bug with a literal ending in an
+; escaped backslash.)
+self._BACKSLASH = '\\ '.substr(0, 1)
+
+function _jsonify_string(s) {
+  out = '"'
+  for i=0, i < s.len(), i=i+1 {
+    c = str(s[i])
+    if c == '"' {
+      out.extend('\\"')
+    } else if c == _BACKSLASH {
+      out.extend(_BACKSLASH).extend(_BACKSLASH)
+    } else if c == '\n' {
+      out.extend('\\n')
+    } else if c == '\r' {
+      out.extend('\\r')
+    } else if c == '\t' {
+      out.extend('\\t')
+    } else {
+      out.extend(c)
+    }
+  }
+  return out.extend('"')
+}
+
 function _jsonify_object(obj) {
   if is_string(obj) {
-    return '\"' + obj + '\"'
-  } else if obj is Array {
+    return _jsonify_string(obj)
+  } else if (obj is Array) or (obj is Tuple) {
     return _jsonify_array(obj)
   } else if obj is struct.Map {
     return _jsonify_map(obj)
   }
   entries = []
   for (_, f) in obj.class().fields() {
-    entries.append('"' + str(f) + '":' + jsonify(obj.$get(f)))
+    entries.append(_jsonify_string(str(f)) + ':' + jsonify(obj.$get(f)))
   }
   return '{' + ','.join(entries) + '}'
 }
 
 function _jsonify_array(arr) {
-  return '[' + ','.join(arr.map(e -> jsonify(e))) + ']'
+  entries = []
+  for (_, e) in arr {
+    entries.append(jsonify(e))
+  }
+  return '[' + ','.join(entries) + ']'
 }
 
 function _jsonify_map(map) {
   entries = []
   for (k, v) in map {
-    entries.append('"' + str(k) + '":' + jsonify(v))
+    entries.append(_jsonify_string(str(k)) + ':' + jsonify(v))
   }
   return '{' + ','.join(entries) + '}'
 }

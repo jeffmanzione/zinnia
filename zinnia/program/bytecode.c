@@ -692,7 +692,8 @@ int bytecode_ins_neg(Bytecode *bytecode, Op op, const Token *token) {
 
   ins->type = INSTRUCTION_PRIMITIVE;
   Primitive p = token_to_primitive(token);
-  ins->val = primitive_int(-pint(&p));
+  ins->val = PRIMITIVE_FLOAT == ptype(&p) ? primitive_float(-pfloat(&p))
+                                          : primitive_int(-pint(&p));
   return 1;
 }
 
