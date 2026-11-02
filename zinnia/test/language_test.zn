@@ -250,4 +250,19 @@ class LanguageFixesTest {
     expect(a is Tuple and a is Array, False)
     expect(a is Array == True, True)
   }
+
+  @test.Test
+  method test_arithmetic_errors_are_catchable() {
+    test.expect_raises(() -> True + 1, error.Error)
+    test.expect_raises(() -> 1.5 & 1, error.Error)
+    test.expect_raises(() -> 1 / 0, error.Error)
+    test.expect_raises(() -> 5 % 0, error.Error)
+  }
+
+  @test.Test
+  method test_float_modulo() {
+    expect(7.5 % 2, 1.5)
+    expect(-7 % 3, -1)
+    expect(1.0 / 4, 0.25)
+  }
 }
