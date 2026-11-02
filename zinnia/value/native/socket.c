@@ -52,13 +52,15 @@ Value Socket_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   obj->_internal_obj = socket;
   if (is_server) {
     if (!socket_is_valid(socket)) {
-      return raise_error(frame, ctx, "Invalid socket.");
+      return raise_error(frame, ctx, "Invalid socket: %s:%d", host, port);
     }
     if (SOCKET_ERROR == socket_bind(socket)) {
-      return raise_error(frame, ctx, "Could not bind to socket.");
+      return raise_error(frame, ctx, "Could not bind to socket on %s:%d.", host,
+                         port);
     }
     if (SOCKET_ERROR == socket_listen(socket, port)) {
-      return raise_error(frame, ctx, "Could not listen to socket.");
+      return raise_error(frame, ctx, "Could not listen to socket on %s:%d.",
+                         host, port);
     }
   }
   return value_object(obj);

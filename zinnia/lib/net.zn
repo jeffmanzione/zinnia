@@ -1,4 +1,4 @@
-;import async
+import async
 import error
 import inject
 import io
@@ -354,7 +354,7 @@ function always_true() {
 
 class RequestController {
   new(field matcher_fn=always_true, field request_key = RawRequest, field response_key = RawResponse) {}
-  method process(controller) {
+  method process(controller, req) {
     return find_annotated_method(controller, Rpc)()
   }
 }
@@ -394,11 +394,9 @@ class Application {
   }
 
   method start() {
-    io.println('Starting app at ' + str(host) + ':' +  str(port))
-    ; async.spawn_actor(
-    ;     ApplicationRunner,
-    ;     (host, port, controller_classes, provider_sets))
-    return ApplicationRunner(host, port, controller_classes, provider_sets)
+    return async.spawn_actor(
+        ApplicationRunner,
+        (host, port, controller_classes, provider_sets))
   }
 }
 
@@ -416,7 +414,7 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
 
 function find_annotated_method(instance, annot) {
   cls = instance.class()
-  methods = cls.all_methods().where(m -> m.annotations.where(a -> a is annot).len() > 0)
+  methods = cls.all_methods().where(m -> m.annotations.has(a -> a is annot))
   if methods.len() == 0 {
     raise error.Error(str(cls) + ' has no ' + str(annot) + ' annotated methods.')
   } else if methods.len() > 1 {
@@ -425,7 +423,7 @@ function find_annotated_method(instance, annot) {
   return instance.$get(methods[0].name())
 }
 
-;@async.Actor
+@async.Actor
 class ApplicationRunner {
   field injector
   new(field host, field port, field controller_classes, field provider_sets=[]) {
@@ -458,8 +456,12 @@ class ApplicationRunner {
     }
     ctrlr = injector.get(ctrlr_cls)
     request2 = injector.get(req_ctrlr.request_key)
-    req_ctrlr.process(ctrlr, request2)
+    process_resp = req_ctrlr.process(ctrlr, request2)
     resp = injector.get(RawResponse)
+    ; RawResponse is not bound, so fall back.
+    if ~(resp is String) {
+      return process_resp
+    }
     return resp
   }
 
@@ -475,6 +477,7 @@ class ApplicationRunner {
 
   method run() {
     sock = socket.create_server_socket(host, port)
+    io.println('Started app at ' + str(host) + ':' +  str(port))
     while True {
       handle = await sock.accept()
       try {
@@ -502,10 +505,10 @@ class Server {
   }
 
   method run() {
-    ; await async.all(
-    ;  apps.map(app -> app.start().run())
-    ;)
-    runners = apps.map(app -> app.start())
-    runners.each(r -> r.run())
+    await async.all(
+     apps.map(app -> app.start().run())
+    )
+    ; runners = apps.map(app -> app.start())
+    ; runners.each(r -> r.run())
   }
 }

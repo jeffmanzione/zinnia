@@ -88,9 +88,9 @@ class RpcController {
   new(field request) {}
   @net.Rpc
   method process() {
-    io.println('Ping')
+    io.println(cat('Ping message: ', request))
     ; For now, just ping back the request.
-    json.jsonify({'request': request, 'response': 'pong'})
+    return json.jsonify({'request': request, 'response': 'pong'})
   }
 }
 
@@ -127,7 +127,8 @@ net.Server()
             .add_controller(NotFoundController)
             .add_controller(RedirectController)
             .add_provider_set(WebProviders))
-    ; .add_application(
-    ;     net.Application(host, api_port)
-    ;         .add_controller(RpcController))
+    ; echo "Hello, world!" | nc localhost 5000
+    .add_application(
+        net.Application(host, api_port)
+            .add_controller(RpcController))
     .run()
