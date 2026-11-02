@@ -62,17 +62,3 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = ["//zinnia/bundle"],
 )
-
-# Deprecated: use zinnia-package.
-alias(
-    name = "zinniap",
-    actual = ":zinnia-package",
-    visibility = ["//visibility:public"],
-)
-
-# Deprecated: use zinnia-bundle.
-alias(
-    name = "zinnias",
-    actual = ":zinnia-bundle",
-    visibility = ["//visibility:public"],
-)

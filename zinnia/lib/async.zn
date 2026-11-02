@@ -17,11 +17,6 @@ function spawn_isolate({fn, args=None, keep_alive=False}) {
   __spawn_isolate(fn, args, keep_alive)
 }
 
-; Deprecated: use spawn_isolate().
-function create_process({fn, args=None, is_remote=False}) {
-  spawn_isolate(fn: fn, args: args, keep_alive: is_remote)
-}
-
 ; Returns a proxy to a new instance of [cls], constructed with [args], that
 ; lives in a newly-spawned isolate.
 ;
@@ -47,11 +42,6 @@ function spawn_actor(cls, args=None) {
       args: (cls, args),
       keep_alive: True)
   return proxy_class(await isolate.start())
-}
-
-; Deprecated: use spawn_actor().
-function create_remote(cls, args=None) {
-  spawn_actor(cls, args)
 }
 
 ; Represents the state of an asynchronous piece of work.
@@ -127,18 +117,9 @@ class Actor {
     })
     proxy_class.add_method('target')
         .with_statement('return actor_ref')
-    ; Deprecated: use target().
-    proxy_class.add_method('remote')
-        .with_statement('return actor_ref')
-    proxy_class = proxy_class.build()
-    ; Deprecated: the proxy class was previously named ['Remote' + cls.name()].
-    cls.module().$set(cat('Remote', cls.name()), proxy_class)
-    return proxy_class
+    return proxy_class.build()
   }
 }
-
-; Deprecated: use Actor.
-class RemoteClass : Actor {}
 
 function _get_proxy_class(cls) {
   proxy_class = cls.module().$get(cls.name() + 'Proxy')

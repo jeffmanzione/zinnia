@@ -1948,6 +1948,42 @@ void _isolate_broadcast_to_parent(Isolate *isolate) {
   }
 }
 
+// Prints an uncaught error without running any Zinnia code, for when io is not
+// initialized (the program never imported it), since io.errorln() needs it.
+void _print_uncaught_error_natively(const Value *error) {
+  if (OBJECT != error->type) {
+    fprintf(stderr, "Uncaught error.\n");
+    return;
+  }
+  const Object *err = error->obj;
+  char *message = NULL;
+  int message_len = 0;
+  const Value *message_value =
+      object_get((Object *)err, global_intern("message"));
+  if (NULL == message_value ||
+      !extract_string(message_value, &message, &message_len)) {
+    message = "";
+    message_len = 0;
+  }
+  fprintf(stderr, "%s: %.*s\n", err->_class->_name, message_len, message);
+  const Value *stacktrace =
+      object_get((Object *)err, global_intern("stacktrace"));
+  if (NULL == stacktrace || !IS_CLASS(stacktrace, Class_Array)) {
+    return;
+  }
+  Array *lines = (Array *)stacktrace->obj->_internal_obj;
+  for (int i = 0; i < Array_size(lines); ++i) {
+    const Value *line = Array_get_ref_unchecked(lines, i);
+    if (!IS_CLASS(line, Class_StackLine)) {
+      continue;
+    }
+    const Module *module = stackline_module(line->obj);
+    fprintf(stderr, "  %s:%d\n",
+            NULL == module ? "<unknown-module>" : module_name(module),
+            (int)stackline_linenum(line->obj) + 1);
+  }
+}
+
 void _isolate_handle_error(Isolate *isolate, Frame *frame) {
   if (NULL == frame->parent_frame ||
       frame->parent_isolate != frame->parent_frame->parent_isolate) {
@@ -1962,6 +1998,10 @@ void _isolate_handle_error(Isolate *isolate, Frame *frame) {
       return;
     }
     isolate->vm->exit_code = EXIT_FAILURE;
+    if (MODULE_INITIALIZED != module_init_state(Module_io)) {
+      _print_uncaught_error_natively(frame_get_acc(frame));
+      return;
+    }
     Object *errorln = module_lookup(Module_io, global_intern("errorln"));
     ASSERT(errorln != NULL);
     ASSERT(Class_Function == errorln->_class);

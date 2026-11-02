@@ -328,8 +328,7 @@ static bool ends_with_(const char str[], const char suffix[]) {
 }
 
 bool is_bundle_file(const char filepath[]) {
-  return ends_with_(filepath, ZNBUNDLE_EXTENSION) ||
-         ends_with_(filepath, ZNSEED_EXTENSION);
+  return ends_with_(filepath, ZNBUNDLE_EXTENSION);
 }
 
 bool load_znbundle_file(VM *vm, const char bundle_filepath[], char *error_buf) {

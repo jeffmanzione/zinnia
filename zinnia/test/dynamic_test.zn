@@ -6,7 +6,7 @@ self.expect = test.expect
 
 test.Tester().test(self)
 
-def load(name) {
+function load(name) {
   lib = dynamic.import_c_library(
     file_name: './examples/dynamic/_custom.dll',
     module_name: name)

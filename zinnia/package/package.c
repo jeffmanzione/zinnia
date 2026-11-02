@@ -240,10 +240,6 @@ int zinnia_package(int argc, const char *argv[]) {
       continue;
     }
 
-    // if (ends_with(file_name, ZNSEED_EXTENSION)) {
-    //   DEBUGF("Processing bundle: %s", file_name);
-    //   continue;
-    // }
     const bool is_bundle = is_bundle_file(file_name);
 
     const char *type = is_bundle ? "FP_FILE_BUNDLE" : "FP_FILE_SOURCE";

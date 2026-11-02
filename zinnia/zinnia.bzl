@@ -402,10 +402,6 @@ def zinnia_bundle(name, deps = []):
         deps = deps,
     )
 
-def zinnia_seed(name, deps = []):
-    """Deprecated: use zinnia_bundle()."""
-    return zinnia_bundle(name = name, deps = deps)
-
 def _zinnia_test_impl(ctx):
     runner_executable = ctx.attr.runner.files_to_run.executable
     main_file = sorted(ctx.attr.main.files.to_list(), key = _prioritize_bin)[0]
