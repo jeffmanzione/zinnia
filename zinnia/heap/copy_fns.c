@@ -5,12 +5,12 @@
 
 #include "zinnia/heap/copy_fns.h"
 
-#include "zinnia/entity/array/array.h"
-#include "zinnia/entity/object.h"
-#include "zinnia/entity/string/string.h"
-#include "zinnia/entity/tuple/tuple.h"
-#include "zinnia/entity/value.h"
 #include "zinnia/heap/heap.h"
+#include "zinnia/value/array/array.h"
+#include "zinnia/value/object.h"
+#include "zinnia/value/string/string.h"
+#include "zinnia/value/tuple/tuple.h"
+#include "zinnia/value/value.h"
 
 void array_copy(ValueCopier *copier, const Object *src_obj,
                 Object *target_obj) {

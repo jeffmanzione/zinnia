@@ -21,7 +21,7 @@ cc_library(
     deps = [
         ":buffer",
         "//zinnia/alloc",
-        "//zinnia/entity:primitive",
+        "//zinnia/value:primitive",
         "//zinnia/program:instruction",
         "//zinnia/util:error",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
@@ -34,7 +34,7 @@ cc_library(
     hdrs = ["deserialize.h"],
     deps = [
         ":buffer",
-        "//zinnia/entity:primitive",
+        "//zinnia/value:primitive",
         "//zinnia/program:instruction",
         "//zinnia/util:error",
         "//zinnia/util:void_array",

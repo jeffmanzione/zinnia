@@ -6,7 +6,7 @@
 #include "zinnia/vm/vm.h"
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/class/classes_def.h"
+#include "zinnia/value/class/classes_def.h"
 #include "zinnia/vm/isolate/isolate.h"
 #include "zinnia/vm/isolate/scope.h"
 

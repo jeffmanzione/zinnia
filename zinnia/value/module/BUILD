@@ -1,0 +1,31 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(
+    default_visibility = ["//zinnia:internal"],
+)
+
+cc_library(
+    name = "module",
+    srcs = ["module.c"],
+    hdrs = ["module.h"],
+    deps = [
+        "//zinnia/value:value",
+        "//zinnia/value:object",
+        "//zinnia/value/class",
+        "//zinnia/value/function",
+        "//zinnia/heap",
+        "//zinnia/program:bytecode",
+        "//zinnia/util:dll",
+        "//zinnia/util:platform",
+        "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
+    ],
+)
+
+cc_library(
+    name = "modules",
+    srcs = ["modules.c"],
+    hdrs = ["modules.h"],
+    deps = [
+        "//zinnia/value:object",
+    ],
+)

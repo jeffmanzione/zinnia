@@ -10,11 +10,11 @@ cc_library(
     hdrs = ["scope.h"],
     deps = [
         ":isolates",
-        "//zinnia/entity:object",
-        "//zinnia/entity/class:classes",
-        "//zinnia/entity/function",
-        "//zinnia/entity/module",
-        "//zinnia/entity/module:modules",
+        "//zinnia/value:object",
+        "//zinnia/value/class:classes",
+        "//zinnia/value/function",
+        "//zinnia/value/module",
+        "//zinnia/value/module:modules",
         "//zinnia/program:instruction",
         "//zinnia/program:bytecode",
         "//zinnia/vm:intern",
@@ -40,8 +40,8 @@ cc_library(
     srcs = ["isolates.c"],
     hdrs = ["isolates.h"],
     deps = [
-        "//zinnia/entity:object",
-        "//zinnia/entity/module",
+        "//zinnia/value:object",
+        "//zinnia/value/module",
         "//zinnia/heap",
         "//zinnia/program:bytecode",
         "//zinnia/util/sync:critical_section",
@@ -61,7 +61,7 @@ cc_library(
     deps = [
         ":scope",
         ":isolates",
-        "//zinnia/entity/class:classes",
+        "//zinnia/value/class:classes",
         "//zinnia/heap",
         "//zinnia/util:error",
     ],
@@ -74,8 +74,8 @@ cc_library(
     deps = [
         ":isolates",
         "//zinnia/alloc",
-        "//zinnia/entity:value",
-        "//zinnia/entity/class:classes",
+        "//zinnia/value:value",
+        "//zinnia/value/class:classes",
         "//zinnia/heap",
     ],
 )

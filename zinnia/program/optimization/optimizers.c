@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "zinnia/alloc/alloc.h"
-#include "zinnia/entity/value.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/program/instruction.h"
 #include "zinnia/program/optimization/optimizer.h"
+#include "zinnia/value/value.h"
 #include "zinnia/vm/intern.h"
 
 Instruction for_op_(Op op) {

@@ -9,8 +9,8 @@
 #include <stdio.h>
 
 #include "c-data-structures/arraylike.h"
-#include "zinnia/entity/primitive.h"
 #include "zinnia/program/op.h"
+#include "zinnia/value/primitive.h"
 
 typedef enum {
   INSTRUCTION_NO_ARG,

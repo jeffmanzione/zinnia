@@ -1,11 +1,11 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_NATIVE_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_NATIVE_H_
 
-#include "zinnia/entity/class/classes_def.h"
-#include "zinnia/entity/native/builder/builder.h"
-#include "zinnia/entity/native/builder/function_context.h"
-#include "zinnia/entity/tuple/tuple.h"
 #include "zinnia/util/platform.h"
+#include "zinnia/value/class/classes_def.h"
+#include "zinnia/value/native/builder/builder.h"
+#include "zinnia/value/native/builder/function_context.h"
+#include "zinnia/value/tuple/tuple.h"
 
 #ifdef OS_WINDOWS
 #define NATIVE_FN __declspec(dllexport)

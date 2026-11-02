@@ -1,0 +1,30 @@
+// error.h
+//
+// Created on: Sept 15, 2020
+//     Author: Jeff Manzione
+
+#ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_NATIVE_ERROR_H_
+#define COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_NATIVE_ERROR_H_
+
+#include <stdarg.h>
+
+#include "zinnia/value/object.h"
+#include "zinnia/vm/isolate/isolates.h"
+#include "zinnia/vm/module_manager.h"
+
+extern Class *Class_StackLine;
+
+Object *error_new(Frame *frame, Scope *ctx, Object *error_msg);
+void error_add_native(ModuleManager *mm, Module *error);
+
+uint32_t stackline_linenum(Object *stackline);
+Module *stackline_module(Object *stackline);
+
+Value raise_error(Frame *frame, Scope *scope, const char fmt[], ...);
+Value raise_errorv(Frame *frame, Scope *scope, const char fmt[], va_list args);
+Value raise_error_with_object(Frame *frame, Scope *scope, Object *err);
+
+Value native_blocking_raise_error(Frame *frame, Scope *scope, const char fmt[],
+                                  ...);
+
+#endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_NATIVE_ERROR_H_ */

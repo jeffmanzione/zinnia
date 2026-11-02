@@ -15,10 +15,10 @@ cc_library(
     hdrs = ["native.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//zinnia/entity/class:classes_def",
-        "//zinnia/entity/native/builder",
-        "//zinnia/entity/native/builder:function_context",
-        "//zinnia/entity/tuple",
+        "//zinnia/value/class:classes_def",
+        "//zinnia/value/native/builder",
+        "//zinnia/value/native/builder:function_context",
+        "//zinnia/value/tuple",
         "//zinnia/util:platform",
     ],
 )
