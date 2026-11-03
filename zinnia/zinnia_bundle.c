@@ -55,7 +55,7 @@ void free_arg_(struct zinnia_module_info *module_info) {
   }
 }
 
-// zinnias
+// zinnia-bundle
 //   bundle_name
 //   out/path/to/bundle_name
 //   mod1:path/to/mod1/mod1.zn:zip_path/to/mod1/mod1.zn
