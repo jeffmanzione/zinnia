@@ -33,10 +33,11 @@ class SimpleHttpServer {
         if _is_icon(request) {
           response.set_content_type('image/x-icon')
         }
-        if request.path == '/' {
+        path = request.path
+        if path == '/' {
           path = '/index.html'
         }
-        response_content = cache.get(request.path)
+        response_content = cache.get(path)
         if ~response_content {
           response.set_status_code(404)
               .set_status('NOT FOUND')

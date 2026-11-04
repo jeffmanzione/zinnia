@@ -1,4 +1,3 @@
-import io
 import test
 
 self.expect = test.expect

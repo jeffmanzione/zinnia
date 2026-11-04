@@ -1,4 +1,3 @@
-import error
 import io
 
 io.println(strfmt('Hello, %v; welcome! %% You are at %p. %d %f %b', 'Jeff', 'Jeff', None, None, None))
