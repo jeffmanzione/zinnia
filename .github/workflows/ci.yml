@@ -13,7 +13,7 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Bazel caches the C++ toolchain it configures for the installed compiler,
       # whose include paths break the build once the runner's compiler changes.
@@ -22,7 +22,7 @@ jobs:
         run: echo "version=$(gcc -dumpfullversion)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Bazel
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/bazel
@@ -43,6 +43,6 @@ jobs:
     name: Build dev image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build -t zinnia-dev zinnia/docker
