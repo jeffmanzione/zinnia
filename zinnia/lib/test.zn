@@ -78,6 +78,9 @@ class Tester {
         if ~_method_is_test(meth) {
           continue
         }
+        if ~_is_selected(cls, meth) {
+          continue
+        }
         pass = True
         err = None
         try {
@@ -107,6 +110,24 @@ class Tester {
     if num_passes != stats.len() {
       raise error.Error(str(stats.len() - num_passes) + ' test(s) failed.')
     }
+  }
+
+  ; Whether [meth] of [cls] is one of the tests to run. The --test flag, if
+  ; given, lists them, separated by commas, as class names, method names or
+  ; Class.method names, e.g. --test=MathTest.test_abs,StringTest.
+  method _is_selected(cls, meth) {
+    if ~args or ~args.test {
+      return True
+    }
+    class_name = str(cls.name())
+    method_name = str(meth.name())
+    for (_, name) in str(args.test).split(',') {
+      name = name.trim()
+      if (name == class_name) or (name == method_name) or (name == cat(class_name, '.', method_name)) {
+        return True
+      }
+    }
+    return False
   }
 
   method _is_test_class(cls) {

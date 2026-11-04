@@ -125,6 +125,12 @@ class MyTest {
   }
 }
 ```
+To run only some of a file's tests, list them with `--test`, as class names,
+method names or `Class.method` names:
+
+```shell
+zinnia my_test.zn -- --test=MyTest.test_add
+```
 
 ## Examples
 
