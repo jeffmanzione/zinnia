@@ -1,25 +1,42 @@
+; Dates, timestamps and timers.
+;
+; Example:
+; ```
+; now = time.current_timestamp()  ; e.g. 2024-05-01T12:30:00.000Z
+; next_week = time.current_date().add_days(7)
+; ```
+
 import math
 
+; Milliseconds per second.
 self.MILLIS_PER_SECOND = 1000
+; Microseconds per millisecond, despite the name.
 self.NANOS_PER_MILLI = 1000
 
 
+; Tells the time. Replace time.clock with your own to control it, e.g. in tests.
 class Clock {
+  ; Creates a clock whose [now_timestamp] returns the current Timestamp and whose
+  ; [now_usec] returns the current time in microseconds.
   new(
     field now_timestamp = () -> Timestamp(__now_timestamp()),
     field now_usec = () -> __now_usec()
   ) {}
+  ; Returns the current timestamp's text.
   method to_s() {
     str(now_timestamp())
   }
 }
 
+; The clock that current_timestamp(), current_date() and Timers use.
 self.clock = Clock()
 
+; Returns the current Timestamp, in UTC.
 function current_timestamp() {
   clock.now_timestamp()
 }
 
+; Returns [n] as text, padded with leading zeros to [width] digits.
 function _pad(n, width) {
   s = str(n)
   out = ''
@@ -30,18 +47,22 @@ function _pad(n, width) {
   return out
 }
 
+; Returns the Timestamp [micros] microseconds after the Unix epoch.
 function timestamp_from_micros(micros) {
   Timestamp(__micros_to_timestamp(micros))
 }
 
+; Returns the Date of [timestamp].
 function date_from_timestamp(timestamp) {
   Date(timestamp.year, timestamp.month, timestamp.day_of_month)
 }
 
+; Returns the current Date, in UTC.
 function current_date() {
   current_timestamp().to_date()
 }
 
+; Returns whether [year] is a leap year.
 function is_leap_year(year) {
   return year % 400 == 0 or (year % 4 == 0 and year % 100 != 0)
 }
@@ -57,6 +78,7 @@ function days_in_month(year, month) {
   return 31
 }
 
+; Returns the Date [days] days after 1970-01-01.
 function date_from_days_since_epoch(days) {
   z = days + 719468
   era = (if z >= 0 then z else (z - 146096)) / 146097
@@ -70,7 +92,9 @@ function date_from_days_since_epoch(days) {
   Date(y + (if m <= 2 then 1 else 0), m, d)
 }
 
+; A point in time, in UTC, to the millisecond.
 class Timestamp {
+  ; Creates a timestamp; [month] and [day_of_month] are 1-based.
   new(field year,
       field month,
       field day_of_month,
@@ -79,12 +103,14 @@ class Timestamp {
       field second = 0,
       field millisecond = 0) {}
 
+  ; Returns the timestamp in ISO 8601 form, e.g. '2024-05-01T12:30:00.000Z'.
   method to_s() {
     cat(year, '-', _pad(month, 2), '-', _pad(day_of_month, 2), 'T',
         _pad(hour, 2), ':', _pad(minute, 2), ':', _pad(second, 2),
         '.', _pad(millisecond, 3), 'Z')
   }
 
+  ; Returns the microseconds since the Unix epoch.
   method to_micros() {
     __timestamp_to_micros(
         year,
@@ -96,10 +122,12 @@ class Timestamp {
         millisecond)
   }
 
+  ; Returns the timestamp's Date.
   method to_date() {
     Date(year, month, day_of_month)
   }
   
+  ; Returns whether [other] is a Timestamp of the same time.
   method ==(other) {
     if ~(other is Timestamp) {
       return False
@@ -107,6 +135,7 @@ class Timestamp {
     to_micros() == other.to_micros()
   }
 
+  ; Returns whether [other] isn't a Timestamp of the same time.
   method !=(other) {
     if ~(other is Timestamp) {
       return True
@@ -114,6 +143,7 @@ class Timestamp {
     to_micros() != other.to_micros()
   }
 
+  ; Compares by time; a Timestamp comes before anything else.
   method __cmp__(other) {
     if ~(other is Timestamp) {
       return 1
@@ -122,9 +152,12 @@ class Timestamp {
   }
 }
 
+; A calendar date.
 class Date {
+  ; Creates a date; [month] and [day_of_month] are 1-based.
   new(field year, field month, field day_of_month) {}
 
+  ; Returns the days since 1970-01-01.
   method get_days_since_epoch() {
     y = year - (if month <= 2 then 1 else 0)
     era = (if y >= 0 then y else y - 399) / 400
@@ -134,12 +167,14 @@ class Date {
     era * 146097 + doe - 719468
   }
 
+  ; Returns the date in ISO 8601 form, e.g. '2024-05-01'.
   method to_s() {
     cat(year, '-',
         (if month < 10 then '0' else ''), month, '-',
         (if day_of_month < 10 then '0' else ''), day_of_month)
   }
 
+  ; Returns the date [days] (which may be negative) days later.
   method add_days(days) {
     date_from_days_since_epoch(get_days_since_epoch() + days)
   }
@@ -166,6 +201,7 @@ class Date {
          math.min([day_of_month, days_in_month(new_year, month)]))
   }
 
+  ; Returns the Timestamp of midnight at the start of the date.
   method to_timestamp() {
     Timestamp(
         year,
@@ -177,6 +213,7 @@ class Date {
         0)  ; millisecond
   }
 
+  ; Returns whether [other] is the same Date.
   method ==(other) {
     if ~(other is Date) {
       return False
@@ -184,6 +221,7 @@ class Date {
     (year == other.year) and (month == other.month) and (day_of_month == other.day_of_month)
   }
 
+  ; Returns whether [other] isn't the same Date.
   method !=(other) {
     if ~(other is Date) {
       return True
@@ -191,6 +229,7 @@ class Date {
     (year != other.year) or (month != other.month) or (day_of_month != other.day_of_month)
   }
 
+  ; Compares by date; a Date comes before anything else.
   method __cmp__(other) {
     if ~(other is Date) {
       return 1
@@ -199,21 +238,34 @@ class Date {
   }
 }
 
+; Times work, marking named points along the way.
+;
+; Example:
+; ```
+; t = time.Timer()
+; t.start()
+; work()
+; io.println(t.mark('work'))  ; Microseconds since start().
+; ```
 class Timer {
   field start_usec, timestamps
+  ; Clears the timer's start and marks.
   method reset() {
     start_usec = 0
     timestamps = []
   }
+  ; Clears the marks and starts timing from now.
   method start() {
     reset()
     start_usec = clock.now_usec()
   }
+  ; Records [mark_name] with the microseconds since start(), and returns them.
   method mark(mark_name) {
     elapsed = clock.now_usec() - start_usec
     timestamps.append((mark_name, elapsed))
     return elapsed
   }
+  ; Returns the marks: (name, microseconds since start()) pairs, in order.
   method elapsed_usec() {
     return timestamps
   }

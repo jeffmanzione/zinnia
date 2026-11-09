@@ -1,14 +1,26 @@
+; Errors and the stack traces they carry.
+;
+; `raise error.Error('message')` raises an error; `try { ... } catch e { ... }`
+; catches one. An uncaught error is printed with its stack trace.
+
 import async ; keep
 
+; A token of source code: its [text], and its 0-based [line] and [col].
 class Token {
+  ; Creates a token.
   new(field text, field line, field col) {}
 
+  ; Returns e.g. "Token(text='x',line=3,col=4)".
   method to_s() {
     return cat('Token(text=\'', text, '\',line=', line, ',col=', col, ')')
   }
 }
 
+; A line of a stack trace: the module, function and instruction an error
+; passed through. module(), function(), linetext() and source_linetext() are
+; defined natively.
 class StackLine {
+  ; Returns the token of the instruction, in the module's compiled code.
   method token() {
     tok = __token()
     if tok {
@@ -16,6 +28,7 @@ class StackLine {
     }
     return Token('', -1, -1)
   }
+  ; Returns the token of the instruction in the source, if there's a source map.
   method source_token() {
     tok = __source_token()
     if tok {
@@ -23,9 +36,11 @@ class StackLine {
     }
     return Token('', -1, -1)
   }
+  ; Returns whether the module has a source map, relating its compiled code to its source.
   method has_source_map() {
     return __has_source_map()
   }
+  ; Returns e.g. 'module.Class.method(file.zn:12)', in color.
   method to_s() {
     tok = if has_source_map() then source_token() else token()
     module_name = None
@@ -57,7 +72,10 @@ class StackLine {
   }
 }
 
+; An error. Error(message) creates one with [message]; [stacktrace] holds the
+; StackLines it was raised through. Subclass it for specific errors.
 class Error {
+  ; Returns the error's class, message, the line it was raised at and its stack trace, in color.
   method to_s() {
     result = cat(color('31;1'), self.class().name(), ': ', message, '\n')
     if stacktrace[0].linetext() {

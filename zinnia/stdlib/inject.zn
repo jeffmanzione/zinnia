@@ -1,3 +1,6 @@
+; Dependency injection: an Injector constructs objects and their dependencies,
+; as classes' @Inject annotations and installed ProviderSets say.
+
 import builtin
 import error
 
@@ -28,6 +31,7 @@ import error
 ; ```
 class Injector {
   field keys_to_providers, keys_to_singletons
+  ; Creates an injector with nothing installed.
   new() {
     keys_to_providers = {}
     keys_to_singletons = {}
@@ -47,6 +51,8 @@ class Injector {
     result = _get(constructed_map, key)
     return result
   }
+  ; Returns the value for [key], a Key, Class or Provider, constructing it and
+  ; its dependencies unless [constructed_map] already has them.
   method _get(constructed_map, key) {
     if key is Key {
       result = constructed_map[key]
@@ -80,6 +86,7 @@ class Injector {
     }
     raise error.Error('Expected key or class but was ' + str(key))
   }
+  ; Returns whether [key]'s class or provider is annotated with Singleton.
   method _is_singleton(key) {
     if key.cls.all_annotations().has(a -> a is Singleton) {
       return True
@@ -94,6 +101,7 @@ class Injector {
     }
     return False
   }
+  ; Returns the value the function [provider] provides, with the dependencies its @Provides lists.
   method _provide_function(constructed_map, key, provider) {
     provides_annots = None
     if provider is FunctionRef {
@@ -114,6 +122,7 @@ class Injector {
     }
     return provider()
   }
+  ; Returns a new instance of [provider], or of [key]'s class, with the dependencies its @Inject lists.
   method _provide_class(constructed_map, key, provider=None) {
     if ~provider {
       provider = key.cls
@@ -121,6 +130,7 @@ class Injector {
     args = _get_args(constructed_map, provider)
     return if args then provider(args) else provider()
   }
+  ; Returns the arguments for constructing [cls], as its @Inject lists, or None.
   method _get_args(constructed_map, cls) {
     inject_annots = cls.all_annotations().where(a -> a is Inject)
     if inject_annots.len() > 1 {
@@ -135,6 +145,7 @@ class Injector {
       return _create_args(args)
     }
   }
+  ; Returns [args] as a call's arguments: None, the one argument, or a tuple.
   method _create_args(args) {
     if ~args or args.len() == 0 {
       return None
@@ -154,6 +165,7 @@ class Injector {
     return self
   }
 
+  ; Installs [provider] for [key], a Key or Class.
   method _install_by_key(key, provider) {
     if ~(key is Key) {
       key = Key(key)
@@ -161,6 +173,7 @@ class Injector {
     keys_to_providers[key] = provider
   }
 
+  ; Installs the @Provides methods, bindings and nested provider sets of [ps].
   method _install_provider_set(ps) {
     if ps.init {
       ps.init()
@@ -180,6 +193,7 @@ class Injector {
     }
   }
 
+  ; Returns [keys] as an Array or Tuple of keys.
   method _get_keys(keys) {
     if (keys is Array) or (keys is Tuple) {
       return keys
@@ -193,6 +207,7 @@ class Injector {
 ;
 ; This is useful in cases where an object is only needed conditionally.
 class Provider {
+  ; Creates a provider of the value for [key].
   new(field key) {}
 }
 
@@ -200,15 +215,19 @@ class Provider {
 ; instance per Injector.
 class Singleton { method annotate(_) { } }
 
-; Reprensents an injectable type.
+; Represents an injectable type: a class, optionally qualified by an annotation.
 class Key {
+  ; Creates a key for [cls], qualified by [annot] if given.
   new(field cls, field annot=None) {}
+  ; Returns whether [other] is a key for the same class and annotation.
   method ==(other) {
     cls == other.cls and annot == other.annot
   }
+  ; Returns a hash of the class and annotation.
   method hash() {
     builtin.hash(cls) + builtin.hash(annot)
   }
+  ; Returns e.g. 'Key(cls=Foo)'.
   method to_s() {
     if annot {
       return cat('Key(cls=', cls, ',annot=', annot, ')')
@@ -220,12 +239,16 @@ class Key {
 ; Annotation that marks a class as Injectable and defines how it finds its
 ; dependencies.
 class Inject {
+  ; Creates the annotation: the class is constructed with the values for [keys],
+  ; in order, and is a singleton if [singleton].
   new({field keys, field singleton=False}) {}
+  ; Called with the annotated class [cls]; marks it a Singleton if asked.
   method annotate(cls) {
     if singleton {
       cls.all_annotations().append(Singleton())
     }
   }
+  ; Returns e.g. 'Inject(keys=[Foo, Bar])'.
   method to_s() {
     cat('Inject(keys=', keys, ')')
   }
@@ -234,12 +257,16 @@ class Inject {
 ; Annotation that marks a method as a provider and defines how to find the
 ; dependencies.
 class Provides {
+  ; Creates the annotation: the method provides the value for [key], is called
+  ; with the values for [params], in order, and is a singleton if [singleton].
   new({field key, field params=[], field singleton=False}) {}
+  ; Called with the annotated method [func]; marks it a Singleton if asked.
   method annotate(func) {
     if singleton {
       func.annotations.append(Singleton())
     }
   }
+  ; Returns e.g. 'Provides(key=Foo,params=[Bar])'.
   method to_s() {
     cat('Provides(key=', key, ',params=', params, ')')
   }
@@ -248,6 +275,7 @@ class Provides {
 ; Class that houses providers and bindings.
 class ProviderSet {
   field _bind_map, _subsets
+  ; Creates a provider set with no bindings or nested sets.
   new() {
     _bind_map = {}
     _subsets = []

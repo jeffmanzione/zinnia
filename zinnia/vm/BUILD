@@ -103,7 +103,7 @@ cc_library(
         "//zinnia/value/native:math",
         "//zinnia/value/native:socket",
         "//zinnia/value/native:time",
-        "//zinnia/lib",
+        "//zinnia/stdlib",
         "//zinnia/util:file",
         "//zinnia/vm:intern",
         "@jeffmanzione_file_utils//file-utils:file_utils",

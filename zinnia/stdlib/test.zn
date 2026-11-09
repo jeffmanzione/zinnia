@@ -1,28 +1,59 @@
+; Unit tests.
+;
+; A test file annotates classes with TestClass and their test methods with
+; Test, and runs them with Tester:
+; ```
+; import test
+;
+; test.Tester().test(self)
+;
+; @test.TestClass
+; class MathTest {
+;   @test.Test
+;   method test_add() {
+;     test.expect(1 + 1, 2)
+;   }
+; }
+; ```
+; Running the file runs its tests, and fails if any fails. To run only some,
+; list them with --test, e.g. `zinnia math_test.zn -- --test=MathTest.test_add`.
+
 import error
 import io
 
+; Marks a class whose Test methods are tests.
 class TestClass {
+  ; Called with the annotated class; does nothing.
   method annotate(cls) {}
 }
 
+; Marks a method of a TestClass as a test.
 class Test {
+  ; Called with the annotated method; does nothing.
   method annotate(cls) {}
 }
 
+; Marks a method of a TestClass to run before each of its tests.
 class SetUp {
+  ; Called with the annotated method; does nothing.
   method annotate(cls) {}
 }
 
+; Marks a method of a TestClass to run after each of its tests.
 class TearDown {
+  ; Called with the annotated method; does nothing.
   method annotate(cls) {}
 }
 
+; The error a failed expectation raises.
 class ExpectError : error.Error {
+  ; Creates the error with the message [str].
   new(str) {
     super(error.Error)(str)
   }
 }
 
+; Raises an ExpectError unless [actual] == [expected].
 function expect(actual, expected) {
   try {
     if actual == expected {
@@ -32,6 +63,7 @@ function expect(actual, expected) {
   raise ExpectError('Expected \'' + str(expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
+; Raises an ExpectError unless [actual] != [not_expected].
 function expect_not(actual, not_expected) {
   try {
     if actual != not_expected {
@@ -41,6 +73,8 @@ function expect_not(actual, not_expected) {
   raise ExpectError('Expected not \'' + str(not_expected) + '\' but was \'' + str(actual) + '\'.')
 }
 
+; Calls [exp] and raises an ExpectError unless it raises an error, of class
+; [error_class] if given.
 function expect_raises(exp, error_class=None) {
   try {
     exp()
@@ -53,6 +87,7 @@ function expect_raises(exp, error_class=None) {
   raise ExpectError('Does not raise')
 }
 
+; Raises an ExpectError unless [actual] is an instance of [expected_class].
 function expect_is(actual, expected_class) {
   try {
     if actual is expected_class {
@@ -62,10 +97,17 @@ function expect_is(actual, expected_class) {
   raise ExpectError('Expected of type \'' + str(expected_class) + '\' but was \'' + str(actual.class()) + '\'.')
 }
 
+; 'PASS', in green.
 self.PASS = color('32;1').extend('PASS').extend(color(0))
+; 'FAIL', in red.
 self.FAIL = color('31;1').extend('FAIL').extend(color(0))
 
+; Runs a module's tests.
 class Tester {
+  ; Runs the tests of [module], usually `self`: each Test method of each
+  ; TestClass, on a new instance, between its SetUp and TearDown methods. Prints
+  ; the failures and how many passed, and raises an error if any failed or none
+  ; were found. The --test flag limits the tests run (see _is_selected()).
   method test(module) {
     stats = []
     for (_, cls) in module.classes() {
@@ -130,6 +172,7 @@ class Tester {
     return False
   }
 
+  ; Returns whether [cls] is annotated with TestClass.
   method _is_test_class(cls) {
     for (_, annot) in cls.all_annotations() {
       if annot is TestClass {
@@ -139,6 +182,7 @@ class Tester {
     return False
   }
 
+  ; Returns whether the method [func] is annotated with Test.
   method _method_is_test(func) {
     for (_, annot) in func.annotations {
       if annot is Test {
@@ -148,6 +192,7 @@ class Tester {
     return False
   }
 
+  ; Returns the methods of [test_cls] annotated with the annotation class [cls].
   method _extract_methods(test_cls, cls) {
     methods = []
     for (_, meth) in test_cls.all_methods() {

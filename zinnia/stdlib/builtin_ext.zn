@@ -1,16 +1,29 @@
+; Parts of builtin written in Zinnia rather than natively: iterators, range(),
+; memoize() and sort(). builtin makes them available to every module.
+
 import error
 
 _ = None
 
+; Iterates with the functions [has_next], which returns whether there are more
+; elements, and [next], which returns the next one. `for x in ...` uses
+; iterators.
 class Iterator {
+  ; Creates an iterator from [has_next] and [next].
   new(field has_next, field next) {}
+  ; Returns this iterator.
   method iter() {
     return self
   }
 }
 
+; Iterates over the elements of an Array or String, or of a range of one, as
+; (index, element) tuples.
 class IndexIterator : Iterator {
   field indexable, start, end, i, index
+  ; Creates an iterator over [args]: an Array or String, or a tuple
+  ; (indexable, start, end) to iterate from index start up to but not including
+  ; end. Raises an error for anything else.
   new(args) {
     if (args is Array) or is_string(args) {
       indexable = args
@@ -33,7 +46,10 @@ class IndexIterator : Iterator {
   }
 }
 
+; Iterates over the (key, value) pairs of [container], with the keys from
+; [key_iter].
 class KVIterator : Iterator {
+  ; Creates an iterator over [container] with the keys from [key_iter].
   new(field key_iter, field container) {
     super(Iterator)(
         key_iter.has_next,
@@ -44,6 +60,8 @@ class KVIterator : Iterator {
   }
 }
 
+; Returns a Range: range(start, end) counts from start up to but not including
+; end, and range(start, inc, end) counts by inc.
 function range(params) {
   start = params[0]
   if params.len() == 3 {
@@ -56,6 +74,10 @@ function range(params) {
   Range(start, inc, end)
 }
 
+; Returns a function that calls [fn] the first time it's called with given
+; arguments, and returns the same result again for later calls with them.
+;
+; A result of None or False isn't cached.
 function memoize(fn) {
   cache = {}
   memoized_fn = (args) {
@@ -69,6 +91,7 @@ function memoize(fn) {
   return memoized_fn
 }
 
+; Partitions seq[l..h] around seq[h] for _quick_sort(), returning the pivot's index.
 function _partition(seq, l, h, cmp) {
   pivot = seq[h]
   i = l - 1
@@ -86,6 +109,7 @@ function _partition(seq, l, h, cmp) {
   return i + 1
 }
 
+; Sorts seq[l..h] in place with [cmp] and returns [seq].
 function _quick_sort(seq, l, h, cmp) {
   if l < h {
     p = _partition(seq, l, h, cmp)
@@ -95,6 +119,11 @@ function _quick_sort(seq, l, h, cmp) {
   seq
 }
 
+; Sorts [seq], an Array, in place and returns it.
+;
+; [cmp] compares two elements, returning a negative number if the first comes
+; first, zero if they're equal and a positive number otherwise; by default
+; elements sort in ascending order.
 function sort(seq, cmp=cmp) {
   _quick_sort(seq, 0, seq.len() - 1, cmp)
 }

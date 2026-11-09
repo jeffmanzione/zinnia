@@ -1,8 +1,28 @@
+; Generates builders for classes.
+;
+; Example:
+; ```
+; @build.WithBuilder
+; class Dog {
+;   field name, age
+; }
+; dog = builder_of_Dog().set_name('Rex').set_age(3).build()
+; ```
+
 import classes
 import io
 
+; Annotates a class with a generated builder class.
+;
+; The builder, named [builder_class_name] or else the class's name followed by
+; 'Builder', has a set_<field>(value) method for each field of the class, which
+; returns the builder, and build(), which returns a new instance of the class
+; with the fields set. The module also gets a builder_of_<Class>() function
+; that returns a new builder.
 class WithBuilder {
+  ; Creates the annotation, optionally naming the builder class.
   new(field _builder_class_name=None) {}
+  ; Called with the annotated class [cls]; creates its builder class.
   method annotate(cls) {
     if ~_builder_class_name {
       _builder_class_name = cat(cls.name(), 'Builder')

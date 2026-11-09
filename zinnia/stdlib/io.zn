@@ -1,12 +1,31 @@
+; Reading and writing files, and printing to standard output and error.
+;
+; Example:
+; ```
+; io.println('Hello')
+; w = io.FileWriter('out.txt')
+; w.writeln('a line')
+; w.close()
+; lines = io.FileReader('out.txt').getlines()
+; ```
+;
+; File operations run on a separate thread, so they don't block other work.
+
 import io_ext
 import struct
 
+; Reads from standard input.
 self.IN = FileReader(i'__STDIN__', True)
+; Writes to standard output.
 self.OUT = FileWriter(i'__STDOUT__', True)
+; Writes to standard error.
 self.ERROR = FileWriter(i'__STDERR__', True)
 
+; An open file, shared by FileReader and FileWriter.
 class _FileInternal {
   field file
+  ; Opens the file [fn] for reading ('r') or writing ('w') as [rw], appending if
+  ; [a], in binary mode if [binary].
   new(fn, rw, a, binary) {
     ; Appending opens with 'a' since 'w' truncates the file.
     mode = cat(if a then i'a' else rw)
@@ -15,8 +34,11 @@ class _FileInternal {
     }
     file = __File(fn, mode)
   }
+  ; Returns up to [n] more characters of the file.
   method gets(n) await file.__gets(n)
+  ; Returns the next line of the file, with its line terminator, or None at its end.
   method getline() await file.__getline()
+  ; Returns the rest of the file.
   method getall() await file.__getall()
   ; Returns the remaining lines of the file, without line terminators.
   method getlines() {
@@ -36,55 +58,76 @@ class _FileInternal {
       lines.append(line)
     }
   }
+  ; Writes the string [s].
   method puts(s) await file.__puts(s)
+  ; Closes the file.
   method close() await file.__close()
 }
 
+; Reads a file.
 class FileReader {
   field fi
+  ; Opens the file [fn] for reading, in binary mode if [binary].
   new(fn, binary=False) {
     fi = _FileInternal(fn, i'r', False, binary)
   }
+  ; Closes the file.
   method close() fi.close()
+  ; Returns up to [n] more characters of the file.
   method gets(n) fi.gets(n)
+  ; Returns the next line of the file, with its line terminator, or None at its end.
   method getline() fi.getline()
+  ; Returns the remaining lines of the file, without line terminators.
   method getlines() fi.getlines()
+  ; Returns the rest of the file.
   method getall() fi.getall()
 }
 
+; Writes a file.
 class FileWriter {
   field fi
+  ; Opens the file [fn] for writing, truncating it unless [append], in binary
+  ; mode if [binary].
   new(fn, append=False, binary=False) {
     fi = _FileInternal(fn, i'w', append, binary)
   }
+  ; Writes the string [s].
   method write(s) fi.puts(s)
+  ; Writes the string [s] and a new line.
   method writeln(s) {
     fi.puts(s)
     fi.puts('\n')
   }
+  ; Closes the file.
   method close() fi.close()
 }
 
+; Writes str([a]) to the FileWriter [f].
 function fprint(f, a) {
   f.write(str(a))
 }
 
+; Writes str([a]) and a new line to the FileWriter [f].
 function fprintln(f, a) {
   f.writeln(str(a))
 }
 
+; Writes str([a]) to standard output.
 function print(a) {
   fprint(OUT, a)
 }
 
+; Writes str([a]) and a new line to standard output.
 function println(a) {
   fprintln(OUT, a)
 }
 
+; Writes str([a]) to standard error.
 function error(a) {
   fprint(ERROR, a)
 }
 
+; Writes str([a]) and a new line to standard error.
 function errorln(a) {
   fprintln(ERROR, a)
 }

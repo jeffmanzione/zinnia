@@ -1,3 +1,6 @@
+; Watching files for changes. Its classes are disabled for now: the code below
+; is commented out, and io's FileEvent and FileWatcher with it.
+
 _ = None
 
 None

@@ -14,7 +14,7 @@ parser_builder(
 cc_binary(
     name = "parser_test",
     srcs = ["parser_test.c"],
-    data = ["//zinnia/lib:lib_srcs"],
+    data = ["//zinnia/stdlib:stdlib_srcs"],
     deps = [
         ":lang_parser",
         "//zinnia/alloc",

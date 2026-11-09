@@ -1,8 +1,19 @@
+; The builtin module: what every module can use without importing it.
+;
+; It defines str(), cat(), strfmt(), cmp(), hash() and the methods that the
+; basic types (String, Array, Tuple, Range, Class, ...) have beyond those
+; defined natively, and makes builtin_ext's iterators, range(), memoize() and
+; sort() available. Its imports, such as io and error, are visible everywhere
+; too. Native functions such as Int(), Float(), Bool(), is_int() and color()
+; have no source here.
+
 import builtin_ext
 import error
 import io
 import struct
 
+; Returns [input] as a String: itself if it's a string, its to_s() if it's an
+; object, and its text otherwise, e.g. '3' for 3.
 function str(input) {
   if is_string(input) {
     return input
@@ -13,6 +24,19 @@ function str(input) {
   }
 }
 
+; Returns the format string, the first of [args], with each '%' specifier
+; replaced by the next of the rest of [args]:
+; - %v: str(arg);
+; - %d: as an Int;
+; - %f: as a Float;
+; - %b: as a Bool;
+; - %p: an object's address, in hex;
+; - %%: a '%'.
+;
+; Example: `strfmt('%v is %d', 'x', 3.0)` returns 'x is 3'.
+;
+; Raises an error for a missing format string or argument, a dangling '%' or an
+; unknown specifier.
 function strfmt(args) {
   ; A format string without arguments.
   if is_string(args) {
@@ -62,6 +86,7 @@ function strfmt(args) {
   return out
 }
 
+; Returns the concatenation of str() of each of [args], e.g. cat('a', 1) is 'a1'.
 function cat(args) {
   result = ''
   if ~(args is Tuple) {
@@ -74,6 +99,7 @@ function cat(args) {
   return result
 }
 
+; Returns a hash of [x]: [x].hash() for objects, and [x] as an Int otherwise.
 function hash(x) {
   if x is Object {
     return x.hash()
@@ -81,6 +107,10 @@ function hash(x) {
   return Int(x)
 }
 
+; Compares [o1] and [o2]: returns a negative number if [o1] comes first, 0 if
+; they're equal and a positive number if [o2] comes first. Objects come before
+; primitives, and an object's class can define __cmp__(other) to compare its
+; instances.
 function cmp(o1, o2) {
   if (o1 is Object) and ~(o2 is Object) {
     return -1
@@ -100,6 +130,7 @@ function cmp(o1, o2) {
   return 1
 }
 
+; Returns [args], an Array, as a Tuple, or [args] itself if it's a Tuple.
 function tuple(args) {
   if args is Tuple {
     return args
@@ -110,7 +141,10 @@ function tuple(args) {
   return t
 }
 
+; The class every class extends. class(), super(), hash(), copy(), $get(name)
+; and $set(name, value) are defined natively.
 class Object {
+  ; Returns e.g. 'Instance of module.Class'.
   method to_s() {
     return cat(
         'Instance of ',
@@ -120,14 +154,19 @@ class Object {
   }
 }
 
+; A module. name(), functions() and classes() are defined natively.
 class Module {
+  ; Returns e.g. 'Module(io)'.
   method to_s() {
     return cat('Module(', name(), ')')
   }
 }
 
+; A class. name(), module(), super(), fields(), methods() and
+; is_subclass_of(cls) are defined natively.
 class Class {
   field annotations
+  ; Returns e.g. 'class Foo', followed by its annotations.
   method to_s() {
     if annotations.len() > 0 {
       cls_name =  'class ' + name()
@@ -139,12 +178,15 @@ class Class {
       return cat('class ', name())
     }
   }
+  ; Adds [annot] to the class's annotations.
   method add_annotation(annot) {
     annotations.append(annot)
   }
+  ; Returns the class's annotations.
   method all_annotations() {
     return annotations
   }
+  ; Returns the methods of the class and the classes it extends.
   method all_methods() {
     meths = methods()
     sup = super()
@@ -156,14 +198,19 @@ class Class {
   }
 }
 
+; Returns whether [e] is a String or an IString.
 function is_string(e) {
   (e is String) or (e is IString)
 }
 
+; A mutable string. len(), extend(s), copy(), trim(), ltrim(), rtrim(),
+; lshrink(n), rshrink(n) and split(delim) are defined natively.
 class String {
+  ; Returns the string itself.
   method to_s() {
     return self
   }
+  ; Returns str() of each of [strs], with this string between them.
   method join(strs) {
     result = ''
     if strs.len() == 0 {
@@ -176,6 +223,8 @@ class String {
     }
     return result
   }
+  ; Returns the [num_chars] characters from [start_index], or all of them to
+  ; the end if [num_chars] is None.
   method substr(start_index, num_chars=None) {
     if ~num_chars {
       num_chars = len() - start_index
@@ -186,21 +235,26 @@ class String {
     }
     return __substr(end_index, start_index)
   }
+  ; Returns the index of the first [sub] at or after [index], or None.
   method find(sub, index=0) {
     __find(sub, index)
   }
+  ; Returns the indices of every [sub] at or after [index].
   method find_all(sub, index=0) {
     __find_all(sub, index)
   }
+  ; Returns whether [sub] is in the string, for `sub in s`.
   method __in__(sub) {
     find(sub) != None
   }
+  ; Returns whether the string starts with [other], which must be a string.
   method starts_with(other) {
     if ~is_string(other) {
       return False
     }
     return __starts_with(other)
   }
+  ; Returns whether the string ends with [other], which must be a string.
   method ends_with(other) {
     if ~is_string(other) {
       return False
@@ -210,7 +264,10 @@ class String {
   }
 }
 
+; An immutable, interned string, written i'text'. len(), copy(), trim(),
+; ltrim(), rtrim() and split(delim) are defined natively.
 class IString {
+  ; Returns str() of each of [strs], with this string between them.
   method join(strs) {
     result = ''
     if strs.len() == 0 {
@@ -223,6 +280,8 @@ class IString {
     }
     return result
   }
+  ; Returns the [num_chars] characters from [start_index], or all of them to
+  ; the end if [num_chars] is None.
   method substr(start_index, num_chars=None) {
     if ~num_chars {
       num_chars = len() - start_index
@@ -233,21 +292,26 @@ class IString {
     }
     return __substr(end_index, start_index)
   }
+  ; Returns the index of the first [sub] at or after [index], or None.
   method find(sub, index=0) {
     __find(sub, index)
   }
+  ; Returns the indices of every [sub] at or after [index].
   method find_all(sub, index=0) {
     __find_all(sub, index)
   }
+  ; Returns whether [sub] is in the string, for `sub in s`.
   method __in__(sub) {
     find(sub) != None
   }
+  ; Returns whether the string starts with [other], which must be a string.
   method starts_with(other) {
     if ~is_string(other) {
       return False
     }
     return __starts_with(other)
   }
+  ; Returns whether the string ends with [other], which must be a string.
   method ends_with(other) {
     if ~is_string(other) {
       return False
@@ -256,7 +320,9 @@ class IString {
   }
 }
 
+; An immutable sequence, written (a, b). len() is defined natively.
 class Tuple {
+  ; Returns whether [other] is a Tuple with equal elements.
   method ==(other) {
     if (~(other is Tuple) or len() != other.len()) return False
     for i=0, i<len(), i=i+1 {
@@ -266,9 +332,11 @@ class Tuple {
     }
     return True
   }
+  ; Returns whether [other] isn't a Tuple with equal elements.
   method !=(other) {
     return ~(self == other)
   }
+  ; Returns e.g. "(1, 'a')".
   method to_s() {
     if len() == 0 {
       return '()'
@@ -282,9 +350,11 @@ class Tuple {
     result.extend(')')
     return result
   }
+  ; Returns an iterator over the (index, element) pairs.
   method iter() {
     return IndexIterator(self, 0, len())
   }
+  ; Returns str([elt]), in quotes if it's a string.
   method _maybe_wrap_in_quotes(elt) {
     if is_string(elt) {
       return '\''.extend(elt).extend('\'')
@@ -294,7 +364,9 @@ class Tuple {
   }
 }
 
+; A growable sequence, written [a, b]. len() and append(value) are defined natively.
 class Array {
+  ; Returns whether [other] is an Array with equal elements.
   method ==(other) {
     if (~(other is Array) or len() != other.len()) return False
     for i=0, i<len(), i=i+1 {
@@ -304,9 +376,11 @@ class Array {
     }
     return True
   }
+  ; Returns whether [other] isn't an Array with equal elements.
   method !=(other) {
     return ~(self == other)
   }
+  ; Removes and returns the element at index [i]; raises an error if it's out of bounds.
   method remove(i) {
     i = Int(i)
     if i >= len() or i < 0 {
@@ -314,6 +388,7 @@ class Array {
     }
     return __remove(i)
   }
+  ; Removes the first element equal to [v], and returns whether there was one.
   method remove_value(v) {
     for i=0, i<len(), i=i+1 {
       if self[i] == v {
@@ -323,6 +398,7 @@ class Array {
     }
     return False
   }
+  ; Returns e.g. "[1, 'a']".
   method to_s() {
     result = '['
     result.extend(', '.join(map((elt) {
@@ -334,11 +410,13 @@ class Array {
     })))
     return result.extend(']')
   }
+  ; Calls [fn] with each element.
   method each(fn) {
     for i=0, i<len(), i=i+1 {
       fn(self[i])
     }
   }
+  ; Returns an Array of [fn] applied to each element.
   method map(fn) {
     result = []
     if len() == 0 {
@@ -350,6 +428,7 @@ class Array {
     } 
     return result
   }
+  ; Returns an Array of the elements for which [filter_fn] returns a true value.
   method where(filter_fn) {
     result = []
     for i=0, i<len(), i=i+1 {
@@ -359,6 +438,7 @@ class Array {
     } 
     return result
   }
+  ; Returns how many elements [filter_fn] returns a true value for.
   method count(filter_fn) {
     result = 0
     for i=0, i<len(), i=i+1 {
@@ -368,6 +448,7 @@ class Array {
     }
     return result
   }
+  ; Returns whether [has_fn] returns a true value for any element.
   method has(has_fn) {
     for i=0, i<len(), i=i+1 {
       if has_fn(self[i]) {
@@ -376,6 +457,11 @@ class Array {
     }
     return False
   }
+  ; Folds the elements with [f](accumulated, element), starting from [s], or
+  ; from the first element if [s] is None, and returns the result. [s] may be a
+  ; function that returns the starting value.
+  ;
+  ; Example: `[1, 2, 3].collect((a, b) -> a + b)` returns 6.
   method collect(f, s=None) {
     if len() == 0 {
       if s is Function {
@@ -401,12 +487,16 @@ class Array {
     }
     return a
   }
+  ; Returns an iterator over the (index, element) pairs.
   method iter() {
     return IndexIterator(self)
   }
 }
 
+; A function or method. name(), module(), is_method() and parent_class() are
+; defined natively, and [annotations] holds its annotations.
 class Function {
+  ; Returns e.g. 'Function(module.name)' or 'Method(module.Class.name)'.
   method to_s() {
     res = None
     if self.is_method() {
@@ -425,18 +515,25 @@ class Function {
     res.extend(')')
     res
   }
+  ; Adds [annot] to the function's annotations.
   method add_annotation(annot) {
     self.annotations.append(annot)
   }
 }
 
+; A method bound to an object, as `obj.method` without a call gives. obj() and
+; func() are defined natively.
 class FunctionRef {
+  ; Returns e.g. 'FunctionRef(obj=...,func=...)'.
   method to_s() {
     cat('FunctionRef(obj=', self.obj(), ',func=', self.func(), ')')
   }
 }
 
+; A sequence of integers from start() up to but not including end(), counting
+; by inc(). Create one with range(start, end) or range(start, inc, end).
 class Range {
+  ; Returns 'start:inc:end'.
   method to_s() {
     cat(start(), ':', inc(), ':', end())
   }
@@ -452,12 +549,14 @@ class Range {
     i = d / inc()
     return i >= 0 and i < len()
   }
+  ; Returns the [i]-th integer of the range; raises an error if [i] is out of bounds.
   method [](i) {
     if i < 0 or i >= len() {
       raise error.Error(cat('Range index out of bounds. was ', i))
     }
     return start() + i * inc()
   }
+  ; Returns how many integers the range has.
   method len() {
     span = end() - start()
     step = inc()
@@ -470,14 +569,21 @@ class Range {
     }
     return ((span + step - 1) / step)
   }
+  ; Returns an iterator over the (index, integer) pairs.
   method iter() {
     IndexIterator(self, 0, len())
   }
 }
 
+; See builtin_ext.Iterator.
 self.Iterator = builtin_ext.Iterator
+; See builtin_ext.IndexIterator.
 self.IndexIterator = builtin_ext.IndexIterator
+; See builtin_ext.KVIterator.
 self.KVIterator = builtin_ext.KVIterator
+; See builtin_ext.range().
 self.range = builtin_ext.range
+; See builtin_ext.memoize().
 self.memoize = builtin_ext.memoize
+; See builtin_ext.sort().
 self.sort = builtin_ext.sort

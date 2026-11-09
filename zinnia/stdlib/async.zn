@@ -1,3 +1,7 @@
+; Asynchronous work: futures, completers, sleeping, isolates and actors.
+;
+; `async` functions and methods return a Future, and `await` waits for one.
+
 import classes
 import error
 import io
@@ -51,6 +55,8 @@ class Future {
   method then(fn) async {
     return fn(await self)
   }
+  ; Returns a future to the result of awaiting what [fn] returns when applied
+  ; to the result of this future, for an [fn] that is itself asynchronous.
   method then_async(fn) async {
     return await fn(await self)
   }
@@ -68,6 +74,7 @@ class Future {
 class Completer {
   field completed, _future
 
+  ; Creates a completer whose future has not completed.
   new() {
     completed = False
     _future = __completer_future()
@@ -98,6 +105,7 @@ function all(futures) async {
 ; to an instance of [cls] in another isolate and return futures to the results.
 ; The proxy's target() returns the underlying ActorRef.
 class Actor {
+  ; Called with the annotated class [cls]; creates its proxy class.
   method annotate(cls) {
     proxy_class = classes.factory.create_class(
         cat(cls.name(), 'Proxy'),

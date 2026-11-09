@@ -1,20 +1,39 @@
+; Data structures: hash maps, sets, caches and sorted sets.
+;
+; `{k: v}` literals create Maps.
+
 import builtin
 import math
 
+; A hash map. Keys need `==` and builtin.hash(); a class can define `==` and
+; hash() for its own.
+;
+; Iterating gives (key, value) pairs in the order the keys were added.
+;
+; Example:
+; ```
+; m = {'a': 1}
+; m['b'] = 2
+; for (k, v) in m {
+;   io.println(cat(k, '=', v))
+; }
+; ```
 class Map {
   field table, keys
+  ; Creates an empty map with [sz] buckets.
   new(field sz=31) {
     table = []
     table[sz] = None
     keys = []
   }
+  ; Returns the bucket of [k].
   method _hash(k) {
     hval = builtin.hash(k)
     pos = hval % sz
     if pos < 0 pos = -pos
     return pos
   }
-  ; Associates the key k with the value v in the map.
+  ; Associates [k] with [v], and returns the value [k] had before, or None.
   method []=(k, v) {
     pos = _hash(k)
     entries = table[pos]
@@ -34,7 +53,7 @@ class Map {
     keys.append(k)
     return None
   }
-  ; Returns the associated value with key k.
+  ; Returns the value associated with [k], or None.
   method [](k) {
     pos = _hash(k)
     entries = table[pos]
@@ -48,7 +67,7 @@ class Map {
     }
     return None
   }
-  ; Returns True if the map contains an entry with key k.
+  ; Returns whether the map has an entry for [k], for `k in map`.
   method __in__(k) {
     entries = table[_hash(k)]
     if ~entries {
@@ -61,7 +80,7 @@ class Map {
     }
     return False
   }
-  ; Removes the entry in the set with the given key k.
+  ; Removes the entry for [k], and returns its value, or None if there was none.
   method remove(k) {
     pos = _hash(k)
     entries = table[pos]
@@ -78,23 +97,28 @@ class Map {
     }
     return None
   }
+  ; Returns the value associated with [k], or [d] if there's none.
   method get_or_default(k, d) {
     if k in self {
       return self[k]
     }
     return d
   }
+  ; Returns the value associated with [k], or [fn]([k]) if there's none.
   method get_or_else(k, fn) {
     if k in self {
       return self[k]
     }
     return fn(k)
   }
+  ; Associates [k] with [v] unless the map has an entry for [k].
   method put_if_absent(k, v) {
     if ~(k in self) {
       self[k] = v
     }
   }
+  ; Associates [k] with [remapping_fn]([k], its current value or None) and
+  ; returns the new value. If that's None or False, removes [k] instead.
   method compute(k, remapping_fn) {
     old_value = self[k]
     new_value = remapping_fn(k, old_value)
@@ -105,6 +129,8 @@ class Map {
     }
     return new_value
   }
+  ; If the map has no entry for [k], associates it with [mapping_fn]([k]) unless
+  ; that's None or False, and returns it; otherwise returns None.
   method compute_if_absent(k, mapping_fn) {
     if ~(k in self) {
       new_value = mapping_fn(k)
@@ -115,6 +141,9 @@ class Map {
     }
     return None
   }
+  ; If [k] has a value, associates it with [remapping_fn]([k], value), or removes
+  ; it if that's None or False, and returns the new value; otherwise returns
+  ; None.
   method compute_if_present(k, remapping_fn) {
     old_value = self[k]
     if old_value {
@@ -128,14 +157,17 @@ class Map {
     }
     return None
   }
+  ; Returns an iterator over the (key, value) pairs.
   method iter() {
     return KVIterator(keys.iter(), self)
   }
+  ; Calls [f](key, value) for each entry.
   method each(f) {
     for (k, v) in self {
       f(k, v)
     }
   }
+  ; Returns e.g. "{'a': 1, 'b': 2}".
   method to_s() {
     kvs = []
     each((k, v) {
@@ -148,11 +180,15 @@ class Map {
 }
 
 
+; Caches the values a factory function computes for keys.
 class Cache {
   field map
+  ; Creates an empty cache, with a Map of [sz] buckets.
   new(sz=31) {
     map = Map(sz)
   }
+  ; Returns the cached value for [k], or computes it with [factory]([k]) and
+  ; caches it. If [factory] raises an error, caches and returns [default].
   method get(k, factory, default=None) {
     if k in map {
       return map[k]
@@ -166,7 +202,7 @@ class Cache {
     map[k] = v
     return v
   }
-  ; Removes the cached value for k, or every cached value if k is None.
+  ; Removes the cached value for [k], or every cached value if [k] is None.
   method clear(k=None) {
     if k == None {
       map = Map(map.sz)
@@ -176,12 +212,16 @@ class Cache {
   }
 }
 
+; A Cache with its factory function.
 class LoadingCache {
+  ; Creates a cache of values that [factory] computes, kept in [cache].
   new({field cache=Cache(255), field factory}) {}
+  ; Returns the cached value for [k], computing it with the factory the first time.
   method get(k) {
     cache.get(k, factory) 
   }
 
+  ; Removes the cached value for [k], or every cached value if [k] is None.
   method clear(k=None) {
     cache.clear(k)
   }
@@ -190,31 +230,35 @@ class LoadingCache {
 ; A collection that contains no duplicate elements.
 class Set {
   field map
+  ; Creates an empty set, with a Map of [sz] buckets.
   new(sz=255) {
     map = Map(sz)
   }
-  ; Inserts a given element k into the Set.
+  ; Inserts [k] into the set.
   method insert(k) {
     map[k] = k
   }
-  ; Removes a given element k from the Set.
+  ; Removes [k] from the set.
   method remove(k) {
     map.remove(k)
   }
-  ; Returns True if k is in the Set.
+  ; Returns whether [k] is in the set, for `k in set`.
   method __in__(k) {
     k in map
   }
 }
 
+; A node of a TreeSet.
 class _TreeNode {
   field left, right, height
+  ; Creates a leaf node holding [value].
   new(field value) {
     left = None
     right = None
     height = 1
   }
   
+  ; Returns e.g. '_TreeNode(3)'.
   method to_s() {
     '_TreeNode(' + str(value) + ')'
   }
@@ -222,7 +266,7 @@ class _TreeNode {
 
 ; Stores a set of comparable values in a self-balancing binary tree.
 ; 
-; Properities
+; Properties
 ;   Insertion: O(logN)
 ;   Removal:   O(logN)
 ;   Lookup:    O(logN)
@@ -233,6 +277,7 @@ class _TreeNode {
 ; insertion.
 class TreeSet {
   field root
+  ; Creates an empty tree.
   new() {
     root = None
   }
@@ -251,6 +296,7 @@ class TreeSet {
     }
   }
 
+  ; Inserts [v] into the subtree at [node] and returns the subtree's rebalanced root.
   method _insert_helper(v, node) {
     if ~node {
       return _TreeNode(v)
@@ -284,6 +330,7 @@ class TreeSet {
     _remove_helper(v, root)
   }
 
+  ; Removes [v] from the subtree at [node] and returns the subtree's rebalanced root.
   method _remove_helper(v, node) {
     if ~node {
       return node
@@ -324,11 +371,13 @@ class TreeSet {
     node
   }
 
+  ; Returns whether [v] is in the tree, for `v in tree`.
   ; O(logN)
   method __in__(v) {
     _in(v, root)
   }
 
+  ; Returns whether [v] is in the subtree at [node].
   method _in(v, node) {
     if ~node {
       return False
@@ -346,6 +395,7 @@ class TreeSet {
     return False
   }
 
+  ; Returns the node with the smallest value in the subtree at [node].
   method _min_value_node(node) {
     if ~node or ~node.left {
       return node
@@ -353,6 +403,7 @@ class TreeSet {
     _min_value_node(node.left)
   }
 
+  ; Returns the height of the subtree at [node], 0 for None.
   method _height(node) {
     if ~node {
       return 0
@@ -360,6 +411,7 @@ class TreeSet {
     return node.height
   }
 
+  ; Returns how much taller the left subtree of [node] is than the right.
   method _balance(node) {
     if ~node {
       return 0
@@ -367,6 +419,7 @@ class TreeSet {
     return _height(node.left) - _height(node.right)
   }
 
+  ; Rotates the subtree at [node] left and returns its new root.
   method _rotate_left(node) {
     y = node.right
     t2 = y.left
@@ -377,6 +430,7 @@ class TreeSet {
     return y
   }
 
+  ; Rotates the subtree at [node] right and returns its new root.
   method _rotate_right(node) {
     y = node.left
     t3 = y.right
@@ -387,6 +441,7 @@ class TreeSet {
     return y
   }
 
+  ; Appends the values of the subtree at [node] to [arr] in sorted order.
   method _inorder(node, arr) {
     if ~node {
       return

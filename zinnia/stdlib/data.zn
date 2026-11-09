@@ -1,6 +1,18 @@
+; Arrays and matrices of numbers, stored compactly rather than as objects.
+;
+; Example:
+; ```
+; a = data.zeros(Int, 3)  ; Int64Array([0, 0, 0])
+; a[1] = 5
+; m = data.zeros2(Float, 2, 2)
+; m[0, 1] = 1.5
+; ```
+
 import io
 
-; Returns a data array of 0 values with the given length.
+; Returns a data array of [count] zeros: an Int64Array for Int, a Float64Array
+; for Float and an Int8Array for Char. Any other [type] is a data array class,
+; e.g. Int32Array, and is constructed with [count].
 function zeros(type, count) {
   if type == Int {
     return Int64Array(count)
@@ -13,7 +25,9 @@ function zeros(type, count) {
   }
 }
 
-; Returns a data matrix of 0 values with the given dimensions.
+; Returns a [dim1] x [dim2] data matrix of zeros: an Int64Matrix for Int, a
+; Float64Matrix for Float and an Int8Matrix for Char. Any other [type] is a data
+; matrix class, e.g. Int32Matrix, and is constructed with [dim1] and [dim2].
 function zeros2(type, dim1, dim2) {
   if type == Int {
     return Int64Matrix(dim1, dim2)
@@ -26,22 +40,32 @@ function zeros2(type, dim1, dim2) {
   }
 }
 
-; Arrays
+; An array of 8-bit integers. Int8Array(n) has n zeros.
 class Int8Array : DataArray {}
+; An array of 32-bit integers. Int32Array(n) has n zeros.
 class Int32Array : DataArray {}
+; An array of 64-bit integers. Int64Array(n) has n zeros.
 class Int64Array : DataArray {}
+; An array of 32-bit floats. Float32Array(n) has n zeros.
 class Float32Array : DataArray {}
+; An array of 64-bit floats. Float64Array(n) has n zeros.
 class Float64Array : DataArray {}
 
-; Matrices
+; A matrix of 8-bit integers. Int8Matrix(rows, cols) has all zeros.
 class Int8Matrix : DataMatrix {}
+; A matrix of 32-bit integers. Int32Matrix(rows, cols) has all zeros.
 class Int32Matrix : DataMatrix {}
+; A matrix of 64-bit integers. Int64Matrix(rows, cols) has all zeros.
 class Int64Matrix : DataMatrix {}
+; A matrix of 32-bit floats. Float32Matrix(rows, cols) has all zeros.
 class Float32Matrix : DataMatrix {}
+; A matrix of 64-bit floats. Float64Matrix(rows, cols) has all zeros.
 class Float64Matrix : DataMatrix {}
 
-; Base class for data arrays.
+; The base class of data arrays. a[i] reads and a[i] = v writes an element;
+; len(), to_arr(), reversed() and sorted() are defined natively.
 class DataArray {
+  ; Returns e.g. 'Int64Array([1, 2, 3])', eliding the middle of long arrays.
   method to_s() {
     res = class().name() + '(['
     l = len()
@@ -63,8 +87,11 @@ class DataArray {
   }
 }
 
-; Base class for data matrices.
+; The base class of data matrices. m[i] is row i as a data array, and
+; m[i, j] reads and m[i, j] = v writes an element; shape() returns
+; (rows, cols).
 class DataMatrix {
+  ; Returns the matrix's rows and shape, eliding the middle of large matrices.
   method to_s() {
     res = class().name() + '(['
     l = shape()[0]
