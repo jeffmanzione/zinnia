@@ -6,87 +6,54 @@ import net
 import socket
 import struct
 
-class Header {
-  new(field protocol,
-      field version,
-      field status_code,
-      field status,
-      field content_type,
-      field charset) {}
-  method to_s() {
-    cat(protocol, '/', version, ' ',
-           status_code, ' ', status,
-           '\r\nContent-Type: ', content_type,
-           '; charset=', charset, '\r\n\r\n')
-  }
-}
-
-function parse_header(header_text) {
-  i = header_text.find('/')
-  protocol = header_text.substr(0, i)
-  i2 = i + 1 + header_text.find(' ', i+1)
-  version = header_text.substr(i+1, i2)
-  i3 = i2 + 1 + header_text.find(' ', i2+1)
-  status_code = header_text.substr(i2+1, i3)
-  i4 = i3 + 1 + header_text.find('\r\n', i3+1)
-  status = header_text.substr(i3+1, i4)
-  i5 = i4 + 1 + header_text.find(' ', i4+1)
-  i6 = i5 + 1 + header_text.find(';', i5+1)
-  content_type = header_text.substr(i5+1, i6)
-  i7 = i6 + 1 + header_text.find('=', i6+1)
-  i8 = i7 + 1 + header_text.find('\r\n', i7+1)
-  charset = header_text.substr(i7+1, i8)
-  return Header(protocol, version, status_code, status, content_type, charset)
-}
-
 class HttpRequest {
-    field _headers
-    new(field type,
-        field path,
-        field params,
-        field protocol,
-        field version,
-        headers) {
-          _headers = headers
-        }
-    method get_header_value(key) {
-      return _headers[key]
-    }
-    method get_host() {
-      return _headers[i'Host']
-    }
-    method get_connection() {
-      return _headers[i'Connection']
-    }
-    method get_user_agent() {
-      return _headers[i'User-Agent']
-    }
-    method get_accept() {
-      return _headers[i'Accept'].split(',')
-    }
-    method get_cookie() {
-      return _headers[i'Cookie']
-    }
-    method to_s() {
-      ret = cat(type, ' ', path)
-      if params and (params.keys.len() > 0) {
-        ret.extend('?')
-        param_arr = []
-        for (k, v) in params {
-          param_arr.append(cat(k, '=', v))
-        }
-        ret.extend('&'.join(param_arr))
+  field _headers
+  new(field type,
+      field path,
+      field params,
+      field protocol,
+      field version,
+      headers) {
+    _headers = headers
+  }
+  method get_header_value(key) {
+    return _headers[key]
+  }
+  method get_host() {
+    return _headers[i'Host']
+  }
+  method get_connection() {
+    return _headers[i'Connection']
+  }
+  method get_user_agent() {
+    return _headers[i'User-Agent']
+  }
+  method get_accept() {
+    return _headers[i'Accept'].split(',')
+  }
+  method get_cookie() {
+    return _headers[i'Cookie']
+  }
+  method to_s() {
+    ret = cat(type, ' ', path)
+    if params and (params.keys.len() > 0) {
+      ret.extend('?')
+      param_arr = []
+      for (k, v) in params {
+        param_arr.append(cat(k, '=', v))
       }
-      ret.extend(' ').extend(protocol).extend('/')
-          .extend(version).extend('\r\n')
-      if _headers {
-        for (k, v) in _headers {
-          ret.extend('  ').extend(k).extend(': ').extend(str(v))
-              .extend('\r\n')
-        }
-      }
-      return ret
+      ret.extend('&'.join(param_arr))
     }
+    ret.extend(' ').extend(protocol).extend('/')
+        .extend(version).extend('\r\n')
+    if _headers {
+      for (k, v) in _headers {
+        ret.extend('  ').extend(k).extend(': ').extend(str(v))
+            .extend('\r\n')
+      }
+    }
+    return ret
+  }
 }
 
 
@@ -207,7 +174,7 @@ function parse_request(req) {
     path = req_head[1]
     (path, params) = parse_params(path)
     protocol = req_head[2].split('/')
-    
+
     map = {}
     for i=1, i<parts.len(), i=i+1 {
       ; Split at the first ':' since values may contain ':' (e.g. Host: a:80).
@@ -315,7 +282,7 @@ class BaseHttpProviderSet: inject.ProviderSet {
       return None
     }
     if ~req {
-      req = parse_request(raw_req)  
+      req = parse_request(raw_req)
       io.println('HTTP/' + req.version + ' ' + req.path)
       resp = None
       http_resp = None
