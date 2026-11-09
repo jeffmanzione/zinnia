@@ -56,10 +56,10 @@ declare class Socket {
   method port()
   ; For a server socket, returns a future to the next connection, as a
   ; SocketHandle.
-  method accept() returns Future
+  method accept()
   ; For a client socket, connects, and returns a future to the connection, as
   ; a SocketHandle.
-  method connect() returns Future
+  method connect()
   ; Closes the socket.
   method close()
 }
@@ -67,10 +67,10 @@ declare class Socket {
 ; One side of a connection, defined natively.
 declare class SocketHandle {
   ; Sends [text], and returns a future that completes once it's sent.
-  method send(text) returns Future
+  method send(text)
   ; Returns a future to the next text received, or to None once the
   ; connection is closed.
-  method receive() returns Future
+  method receive()
   ; Closes the connection.
   method close()
 }

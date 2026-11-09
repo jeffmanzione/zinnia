@@ -725,7 +725,7 @@ class Range {
 ; async.spawn_isolate().
 declare class Isolate {
   ; Starts the isolate, and returns a future to the result of its function.
-  method start() returns Future
+  method start()
 }
 
 ; A reference to an actor in another isolate, which the proxies that
