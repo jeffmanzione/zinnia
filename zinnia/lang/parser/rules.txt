@@ -649,13 +649,30 @@ static_field_statement ->
     rule:conditional_expression
   );
 
+// A method written without `method`, as in `declare copy()`.
+declared_method_shorthand -> AND(rule:identifier, rule:function_parameters);
+
+// A member of a class that exists at runtime but whose code isn't here, e.g.
+// because it's defined natively. It compiles to nothing.
+declared_class_member ->
+  AND(
+    token:KEYWORD_DECLARE,
+    OR(
+      rule:field_statement,
+      rule:method_signature,
+      rule:new_signature,
+      rule:declared_method_shorthand
+    )
+  );
+
 class_statement ->
   AND(
     OR(
       rule:new_definition,
       rule:field_statement,
       rule:static_field_statement,
-      rule:method_definition
+      rule:method_definition,
+      rule:declared_class_member
     ),
     OPTIONAL(token:TOKEN_NEWLINE)
   );
@@ -756,6 +773,49 @@ class_definition ->
     rule:class_definition_no_annotation
   );
 
+// The members of a declared class, which have no code.
+declared_class_statement ->
+  AND(
+    OR(
+      rule:declared_class_member,
+      rule:field_statement,
+      rule:method_signature,
+      rule:new_signature,
+      rule:declared_method_shorthand
+    ),
+    OPTIONAL(token:TOKEN_NEWLINE)
+  );
+
+declared_class_statement_list ->
+  LIST(
+    E,
+    AND(
+      rule:declared_class_statement,
+      OPTIONAL(token:TOKEN_NEWLINE)
+    )
+  );
+
+declared_class_body ->
+  OR(
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE),
+    AND(token:SYMBOL_LBRACE, OPTIONAL(token:TOKEN_NEWLINE), rule:declared_class_statement_list, OPTIONAL(token:TOKEN_NEWLINE), token:SYMBOL_RBRACE)
+  );
+
+// A class that exists at runtime but whose code isn't here, e.g. because it's
+// defined natively. It compiles to nothing.
+declared_class ->
+  AND(
+    token:KEYWORD_DECLARE,
+    token:KEYWORD_CLASS,
+    rule:class_name_and_inheritance,
+    OPTIONAL(token:TOKEN_NEWLINE),
+    rule:declared_class_body
+  );
+
+// A function that exists at runtime but whose code isn't here. It compiles to
+// nothing.
+declared_function -> AND(token:KEYWORD_DECLARE, rule:function_signature);
+
 import_statement ->
   OR(
     AND(
@@ -804,6 +864,8 @@ file_level_statement ->
       rule:import_statement,
       rule:class_definition,
       rule:function_definition,
+      rule:declared_class,
+      rule:declared_function,
       rule:statement
     ),
     OPTIONAL(token:TOKEN_NEWLINE)

@@ -534,7 +534,7 @@ class ApplicationRunner {
   }
 
   ; Returns the response to [request] from the controller that matches it.
-  method process(request, timer) {
+  method process(request) {
     injector.install(RawRequest, () -> request)
     (req_ctrlr, ctrlr_cls) = _select_controller(request)
     if ~req_ctrlr or ~ctrlr_cls {
@@ -570,7 +570,7 @@ class ApplicationRunner {
       handle = await sock.accept()
       try {
         req = await handle.receive()
-        resp = process(req, timer)
+        resp = process(req)
         await handle.send(resp)
       } catch e {
         io.fprintln(io.ERROR, e)

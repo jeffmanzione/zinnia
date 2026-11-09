@@ -48,6 +48,9 @@ function spawn_actor(cls, args=None) {
   return proxy_class(await isolate.start())
 }
 
+; Returns a future that has already completed with [v].
+declare function value(v)
+
 ; Represents the state of an asynchronous piece of work.
 class Future {
   ; Returns a future to the value of the result of this future with [fn]

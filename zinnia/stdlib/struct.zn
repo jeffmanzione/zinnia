@@ -327,7 +327,7 @@ class TreeSet {
   ; Removes [v] from the tree.
   ; O(logN)
   method remove(v) {
-    _remove_helper(v, root)
+    root = _remove_helper(v, root)
   }
 
   ; Removes [v] from the subtree at [node] and returns the subtree's rebalanced root.

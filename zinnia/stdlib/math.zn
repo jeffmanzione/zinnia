@@ -40,16 +40,37 @@ function max(sequence) {
 }
 
 ; Returns the value of [num] raised to [power], i.e., num^power.
-; function pow(num, power) {}
+declare function pow(num, power)
 
 ; Returns the absolute value of [x].
-; function abs(x) {}
+declare function abs(x)
 
 ; Returns the ceiling of [x].
-; function ceil(x) {}
+declare function ceil(x)
 
 ; Returns the floor of [x].
-; function floor(x) {}
+declare function floor(x)
+
+; Returns e raised to [x].
+declare function exp(x)
+
+; Returns the sine of [x], in radians.
+declare function sin(x)
+
+; Returns the cosine of [x], in radians.
+declare function cos(x)
+
+; Returns the tangent of [x], in radians.
+declare function tan(x)
+
+; Returns the arcsine of [x], in radians.
+declare function asin(x)
+
+; Returns the arccosine of [x], in radians.
+declare function acos(x)
+
+; Returns the arctangent of [x], in radians.
+declare function atan(x)
 
 ; Returns the logarithm of [x] with base [base], by default E.
 function log(x, base=E) {
@@ -70,7 +91,7 @@ function log10(x) {
 function sqrt(x) pow(x, 0.5)
 
 ; Returns the remainder of [n] divided by [d].
-; function mod(n, d) {}
+declare function mod(n, d)
 
 ; Returns the tuple ([n] / [d], mod([n], [d])).
 function div(n, d) {
