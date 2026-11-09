@@ -232,6 +232,9 @@ void populate_class_statement(SemanticAnalyzer *analyzer, ClassDef *class,
     }
   } else if (IS_SYNTAX(stree, rule_static_field_statement)) {
     populate_static_field_statement(analyzer, stree, class);
+  } else if (IS_SYNTAX(stree, rule_declared_class_member)) {
+    // Declared members exist at runtime without code here, so there's
+    // nothing to compile.
   } else {
     FATALF("Unknown class_statement.");
   }
@@ -585,6 +588,10 @@ void populate_fi_statement(SemanticAnalyzer *analyzer, const SyntaxTree *stree,
   } else if (IS_SYNTAX(stree, rule_function_definition)) {
     *FunctionDefArray_push_back_ref(&module->functions) =
         populate_function(analyzer, stree);
+  } else if (IS_SYNTAX(stree, rule_declared_class) ||
+             IS_SYNTAX(stree, rule_declared_function)) {
+    // Declared classes and functions exist at runtime without code here, so
+    // there's nothing to compile.
   } else {
     ExpressionTreeArray_push_back(&module->statements,
                                   semantic_analyzer_populate(analyzer, stree));
@@ -626,7 +633,9 @@ ExpressionTree *populate_file(SemanticAnalyzer *analyzer,
       !IS_SYNTAX(stree, rule_import_statement) &&
       !IS_SYNTAX(stree, rule_class_definition_no_annotation) &&
       !IS_SYNTAX(stree, rule_class_definition_with_annotation) &&
-      !IS_SYNTAX(stree, rule_function_definition)) {
+      !IS_SYNTAX(stree, rule_function_definition) &&
+      !IS_SYNTAX(stree, rule_declared_class) &&
+      !IS_SYNTAX(stree, rule_declared_function)) {
     // A statement list, or a lone statement that can be populated directly.
     return semantic_analyzer_populate(analyzer, stree);
   }

@@ -298,3 +298,32 @@ class Annotated {
   @Tag(7)
   method m() {}
 }
+
+; Declarations say what exists at runtime without code here; they compile to
+; nothing.
+declare function declared_fn(a, b)
+
+declare class DeclaredClass {
+  field f
+  new(field g)
+  method m(x)
+}
+
+class PartlyDeclared {
+  declare field native_field
+  declare method native_method(x)
+  declare shorthand(y)
+  method real() 'real'
+}
+
+@test.TestClass
+class DeclareTest {
+  @test.Test
+  method test_declarations_compile_to_nothing() {
+    module = PartlyDeclared.module()
+    expect(module.functions().where(f -> f.name() == 'declared_fn').len(), 0)
+    expect(module.classes().where(c -> c.name() == 'DeclaredClass').len(), 0)
+    expect(PartlyDeclared().real(), 'real')
+    expect(PartlyDeclared.methods().len(), 1)
+  }
+}
