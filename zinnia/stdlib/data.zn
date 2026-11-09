@@ -101,7 +101,7 @@ class DataArray {
   ; Returns how many elements the array has.
   declare method len()
   ; Returns the elements as an Array.
-  declare method to_arr()
+  declare method to_arr() returns Array
   ; Returns a copy of the array in reverse order.
   declare method reversed()
   ; Returns a sorted copy of the array.
@@ -137,7 +137,7 @@ class DataMatrix {
   ; Sets the element at [index], a tuple (row, col), to [value].
   declare method []=(index, value)
   ; Returns the matrix's dimensions, (rows, cols).
-  declare method shape()
+  declare method shape() returns Tuple
 
   ; Returns the matrix's rows and shape, eliding the middle of large matrices.
   method to_s() {

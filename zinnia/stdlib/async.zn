@@ -49,7 +49,7 @@ function spawn_actor(cls, args=None) {
 }
 
 ; Returns a future that has already completed with [v].
-declare function value(v)
+declare function value(v) returns Future
 
 ; Represents the state of an asynchronous piece of work.
 class Future {

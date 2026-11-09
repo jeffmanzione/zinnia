@@ -51,15 +51,15 @@ declare class Socket {
   ; [host] and [port], which listens for connections if [is_server].
   new(family, type, protocol, host, port, is_server)
   ; Returns the host the socket is bound or connected to.
-  method host()
+  method host() returns String
   ; Returns the port the socket is bound or connected to.
   method port()
   ; For a server socket, returns a future to the next connection, as a
   ; SocketHandle.
-  method accept()
+  method accept() returns Future
   ; For a client socket, connects, and returns a future to the connection, as
   ; a SocketHandle.
-  method connect()
+  method connect() returns Future
   ; Closes the socket.
   method close()
 }
@@ -67,10 +67,10 @@ declare class Socket {
 ; One side of a connection, defined natively.
 declare class SocketHandle {
   ; Sends [text], and returns a future that completes once it's sent.
-  method send(text)
+  method send(text) returns Future
   ; Returns a future to the next text received, or to None once the
   ; connection is closed.
-  method receive()
+  method receive() returns Future
   ; Closes the connection.
   method close()
 }

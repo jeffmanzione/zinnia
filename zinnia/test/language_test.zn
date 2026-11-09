@@ -302,17 +302,22 @@ class Annotated {
 ; Declarations say what exists at runtime without code here; they compile to
 ; nothing.
 declare function declared_fn(a, b)
+declare function typed_fn(a) returns DeclaredClass
 
 declare class DeclaredClass {
-  field f
+  field f, typed is String
   new(field g)
   method m(x)
+  method typed_m() async returns DeclaredClass
 }
 
 class PartlyDeclared {
   declare field native_field
+  declare field typed_field is DeclaredClass
   declare method native_method(x)
+  declare method typed_method() returns DeclaredClass
   declare shorthand(y)
+  declare typed_shorthand() returns DeclaredClass
   method real() 'real'
 }
 
@@ -322,6 +327,7 @@ class DeclareTest {
   method test_declarations_compile_to_nothing() {
     module = PartlyDeclared.module()
     expect(module.functions().where(f -> f.name() == 'declared_fn').len(), 0)
+    expect(module.functions().where(f -> f.name() == 'typed_fn').len(), 0)
     expect(module.classes().where(c -> c.name() == 'DeclaredClass').len(), 0)
     expect(PartlyDeclared().real(), 'real')
     expect(PartlyDeclared.methods().len(), 1)

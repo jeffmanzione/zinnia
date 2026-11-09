@@ -649,8 +649,29 @@ static_field_statement ->
     rule:conditional_expression
   );
 
+// The class of what a declared function or method returns, or of a declared
+// field: a class name, or module.ClassName.
+type_name ->
+  OR(
+    AND(rule:identifier, token:SYMBOL_PERIOD, rule:identifier),
+    rule:identifier
+  );
+
+// The class a declared function or method returns, as in `returns A`.
+return_type -> AND(token:KEYWORD_RETURNS, rule:type_name);
+
+// A declared method, optionally with its return type.
+declared_method -> AND(rule:method_signature, OPTIONAL(rule:return_type));
+
 // A method written without `method`, as in `declare copy()`.
-declared_method_shorthand -> AND(rule:identifier, rule:function_parameters);
+declared_method_shorthand ->
+  AND(rule:identifier, rule:function_parameters, OPTIONAL(rule:return_type));
+
+// A declared field, optionally with its class, as in `f is F`.
+declared_field -> OR(AND(rule:identifier, token:KEYWORD_IS, rule:type_name), rule:identifier);
+
+declared_field_statement ->
+  AND(token:KEYWORD_FIELD, LIST(token:SYMBOL_COMMA, rule:declared_field));
 
 // A member of a class that exists at runtime but whose code isn't here, e.g.
 // because it's defined natively. It compiles to nothing.
@@ -658,8 +679,8 @@ declared_class_member ->
   AND(
     token:KEYWORD_DECLARE,
     OR(
-      rule:field_statement,
-      rule:method_signature,
+      rule:declared_field_statement,
+      rule:declared_method,
       rule:new_signature,
       rule:declared_method_shorthand
     )
@@ -778,8 +799,8 @@ declared_class_statement ->
   AND(
     OR(
       rule:declared_class_member,
-      rule:field_statement,
-      rule:method_signature,
+      rule:declared_field_statement,
+      rule:declared_method,
       rule:new_signature,
       rule:declared_method_shorthand
     ),
@@ -814,7 +835,8 @@ declared_class ->
 
 // A function that exists at runtime but whose code isn't here. It compiles to
 // nothing.
-declared_function -> AND(token:KEYWORD_DECLARE, rule:function_signature);
+declared_function ->
+  AND(token:KEYWORD_DECLARE, rule:function_signature, OPTIONAL(rule:return_type));
 
 import_statement ->
   OR(

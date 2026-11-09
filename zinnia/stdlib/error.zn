@@ -20,13 +20,13 @@ class Token {
 ; passed through.
 class StackLine {
   ; Returns the module of the line.
-  declare method module()
+  declare method module() returns Module
   ; Returns the function of the line, or None for a module's top-level code.
-  declare method function()
+  declare method function() returns Function
   ; Returns the text of the line, in the module's compiled code.
-  declare method linetext()
+  declare method linetext() returns String
   ; Returns the text of the line in the source, if there's a source map.
-  declare method source_linetext()
+  declare method source_linetext() returns String
 
   ; Returns the token of the instruction, in the module's compiled code.
   method token() {
@@ -83,7 +83,7 @@ class StackLine {
 ; An error. Subclass it for specific errors.
 class Error {
   ; The error's message, and the StackLines it was raised through.
-  declare field message, stacktrace
+  declare field message is String, stacktrace is Array
   ; Creates an error with [message].
   declare new(message)
 
