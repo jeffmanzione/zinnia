@@ -51,7 +51,7 @@ declare class Socket {
   ; [host] and [port], which listens for connections if [is_server].
   new(family, type, protocol, host, port, is_server)
   ; Returns the host the socket is bound or connected to.
-  method host()
+  method host() returns String
   ; Returns the port the socket is bound or connected to.
   method port()
   ; For a server socket, returns a future to the next connection, as a
