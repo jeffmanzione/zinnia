@@ -36,7 +36,6 @@ class BasePathRequestMatcher : net.RequestMatcher {
   }
 }
 
-
 @net.HttpRequestController(FaviconRequestMatcher)
 @inject.Inject(keys: [Favicon, net.HttpResponse])
 class FaviconController {
@@ -56,7 +55,7 @@ class IndexController {
   @net.Get
   method get() {
     cookies = cookies_provider()
-    cookies['poop'] = 'big'
+    cookies['message'] = 'hello'
     http_response.add_content(index_html)
   }
 }
