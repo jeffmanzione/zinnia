@@ -1,4 +1,4 @@
-// lib_gen_main.c
+// stdlib_gen_main.c
 //
 // Created on: Nov 15, 2022
 //     Author: Jeff Manzione

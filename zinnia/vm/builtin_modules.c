@@ -9,7 +9,7 @@
 
 #include "file-utils/file_utils.h"
 #include "file-utils/string_utils.h"
-#include "zinnia/lib/lib.h"
+#include "zinnia/stdlib/lib.h"
 #include "zinnia/util/file.h"
 #include "zinnia/util/platform.h"
 #include "zinnia/value/class/classes_def.h"
@@ -27,7 +27,7 @@
 #include "zinnia/value/native/time.h"
 #include "zinnia/vm/intern.h"
 
-#define LIB_DIR "zinnia/lib/"
+#define LIB_DIR "zinnia/stdlib/"
 #define LIB_EXT ".zna"
 
 #define REGISTER_MODULE(mm, name, lib_location)                             \

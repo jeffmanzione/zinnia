@@ -32,7 +32,7 @@ cc_library(
 cc_binary(
     name = "semantic_analyzer_test",
     srcs = ["semantic_analyzer_test.c"],
-    data = ["//zinnia/lib:lib_srcs"],
+    data = ["//zinnia/stdlib:stdlib_srcs"],
     deps = [
         ":definitions",
         "//zinnia/alloc",

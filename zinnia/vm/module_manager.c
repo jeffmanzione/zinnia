@@ -374,9 +374,9 @@ ModuleInfo *mm_register_module_with_callback_impl_(
 
   const char *module_key;
 
-  // lib is a magic directory name.
+  // Standard library modules are known by their names alone.
   if (NULL == dir_path || strlen(dir_path) == 0 ||
-      0 == strcmp(dir_path, "zinnia/lib/")) {
+      0 == strcmp(dir_path, "zinnia/stdlib/")) {
     module_key = module_name;
   } else {
     char *path_no_ext = strdup(relative_path);

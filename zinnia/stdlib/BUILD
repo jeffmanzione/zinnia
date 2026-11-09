@@ -7,20 +7,20 @@ package(
 )
 
 filegroup(
-    name = "lib_srcs",
+    name = "stdlib_srcs",
     srcs = glob(["*.zn"]),
 )
 
 zinnia_library(
-    name = "lib_zna_srcs",
-    srcs = [":lib_srcs"],
+    name = "stdlib_zna_srcs",
+    srcs = [":stdlib_srcs"],
     bin = False,
     minimize = True,
 )
 
 cc_library(
-    name = "lib_gen_main",
-    srcs = ["lib_gen_main.c"],
+    name = "stdlib_gen_main",
+    srcs = ["stdlib_gen_main.c"],
     deps = [
         "//zinnia/alloc",
         "//zinnia/util:codegen",
@@ -29,21 +29,21 @@ cc_library(
 )
 
 cc_binary(
-    name = "lib_gen_bin",
-    deps = [":lib_gen_main"],
+    name = "stdlib_gen_bin",
+    deps = [":stdlib_gen_main"],
 )
 
 genrule(
-    name = "lib_gen",
+    name = "stdlib_gen",
     srcs = [
-        ":lib_zna_srcs",
+        ":stdlib_zna_srcs",
     ],
     outs = ["lib.h"],
-    cmd = "./$(location :lib_gen_bin) $(location :lib.h) $(locations :lib_zna_srcs)",
-    tools = [":lib_gen_bin"],
+    cmd = "./$(location :stdlib_gen_bin) $(location :lib.h) $(locations :stdlib_zna_srcs)",
+    tools = [":stdlib_gen_bin"],
 )
 
 cc_library(
-    name = "lib",
-    hdrs = [":lib_gen"],
+    name = "stdlib",
+    hdrs = [":stdlib_gen"],
 )
