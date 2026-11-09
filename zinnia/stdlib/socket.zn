@@ -44,16 +44,33 @@ function cleanup() {
   __cleanup()
 }
 
-; Socket and SocketHandle are defined natively.
-;
-; Socket(family, type, protocol, host, port, is_server) creates a socket.
-; Its methods:
-; - host() and port(): where it's bound or connected;
-; - accept(): for a server, waits for a client and returns a SocketHandle;
-; - connect(): for a client, connects and returns a SocketHandle;
-; - close(): closes it.
-;
-; A SocketHandle is one side of a connection. Its methods:
-; - send(text): sends [text];
-; - receive(): waits for and returns the text received;
-; - close(): closes the connection.
+; A socket, defined natively. Create one with create_server_socket() or
+; create_client_socket().
+declare class Socket {
+  ; Creates a socket of the address [family] and [type] with [protocol], for
+  ; [host] and [port], which listens for connections if [is_server].
+  new(family, type, protocol, host, port, is_server)
+  ; Returns the host the socket is bound or connected to.
+  method host()
+  ; Returns the port the socket is bound or connected to.
+  method port()
+  ; For a server socket, returns a future to the next connection, as a
+  ; SocketHandle.
+  method accept()
+  ; For a client socket, connects, and returns a future to the connection, as
+  ; a SocketHandle.
+  method connect()
+  ; Closes the socket.
+  method close()
+}
+
+; One side of a connection, defined natively.
+declare class SocketHandle {
+  ; Sends [text], and returns a future that completes once it's sent.
+  method send(text)
+  ; Returns a future to the next text received, or to None once the
+  ; connection is closed.
+  method receive()
+  ; Closes the connection.
+  method close()
+}

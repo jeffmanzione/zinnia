@@ -40,31 +40,73 @@ function zeros2(type, dim1, dim2) {
   }
 }
 
-; An array of 8-bit integers. Int8Array(n) has n zeros.
-class Int8Array : DataArray {}
-; An array of 32-bit integers. Int32Array(n) has n zeros.
-class Int32Array : DataArray {}
-; An array of 64-bit integers. Int64Array(n) has n zeros.
-class Int64Array : DataArray {}
-; An array of 32-bit floats. Float32Array(n) has n zeros.
-class Float32Array : DataArray {}
-; An array of 64-bit floats. Float64Array(n) has n zeros.
-class Float64Array : DataArray {}
+; An array of 8-bit integers.
+class Int8Array : DataArray {
+  ; Creates an array of [count] zeros.
+  declare new(count)
+}
+; An array of 32-bit integers.
+class Int32Array : DataArray {
+  ; Creates an array of [count] zeros.
+  declare new(count)
+}
+; An array of 64-bit integers.
+class Int64Array : DataArray {
+  ; Creates an array of [count] zeros.
+  declare new(count)
+}
+; An array of 32-bit floats.
+class Float32Array : DataArray {
+  ; Creates an array of [count] zeros.
+  declare new(count)
+}
+; An array of 64-bit floats.
+class Float64Array : DataArray {
+  ; Creates an array of [count] zeros.
+  declare new(count)
+}
 
-; A matrix of 8-bit integers. Int8Matrix(rows, cols) has all zeros.
-class Int8Matrix : DataMatrix {}
-; A matrix of 32-bit integers. Int32Matrix(rows, cols) has all zeros.
-class Int32Matrix : DataMatrix {}
-; A matrix of 64-bit integers. Int64Matrix(rows, cols) has all zeros.
-class Int64Matrix : DataMatrix {}
-; A matrix of 32-bit floats. Float32Matrix(rows, cols) has all zeros.
-class Float32Matrix : DataMatrix {}
-; A matrix of 64-bit floats. Float64Matrix(rows, cols) has all zeros.
-class Float64Matrix : DataMatrix {}
+; A matrix of 8-bit integers.
+class Int8Matrix : DataMatrix {
+  ; Creates a [rows] x [cols] matrix of zeros.
+  declare new(rows, cols)
+}
+; A matrix of 32-bit integers.
+class Int32Matrix : DataMatrix {
+  ; Creates a [rows] x [cols] matrix of zeros.
+  declare new(rows, cols)
+}
+; A matrix of 64-bit integers.
+class Int64Matrix : DataMatrix {
+  ; Creates a [rows] x [cols] matrix of zeros.
+  declare new(rows, cols)
+}
+; A matrix of 32-bit floats.
+class Float32Matrix : DataMatrix {
+  ; Creates a [rows] x [cols] matrix of zeros.
+  declare new(rows, cols)
+}
+; A matrix of 64-bit floats.
+class Float64Matrix : DataMatrix {
+  ; Creates a [rows] x [cols] matrix of zeros.
+  declare new(rows, cols)
+}
 
-; The base class of data arrays. a[i] reads and a[i] = v writes an element;
-; len(), to_arr(), reversed() and sorted() are defined natively.
+; The base class of data arrays.
 class DataArray {
+  ; Returns the element at index [i].
+  declare method [](i)
+  ; Sets the element at index [i] to [value].
+  declare method []=(i, value)
+  ; Returns how many elements the array has.
+  declare method len()
+  ; Returns the elements as an Array.
+  declare method to_arr()
+  ; Returns a copy of the array in reverse order.
+  declare method reversed()
+  ; Returns a sorted copy of the array.
+  declare method sorted()
+
   ; Returns e.g. 'Int64Array([1, 2, 3])', eliding the middle of long arrays.
   method to_s() {
     res = class().name() + '(['
@@ -87,10 +129,16 @@ class DataArray {
   }
 }
 
-; The base class of data matrices. m[i] is row i as a data array, and
-; m[i, j] reads and m[i, j] = v writes an element; shape() returns
-; (rows, cols).
+; The base class of data matrices.
 class DataMatrix {
+  ; Returns row [index] as a data array for an Int, or the element at
+  ; [index] for a tuple (row, col).
+  declare method [](index)
+  ; Sets the element at [index], a tuple (row, col), to [value].
+  declare method []=(index, value)
+  ; Returns the matrix's dimensions, (rows, cols).
+  declare method shape()
+
   ; Returns the matrix's rows and shape, eliding the middle of large matrices.
   method to_s() {
     res = class().name() + '(['

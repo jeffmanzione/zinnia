@@ -17,9 +17,17 @@ class Token {
 }
 
 ; A line of a stack trace: the module, function and instruction an error
-; passed through. module(), function(), linetext() and source_linetext() are
-; defined natively.
+; passed through.
 class StackLine {
+  ; Returns the module of the line.
+  declare method module()
+  ; Returns the function of the line, or None for a module's top-level code.
+  declare method function()
+  ; Returns the text of the line, in the module's compiled code.
+  declare method linetext()
+  ; Returns the text of the line in the source, if there's a source map.
+  declare method source_linetext()
+
   ; Returns the token of the instruction, in the module's compiled code.
   method token() {
     tok = __token()
@@ -72,9 +80,13 @@ class StackLine {
   }
 }
 
-; An error. Error(message) creates one with [message]; [stacktrace] holds the
-; StackLines it was raised through. Subclass it for specific errors.
+; An error. Subclass it for specific errors.
 class Error {
+  ; The error's message, and the StackLines it was raised through.
+  declare field message, stacktrace
+  ; Creates an error with [message].
+  declare new(message)
+
   ; Returns the error's class, message, the line it was raised at and its stack trace, in color.
   method to_s() {
     result = cat(color('31;1'), self.class().name(), ': ', message, '\n')

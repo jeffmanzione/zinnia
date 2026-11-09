@@ -1,16 +1,42 @@
 ; The builtin module: what every module can use without importing it.
 ;
-; It defines str(), cat(), strfmt(), cmp(), hash() and the methods that the
-; basic types (String, Array, Tuple, Range, Class, ...) have beyond those
-; defined natively, and makes builtin_ext's iterators, range(), memoize() and
-; sort() available. Its imports, such as io and error, are visible everywhere
-; too. Native functions such as Int(), Float(), Bool(), is_int() and color()
-; have no source here.
+; It defines str(), cat(), strfmt(), cmp(), hash() and the basic types
+; (String, Array, Tuple, Range, Class, ...), and makes builtin_ext's
+; iterators, range(), memoize() and sort() available. Its imports, such as io
+; and error, are visible everywhere too.
+;
+; Much of it is defined natively, in C. Those functions, classes and methods
+; are declared here with `declare`, which compiles to nothing.
 
 import builtin_ext
 import error
 import io
 import struct
+
+; Returns [x] as an Int: a Float truncated, a Bool as 1 or 0, a Char as its
+; code, a string parsed, and 0 for None. Raises an error for anything else.
+declare function Int(x)
+
+; Returns [x] as a Float.
+declare function Float(x)
+
+; Returns [x] as a Bool: False for None and False, and True for any other
+; primitive, including 0. A string must be 'True', 'true', 'T' or 't', or
+; 'False', 'false', 'F' or 'f'; anything else raises an error.
+declare function Bool(x)
+
+; Returns whether [x] is an Int.
+declare function is_int(x)
+
+; Returns whether [x] is a Float.
+declare function is_float(x)
+
+; Returns whether [x] is a Bool.
+declare function is_bool(x)
+
+; Returns the terminal escape sequence for the color [code], e.g. '31;1' for
+; bold red, or that resets the color for 0 or None.
+declare function color(code)
 
 ; Returns [input] as a String: itself if it's a string, its to_s() if it's an
 ; object, and its text otherwise, e.g. '3' for 3.
@@ -141,9 +167,26 @@ function tuple(args) {
   return t
 }
 
-; The class every class extends. class(), super(), hash(), copy(), $get(name)
-; and $set(name, value) are defined natively.
+; The class every class extends.
 class Object {
+  ; Returns the object's class.
+  declare method class()
+  ; Returns the constructor of [cls], a class this object's class extends,
+  ; for calling it from a constructor: `super(Base)(args)`.
+  declare method super(cls)
+  ; Returns a hash of the object.
+  declare method hash()
+  ; Returns a copy of the object.
+  declare method copy()
+  ; Returns the member [name] of the object, or None.
+  declare method $get(name)
+  ; Sets the member [name] of the object to [value].
+  declare method $set(name, value)
+  ; Returns the object's address, as an Int.
+  declare method $adr()
+  ; Returns the object's address, in hexadecimal.
+  declare method $hex_addr()
+
   ; Returns e.g. 'Instance of module.Class'.
   method to_s() {
     return cat(
@@ -154,17 +197,45 @@ class Object {
   }
 }
 
-; A module. name(), functions() and classes() are defined natively.
+; A module.
 class Module {
+  ; Returns the module's name.
+  declare method name()
+  ; Returns the module's functions.
+  declare method functions()
+  ; Returns the module's classes.
+  declare method classes()
+  ; Returns the file the module was loaded from.
+  declare method filename()
+  ; Returns the module's source file, if it was loaded with a source map.
+  declare method source_filename()
+  ; Returns whether the module is a C library loaded with
+  ; dynamic.import_c_library().
+  declare method has_dl()
+  ; Calls the C library's function [fn_name] with [args].
+  declare method dlcall(fn_name, args)
+
   ; Returns e.g. 'Module(io)'.
   method to_s() {
     return cat('Module(', name(), ')')
   }
 }
 
-; A class. name(), module(), super(), fields(), methods() and
-; is_subclass_of(cls) are defined natively.
+; A class.
 class Class {
+  ; Returns the class's name.
+  declare method name()
+  ; Returns the module the class is defined in.
+  declare method module()
+  ; Returns the class this class extends, or None.
+  declare method super()
+  ; Returns the names of the class's fields.
+  declare method fields()
+  ; Returns the class's methods, but not those of the classes it extends.
+  declare method methods()
+  ; Returns whether this class extends [cls], directly or not.
+  declare method is_subclass_of(cls)
+
   field annotations
   ; Returns e.g. 'class Foo', followed by its annotations.
   method to_s() {
@@ -203,9 +274,32 @@ function is_string(e) {
   (e is String) or (e is IString)
 }
 
-; A mutable string. len(), extend(s), copy(), trim(), ltrim(), rtrim(),
-; lshrink(n), rshrink(n) and split(delim) are defined natively.
+; A mutable string.
 class String {
+  ; Returns the character at index [i].
+  declare method [](i)
+  ; Sets the character at index [i] to [c].
+  declare method []=(i, c)
+  ; Returns the string's length.
+  declare method len()
+  ; Appends the string [s] to this string, and returns this string.
+  declare method extend(s)
+  ; Returns a copy of the string.
+  declare method copy()
+  ; Returns the string without leading and trailing whitespace.
+  declare method trim()
+  ; Returns the string without leading whitespace.
+  declare method ltrim()
+  ; Returns the string without trailing whitespace.
+  declare method rtrim()
+  ; Removes [n] characters from the start of the string.
+  declare method lshrink(n)
+  ; Removes [n] characters from the end of the string.
+  declare method rshrink(n)
+  ; Returns the parts of the string between occurrences of [delim], as an
+  ; Array.
+  declare method split(delim)
+
   ; Returns the string itself.
   method to_s() {
     return self
@@ -264,9 +358,26 @@ class String {
   }
 }
 
-; An immutable, interned string, written i'text'. len(), copy(), trim(),
-; ltrim(), rtrim() and split(delim) are defined natively.
+; An immutable, interned string, written i'text'.
 class IString {
+  ; Returns the character at index [i].
+  declare method [](i)
+  ; Returns the string's length.
+  declare method len()
+  ; Returns a mutable String copy of the string.
+  declare method copy()
+  ; Returns the string without leading and trailing whitespace.
+  declare method trim()
+  ; Returns the string without leading whitespace.
+  declare method ltrim()
+  ; Returns the string without trailing whitespace.
+  declare method rtrim()
+  ; Returns the parts of the string between occurrences of [delim], as an
+  ; Array.
+  declare method split(delim)
+  ; Returns the string as a String.
+  declare method to_s()
+
   ; Returns str() of each of [strs], with this string between them.
   method join(strs) {
     result = ''
@@ -320,8 +431,11 @@ class IString {
   }
 }
 
-; An immutable sequence, written (a, b). len() is defined natively.
+; An immutable sequence, written (a, b).
 class Tuple {
+  ; Returns how many elements the tuple has.
+  declare method len()
+
   ; Returns whether [other] is a Tuple with equal elements.
   method ==(other) {
     if (~(other is Tuple) or len() != other.len()) return False
@@ -364,8 +478,13 @@ class Tuple {
   }
 }
 
-; A growable sequence, written [a, b]. len() and append(value) are defined natively.
+; A growable sequence, written [a, b].
 class Array {
+  ; Returns how many elements the array has.
+  declare method len()
+  ; Adds [value] to the end of the array.
+  declare method append(value)
+
   ; Returns whether [other] is an Array with equal elements.
   method ==(other) {
     if (~(other is Array) or len() != other.len()) return False
@@ -493,9 +612,17 @@ class Array {
   }
 }
 
-; A function or method. name(), module(), is_method() and parent_class() are
-; defined natively, and [annotations] holds its annotations.
+; A function or method. [annotations] holds its annotations.
 class Function {
+  ; Returns the function's name.
+  declare method name()
+  ; Returns the module the function is defined in.
+  declare method module()
+  ; Returns whether the function is a method.
+  declare method is_method()
+  ; Returns the class a method is defined in, or None for a function.
+  declare method parent_class()
+
   ; Returns e.g. 'Function(module.name)' or 'Method(module.Class.name)'.
   method to_s() {
     res = None
@@ -521,9 +648,17 @@ class Function {
   }
 }
 
-; A method bound to an object, as `obj.method` without a call gives. obj() and
-; func() are defined natively.
+; A method bound to an object, as `obj.method` without a call gives.
 class FunctionRef {
+  ; Returns the method's name.
+  declare method name()
+  ; Returns the module the method is defined in.
+  declare method module()
+  ; Returns the object the method is bound to.
+  declare method obj()
+  ; Returns the method, as a Function.
+  declare method func()
+
   ; Returns e.g. 'FunctionRef(obj=...,func=...)'.
   method to_s() {
     cat('FunctionRef(obj=', self.obj(), ',func=', self.func(), ')')
@@ -533,6 +668,16 @@ class FunctionRef {
 ; A sequence of integers from start() up to but not including end(), counting
 ; by inc(). Create one with range(start, end) or range(start, inc, end).
 class Range {
+  ; Creates a range counting from [start] by [inc] up to but not including
+  ; [end].
+  declare new(start, inc, end)
+  ; Returns the first integer of the range.
+  declare method start()
+  ; Returns the amount the range counts by.
+  declare method inc()
+  ; Returns the end of the range, which it doesn't include.
+  declare method end()
+
   ; Returns 'start:inc:end'.
   method to_s() {
     cat(start(), ':', inc(), ':', end())
@@ -576,6 +721,26 @@ class Range {
 }
 
 ; See builtin_ext.Iterator.
+; Runs a function in an isolate of its own. Create one with
+; async.spawn_isolate().
+declare class Isolate {
+  ; Starts the isolate, and returns a future to the result of its function.
+  method start()
+}
+
+; A reference to an actor in another isolate, which the proxies that
+; async.spawn_actor() returns send calls to.
+declare class ActorRef {
+  ; Returns the isolate the actor lives in.
+  method isolate()
+}
+
+; A frame of the call stack, defined natively.
+declare class Frame {}
+
+; A scope of variables, defined natively.
+declare class Scope {}
+
 self.Iterator = builtin_ext.Iterator
 ; See builtin_ext.IndexIterator.
 self.IndexIterator = builtin_ext.IndexIterator
