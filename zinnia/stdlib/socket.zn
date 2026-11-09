@@ -1,27 +1,59 @@
+; Network sockets over TCP/IP.
+;
+; Example:
+; ```
+; server = socket.create_server_socket(socket.lookup_local_address(), 8080)
+; handle = await server.accept()
+; io.println(await handle.receive())
+; await handle.send('Hello')
+; handle.close()
+; server.close()
+; ```
+
 import io
 
+; The value socket calls return on errors.
 self.SOCKET_ERROR = -1
+; The IPv4 address family.
 self.AF_INET = 2
+; Binds a server to all of this machine's addresses.
 self.INADDR_ANY = 0
+; A stream (TCP) socket.
 self.SOCK_STREAM = 1
 
+; Initializes the platform's socket library.
 __init()
 
+; Returns this machine's address.
 function lookup_local_address() {
   return __lookup_local_address()
 }
 
+; Returns a TCP server socket bound to [host] and [port].
 function create_server_socket(host, port) {
   return Socket(AF_INET, SOCK_STREAM, 0, host, port, True)
 }
 
+; Returns a TCP client socket for [host] and [port]; call connect() to connect.
 function create_client_socket(host, port) {
   return Socket(AF_INET, SOCK_STREAM, 0, host, port, False)
 }
 
+; Releases the platform's socket library.
 function cleanup() {
   __cleanup()
 }
 
-; class Socket { }
-; class SocketHandle { }
+; Socket and SocketHandle are defined natively.
+;
+; Socket(family, type, protocol, host, port, is_server) creates a socket.
+; Its methods:
+; - host() and port(): where it's bound or connected;
+; - accept(): for a server, waits for a client and returns a SocketHandle;
+; - connect(): for a client, connects and returns a SocketHandle;
+; - close(): closes it.
+;
+; A SocketHandle is one side of a connection. Its methods:
+; - send(text): sends [text];
+; - receive(): waits for and returns the text received;
+; - close(): closes the connection.

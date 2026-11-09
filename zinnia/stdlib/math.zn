@@ -17,7 +17,7 @@ self.PI = 3.141592653589793
 ;
 self.E = exp(1)
 
-; Returns the comparatively smalles number from [sequence].
+; Returns the smallest number in [sequence].
 function min(sequence) {
 	m = sequence[0]
   for i=1, i < sequence.len(), i=i+1 {
@@ -28,7 +28,7 @@ function min(sequence) {
   m
 }
 
-; Returns the comparatively largest number from [sequence].
+; Returns the largest number in [sequence].
 function max(sequence) {
 	m = sequence[0]
   for i=1, i < sequence.len(), i=i+1 {
@@ -51,17 +51,17 @@ function max(sequence) {
 ; Returns the floor of [x].
 ; function floor(x) {}
 
-; Returns the logarithm of the specified value [x] with base [base].
+; Returns the logarithm of [x] with base [base], by default E.
 function log(x, base=E) {
   __log(x, base)
 }
 
-; Returns the natural logarithm of the specified valued [x].
+; Returns the natural logarithm of [x].
 function ln(x) {
   log(x)
 }
 
-; Returns the base-10 logarithm of the specified value [x].
+; Returns the base-10 logarithm of [x].
 function log10(x) {
   log(x, 10)
 }
@@ -72,12 +72,12 @@ function sqrt(x) pow(x, 0.5)
 ; Returns the remainder of [n] divided by [d].
 ; function mod(n, d) {}
 
-; Returns (n / d, mod(n, d)).
+; Returns the tuple ([n] / [d], mod([n], [d])).
 function div(n, d) {
   return (n / d, mod(n, d))
 }
 
-; Like [n] / [d], except when [d] is 0, then returns None.
+; Returns [n] / [d], or None if [d] is 0.
 function safe_divide(n, d) {
   if d == 0 {
     return None

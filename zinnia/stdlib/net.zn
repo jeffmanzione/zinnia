@@ -1,3 +1,31 @@
+; HTTP: requests and responses, sockets that speak HTTP, and a framework for
+; serving applications from annotated controller classes, whose dependencies
+; are injected (see inject).
+;
+; Example:
+; ```
+; @inject.Inject(keys: [net.HttpRequest])
+; class IndexMatcher : net.RequestMatcher {
+;   new(field http_request) {}
+;   method matches() ~~http_request and (http_request.path == '/')
+; }
+;
+; @net.HttpRequestController(IndexMatcher)
+; @inject.Inject(keys: [net.HttpResponse])
+; class IndexController {
+;   new(field http_response) {}
+;   @net.Get
+;   method get() {
+;     http_response.add_content('<h1>Hello</h1>')
+;   }
+; }
+;
+; net.Server()
+;     .add_application(
+;         net.Application('localhost', 8080).add_controller(IndexController))
+;     .run()
+; ```
+
 import async
 import error
 import inject
@@ -6,8 +34,11 @@ import net
 import socket
 import struct
 
+; An HTTP request.
 class HttpRequest {
   field _headers
+  ; Creates a request: its method [type] (e.g. 'GET'), [path], query [params] (a
+  ; Map), [protocol] (e.g. 'HTTP'), [version] and [headers] (a Map).
   new(field type,
       field path,
       field params,
@@ -16,24 +47,31 @@ class HttpRequest {
       headers) {
     _headers = headers
   }
+  ; Returns the value of the header [key], or None.
   method get_header_value(key) {
     return _headers[key]
   }
+  ; Returns the Host header.
   method get_host() {
     return _headers[i'Host']
   }
+  ; Returns the Connection header.
   method get_connection() {
     return _headers[i'Connection']
   }
+  ; Returns the User-Agent header.
   method get_user_agent() {
     return _headers[i'User-Agent']
   }
+  ; Returns the Accept header's media types, as an Array.
   method get_accept() {
     return _headers[i'Accept'].split(',')
   }
+  ; Returns the Cookie header.
   method get_cookie() {
     return _headers[i'Cookie']
   }
+  ; Returns the request line and headers.
   method to_s() {
     ret = cat(type, ' ', path)
     if params and (params.keys.len() > 0) {
@@ -57,9 +95,12 @@ class HttpRequest {
 }
 
 
+; An HTTP response. Its setters return the response, so calls can be chained:
+; `HttpResponse().set_content_type('text/plain').add_content('Hi')`.
 class HttpResponse {
   field _protocol, _version, _status_code, _status
   field _headers, _content, _set_cookies
+  ; Creates a '200 OK' HTTP/1.1 text/html response with no content.
   new() {
     _protocol = i'HTTP'
     _version = 1.1
@@ -72,42 +113,52 @@ class HttpResponse {
     _content = ''
     _set_cookies = {}
   }
+  ; Sets the status text, e.g. 'NOT FOUND'.
   method set_status(status) {
     _status = status
     return self
   }
+  ; Sets the status code, e.g. 404.
   method set_status_code(status_code) {
     _status_code = status_code
     return self
   }
+  ; Sets the Server header.
   method set_server(server) {
     _headers[i'Server'] = server
     return self
   }
+  ; Sets the Date header.
   method set_date(date_text) {
     _headers[i'Date'] = date_text
     return self
   }
+  ; Sets the Last-Modified header.
   method set_last_modified(date_text) {
     _headers[i'Last-Modified'] = date_text
     return self
   }
+  ; Sets the Content-Type header, e.g. 'application/json'.
   method set_content_type(type) {
     _headers[i'Content-Type'] = type
     return self
   }
+  ; Sets the Accept-Ranges header.
   method set_accept_ranges(ranges) {
     _headers[i'Accept-Ranges'] = ranges
     return self
   }
+  ; Sets the cookie [name] to [value] with a Set-Cookie header. Unlike the other setters, returns None.
   method set_cookie(name, value) {
     _set_cookies[str(name)] = str(value)
   }
+  ; Appends [text] to the body, updating Content-Length.
   method add_content(text) {
     _content.extend(text)
     _headers[i'Content-Length'] = _headers[i'Content-Length'] + text.len()
     return self
   }
+  ; Returns the response as sent: the status line, headers and body.
   method to_s() {
     res = cat(_protocol, '/', _version, ' ', _status_code, ' ', _status, '\r\n')
     for (k, v) in _headers {
@@ -120,11 +171,14 @@ class HttpResponse {
     res.extend(_content)
     return res
   }
+  ; Returns the Set-Cookie value for [name] and [value].
   method _set_cookie_string(name, value) {
     return cat(name, '="', value, '"')
   }
 }
 
+; Makes [response] a 301 redirect to [target], keeping [request]'s query
+; parameters, and returns it.
 function redirect(request, response, target) {
   response.set_status_code(301)
   location = target
@@ -140,6 +194,8 @@ function redirect(request, response, target) {
   return response
 }
 
+; Splits [path] at '?' and returns (path, params), with the query's
+; parameters in a Map; a parameter without '=' has the value '1'.
 function parse_params(path) {
   q_index = path.find('?')
   if ~q_index {
@@ -162,6 +218,7 @@ function parse_params(path) {
         {}))
 }
 
+; Returns the HttpRequest that the text [req] holds, or None if it's invalid, printing the error.
 function parse_request(req) {
   try {
     parts = req.split('\r\n')
@@ -192,23 +249,30 @@ function parse_request(req) {
   }
 }
 
+; The cookies of the current request, injected into controllers. Setting one
+; also sets it on the response.
 @inject.Inject(keys: [HttpRequest, inject.Provider(HttpResponse)])
 class Cookies {
   field cookies_map
 
+  ; Creates the cookies of [req], setting new ones on the response [resp_provider] provides.
   new(field req, field resp_provider) {
     cookies_map = _parse_cookie_map(req.get_cookie())
   }
+  ; Returns the value of the cookie [name], or None.
   method [](name) {
     return cookies_map[name]
   }
+  ; Sets the cookie [name] to [value], on the response too.
   method []=(name, value) {
     cookies_map[name] = value
     resp_provider().set_cookie(name, value)
   }
+  ; Returns the cookies as a Map's text.
   method to_s() {
     return cookies_map.to_s()
   }
+  ; Returns the cookies of a Cookie header, as a Map.
   method _parse_cookie_map(cookie_string) {
     if ~cookie_string or cookie_string == '' {
       return {}
@@ -224,9 +288,12 @@ class Cookies {
   }
 }
 
+; A connection that receives HttpRequests and sends HttpResponses.
 class HttpSocketHandle {
+  ; Wraps the socket.SocketHandle [raw_handle].
   new(field raw_handle) {}
 
+  ; Returns a future to the next request, or to None once the connection is closed.
   method receive() async {
     raw_request = await raw_handle.receive()
     ; When the connection is gracefully closed, the response is None.
@@ -235,23 +302,29 @@ class HttpSocketHandle {
     }
     return parse_request(raw_request)
   }
+  ; Sends [http_response], an HttpResponse; raises an error for anything else.
   method send(http_response) async {
     if ~(http_response is HttpResponse) {
       raise error.Error(i'HttpSocketHandle.send() expects an HttpResponse argument.')
     }
     await raw_handle.send(http_response.to_s())
   }
+  ; Closes the connection.
   method close() {
     raw_handle.close()
   }
 }
 
+; A server socket that accepts HTTP connections.
 class HttpSocket {
+  ; Wraps the server socket.Socket [raw_socket].
   new(field raw_socket) {}
 
+  ; Returns a future to the next connection, as an HttpSocketHandle.
   method accept() async {
     HttpSocketHandle(await raw_socket.accept())
   }
+  ; Closes the socket.
   method close() {
     raw_socket.close()
   }
@@ -259,15 +332,20 @@ class HttpSocket {
 
 ; Marker for the raw request string.
 class RawRequest {}
+; Marker for the raw response string.
 class RawResponse {}
 
+; Provides the HttpRequest parsed from the RawRequest and the HttpResponse of
+; the current request, and the RawResponse text of that response.
 class BaseHttpProviderSet: inject.ProviderSet {
   field req, resp, http_resp
 
+  ; Creates the provider set.
   new() {
     super(inject.ProviderSet)()
   }
 
+  ; Returns the current request's HttpResponse, creating it the first time.
   @inject.Provides(key: HttpResponse)
   method base_response() {
     if ~http_resp {
@@ -276,6 +354,7 @@ class BaseHttpProviderSet: inject.ProviderSet {
     return http_resp
   }
 
+  ; Returns the HttpRequest parsed from [raw_req], parsing it the first time.
   @inject.Provides(key: HttpRequest, params: [RawRequest])
   method marshall(raw_req) {
     if ~raw_req {
@@ -290,6 +369,7 @@ class BaseHttpProviderSet: inject.ProviderSet {
     return req
   }
 
+  ; Returns the text of [http_resp], the response to send.
   @inject.Provides(key: RawResponse, params: [HttpResponse])
   method unmarshall(http_resp) {
     if ~http_resp {
@@ -303,63 +383,95 @@ class BaseHttpProviderSet: inject.ProviderSet {
   }
 }
 
+; Marks the method of a RequestController's controller that handles requests.
 class Rpc { method annotate(_) {} }
 
+; Marks the method of an HttpRequestController's controller that handles GET requests.
 class Get { method annotate(_) {} }
+; Marks the method that handles HEAD requests.
 class Head { method annotate(_) {} }
+; Marks the method that handles POST requests.
 class Post { method annotate(_) {} }
+; Marks the method that handles PUT requests.
 class Put { method annotate(_) {} }
+; Marks the method that handles DELETE requests.
 class Delete { method annotate(_) {} }
+; Marks the method that handles CONNECT requests.
 class Connect { method annotate(_) {} }
+; Marks the method that handles OPTIONS requests.
 class Options { method annotate(_) {} }
+; Marks the method that handles TRACE requests.
 class Trace { method annotate(_) {} }
+; Marks the method that handles PATCH requests.
 class Patch { method annotate(_) {} }
 
+; Returns True: matches every request.
 function always_true() {
   True
 }
 
+; Annotates a controller class: requests that [matcher_fn] accepts go to its
+; Rpc method, with the value injected for [request_key], and its response is
+; the value injected for [response_key].
 class RequestController {
+  ; Creates the annotation. [matcher_fn] is a function of the raw request text,
+  ; or a RequestMatcher class, which is constructed by the injector.
   new(field matcher_fn=always_true, field request_key = RawRequest, field response_key = RawResponse) {}
+  ; Calls the Rpc method of [controller].
   method process(controller, req) {
     return find_annotated_method(controller, Rpc)()
   }
 }
 
+; Decides which requests a controller handles. Subclass it, inject what it
+; needs (e.g. the HttpRequest) and override matches().
 class RequestMatcher {
+  ; Returns whether the controller handles the request; by default, False.
   method matches(raw_request) { False }
 }
 
+; Annotates a controller class that handles the HTTP requests that
+; [http_matcher_fn] accepts with its Get, Post, etc. methods. They're called
+; with the HttpRequest, and the response is the injected HttpResponse, so they
+; usually add to that.
 class HttpRequestController : RequestController {
+  ; Creates the annotation.
   new(http_matcher_fn=always_true) {
     super(RequestController)(http_matcher_fn, HttpRequest, HttpResponse)
   }
 
+  ; Calls the method of [controller] annotated for [req]'s HTTP method.
   method process(controller, req) {
     find_annotated_method(controller, _get_label(req))(req)
   }
 
+  ; Returns the annotation class for [req]'s HTTP method.
   method _get_label(req) { _REQUEST_METHOD_TO_ANNOTATION[req.type] }
 }
 
+; A web application: controller classes and provider sets, served at a host and port.
 class Application {
   field controller_classes, provider_sets
 
+  ; Creates an application served at [host] and [port], with no controllers.
   new(field host, field port) {
     controller_classes = []
     provider_sets = []
   }
 
+  ; Adds the controller class [ctrlr_cls], annotated with a RequestController, and returns this.
   method add_controller(ctrlr_cls) {
     controller_classes.append(ctrlr_cls)
     return self
   }
 
+  ; Adds the inject.ProviderSet class [ps] and returns this.
   method add_provider_set(ps) {
     provider_sets.append(ps)
     return self
   }
 
+  ; Returns an ApplicationRunner for the application, in an isolate of its own; call run() to serve it.
   method start() {
     return async.spawn_actor(
         ApplicationRunner,
@@ -367,6 +479,7 @@ class Application {
   }
 }
 
+; The annotation class for each HTTP method.
 self._REQUEST_METHOD_TO_ANNOTATION = {
   i'GET': Get,
   i'HEAD': Head,
@@ -379,6 +492,8 @@ self._REQUEST_METHOD_TO_ANNOTATION = {
   i'PATCH': Patch
 }
 
+; Returns the method of [instance] annotated with [annot], bound to it. Raises
+; an error unless there's exactly one.
 function find_annotated_method(instance, annot) {
   cls = instance.class()
   methods = cls.all_methods().where(m -> m.annotations.has(a -> a is annot))
@@ -390,9 +505,11 @@ function find_annotated_method(instance, annot) {
   return instance.$get(methods[0].name())
 }
 
+; Serves an Application, as an actor (see Application.start()).
 @async.Actor
 class ApplicationRunner {
   field injector
+  ; Creates the runner, installing the provider sets and controllers in an injector.
   new(field host, field port, field controller_classes, field provider_sets=[]) {
     injector = inject.Injector()
     provider_sets.each(ps -> injector.install(ps()))
@@ -401,6 +518,7 @@ class ApplicationRunner {
     }
   }
 
+  ; Returns (RequestController, controller class) for the first controller that matches [request].
   method _select_controller(request) {
     for (_, ctrlr_cls) in controller_classes {
       req_ctrlr = _get_request_controller(ctrlr_cls)
@@ -415,6 +533,7 @@ class ApplicationRunner {
     return (None, None)
   }
 
+  ; Returns the response to [request] from the controller that matches it.
   method process(request, timer) {
     injector.install(RawRequest, () -> request)
     (req_ctrlr, ctrlr_cls) = _select_controller(request)
@@ -432,6 +551,7 @@ class ApplicationRunner {
     return resp
   }
 
+  ; Returns the RequestController annotation of [ctrlr_cls]; raises an error unless there's exactly one.
   method _get_request_controller(ctrlr_cls) {
     req_ctrlrs = ctrlr_cls.all_annotations().where(a -> a is RequestController)
     if req_ctrlrs.len() == 0 {
@@ -442,6 +562,7 @@ class ApplicationRunner {
     return req_ctrlrs[0]
   }
 
+  ; Serves requests until the program ends, one connection at a time, printing errors.
   method run() {
     sock = socket.create_server_socket(host, port)
     io.println('Started app at ' + str(host) + ':' +  str(port))
@@ -459,18 +580,22 @@ class ApplicationRunner {
   }
 }
 
+; Serves several Applications at once.
 class Server {
   field apps
 
+  ; Creates a server with no applications.
   new() {
     apps = []
   }
 
+  ; Adds the Application [app] and returns this.
   method add_application(app) {
     apps.append(app)
     return self
   }
 
+  ; Starts and runs every application, until the program ends.
   method run() {
     await async.all(
      apps.map(app -> app.start().run())

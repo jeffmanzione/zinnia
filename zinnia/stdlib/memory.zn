@@ -1,11 +1,17 @@
+; Garbage collection and memory use.
+
 _ = None
-; Container for garbage collection results
+; The result of a garbage collection.
 class GCStatus {
+  ; Creates a status: [objects_collected] objects were freed,
+  ; [remaining_object_count] remain, and [object_counts] has a (class, count)
+  ; pair for each class of remaining objects.
   new(field objects_collected,
       field remaining_object_count,
       field object_counts) {
   }
 
+  ; Returns the counts, with the most common classes first.
   method to_s() {
     sort(object_counts, (oc1, oc2) {
       ; Most common classes first, then alphabetically.
@@ -29,7 +35,7 @@ class GCStatus {
   }
 }
 
-; Forces a garbage collection and returns the result of the colletion.
+; Collects garbage now, and returns a future to its GCStatus.
 function collect_garbage() async {
   GCStatus(await __collect_garbage())
 }

@@ -1,5 +1,14 @@
+; Loads modules implemented in C from shared libraries at runtime.
+
 import error
 
+; Loads the shared library [file_name] and returns it as a module named
+; [module_name].
+;
+; If [init_fn_name] is given, the library's function of that name is called to
+; build the module's classes and functions. Raises an error if an argument
+; isn't a String (or None, for [init_fn_name]), or if the library or the
+; function can't be loaded.
 function import_c_library({file_name, module_name, init_fn_name=None}) {
   if ~is_string(file_name) {
     raise error.Error('file_name must be a String')

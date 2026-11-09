@@ -1,29 +1,46 @@
+; Builds classes at runtime from their parts, for annotations that generate
+; classes (such as async.Actor and build.WithBuilder).
+;
+; Example:
+; ```
+; cls = classes.factory.create_class('Point', self)
+; cls.get_constructor().with_parameter('x', True).with_parameter('y', True)
+; cls.add_method('sum').with_statement('return x + y')
+; Point = cls.build()
+; ```
+
 import struct
 
+; Builds the source of a method of a class built with a _ClassBuilder.
 class _MethodBuilder {
   field statements, parameters, is_async
 
+  ; Creates a builder for a method named [method_name], with no parameters or statements.
   new(field method_name) {
     statements = []
     parameters = []
     is_async = False
   }
 
+  ; Adds a parameter named [name], with [default_value] if given, and returns this builder.
   method with_parameter(name, default_value = None) {
     parameters.append((name, default_value))    
     return self
   }
 
+  ; Makes the method `async` and returns this builder.
   method as_async() {
     is_async = True
     return self
   }
   
+  ; Adds a statement, the Zinnia source [statement_text], and returns this builder.
   method with_statement(statement_text) {
     statements.append(statement_text)
     return self
   }
   
+  ; Returns the method's source.
   method to_s() {
     c_text = cat(
       '  method ',
@@ -48,24 +65,30 @@ class _MethodBuilder {
   }
 }
 
+; Builds the source of the constructor of a class built with a _ClassBuilder.
 class _ConstructorBuilder {
   field parameters, statements
   
+  ; Creates a builder for a constructor with no parameters or statements.
   new() {
     parameters = []
     statements = []
   }
   
+  ; Adds a parameter named [name], which is a field of the class if [is_field],
+  ; with [default_value] if given, and returns this builder.
   method with_parameter(name, is_field = False, default_value = None) {
     parameters.append((name, is_field, default_value))
     return self
   }
   
+  ; Adds a statement, the Zinnia source [statement_text], and returns this builder.
   method with_statement(statement_text) {
     statements.append(statement_text)
     return self
   }
 
+  ; Returns the constructor's source.
   method to_s() {
     c_text = cat(
       '  new(',
@@ -88,20 +111,24 @@ class _ConstructorBuilder {
   }
 }
 
+; Builds a class named [class_name] in [module].
 class _ClassBuilder {
   field fields, constructor, methods
 
+  ; Creates a builder for a class with no fields, constructor or methods.
   new(field class_name, field module) {
     fields = []
     constructor = None
     methods = []
   }
 
+  ; Adds a field named [field_name] and returns this builder.
   method with_field(field_name) {
     fields.append(field_name)
     return self
   }
 
+  ; Returns the builder of the class's constructor, creating it the first time.
   method get_constructor() {
     if ~constructor {
       constructor = _ConstructorBuilder()
@@ -109,16 +136,19 @@ class _ClassBuilder {
     return constructor
   }
 
+  ; Adds a method named [method_name] and returns its builder.
   method add_method(method_name) {
     m = _MethodBuilder(method_name)
     methods.append(m)
     return m
   }
 
+  ; Compiles the class into [module] and returns it.
   method build() {
     return __load_class_from_text(module, to_s().extend('\nNone\n'))
   }
 
+  ; Returns the class's source.
   method to_s() {
     class_text = cat('class ', class_name, ' {\n')
     if fields.len() > 0 {
@@ -134,10 +164,13 @@ class _ClassBuilder {
   }
 }
 
+; Creates class builders; use classes.factory.
 class _ClassFactory {
+  ; Returns a builder for a class named [class_name] in [module].
   method create_class(class_name, module) {
     return _ClassBuilder(class_name, module)
   }
 }
 
+; The factory that creates class builders.
 self.factory = _ClassFactory()
