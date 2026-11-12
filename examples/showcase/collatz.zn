@@ -1,0 +1,133 @@
+; Zinnia in one program: the longest Collatz sequences below a limit, found
+; in parallel by actors that each run on a thread of their own.
+;
+; A Collatz sequence starts at a number n and steps to n / 2 if n is even, or
+; to 3n + 1 if it's odd, until it reaches 1. Which starts below a limit take
+; the most steps?
+;
+;   zinnia examples/showcase/collatz.zn -- --limit=50000 --workers=4
+;   bazel run //examples/showcase:collatz -- --limit=50000 --workers=4
+;
+; With --show_generated, it also prints the class that @Leaderboard writes.
+
+import async
+import classes
+import error
+import io
+
+; `|` gives the value on its left unless that's None, so it doubles as a
+; default for a flag that isn't given.
+limit = Int(args.limit | 20000)
+workers = Int(args.workers | 4)
+
+; An annotation is an ordinary class. Its annotate() runs when the class it
+; annotates is defined, so it can write code: @Leaderboard on a class Foo
+; writes a new class, FooLeaderboard, which keeps the best [size] Foos, in the
+; order Foo's __cmp__ gives.
+class Leaderboard {
+  field source
+
+  ; Named parameters, with defaults. `field` makes a parameter a field.
+  new({field size=3}) {}
+
+  method annotate(cls) {
+    board = classes.factory.create_class(cat(cls.name(), 'Leaderboard'), cls.module())
+    board.with_field('entries')
+    board.get_constructor().with_statement('entries = []')
+    board.add_method('add')
+        .with_parameter('entry')
+        .with_statement(strfmt(
+            'if (|entries| == %d) and (cmp(entry, entries[%d]) >= 0) return self',
+            size, size - 1))
+        .with_statement('entries.append(entry)')
+        .with_statement('sort(entries)')
+        .with_statement(strfmt('if |entries| > %d entries.remove(%d)', size, size))
+        .with_statement('return self')
+    ; Operators are methods. These make |board|, board[i] and
+    ; `for ... in board` work.
+    board.add_method('len').with_statement('|entries|')
+    board.add_method('[]').with_parameter('i').with_statement('entries[i]')
+    board.add_method('iter').with_statement('entries.iter()')
+    source = str(board)
+    board.build()
+  }
+}
+
+@Leaderboard(size: 5)
+class Result {
+  new(field start, field steps) {}
+
+  ; Orders Results by the most steps, then the smallest start; sort() and
+  ; cmp() use it.
+  method __cmp__(other) {
+    if steps != other.steps return other.steps - steps
+    start - other.start
+  }
+
+  method to_s() cat(start, ', in ', steps, if steps == 1 then ' step' else ' steps')
+}
+
+; A function returns its last expression, and `if` is an expression too.
+function steps(n) {
+  count = 0
+  while n != 1 {
+    n = if n % 2 == 0 then n / 2 else 3 * n + 1
+    count = count + 1
+  }
+  count
+}
+
+; An actor lives in an isolate: a thread with a heap of its own. @async.Actor
+; writes ExplorerProxy, whose methods send the actor messages and return
+; futures. The actor handles one message at a time, so it needs no locks.
+@async.Actor
+class Explorer {
+  new(field name) {}
+
+  method explore(lo, hi) {
+    if lo < 1 {
+      raise error.Error(cat(name, ' was asked to start at ', lo, '.'))
+    }
+    board = ResultLeaderboard()
+    ; `lo:hi` is a Range. Iterating it gives (index, value) pairs.
+    for (_, n) in lo:hi board.add(Result(n, steps(n)))
+    ; What an actor returns is copied to the caller's heap.
+    return board
+  }
+}
+
+; Classes can be inspected at runtime, written ones included.
+written = ResultLeaderboard.methods().map(m -> str(m.name())).where(m -> ~m.starts_with('$'))
+io.println(cat('@Leaderboard wrote ResultLeaderboard, with methods ', ', '.join(written), '.'))
+if args.show_generated {
+  io.println(Result.all_annotations().where(a -> a is Leaderboard)[0].source)
+}
+
+; Split 1:limit into a range per worker, and explore them all at once.
+chunk = (limit + workers - 1) / workers
+explorers = []
+searches = []
+for (i, _) in 0:workers {
+  explorer = async.spawn_actor(Explorer, cat('explorer ', i))
+  explorers.append(explorer)
+  lo = 1 + i * chunk
+  hi = if lo + chunk > limit then limit else lo + chunk
+  searches.append(explorer.explore(lo, hi))
+}
+
+; This thread is free while they work. `await` waits for every search.
+best = ResultLeaderboard()
+for (_, board) in await async.all(searches) {
+  for (_, result) in board best.add(result)
+}
+
+io.println(cat('The longest Collatz sequences starting below ', limit, ', found by ',
+               workers, if workers == 1 then ' actor:' else ' actors:'))
+for (i, result) in best io.println(cat('  ', i + 1, '. ', result))
+
+; An error raised in an actor is raised again where its future is awaited.
+try {
+  await explorers[0].explore(0, 10)
+} catch e {
+  io.println(cat('Caught from another isolate: ', e.message))
+}
