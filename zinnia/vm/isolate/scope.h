@@ -17,6 +17,10 @@ void scope_finalize(Scope *ctx);
 Object *scope_self(Scope *ctx);
 Module *scope_module(Scope *ctx);
 const Instruction *scope_ins(Scope *ctx);
+// Sets the scope [ctx] is nested in, which it keeps alive.
+void scope_set_previous(Scope *ctx, Scope *previous);
+// Keeps [ctx] alive as long as [fn_ref], an anonymous function defined in it.
+void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap);
 void scope_set_function(Scope *ctx, const Function *func);
 Value *scope_lookup(Scope *ctx, const char id[], Value *tmp);
 void scope_let(Scope *ctx, const char id[], const Value *e);

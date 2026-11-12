@@ -38,6 +38,9 @@ DEFINE_ARRAYLIKE(FrameArray, Frame *);
 
 struct __Scope {
   Frame *parent_frame;
+  // The isolate whose heap the scope is in. A scope captured by an anonymous
+  // function can outlive its frame, so this doesn't go through parent_frame.
+  Isolate *parent_isolate;
   Scope *previous_scope;
 
   Object *_reflection;
@@ -119,6 +122,8 @@ struct __Isolate {
   FrameSet blocking_frames;
 
   Mutex heap_access_lock;
+  // Instructions run since the last check for garbage collection.
+  uint32_t instructions_since_gc_check;
 
   Object *_reflection;
   ThreadHandle thread;  // Null if main thread.

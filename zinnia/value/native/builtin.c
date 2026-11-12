@@ -289,6 +289,9 @@ Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
   Object *fn_ref = heap_new(frame->parent_isolate->heap, Class_FunctionRef);
   function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL,
                       frame->parent_isolate->heap);
+  if (f->_is_anon) {
+    scope_capture(ctx, fn_ref, frame->parent_isolate->heap);
+  }
   return fn_ref;
 }
 
@@ -1350,7 +1353,7 @@ void scope_delete_(Object *obj) {
   scope_finalize(ctx);
   // This can segfault if the process is cleaned up before the context.
   // This segfault should only occur during DEBUG mode.
-  arena_free(&ctx->parent_frame->parent_isolate->scope_arena, ctx);
+  arena_free(&ctx->parent_isolate->scope_arena, ctx);
 }
 
 void actor_init_(Object *obj) { create_actor_on_object(obj); }

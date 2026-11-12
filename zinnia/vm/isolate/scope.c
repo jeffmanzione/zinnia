@@ -59,8 +59,22 @@ const Instruction *scope_ins(Scope *ctx) {
   return bytecode_get(ctx->bytecode, ctx->ins);
 }
 
-Heap *scope_heap_(Scope *ctx) {
-  return ctx->parent_frame->parent_isolate->heap;
+Heap *scope_heap_(Scope *ctx) { return ctx->parent_isolate->heap; }
+
+void scope_set_previous(Scope *ctx, Scope *previous) {
+  ctx->previous_scope = previous;
+  // An anonymous function defined in [ctx] can outlive it, and looks up names
+  // in the scopes it's nested in, so they're kept as long as it is.
+  if (NULL != previous && previous->parent_isolate == ctx->parent_isolate) {
+    heap_inc_edge(scope_heap_(ctx), ctx->_reflection, previous->_reflection);
+  }
+}
+
+void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap) {
+  // An anonymous function keeps the scope it was defined in.
+  if (NULL != ctx && scope_heap_(ctx) == heap) {
+    heap_inc_edge(heap, fn_ref, ctx->_reflection);
+  }
 }
 
 Object *scope_self(Scope *ctx) {
@@ -77,6 +91,9 @@ Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
                              Scope *ctx) {
   Object *fn_ref = heap_new(heap, Class_FunctionRef);
   function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL, heap);
+  if (f->_is_anon) {
+    scope_capture(ctx, fn_ref, heap);
+  }
   return fn_ref;
 }
 

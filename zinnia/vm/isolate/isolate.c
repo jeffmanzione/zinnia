@@ -19,6 +19,7 @@ void isolate_init(Isolate *isolate, HeapConf *conf) {
   isolate->frame_create_lock = mutex_create();
   isolate->frame_queue_lock = mutex_create();
   isolate->heap_access_lock = mutex_create();
+  isolate->instructions_since_gc_check = 0;
   isolate->frame_waiting_cs = critical_section_create();
   isolate->frame_wait_cond =
       critical_section_create_condition(isolate->frame_waiting_cs);
