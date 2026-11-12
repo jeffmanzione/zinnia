@@ -135,3 +135,13 @@ zinnia my_test.zn -- --test=MyTest.test_add
 ## Examples
 
 Check out the [examples](https://github.com/jeffmanzione/zinnia/tree/master/examples).
+
+For a tour of what sets Zinnia apart, start with
+[examples/showcase/collatz.zn](https://github.com/jeffmanzione/zinnia/tree/master/examples/showcase/collatz.zn).
+It searches for the longest Collatz sequences with actors that each run on a
+thread of their own, keeps the best results in a class that an annotation
+writes at runtime, and catches an error raised in another isolate:
+
+```shell
+zinnia examples/showcase/collatz.zn -- --limit=50000 --workers=4 --show_generated
+```

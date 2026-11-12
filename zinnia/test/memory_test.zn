@@ -1,0 +1,64 @@
+import async
+import memory
+import test
+
+self.expect = test.expect
+
+test.Tester().test(self)
+
+class Box {
+  new(field value) {}
+}
+
+@async.Actor
+class Summer {
+  method sum(n) {
+    total = 0
+    for (_, i) in 0:n total = total + Box(i).value
+    return total
+  }
+}
+
+function make_counter() {
+  count = 0
+  return () {
+    count = count + 1
+    return count
+  }
+}
+
+@test.TestClass
+class MemoryTest {
+  @test.Test
+  method test_closures_keep_their_scopes() {
+    counter = make_counter()
+    counter()
+    await memory.collect_garbage()
+    expect(counter(), 2)
+  }
+
+  @test.Test
+  method test_iterators_survive_collection() {
+    seen = []
+    for (_, v) in [1, 2, 3] {
+      await memory.collect_garbage()
+      seen.append(v)
+    }
+    expect(seen, [1, 2, 3])
+  }
+
+  @test.Test
+  method test_long_loops_collect_garbage() {
+    ; Each iteration allocates; a loop that never yields still collects.
+    total = 0
+    for (_, i) in 0:20000 total = total + Box(i).value
+    expect(total, 199990000)
+    expect((await memory.collect_garbage()).remaining_object_count < 20000, True)
+  }
+
+  @test.Test
+  method test_actors_collect_garbage() {
+    summers = [async.spawn_actor(Summer), async.spawn_actor(Summer)]
+    expect(await async.all(summers.map(s -> s.sum(20000))), [199990000, 199990000])
+  }
+}

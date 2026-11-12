@@ -58,8 +58,9 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
                           uint32_t instruction_pos) {
   Scope *ctx = (Scope *)arena_malloc(&frame->parent_isolate->scope_arena);
   ctx->parent_frame = frame;
+  ctx->parent_isolate = frame->parent_isolate;
   scope_init(ctx, self, module, instruction_pos);
-  ctx->previous_scope = frame->current;
+  scope_set_previous(ctx, frame->current);
   frame->current = ctx;
   return ctx;
 }

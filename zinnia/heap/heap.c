@@ -157,6 +157,7 @@ Value *object_set_member_obj(Heap *heap, Object *parent, const char key[],
 Object *object_create_(Heap *heap, const Class *class) {
   ASSERT(heap != NULL);
   Object *object = (Object *)arena_malloc(&heap->object_arena);
+  object->_heap = heap;
   object->_class = class;
   ValueMap_init(&object->_members, hash_interned_string,
                 compare_interned_strings);
@@ -237,10 +238,23 @@ void object_delete_(Object *object, Heap *heap) {
   arena_free(&heap->object_arena, object);
 }
 
+// Whether an edge from [parent] to [child] belongs in [heap]. Edges between
+// heaps are left out: each isolate collects its own heap on its own thread, so
+// following or changing another heap's nodes would race with that thread.
+// Values passed between isolates are copied, and what an isolate shares with
+// the main isolate (modules, classes and functions) is kept alive there.
+static bool heap_has_edge_(const Heap *heap, const Object *parent,
+                           const Object *child) {
+  return parent->_heap == heap && child->_heap == heap;
+}
+
 void heap_inc_edge(Heap *heap, Object *parent, Object *child) {
   ASSERT(heap != NULL);
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
+  if (!heap_has_edge_(heap, parent, child)) {
+    return;
+  }
   mgraph_inc(&heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
 }
 
@@ -248,6 +262,9 @@ void heap_dec_edge(Heap *heap, Object *parent, Object *child) {
   ASSERT(heap != NULL);
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
+  if (!heap_has_edge_(heap, parent, child)) {
+    return;
+  }
   mgraph_dec(&heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
 }
 

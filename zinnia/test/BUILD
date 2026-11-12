@@ -46,6 +46,11 @@ zinnia_test(
 )
 
 zinnia_test(
+    name = "memory_test",
+    main = "memory_test.zn",
+)
+
+zinnia_test(
     name = "module_test",
     main = "module_test.zn",
     deps = [

@@ -40,6 +40,8 @@ DEFINE_STABLE_MAPLIKE(FunctionMap, char *, Function);
 // Represents an object with properties.
 struct Object_ {
   const Node *_node_ref;
+  // The heap the object is in, a Heap.
+  const void *_heap;
   const Class *_class;
   ValueMap _members;  // Member
 

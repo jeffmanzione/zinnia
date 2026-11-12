@@ -34,6 +34,8 @@
 #include "zinnia/vm/isolate/scope.h"
 
 #define DEFAULT_THREADPOOL_SIZE 6
+// How many instructions a frame runs between checks for garbage collection.
+#define INSTRUCTIONS_PER_GC_CHECK 1024
 
 bool isolate_maybe_collect_garbage(Isolate *isolate);
 bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
@@ -1052,7 +1054,7 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
                           fn_ctx->parent_frame);
   }
   if (func->_is_anon) {
-    fn_ctx->previous_scope = parent_scope;
+    scope_set_previous(fn_ctx, parent_scope);
   }
   if (func->_is_async && frame->parent_isolate->vm->async_enabled) {
     *frame_mutable_acc(frame) =
@@ -1827,6 +1829,17 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         FATALF("Unknown instruction: %s", op_to_str(ins->op));
     }
     scope->ins++;
+    // Collects garbage now and then while a frame runs, not only once the
+    // isolate has nothing left to run, so a long computation doesn't keep all
+    // it ever allocated. Between instructions everything live is reachable
+    // from the frame.
+    if (++frame->parent_isolate->instructions_since_gc_check >=
+        INSTRUCTIONS_PER_GC_CHECK) {
+      frame->parent_isolate->instructions_since_gc_check = 0;
+      if (isolate_maybe_collect_garbage(frame->parent_isolate)) {
+        FATALF("MEMORY LIMIT EXCEEDED");
+      }
+    }
   }
 end_of_loop:
   return frame->state;
