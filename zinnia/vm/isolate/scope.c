@@ -31,6 +31,8 @@ void scope_init(Scope *ctx, Object *self, Module *module,
   ctx->error = NULL;
   ctx->catch_ins = -1;
   ctx->previous_scope = NULL;
+  ctx->caller_scope = NULL;
+  ctx->caller_stack_size = 0;
   ctx->const_ids = NULL;
   ctx->num_const_ids = 0;
   ctx->const_ids_capacity = 0;
@@ -68,6 +70,10 @@ void scope_set_previous(Scope *ctx, Scope *previous) {
   if (NULL != previous && previous->parent_isolate == ctx->parent_isolate) {
     heap_inc_edge(scope_heap_(ctx), ctx->_reflection, previous->_reflection);
   }
+}
+
+Scope *scope_dynamic_parent(const Scope *ctx) {
+  return NULL != ctx->caller_scope ? ctx->caller_scope : ctx->previous_scope;
 }
 
 void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap) {
