@@ -333,3 +333,88 @@ class DeclareTest {
     expect(PartlyDeclared.methods().len(), 1)
   }
 }
+
+function _depth(n) {
+  return if n == 0 then 0 else 1 + _depth(n - 1)
+}
+
+function _raise_at(n) {
+  if n == 0 {
+    raise error.Error('bottom')
+  }
+  return _raise_at(n - 1)
+}
+
+function _first_match(items, x) {
+  for (_, item) in items {
+    if item == x {
+      try {
+        return cat('found ', item)
+      } catch e {}
+    }
+  }
+  return 'none'
+}
+
+function _leaves_values(a, b) a
+
+class _Indexed {
+  new(field base) {}
+  method [](i) base + i
+  method []=(i, v) { base = i + v }
+  method ==(other) base == other.base
+}
+
+@test.TestClass
+class CallTest {
+  @test.Test
+  method test_deep_recursion() {
+    expect(_depth(20000), 20000)
+  }
+
+  @test.Test
+  method test_errors_unwind_through_calls() {
+    message = None
+    trace = None
+    try {
+      _raise_at(3)
+    } catch e {
+      message = e.message
+      trace = e.stacktrace.len()
+    }
+    expect(message, 'bottom')
+    ; _raise_at four times, this method and its callers.
+    expect(trace > 4, True)
+  }
+
+  @test.Test
+  method test_return_from_inside_try_and_loop() {
+    expect(_first_match([1, 2, 3], 2), 'found 2')
+    expect(_first_match([1, 2, 3], 9), 'none')
+  }
+
+  @test.Test
+  method test_calls_leave_the_stack_as_it_was() {
+    expect([_leaves_values(1, 2), _leaves_values(3, 4), _leaves_values(5, 6)], [1, 3, 5])
+  }
+
+  @test.Test
+  method test_operator_methods() {
+    x = _Indexed(1)
+    expect(x[10], 11)
+    x[2] = 5
+    expect(x.base, 7)
+    expect(x == _Indexed(7), True)
+    expect(x == _Indexed(8), False)
+  }
+
+  @test.Test
+  method test_closures_called_in_a_loop() {
+    add = (a, b) -> a + b
+    total = 0
+    for (_, i) in 0:1000 {
+      total = add(total, i)
+    }
+    expect(total, 499500)
+  }
+}
