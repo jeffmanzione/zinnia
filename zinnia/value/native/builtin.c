@@ -276,6 +276,15 @@ Value is_int_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return (NULL != args && IS_INT(args)) ? TRUE_VALUE : FALSE_VALUE;
 }
 
+// Returns the character whose byte value is [args], an Int from 0 to 255.
+Value char_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
+  if (NULL == args || !IS_INT(args) || pint(&args->pri) < 0 ||
+      pint(&args->pri) > 255) {
+    return raise_error(frame, ctx, "Expected an Int from 0 to 255.");
+  }
+  return value_char((int8_t)pint(&args->pri));
+}
+
 Value is_float_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   return (NULL != args && IS_FLOAT(args)) ? TRUE_VALUE : FALSE_VALUE;
 }
@@ -580,7 +589,7 @@ Value string_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (NULL == found_index) {
     return NONE_VALUE;
   }
-  return value_int(found_index - start_index);
+  return value_int(found_index - str->table);
 }
 
 Value istring_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
@@ -597,7 +606,7 @@ Value istring_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
                        "Index out of bounds. Was %d, array length is %d.",
                        index, substr_len);
   }
-  if ((index + substr_len) > substr_len) {
+  if ((index + substr_len) > str_len) {
     return NONE_VALUE;
   }
   char *start_index = str + index;
@@ -608,7 +617,7 @@ Value istring_find_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   if (NULL == found_index) {
     return NONE_VALUE;
   }
-  return value_int(found_index - start_index);
+  return value_int(found_index - str);
 }
 
 Value string_find_all_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
@@ -1464,6 +1473,7 @@ void builtin_add_native(ModuleManager *mm, Module *builtin) {
   native_function(builtin, global_intern("Float"), Float_);
   native_function(builtin, global_intern("Bool"), _Bool_);
   native_function(builtin, global_intern("is_int"), is_int_);
+  native_function(builtin, global_intern("__char"), char_);
   native_function(builtin, global_intern("is_float"), is_float_);
   native_function(builtin, global_intern("is_bool"), is_bool_);
   native_function(builtin, global_intern("__stringify"), stringify_);

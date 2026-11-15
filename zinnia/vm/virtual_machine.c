@@ -1003,6 +1003,24 @@ BlockingCallArgs *_create_blocking_call_args(Frame *frame, Scope *scope,
   return args;
 }
 
+// Whether a call of [func] from [scope] can run in [frame] itself, as a scope
+// of its own, instead of in a new frame. That's much cheaper: a frame of its
+// own is only needed for an async call, which runs on its own, and for a call
+// that must first wait for its module to be initialized.
+static bool _can_call_in_frame(Frame *frame, Scope *scope, const Function *func,
+                               Object *self) {
+  if (NULL == scope || scope != frame->current ||
+      FRAME_RUNNING != frame->state) {
+    return false;
+  }
+  if (func->_is_async && frame->parent_isolate->vm->async_enabled) {
+    return false;
+  }
+  const ModuleInitState state =
+      module_init_state((Module *)self->_class->_module);
+  return MODULE_INITIALIZING == state || MODULE_INITIALIZED == state;
+}
+
 // Context is only necessary for native functions.
 bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
                          Object *self, Scope *parent_scope) {
@@ -1037,6 +1055,16 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
     native_fn(&fn_ctx);
     *frame_mutable_acc(frame) = *FunctionContext_get_retval(&fn_ctx);
     return false;
+  }
+  if (_can_call_in_frame(frame, scope, func, self)) {
+    Scope *fn_ctx = frame_push_call_scope(frame, self, (Module *)func->_module,
+                                          func->_ins_pos);
+    scope_set_function(fn_ctx, func);
+    if (func->_is_anon) {
+      scope_set_previous(fn_ctx, parent_scope);
+    }
+    // vm_execute_frame() runs it, now that it's the frame's current scope.
+    return true;
   }
   Scope *fn_ctx = _execute_as_new_frame(frame, self, (Module *)func->_module,
                                         func->_ins_pos);
@@ -1401,11 +1429,12 @@ bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   const Function *aset_fn =
       class_get_function(arr_value.obj->_class, ARRAYLIKE_SET_KEY);
   if (NULL != aset_fn) {
-    Object *args = heap_new(frame->parent_isolate->heap, Class_Tuple);
+    Heap *heap = frame->parent_isolate->heap;
+    Object *args = heap_new(heap, Class_Tuple);
     args->_internal_obj = tuple_create(2);
-    Tuple *t = (Tuple *)args->_internal_obj;
-    *tuple_get_mutable(t, 0) = *index;
-    *tuple_get_mutable(t, 1) = new_val;
+    // tuple_set() keeps the key and value alive while the method runs.
+    tuple_set(heap, args, 0, index);
+    tuple_set(heap, args, 1, &new_val);
     *frame_mutable_acc(frame) = value_object(args);
     return _call_function_base(frame, scope, aset_fn, arr_value.obj, scope);
   }
@@ -1555,8 +1584,47 @@ void _execute_RAIS(VM *vm, Frame *frame, Scope *scope) {
   raise_error_with_object(frame, scope, err->obj);
 }
 
+// Whether a call made [frame]'s current scope a new one, which runs it in the
+// frame. Updates [scope] to it if so.
+static bool _switched_scope(Frame *frame, Scope **scope) {
+  if (frame->current == *scope) {
+    return false;
+  }
+  *scope = frame->current;
+  return true;
+}
+
+// The scope of the function or method that [scope] is in, or of the module's
+// code, outside any blocks.
+static Scope *_function_scope(Frame *frame, Scope *scope) {
+  while (NULL == scope->caller_scope && NULL == scope->func &&
+         NULL != scope->previous_scope &&
+         scope->previous_scope->parent_frame == frame) {
+    scope = scope->previous_scope;
+  }
+  return scope;
+}
+
+// Returns from the function or method that [scope] is in to its caller, if it
+// was called in this frame, and returns whether it was.
+static bool _return_in_frame(Frame *frame, Scope *scope) {
+  Scope *fn_scope = _function_scope(frame, scope);
+  if (NULL == fn_scope->caller_scope) {
+    return false;
+  }
+  frame_pop_call_scope(frame, fn_scope);
+  return true;
+}
+
 bool _attemp_catch_error(Frame *frame, Scope *ctx) {
   while (ctx->catch_ins < 0) {
+    // A function or method called in this frame passes the error to its
+    // caller.
+    if (NULL != ctx->caller_scope) {
+      frame_pop_call_scope(frame, ctx);
+      ctx = frame->current;
+      continue;
+    }
     // Only unwind this frame's own scopes. An anonymous function's outermost
     // scope links to the enclosing scope of its definition, which belongs to
     // another frame.
@@ -1604,6 +1672,8 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
       if (!_attemp_catch_error(frame, scope)) {
         goto end_of_loop;
       }
+      // The catch may be in a scope that encloses this one, or in a caller.
+      scope = frame->current;
     }
     const Instruction *ins = scope_ins(scope);
 #ifdef DEBUG
@@ -1664,14 +1734,21 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
       case CALL:
       case CLLN:
         if (_execute_CALL(vm, frame, scope, ins)) {
+          scope->ins++;
+          if (_switched_scope(frame, &scope)) {
+            continue;  // Runs the call.
+          }
           frame->state = FRAME_WAITING;
           frame->wait_reason = WAITING_ON_FN_CALL;
-          scope->ins++;
           goto end_of_loop;
         }
         break;
       case RET:
         _execute_RET(vm, frame, scope, ins);
+        if (_return_in_frame(frame, scope)) {
+          scope = frame->current;
+          continue;  // Runs the caller.
+        }
         frame->state = FRAME_COMPLETE;
         scope->ins++;
         goto end_of_loop;
@@ -1740,9 +1817,12 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
       case EQ:
       case NEQ:
         if (_execute_EQ(vm, frame, scope, ins)) {
+          scope->ins++;
+          if (_switched_scope(frame, &scope)) {
+            continue;  // Runs the call.
+          }
           frame->state = FRAME_WAITING;
           frame->wait_reason = WAITING_ON_FN_CALL;
-          scope->ins++;
           goto end_of_loop;
         }
         break;
@@ -1757,17 +1837,23 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         break;
       case AIDX:
         if (_execute_AIDX(vm, frame, scope, ins)) {
+          scope->ins++;
+          if (_switched_scope(frame, &scope)) {
+            continue;  // Runs the call.
+          }
           frame->state = FRAME_WAITING;
           frame->wait_reason = WAITING_ON_FN_CALL;
-          scope->ins++;
           goto end_of_loop;
         }
         break;
       case ASET:
         if (_execute_ASET(vm, frame, scope, ins)) {
+          scope->ins++;
+          if (_switched_scope(frame, &scope)) {
+            continue;  // Runs the call.
+          }
           frame->state = FRAME_WAITING;
           frame->wait_reason = WAITING_ON_FN_CALL;
-          scope->ins++;
           goto end_of_loop;
         }
         break;
@@ -1877,6 +1963,8 @@ void _isolate_keep_result(Isolate *isolate, Frame *frame) {
 void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
   if (frame == frame->parent_isolate->start_frame) {
     _isolate_keep_result(frame->parent_isolate, frame);
+    // Once deleted, its memory can hold another of the isolate's frames.
+    frame->parent_isolate->start_frame = NULL;
   }
   if (NULL != frame->initializing_module) {
     _finish_module_init(frame->initializing_module, frame);
@@ -1884,6 +1972,7 @@ void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push) {
   if (NULL != frame->actor_future) {
     _mark_actor_frame_complete(isolate, frame, should_push);
   }
+  future_complete_from_frame(frame);
   isolate_wake_dependent_frames(isolate, frame, should_push);
   // Last, since the frame's isolate deletes completed frames when it collects
   // garbage, which can be on another thread than this one.

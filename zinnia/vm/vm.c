@@ -118,7 +118,7 @@ void frame_inc_all_scope_(Isolate *isolate, Frame *frame) {
     if (NULL != ctx->error) {
       heap_inc_edge(heap, ctx->_reflection, ctx->error);
     }
-    ctx = ctx->previous_scope;
+    ctx = scope_dynamic_parent(ctx);
   }
   // printf("done\n");
 }
@@ -155,7 +155,7 @@ void frame_dec_all_scope_(Isolate *isolate, Frame *frame) {
     if (NULL != ctx->error) {
       heap_dec_edge(heap, ctx->_reflection, ctx->error);
     }
-    ctx = ctx->previous_scope;
+    ctx = scope_dynamic_parent(ctx);
   }
 }
 

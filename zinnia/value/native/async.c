@@ -42,7 +42,31 @@ Object *future_create(Frame *frame) {
   Object *future_obj = heap_new(heap, Class_Future);
   Future *future = (Future *)future_obj->_internal_obj;
   future->frame = frame;
+  // The frame keeps the future until it completes and gives it its result.
+  frame->future = future_obj;
+  heap_inc_edge(heap, frame->_reflection, future_obj);
   return future_obj;
+}
+
+void future_complete_from_frame(Frame *frame) {
+  Object *future_obj = frame->future;
+  if (NULL == future_obj) {
+    return;
+  }
+  frame->future = NULL;
+  Isolate *isolate = frame->parent_isolate;
+  Heap *heap = isolate->heap;
+  Future *future = (Future *)future_obj->_internal_obj;
+  // Frames can complete on other threads, such as a blocking call's.
+  SYNCHRONIZED(isolate->heap_access_lock, {
+    if (!future->_is_result_set) {
+      object_set_member(heap, future_obj, RESULT_VAL, frame_get_acc(frame));
+      future->_is_result_set = true;
+    }
+    future->_is_error = FRAME_ERROR == frame->state;
+    future->_is_complete = true;
+    heap_dec_edge(heap, frame->_reflection, future_obj);
+  });
 }
 
 bool future_is_complete(Future *f) {
@@ -112,6 +136,7 @@ Value complete_future_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Frame *pending = future->frame;
   *frame_mutable_acc(pending) = *result;
   pending->state = FRAME_COMPLETE;
+  future_complete_from_frame(pending);
   isolate_mark_frame_complete(isolate, pending);
   isolate_wake_dependent_frames(isolate, pending, /*should_push=*/false);
   return NONE_VALUE;

@@ -41,7 +41,13 @@ struct __Scope {
   // The isolate whose heap the scope is in. A scope captured by an anonymous
   // function can outlive its frame, so this doesn't go through parent_frame.
   Isolate *parent_isolate;
+  // The scope the scope is nested in, where names are looked up next.
   Scope *previous_scope;
+  // For a function or method called in its caller's frame: the scope that
+  // called it, which runs again when it returns, and the size of the frame's
+  // value stack when it was called.
+  Scope *caller_scope;
+  uint32_t caller_stack_size;
 
   Object *_reflection;
 
@@ -97,6 +103,8 @@ struct __Frame {
   Object *_reflection;
 
   Future *actor_future;
+  // The future to the frame's result, if any, until the frame completes.
+  Object *future;
   // The module whose top-level code this frame runs, if any.
   Module *initializing_module;
 };

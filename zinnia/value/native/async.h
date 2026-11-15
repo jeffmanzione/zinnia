@@ -11,6 +11,9 @@
 typedef struct Future_ Future;
 
 Object *future_create(Frame *frame);
+// Gives [frame]'s future, if it has one, the frame's result, which it keeps
+// once the frame is deleted. Called when the frame completes.
+void future_complete_from_frame(Frame *frame);
 bool future_is_complete(Future *f);
 // Returns whether the future completed with an error.
 bool future_is_error(Future *f);

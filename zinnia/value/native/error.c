@@ -164,7 +164,7 @@ Value error_constructor_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
   Frame *t = frame;
   while (NULL != t) {
     Scope *c;
-    for (c = t->current; NULL != c; c = c->previous_scope) {
+    for (c = t->current; NULL != c; c = scope_dynamic_parent(c)) {
       Object *stackline =
           heap_new(frame->parent_isolate->heap, Class_StackLine);
       StackLine_ *sl = (StackLine_ *)stackline->_internal_obj;

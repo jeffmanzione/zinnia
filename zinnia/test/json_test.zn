@@ -1,4 +1,6 @@
+import error
 import json
+import struct
 import test
 
 self.expect = test.expect
@@ -59,5 +61,86 @@ class JsonTest {
   @test.Test
   method test_jsonify_tuple() {
     expect(json.jsonify((1, 'a')), '[1,"a"]')
+  }
+  @test.Test
+  method test_parse_literals() {
+    expect(json.parse('true'), True)
+    expect(json.parse('false'), False)
+    expect(json.parse('null'), None)
+    expect(json.parse(' \n\t"Cat"\r\n'), 'Cat')
+  }
+  @test.Test
+  method test_parse_numbers() {
+    expect(json.parse('0'), 0)
+    expect(json.parse('-12'), -12)
+    expect(is_int(json.parse('7')), True)
+    expect(json.parse('2.5'), 2.5)
+    expect(json.parse('-3.25E-1'), -0.325)
+    expect(json.parse('1e2'), 100.0)
+    expect(is_float(json.parse('1e2')), True)
+  }
+  @test.Test
+  method test_parse_arrays_and_objects() {
+    expect(json.parse('[]'), [])
+    expect(json.parse('[1, "a", [true]]'), [1, 'a', [True]])
+    value = json.parse('{"cat": "Cat", "n": {"m": [1, 2]}, "e": {}}')
+    expect(value is struct.Map, True)
+    expect(value['cat'], 'Cat')
+    expect(value['n']['m'], [1, 2])
+    expect(json.jsonify(value['e']), '{}')
+    expect(json.parse('{"a": 1, "a": 2}')['a'], 2)
+  }
+  @test.Test
+  method test_parse_escapes() {
+    expect(json.parse('"say \\"hi\\"\\n"'), 'say "hi"\n')
+    expect(json.parse('"a\\\\b\\/c\\td\\re"'), 'a\\b/c\td\re')
+    expect(json.parse('"\\u0041\\u00e9"'), 'Aé')
+    expect(json.parse('"\\u20AC"'), '€')
+    expect(json.parse('"\\ud83d\\ude00"'), '😀')
+    expect(json.parse('"\\ud83d\\ude00"').len(), 4)
+  }
+  @test.Test
+  method test_parse_round_trips_jsonify() {
+    value = {'name': 'Zinnia', 'tags': ['a "b"', 'c\\d\n'], 'n': [1, -2.5, None, False]}
+    parsed = json.parse(json.jsonify(value))
+    expect(parsed['name'], 'Zinnia')
+    expect(parsed['tags'], ['a "b"', 'c\\d\n'])
+    expect(parsed['n'], [1, -2.5, None, False])
+    expect(json.jsonify(parsed), json.jsonify(value))
+    expect(json.parse(json.jsonify(Test1(True, 'Cat')))['f2'], 'Cat')
+  }
+  @test.Test
+  method test_parse_errors() {
+    for (_, case) in [
+      ('', 'Expected a value but the text ended (line 1, column 1)'),
+      ('[1,]', 'Unexpected \']\' (line 1, column 4)'),
+      ('[1 2]', 'Expected \',\' or \']\' but found \'2\' (line 1, column 4)'),
+      ('{"a" 1}', 'Expected \':\' but found \'1\' (line 1, column 6)'),
+      ('{1: 2}', 'Expected a string key but found \'1\' (line 1, column 2)'),
+      ('"abc', 'The string doesn\'t end (line 1, column 1)'),
+      ('"\\x"', 'Unknown escape sequence \'\\x\' (line 1, column 2)'),
+      ('"\\u12"', 'Expected four hexadecimal digits (line 1, column 4)'),
+      ('"\\udc00"', 'Unpaired low surrogate (line 1, column 2)'),
+      ('01', 'Unexpected \'1\' after the value (line 1, column 2)'),
+      ('1.', 'Expected a digit after \'.\' (line 1, column 3)'),
+      ('tru', 'Unexpected \'t\' (line 1, column 1)'),
+      ('[\n  1,\n  @]', 'Unexpected \'@\' (line 3, column 3)')
+    ] {
+      (text, message) = case
+      raised = None
+      try {
+        json.parse(text)
+      } catch e {
+        raised = e
+      }
+      expect(raised is json.ParseError, True)
+      expect(raised is error.Error, True)
+      expect(raised.message, message)
+    }
+    try {
+      json.parse('[\n  1,\n  @]')
+    } catch e {
+      expect((e.line, e.column), (3, 3))
+    }
   }
 }

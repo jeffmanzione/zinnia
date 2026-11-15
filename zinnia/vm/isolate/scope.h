@@ -17,6 +17,9 @@ void scope_finalize(Scope *ctx);
 Object *scope_self(Scope *ctx);
 Module *scope_module(Scope *ctx);
 const Instruction *scope_ins(Scope *ctx);
+// The scope that runs after [ctx], in the call stack: its caller, if it was
+// called in its caller's frame, or else the scope it's nested in.
+Scope *scope_dynamic_parent(const Scope *ctx);
 // Sets the scope [ctx] is nested in, which it keeps alive.
 void scope_set_previous(Scope *ctx, Scope *previous);
 // Keeps [ctx] alive as long as [fn_ref], an anonymous function defined in it.

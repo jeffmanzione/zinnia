@@ -62,3 +62,23 @@ class MemoryTest {
     expect(await async.all(summers.map(s -> s.sum(20000))), [199990000, 199990000])
   }
 }
+
+function _box_later(n) async {
+  return Box(n)
+}
+
+@test.TestClass
+class FutureMemoryTest {
+  @test.Test
+  method test_results_outlive_their_frames() {
+    futures = [_box_later(1), _box_later(2), _box_later(3)]
+    await async.sleep(0.01)
+    ; Deletes the completed frames.
+    await memory.collect_garbage()
+    total = 0
+    for (_, f) in futures {
+      total = total + (await f).value
+    }
+    expect(total, 6)
+  }
+}

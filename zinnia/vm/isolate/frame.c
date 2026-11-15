@@ -35,9 +35,13 @@ void frame_init(Frame *frame) {
   FrameSet_init(&frame->dependent_frames, hash_frame, compare_frames);
   frame->child_frame_has_error = false;
   frame->current = NULL;
+  // Frames are reused, and a frame that never runs code, such as one that
+  // holds a result for a future, must not keep its predecessor's.
+  frame->acc = NONE_VALUE;
   frame->_reflection = NULL;
   frame->is_finalized = false;
   frame->actor_future = NULL;
+  frame->future = NULL;
   frame->initializing_module = NULL;
 }
 
@@ -63,6 +67,27 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
   scope_set_previous(ctx, frame->current);
   frame->current = ctx;
   return ctx;
+}
+
+Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
+                             uint32_t instruction_pos) {
+  Scope *ctx = (Scope *)arena_malloc(&frame->parent_isolate->scope_arena);
+  ctx->parent_frame = frame;
+  ctx->parent_isolate = frame->parent_isolate;
+  scope_init(ctx, self, module, instruction_pos);
+  ctx->caller_scope = frame->current;
+  ctx->caller_stack_size = ValueStack_size(&frame->value_stack);
+  frame->current = ctx;
+  return ctx;
+}
+
+void frame_pop_call_scope(Frame *frame, Scope *call_scope) {
+  ASSERT(NULL != call_scope->caller_scope);
+  // Drops what the call left on the stack.
+  while (ValueStack_size(&frame->value_stack) > call_scope->caller_stack_size) {
+    ValueStack_pop_back_unchecked(&frame->value_stack);
+  }
+  frame->current = call_scope->caller_scope;
 }
 
 Scope *frame_back_scope(Frame *frame) {
