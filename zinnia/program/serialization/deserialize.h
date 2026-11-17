@@ -18,7 +18,9 @@
 int deserialize_bytes(FILE *file, uint32_t num_bytes, char *buffer,
                       uint32_t buffer_sz);
 int deserialize_string(FILE *file, char *buffer, uint32_t buffer_sz);
-int deserialize_ins(FILE *file, const CharPtrArray *strings, Instruction *ins);
+// [version] is the file's format version (see BYTECODE_FORMAT_VERSION).
+int deserialize_ins(FILE *file, const CharPtrArray *strings, Instruction *ins,
+                    int version);
 
 #endif
 /* COM_GITHUB_JEFFMANZIONE_ZINNIA_PROGRAM_SERIALIZATION_DESERIALIZE_H_ */

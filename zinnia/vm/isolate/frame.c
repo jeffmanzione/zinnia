@@ -31,6 +31,7 @@ void frame_init(Frame *frame) {
   frame->state = FRAME_NEW;
   frame->wait_reason = WAITING_TO_START;
   ValueStack_init(&frame->value_stack);
+  SlotStack_init(&frame->slots);
   frame->parent_frame = NULL;
   FrameSet_init(&frame->dependent_frames, hash_frame, compare_frames);
   frame->child_frame_has_error = false;
@@ -51,6 +52,15 @@ void frame_finalize(Frame *frame) {
   }
   FrameSet_finalize(&frame->dependent_frames);
   ValueStack_finalize(&frame->value_stack);
+  SlotStack_finalize(&frame->slots);
+  // Frees the frame's scopes that nothing else can refer to.
+  Scope *scope = frame->current;
+  while (NULL != scope && scope->parent_frame == frame) {
+    Scope *next = scope_dynamic_parent(scope);
+    scope_release(scope);
+    scope = next;
+  }
+  frame->current = NULL;
   if (NULL != frame->parent_isolate) {
     heap_dec_edge(frame->parent_isolate->heap,
                   frame->parent_isolate->_reflection, frame->_reflection);
@@ -64,6 +74,9 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
   ctx->parent_frame = frame;
   ctx->parent_isolate = frame->parent_isolate;
   scope_init(ctx, self, module, instruction_pos);
+  // A block's scope uses its function's slots.
+  ctx->slot_base = (NULL == frame->current) ? SlotStack_size(&frame->slots)
+                                            : frame->current->slot_base;
   scope_set_previous(ctx, frame->current);
   frame->current = ctx;
   return ctx;
@@ -77,6 +90,7 @@ Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
   scope_init(ctx, self, module, instruction_pos);
   ctx->caller_scope = frame->current;
   ctx->caller_stack_size = ValueStack_size(&frame->value_stack);
+  ctx->slot_base = SlotStack_size(&frame->slots);
   frame->current = ctx;
   return ctx;
 }
@@ -87,12 +101,25 @@ void frame_pop_call_scope(Frame *frame, Scope *call_scope) {
   while (ValueStack_size(&frame->value_stack) > call_scope->caller_stack_size) {
     ValueStack_pop_back_unchecked(&frame->value_stack);
   }
+  // And its slots.
+  while (SlotStack_size(&frame->slots) > call_scope->slot_base) {
+    SlotStack_pop_back_unchecked(&frame->slots);
+  }
+  // And the scopes of blocks it returned from inside of, and its own.
+  Scope *scope = frame->current;
   frame->current = call_scope->caller_scope;
+  while (NULL != scope) {
+    Scope *next = (scope == call_scope) ? NULL : scope->previous_scope;
+    scope_release(scope);
+    scope = next;
+  }
 }
 
 Scope *frame_back_scope(Frame *frame) {
-  uint32_t ins = frame->current->ins;
-  frame->current = frame->current->previous_scope;
+  Scope *block = frame->current;
+  uint32_t ins = block->ins;
+  frame->current = block->previous_scope;
+  scope_release(block);
   // This was the last context.
   if (NULL == frame->current) {
     return NULL;

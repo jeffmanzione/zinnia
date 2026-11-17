@@ -58,6 +58,7 @@ int serialize_ins(WBuffer *const buffer, const Instruction *ins,
   uint8_t param = (uint8_t)ins->type;
   i += serialize_type(buffer, uint8_t, op);
   i += serialize_type(buffer, uint8_t, param);
+  i += serialize_type(buffer, uint16_t, ins->slot);
   //  i += serialize_type(buffer, uint16_t, ins->row);
   //  i += serialize_type(buffer, uint16_t, ins->col);
   uint16_t ref;

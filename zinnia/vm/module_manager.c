@@ -19,6 +19,7 @@
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 #include "zinnia/program/bytecode_binary.h"
+#include "zinnia/program/slots.h"
 #include "zinnia/program/optimization/optimize.h"
 #include "zinnia/util/file.h"
 #include "zinnia/value/class/class.h"
@@ -297,6 +298,7 @@ Module *read_zn_(ModuleManager *mm, ModuleInfo *module_info) {
     TokenArray_finalize(&tokens);
 
     bytecode = optimize(bytecode);
+    bytecode_assign_slots(bytecode);
     modulemanager_hydrate_(mm, bytecode, module_info);
     module_info->fi = fi;
     return &module_info->module;
@@ -311,6 +313,7 @@ Module *read_zna_(ModuleManager *mm, ModuleInfo *module_info) {
 
   Bytecode *bytecode = bytecode_create();
   bytecode_read(bytecode, &tokens);
+  bytecode_resolve_slot_names(bytecode);
   modulemanager_hydrate_(mm, bytecode, module_info);
   module_info->fi = fi;
 

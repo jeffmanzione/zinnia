@@ -479,3 +479,162 @@ class MethodCallTest {
     expect(message, 'Failed to find method \'missing\' on _Dispatch')
   }
 }
+
+class _Counted {
+  field items, count
+  new() {
+    items = []
+    count = 0
+  }
+  method add(v) {
+    count = count + 1
+    items.append(v)
+    return count
+  }
+  method shadow() {
+    ; Creates a local, so later reads see it rather than the field.
+    local = 5
+    $set('local', 99)
+    return local
+  }
+}
+
+function _member_fn() 1
+
+function _replace_member() {
+  ; The module's member, since a function's self is its module.
+  _member_fn = 'replaced'
+}
+
+function _make_counter() {
+  c = 0
+  return () {
+    c = c + 1
+    return c
+  }
+}
+
+function _assign_outer() {
+  x = 1
+  set_x = v -> x = v
+  set_x(7)
+  return x
+}
+
+function _recurse(n) {
+  local = n
+  if n > 0 {
+    _recurse(n - 1)
+  }
+  return local
+}
+
+function _const_reassign() {
+  const k = 1
+  k = 2
+}
+
+@test.TestClass
+class ScopeTest {
+  @test.Test
+  method test_fields_assigned_without_self() {
+    c = _Counted()
+    expect(c.add('a'), 1)
+    expect(c.add('b'), 2)
+    expect(c.count, 2)
+    expect(c.items, ['a', 'b'])
+  }
+
+  @test.Test
+  method test_locals_win_over_later_members() {
+    expect(_Counted().shadow(), 5)
+  }
+
+  @test.Test
+  method test_loop_variables_are_function_wide() {
+    for (_, i) in [1, 2, 3] {
+      last = i
+    }
+    expect(i, 3)
+    expect(last, 3)
+    for j = 0, j < 4, j = j + 1 {}
+    expect(j, 4)
+  }
+
+  @test.Test
+  method test_try_variables_are_function_wide() {
+    try {
+      inside = 1
+      raise error.Error('x')
+    } catch e {
+      caught = e.message
+    }
+    expect(inside, 1)
+    expect(caught, 'x')
+    expect(e.message, 'x')
+  }
+
+  @test.Test
+  method test_reassigned_in_a_loop() {
+    total = 0
+    for (_, v) in [1, 2, 3] {
+      total = total + v
+    }
+    expect(total, 6)
+  }
+
+  @test.Test
+  method test_error_from_a_loop_caught_outside() {
+    seen = []
+    try {
+      for (_, v) in [1, 2, 3] {
+        seen.append(v)
+        if v == 2 {
+          raise error.Error('stop')
+        }
+      }
+    } catch e {}
+    expect(seen, [1, 2])
+    expect(v, 2)
+  }
+
+  @test.Test
+  method test_closures_share_captured_variables() {
+    counter = _make_counter()
+    counter()
+    expect(counter(), 2)
+    expect(_assign_outer(), 7)
+  }
+
+  @test.Test
+  method test_functions_assign_module_members() {
+    expect(_member_fn(), 1)
+    _replace_member()
+    expect(_member_fn, 'replaced')
+  }
+
+  @test.Test
+  method test_recursion_keeps_each_call_variables() {
+    expect(_recurse(5), 5)
+  }
+
+  @test.Test
+  method test_const_reassignment_raises() {
+    message = None
+    try {
+      _const_reassign()
+    } catch e {
+      message = e.message
+    }
+    expect(message, 'Cannot reassign const \'k\'.')
+  }
+
+  @test.Test
+  method test_names_before_assignment_fall_through() {
+    ; `str` is read from builtin until this function assigns its own.
+    before = str(1)
+    str = 'local'
+    expect(before, '1')
+    expect(str, 'local')
+  }
+}

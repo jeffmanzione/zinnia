@@ -1,6 +1,7 @@
 #include "zinnia/vm/isolate/isolates.h"
 
 IMPL_ARRAYLIKE(ValueStack, Value);
+IMPL_ARRAYLIKE(SlotStack, Slot);
 IMPL_SETLIKE(FrameSet, Frame *);
 IMPL_ARRAYLIKE(FrameArray, Frame *);
 

@@ -55,6 +55,11 @@ DEFINE_ARRAYLIKE(ClassRefPtrArray, ClassRef *);
 
 typedef struct Bytecode_ Bytecode;
 
+// The version of the .zna and .znb formats this build writes; it reads this
+// one and those before it. A file without a version is version 0, from before
+// variables were kept in slots.
+#define BYTECODE_FORMAT_VERSION 1
+
 // Access-related functions.
 const Instruction *bytecode_get(const Bytecode *bytecode, uint32_t index);
 Instruction *bytecode_get_mutable(Bytecode *bytecode, uint32_t index);

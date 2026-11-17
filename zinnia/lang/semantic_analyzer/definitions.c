@@ -1338,6 +1338,8 @@ int produce_function(SemanticAnalyzer *analyzer, const FunctionDef *func,
                      Bytecode *bytecode) {
   int num_ins = 0;
   num_ins += produce_function_name(func, bytecode);
+  // Filled in by bytecode_assign_slots().
+  num_ins += bytecode_ins_no_arg(bytecode, SLOTS, func->def_token);
   if (func->has_args) {
     num_ins += produce_arguments(analyzer, &func->args, bytecode);
   }
@@ -1413,6 +1415,8 @@ int produce_anon_function(SemanticAnalyzer *analyzer, FunctionDef *func,
                           Bytecode *bytecode) {
   int num_ins = 0, func_ins = 0;
   Bytecode *tmp = bytecode_create();
+  // Filled in by bytecode_assign_slots().
+  func_ins += bytecode_ins_no_arg(tmp, SLOTS, func->def_token);
   if (func->has_args) {
     func_ins += produce_arguments(analyzer, &func->args, tmp);
   }

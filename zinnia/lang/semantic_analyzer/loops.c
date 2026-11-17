@@ -32,8 +32,8 @@ DELETE_IMPL(foreach_statement, SemanticAnalyzer *analyzer) {
 }
 
 PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
+  // Variables are function-wide, so a loop opens no block scope.
   int num_ins = 0;
-  num_ins += bytecode_ins_no_arg(target, NBLK, foreach_statement->for_token);
   num_ins +=
       semantic_analyzer_produce(analyzer, foreach_statement->iterable, target);
   num_ins += bytecode_ins_no_arg(target, PUSH, foreach_statement->in_token);
@@ -76,7 +76,6 @@ PRODUCE_IMPL(foreach_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
   num_ins += bytecode_ins_int(target, JMP, -(inc_lines + body_ins + 1),
                               foreach_statement->in_token);
   num_ins += bytecode_ins_no_arg(target, RES, foreach_statement->in_token);
-  num_ins += bytecode_ins_no_arg(target, BBLK, foreach_statement->for_token);
   return num_ins;
 }
 
@@ -106,8 +105,8 @@ DELETE_IMPL(for_statement, SemanticAnalyzer *analyzer) {
 }
 
 PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
+  // Variables are function-wide, so a loop opens no block scope.
   int num_ins = 0;
-  num_ins += bytecode_ins_no_arg(target, NBLK, for_statement->for_token);
   num_ins += semantic_analyzer_produce(analyzer, for_statement->init, target);
   int condition_ins =
       semantic_analyzer_produce(analyzer, for_statement->condition, target);
@@ -142,7 +141,6 @@ PRODUCE_IMPL(for_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
   num_ins += bytecode_ins_int(target, JMP,
                               -(body_ins + condition_ins + inc_ins + 1 + 1),
                               for_statement->for_token);
-  num_ins += bytecode_ins_no_arg(target, BBLK, for_statement->for_token);
 
   return num_ins;
 }
@@ -165,8 +163,8 @@ DELETE_IMPL(while_statement, SemanticAnalyzer *analyzer) {
 }
 
 PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
+  // Variables are function-wide, so a loop opens no block scope.
   int num_ins = 0;
-  num_ins += bytecode_ins_no_arg(target, NBLK, while_statement->while_token);
   num_ins +=
       semantic_analyzer_produce(analyzer, while_statement->condition, target);
 
@@ -190,9 +188,9 @@ PRODUCE_IMPL(while_statement, SemanticAnalyzer *analyzer, Bytecode *target) {
                                                while_statement->while_token);
   bytecode_append(target, tmp_bytecode);
 
-  num_ins +=
-      bytecode_ins_int(target, JMP, -num_ins, while_statement->while_token);
-  num_ins += bytecode_ins_no_arg(target, BBLK, while_statement->while_token);
+  // Back to the first instruction of the condition.
+  num_ins += bytecode_ins_int(target, JMP, -(num_ins + 1),
+                              while_statement->while_token);
 
   return num_ins;
 }

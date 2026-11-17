@@ -108,15 +108,30 @@ void frame_inc_all_scope_(Isolate *isolate, Frame *frame) {
   if (OBJECT == frame->acc.type) {
     heap_inc_edge(heap, frame->_reflection, frame->acc.obj);
   }
+  for (int i = 0; i < SlotStack_size(&frame->slots); ++i) {
+    const Slot *slot = SlotStack_get_ref_unchecked(&frame->slots, i);
+    if (slot->is_set && OBJECT == slot->value.type) {
+      heap_inc_edge(heap, frame->_reflection, slot->value.obj);
+    }
+  }
   Scope *ctx = frame->current;
   while (NULL != ctx) {
     // printf("_task_inc_all_context task=%p ctx=%p self=%p\n",
     // task->_reflection,
     //        ctx->_reflection, IS_NONE(&ctx->self) ? NULL : ctx->self.obj);
-    heap_inc_edge(heap, frame->_reflection, ctx->_reflection);
-    heap_inc_edge(heap, ctx->_reflection, ctx->self.obj);
+    // A scope may have no object on the heap, so the frame keeps what it
+    // refers to.
+    if (NULL != ctx->_reflection) {
+      heap_inc_edge(heap, frame->_reflection, ctx->_reflection);
+    }
+    if (NULL != ctx->previous_scope &&
+        NULL != ctx->previous_scope->_reflection) {
+      heap_inc_edge(heap, frame->_reflection,
+                    ctx->previous_scope->_reflection);
+    }
+    heap_inc_edge(heap, frame->_reflection, ctx->self.obj);
     if (NULL != ctx->error) {
-      heap_inc_edge(heap, ctx->_reflection, ctx->error);
+      heap_inc_edge(heap, frame->_reflection, ctx->error);
     }
     ctx = scope_dynamic_parent(ctx);
   }
@@ -148,12 +163,25 @@ void frame_dec_all_scope_(Isolate *isolate, Frame *frame) {
   if (OBJECT == frame->acc.type) {
     heap_dec_edge(heap, frame->_reflection, frame->acc.obj);
   }
+  for (int i = 0; i < SlotStack_size(&frame->slots); ++i) {
+    const Slot *slot = SlotStack_get_ref_unchecked(&frame->slots, i);
+    if (slot->is_set && OBJECT == slot->value.type) {
+      heap_dec_edge(heap, frame->_reflection, slot->value.obj);
+    }
+  }
   Scope *ctx = frame->current;
   while (NULL != ctx) {
-    heap_dec_edge(heap, ctx->_reflection, ctx->self.obj);
-    heap_dec_edge(heap, frame->_reflection, ctx->_reflection);
+    if (NULL != ctx->_reflection) {
+      heap_dec_edge(heap, frame->_reflection, ctx->_reflection);
+    }
+    if (NULL != ctx->previous_scope &&
+        NULL != ctx->previous_scope->_reflection) {
+      heap_dec_edge(heap, frame->_reflection,
+                    ctx->previous_scope->_reflection);
+    }
+    heap_dec_edge(heap, frame->_reflection, ctx->self.obj);
     if (NULL != ctx->error) {
-      heap_dec_edge(heap, ctx->_reflection, ctx->error);
+      heap_dec_edge(heap, frame->_reflection, ctx->error);
     }
     ctx = scope_dynamic_parent(ctx);
   }

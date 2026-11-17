@@ -5,6 +5,8 @@
 
 #include "zinnia/program/bytecode_binary.h"
 
+#include <string.h>
+
 #include "zinnia/program/serialization/deserialize.h"
 #include "zinnia/program/serialization/serialize.h"
 #include "zinnia/util/void_array.h"
@@ -14,12 +16,36 @@
 
 #define _CONST_CHAR_POINTER(ptr) ((const char *)(ptr))
 
+// Starts a versioned .znb file, followed by its version as one byte. A file
+// without it is version 0.
+static const char MAGIC_[] = {'Z', 'N', 'B'};
+
+// The version of the file being read, or 0 for one without MAGIC_.
+static int read_version_(FILE *file) {
+  char magic[sizeof(MAGIC_)];
+  const long start = ftell(file);
+  if (sizeof(MAGIC_) == fread(magic, 1, sizeof(MAGIC_), file) &&
+      0 == memcmp(magic, MAGIC_, sizeof(MAGIC_))) {
+    uint8_t version;
+    deserialize_type(file, uint8_t, &version);
+    if (version > BYTECODE_FORMAT_VERSION) {
+      FATALF("This file is in bytecode format version %d, but this Zinnia "
+             "reads versions up to %d. Rebuild it with this Zinnia.",
+             (int)version, BYTECODE_FORMAT_VERSION);
+    }
+    return version;
+  }
+  fseek(file, start, SEEK_SET);
+  return 0;
+}
+
 void bytecode_read_binary(Bytecode *const bytecode, FILE *file) {
   ASSERT(bytecode != NULL);
   ASSERT(file != NULL);
   CharPtrArray strings;
   CharPtrArray_init(&strings);
 
+  const int version = read_version_(file);
   uint16_t num_strings;
   deserialize_type(file, uint16_t, &num_strings);
   int i;
@@ -87,8 +113,8 @@ void bytecode_read_binary(Bytecode *const bytecode, FILE *file) {
   uint16_t num_ins;
   deserialize_type(file, uint16_t, &num_ins);
   for (i = 0; i < num_ins; ++i) {
-    Instruction ins;
-    deserialize_ins(file, &strings, &ins);
+    Instruction ins = {0};
+    deserialize_ins(file, &strings, &ins, version);
     bytecode_ins_raw(bytecode, &ins);
     if (has_source_map) {
       SourceMapping *sm = (SourceMapping *)bytecode_get_source(
@@ -230,6 +256,11 @@ void bytecode_write_binary(const Bytecode *const bytecode, FILE *file) {
 
   WBuffer buffer;
   buffer_init(&buffer, file, 512);
+
+  for (int m = 0; m < sizeof(MAGIC_); ++m) {
+    serialize_type(&buffer, char, MAGIC_[m]);
+  }
+  serialize_type(&buffer, uint8_t, (uint8_t){BYTECODE_FORMAT_VERSION});
 
   serialize_all_strings_(&strings, &string_index, &buffer);
 

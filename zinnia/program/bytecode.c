@@ -5,6 +5,8 @@
 
 #include "zinnia/program/bytecode.h"
 
+#include <stdlib.h>
+
 #include "language-tools/lexer/token.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
@@ -21,6 +23,7 @@
 #define MODULE_KEYWORD "module"
 #define FIELD_KEYWORD "field"
 #define SOURCE_KEYWORD "source"
+#define VERSION_KEYWORD "version"
 #define BODY_KEYWORD "body"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
@@ -87,7 +90,9 @@ Instruction *bytecode_add(Bytecode *bytecode) {
   sm->source_line = -1;
   sm->source_token = NULL;
   sm->token = NULL;
-  return InstructionArray_push_back_ref(&bytecode->ins);
+  Instruction *ins = InstructionArray_push_back_ref(&bytecode->ins);
+  *ins = (Instruction){0};
+  return ins;
 }
 
 SourceMapping *bytecode_add_source(Bytecode *bytecode, Instruction *ins) {
@@ -280,6 +285,7 @@ void classref_finalize_(ClassRef *ref) {
 void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
   ASSERT(bytecode != NULL);
   ASSERT(file != NULL);
+  fprintf(file, "%s %d\n", VERSION_KEYWORD, BYTECODE_FORMAT_VERSION);
   if (bytecode->module_name && 0 != strcmp("$", bytecode->module_name)) {
     fprintf(file, "module %s\n", bytecode->module_name);
   }
@@ -356,6 +362,10 @@ void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
                            ? 0
                            : remaining_characters_before_comment;
         fprintf(file, "%*s #%d %d", lpadding, PADDING, sm->line, sm->col);
+      }
+      // Names the variable of a slot operand, in a comment.
+      if (!minimize && INSTRUCTION_ID == ins->type && ins->slot > 0) {
+        fprintf(file, "  ; %s", ins->id);
       }
       fprintf(file, "\n");
     }
@@ -565,6 +575,18 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
   } else if (SYMBOL_MINUS == next->type) {
     TokenArray_remove_unchecked(tokens, 0);
     bytecode_ins_neg(bytecode, op, TokenArray_remove_unchecked(tokens, 0));
+  } else if (SYMBOL_PERCENT == next->type) {
+    // A slot operand, %n. Its name comes from its body's SLOTS instruction,
+    // once the whole file is read (bytecode_resolve_slot_names()).
+    TokenArray_remove_unchecked(tokens, 0);
+    Token *slot = TokenArray_remove_unchecked(tokens, 0);
+    bytecode_ins(bytecode, op, slot);
+    Instruction *ins =
+        bytecode_get_mutable(bytecode, bytecode_size(bytecode) - 1);
+    const uint16_t slot_number = (uint16_t)pint(&ins->val);
+    ins->type = INSTRUCTION_ID;
+    ins->id = NULL;
+    ins->slot = slot_number + 1;
   } else {
     TokenArray_remove_unchecked(tokens, 0);
     bytecode_ins(bytecode, op, next);
@@ -589,6 +611,19 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
 void bytecode_read(Bytecode *const bytecode, TokenArray *tokens) {
   ASSERT(bytecode != NULL);
   ASSERT(tokens != NULL);
+  if (0 == strcmp(VERSION_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
+    TokenArray_remove_unchecked(tokens, 0);
+    const Token *version_token = TokenArray_remove_unchecked(tokens, 0);
+    const int64_t version = strtoll(version_token->text, NULL, 10);
+    if (version > BYTECODE_FORMAT_VERSION) {
+      FATALF("This file is in bytecode format version %d, but this Zinnia "
+             "reads versions up to %d. Rebuild it with this Zinnia.",
+             (int)version, BYTECODE_FORMAT_VERSION);
+    }
+    if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
+      TokenArray_remove_unchecked(tokens, 0);
+    }
+  }
   if (0 == strcmp(MODULE_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
     TokenArray_remove_unchecked(tokens, 0);
     Token *module_name = TokenArray_remove_unchecked(tokens, 0);
