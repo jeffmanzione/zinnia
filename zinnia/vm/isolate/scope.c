@@ -16,9 +16,37 @@
 
 Heap *scope_heap_(Scope *ctx);
 
-void scope_add_reflection_(Scope *scope) {
-  scope->_reflection = heap_new(scope_heap_(scope), Class_Scope);
-  scope->_reflection->_internal_obj = scope;
+// A scope's object on the heap holds its named variables, and lets the
+// collector keep a scope that outlives its call, such as one a lambda
+// captured. Most calls keep their variables in slots and never need one, so
+// it's made only when first needed. A scope that has one keeps the scopes it's
+// nested in, which then have one too.
+static Object *scope_reflection_(Scope *ctx) {
+  if (NULL != ctx->_reflection) {
+    return ctx->_reflection;
+  }
+  ctx->_reflection = heap_new(scope_heap_(ctx), Class_Scope);
+  ctx->_reflection->_internal_obj = ctx;
+  Scope *previous = ctx->previous_scope;
+  if (NULL != previous && previous->parent_isolate == ctx->parent_isolate) {
+    heap_inc_edge(scope_heap_(ctx), ctx->_reflection,
+                  scope_reflection_(previous));
+  }
+  return ctx->_reflection;
+}
+
+// The named variable [id] of [ctx], if it has one.
+static Value *scope_get_(Scope *ctx, const char id[]) {
+  return NULL == ctx->_reflection ? NULL : object_get(ctx->_reflection, id);
+}
+
+void scope_release(Scope *ctx) {
+  // A scope with an object on the heap is freed when the object is collected.
+  if (NULL != ctx->_reflection) {
+    return;
+  }
+  scope_finalize(ctx);
+  arena_free(&ctx->parent_isolate->scope_arena, ctx);
 }
 
 void scope_init(Scope *ctx, Object *self, Module *module,
@@ -33,10 +61,12 @@ void scope_init(Scope *ctx, Object *self, Module *module,
   ctx->previous_scope = NULL;
   ctx->caller_scope = NULL;
   ctx->caller_stack_size = 0;
+  ctx->slot_base = 0;
+  ctx->is_block = false;
   ctx->const_ids = NULL;
   ctx->num_const_ids = 0;
   ctx->const_ids_capacity = 0;
-  scope_add_reflection_(ctx);
+  ctx->_reflection = NULL;
 }
 
 void scope_finalize(Scope *ctx) {
@@ -67,8 +97,10 @@ void scope_set_previous(Scope *ctx, Scope *previous) {
   ctx->previous_scope = previous;
   // An anonymous function defined in [ctx] can outlive it, and looks up names
   // in the scopes it's nested in, so they're kept as long as it is.
-  if (NULL != previous && previous->parent_isolate == ctx->parent_isolate) {
-    heap_inc_edge(scope_heap_(ctx), ctx->_reflection, previous->_reflection);
+  if (NULL != ctx->_reflection && NULL != previous &&
+      previous->parent_isolate == ctx->parent_isolate) {
+    heap_inc_edge(scope_heap_(ctx), ctx->_reflection,
+                  scope_reflection_(previous));
   }
 }
 
@@ -79,7 +111,7 @@ Scope *scope_dynamic_parent(const Scope *ctx) {
 void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap) {
   // An anonymous function keeps the scope it was defined in.
   if (NULL != ctx && scope_heap_(ctx) == heap) {
-    heap_inc_edge(heap, fn_ref, ctx->_reflection);
+    heap_inc_edge(heap, fn_ref, scope_reflection_(ctx));
   }
 }
 
@@ -109,14 +141,14 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
   if (SELF == id) {
     return &ctx->self;
   }
-  Value *member = object_get(ctx->_reflection, id);
+  Value *member = scope_get_(ctx, id);
   if (NULL != member) {
     return member;
   }
   Frame *frame = ctx->parent_frame;
   Scope *parent_scope = ctx->previous_scope;
   while (NULL != parent_scope &&
-         NULL == (member = object_get(parent_scope->_reflection, id))) {
+         NULL == (member = scope_get_(parent_scope, id))) {
     parent_scope = parent_scope->previous_scope;
   }
   if (NULL != member) {
@@ -196,16 +228,26 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
   return NULL;
 }
 
+// The scope new variables of [ctx] go in: its function's, since variables are
+// function-wide.
+static Scope *function_scope_(Scope *ctx) {
+  while (ctx->is_block && NULL != ctx->previous_scope) {
+    ctx = ctx->previous_scope;
+  }
+  return ctx;
+}
+
 void scope_let(Scope *ctx, const char id[], const Value *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
-  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+  ctx = function_scope_(ctx);
+  object_set_member(scope_heap_(ctx), scope_reflection_(ctx), id, e);
 }
 
 bool scope_is_const(Scope *ctx, const char id[]) {
   for (Scope *s = ctx; NULL != s; s = s->previous_scope) {
-    if (NULL != object_get(s->_reflection, id)) {
+    if (NULL != scope_get_(s, id)) {
       return scope_is_const_(s, id);
     }
   }
@@ -216,6 +258,7 @@ bool scope_let_const(Scope *ctx, const char id[], const Value *e) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   ASSERT(e != NULL);
+  ctx = function_scope_(ctx);
   if (scope_is_const_(ctx, id)) {
     return false;
   }
@@ -228,7 +271,7 @@ bool scope_let_const(Scope *ctx, const char id[], const Value *e) {
             : REALLOC(ctx->const_ids, const char *, ctx->const_ids_capacity);
   }
   ctx->const_ids[ctx->num_const_ids++] = id;
-  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+  object_set_member(scope_heap_(ctx), scope_reflection_(ctx), id, e);
   return true;
 }
 
@@ -237,23 +280,23 @@ bool scope_set(Scope *ctx, const char id[], const Value *e) {
   ASSERT(id != NULL);
   ASSERT(e != NULL);
   Value *member = NULL;
-  if (NULL != object_get(ctx->_reflection, id)) {
+  if (NULL != scope_get_(ctx, id)) {
     if (scope_is_const_(ctx, id)) {
       return false;
     }
-    object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+    object_set_member(scope_heap_(ctx), scope_reflection_(ctx), id, e);
     return true;
   }
   Scope *parent_scope = ctx->previous_scope;
   while (NULL != parent_scope &&
-         NULL == (member = object_get(parent_scope->_reflection, id))) {
+         NULL == (member = scope_get_(parent_scope, id))) {
     parent_scope = parent_scope->previous_scope;
   }
   if (NULL != member) {
     if (scope_is_const_(parent_scope, id)) {
       return false;
     }
-    object_set_member(scope_heap_(parent_scope), parent_scope->_reflection, id,
+    object_set_member(scope_heap_(parent_scope), scope_reflection_(parent_scope), id,
                       e);
     return true;
   }
@@ -261,8 +304,94 @@ bool scope_set(Scope *ctx, const char id[], const Value *e) {
     object_set_member(scope_heap_(ctx), ctx->self.obj, id, e);
     return true;
   }
-  object_set_member(scope_heap_(ctx), ctx->_reflection, id, e);
+  Scope *function_scope = function_scope_(ctx);
+  object_set_member(scope_heap_(function_scope), scope_reflection_(function_scope),
+                    id, e);
   return true;
+}
+
+// The slot that [ins]'s operand names, in [ctx]'s function's slots.
+static Slot *slot_of_(Scope *ctx, const Instruction *ins) {
+  SlotStack *slots = &ctx->parent_frame->slots;
+  const uint32_t index = ctx->slot_base + ins->slot - 1;
+  ASSERT(index < SlotStack_size(slots));
+  return SlotStack_mutable_ref_unchecked(slots, index);
+}
+
+void scope_add_slots(Scope *ctx, uint16_t num_slots) {
+  SlotStack *slots = &ctx->parent_frame->slots;
+  ctx->slot_base = SlotStack_size(slots);
+  for (int i = 0; i < num_slots; ++i) {
+    SlotStack_push_back(slots, (Slot){.value = NONE_VALUE});
+  }
+}
+
+Value *scope_lookup_ins(Scope *ctx, const Instruction *ins, Value *tmp) {
+  if (ins->slot > 0) {
+    Slot *slot = slot_of_(ctx, ins);
+    if (slot->is_set) {
+      return &slot->value;
+    }
+  }
+  return scope_lookup(ctx, ins->id, tmp);
+}
+
+void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e) {
+  if (0 == ins->slot) {
+    scope_let(ctx, ins->id, e);
+    return;
+  }
+  Slot *slot = slot_of_(ctx, ins);
+  slot->value = *e;
+  slot->is_set = true;
+  slot->is_const = false;
+}
+
+bool scope_set_ins(Scope *ctx, const Instruction *ins, const Value *e) {
+  if (0 == ins->slot) {
+    return scope_set(ctx, ins->id, e);
+  }
+  Slot *slot = slot_of_(ctx, ins);
+  if (slot->is_set) {
+    if (slot->is_const) {
+      return false;
+    }
+    slot->value = *e;
+    return true;
+  }
+  // Not created yet in this call: a member of self of that name, such as a
+  // field, is assigned instead, as scope_set() does.
+  if (NULL != object_get(ctx->self.obj, ins->id)) {
+    object_set_member(scope_heap_(ctx), ctx->self.obj, ins->id, e);
+    return true;
+  }
+  slot->value = *e;
+  slot->is_set = true;
+  return true;
+}
+
+bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e) {
+  if (0 == ins->slot) {
+    return scope_let_const(ctx, ins->id, e);
+  }
+  Slot *slot = slot_of_(ctx, ins);
+  if (slot->is_set && slot->is_const) {
+    return false;
+  }
+  slot->value = *e;
+  slot->is_set = true;
+  slot->is_const = true;
+  return true;
+}
+
+bool scope_is_const_ins(Scope *ctx, const Instruction *ins) {
+  if (ins->slot > 0) {
+    Slot *slot = slot_of_(ctx, ins);
+    if (slot->is_set) {
+      return slot->is_const;
+    }
+  }
+  return scope_is_const(ctx, ins->id);
 }
 
 void scope_set_function(Scope *ctx, const Function *func) { ctx->func = func; }

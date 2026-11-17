@@ -321,6 +321,8 @@ int produce_constructor(SemanticAnalyzer *analyzer, const ClassDef *class,
   } else {
     num_ins += bytecode_label_text(bytecode, CONSTRUCTOR_KEY);
   }
+  // Filled in by bytecode_assign_slots().
+  num_ins += bytecode_ins_no_arg(bytecode, SLOTS, class->def.name.token);
 
   int num_fields = FieldDefArray_size(&class->fields);
   if (num_fields > 0) {
@@ -863,6 +865,13 @@ int produce_module_def(SemanticAnalyzer *analyzer, ModuleDef *module,
   if (module->name.is_named) {
     num_ins += bytecode_module(bytecode, module->name.module_name);
   }
+  // The module's own code starts at index 0. Filled in by
+  // bytecode_assign_slots().
+  num_ins += bytecode_ins_no_arg(
+      bytecode, SLOTS,
+      module->name.module_token == NULL
+          ? token_create(TOKEN_INTEGER, -1, -1, "0", 1)
+          : module->name.module_token);
   int i;
   // Imports
   for (i = 0; i < ImportArray_size(&module->imports); ++i) {

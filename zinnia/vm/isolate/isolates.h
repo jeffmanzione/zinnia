@@ -33,6 +33,16 @@ int32_t compare_frames(const Frame *tsk1, uint32_t size1, const Frame *tsk2,
                        uint32_t size2);
 
 DEFINE_ARRAYLIKE(ValueStack, Value);
+
+// A variable kept in a slot (see SLOTS). An unset slot is a variable its call
+// hasn't created yet, so a use of its name finds whatever it would without it.
+typedef struct {
+  Value value;
+  bool is_set;
+  bool is_const;
+} Slot;
+
+DEFINE_ARRAYLIKE(SlotStack, Slot);
 DEFINE_SETLIKE(FrameSet, Frame *);
 DEFINE_ARRAYLIKE(FrameArray, Frame *);
 
@@ -48,6 +58,13 @@ struct __Scope {
   // value stack when it was called.
   Scope *caller_scope;
   uint32_t caller_stack_size;
+  // Where its function's slots start in the frame's slot stack. Block scopes
+  // share their function's.
+  uint32_t slot_base;
+  // Whether this is the scope of a block in a function, such as a `try`, rather
+  // than the function's own. Variables are function-wide, so a block's are
+  // created in its function's scope.
+  bool is_block;
 
   Object *_reflection;
 
@@ -92,6 +109,9 @@ struct __Frame {
 
   Value acc;
   ValueStack value_stack;
+  // The slots of the calls running in this frame, each call's after its
+  // caller's.
+  SlotStack slots;
 
   Frame *parent_frame;
 

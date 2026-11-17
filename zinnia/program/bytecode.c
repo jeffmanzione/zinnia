@@ -5,6 +5,8 @@
 
 #include "zinnia/program/bytecode.h"
 
+#include <stdlib.h>
+
 #include "language-tools/lexer/token.h"
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/lang/lexer/lang_lexer.h"
@@ -21,6 +23,7 @@
 #define MODULE_KEYWORD "module"
 #define FIELD_KEYWORD "field"
 #define SOURCE_KEYWORD "source"
+#define VERSION_KEYWORD "version"
 #define BODY_KEYWORD "body"
 #define INSTRUCTION_COMMENT_LPAD 16
 #define PADDING ""
@@ -87,7 +90,9 @@ Instruction *bytecode_add(Bytecode *bytecode) {
   sm->source_line = -1;
   sm->source_token = NULL;
   sm->token = NULL;
-  return InstructionArray_push_back_ref(&bytecode->ins);
+  Instruction *ins = InstructionArray_push_back_ref(&bytecode->ins);
+  *ins = (Instruction){0};
+  return ins;
 }
 
 SourceMapping *bytecode_add_source(Bytecode *bytecode, Instruction *ins) {
@@ -280,6 +285,7 @@ void classref_finalize_(ClassRef *ref) {
 void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
   ASSERT(bytecode != NULL);
   ASSERT(file != NULL);
+  fprintf(file, "%s %d\n", VERSION_KEYWORD, BYTECODE_FORMAT_VERSION);
   if (bytecode->module_name && 0 != strcmp("$", bytecode->module_name)) {
     fprintf(file, "module %s\n", bytecode->module_name);
   }
@@ -356,6 +362,10 @@ void bytecode_write(const Bytecode *bytecode, FILE *file, bool minimize) {
                            ? 0
                            : remaining_characters_before_comment;
         fprintf(file, "%*s #%d %d", lpadding, PADDING, sm->line, sm->col);
+      }
+      // Names the variable of a slot operand, in a comment.
+      if (!minimize && INSTRUCTION_ID == ins->type && ins->slot > 0) {
+        fprintf(file, "  ; %s", ins->id);
       }
       fprintf(file, "\n");
     }
@@ -464,24 +474,38 @@ void bytecode_append(Bytecode *head, Bytecode *tail) {
   RELEASE(tail);
 }
 
+// The readers below take tokens from the end of the array, which
+// bytecode_read() reverses first: removing from the front would move every
+// token after it, and reading a module would take time quadratic in its size.
 Token *q_peek_(TokenArray *tokens) {
   if (TokenArray_size(tokens) <= 0) {
     return NULL;
   }
-  return TokenArray_get_unchecked(tokens, 0);
+  return TokenArray_last_unchecked(tokens);
+}
+
+static void reverse_tokens_(TokenArray *tokens) {
+  const int32_t size = TokenArray_size(tokens);
+  for (int32_t i = 0; i < size / 2; ++i) {
+    Token **front = TokenArray_mutable_ref_unchecked(tokens, i);
+    Token **back = TokenArray_mutable_ref_unchecked(tokens, size - 1 - i);
+    Token *tmp = *front;
+    *front = *back;
+    *back = tmp;
+  }
 }
 
 Token *next_token_skip_ln_(TokenArray *queue) {
   ASSERT(queue != NULL);
   ASSERT(TokenArray_size(queue) > 0);
-  Token *first = TokenArray_remove_unchecked(queue, 0);
+  Token *first = TokenArray_pop_back_unchecked(queue);
   ASSERT(first != NULL);
   while (first->type == TOKEN_NEWLINE) {
     first = q_peek_(queue);
     if (NULL == first) {
       return NULL;
     }
-    TokenArray_remove_unchecked(queue, 0);
+    TokenArray_pop_back_unchecked(queue);
   }
   return first;
 }
@@ -505,7 +529,7 @@ bool is_body_token_(const Token *tok) {
   return 0 == strcmp(BODY_KEYWORD, tok->text);
 }
 
-bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
+static bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
   ASSERT(tokens != NULL);
   if (TokenArray_size(tokens) < 1) {
     return false;
@@ -515,10 +539,10 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
     return false;
   }
   if (SYMBOL_AT == first->type) {
-    Token *fn_name = TokenArray_remove_unchecked(tokens, 0);
+    Token *fn_name = TokenArray_pop_back_unchecked(tokens);
     if (SYMBOL_COLON == q_peek_(tokens)->type) {
-      TokenArray_remove_unchecked(tokens, 0);
-      Token *async_keyword = TokenArray_remove_unchecked(tokens, 0);
+      TokenArray_pop_back_unchecked(tokens);
+      Token *async_keyword = TokenArray_pop_back_unchecked(tokens);
       if (0 != strcmp("async", async_keyword->text)) {
         FATALF("Invalid function qualifier '%s' on '%s'.", async_keyword->text,
                fn_name->text);
@@ -533,7 +557,7 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
     return true;
   }
   if (0 == strcmp(CLASS_KEYWORD, first->text)) {
-    Token *class_name = TokenArray_remove_unchecked(tokens, 0);
+    Token *class_name = TokenArray_pop_back_unchecked(tokens);
     if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
       bytecode_class(bytecode, class_name);
       return true;
@@ -541,9 +565,9 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
     CharPtrArray parents;
     CharPtrArray_init(&parents);
     while (SYMBOL_COMMA == q_peek_(tokens)->type) {
-      TokenArray_remove_unchecked(tokens, 0);
+      TokenArray_pop_back_unchecked(tokens);
       *CharPtrArray_push_back_ref(&parents) =
-          (char *)TokenArray_remove_unchecked(tokens, 0)->text;
+          (char *)TokenArray_pop_back_unchecked(tokens)->text;
     }
     bytecode_class_with_parents(bytecode, class_name, &parents);
     CharPtrArray_finalize(&parents);
@@ -554,7 +578,7 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
     return true;
   }
   if (0 == strcmp(FIELD_KEYWORD, first->text)) {
-    Token *field = TokenArray_remove_unchecked(tokens, 0);
+    Token *field = TokenArray_pop_back_unchecked(tokens);
     bytecode_field(bytecode, field->text);
     return true;
   }
@@ -563,18 +587,30 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
   if (TOKEN_NEWLINE == next->type || SYMBOL_POUND == next->type) {
     bytecode_ins_no_arg(bytecode, op, first);
   } else if (SYMBOL_MINUS == next->type) {
-    TokenArray_remove_unchecked(tokens, 0);
-    bytecode_ins_neg(bytecode, op, TokenArray_remove_unchecked(tokens, 0));
+    TokenArray_pop_back_unchecked(tokens);
+    bytecode_ins_neg(bytecode, op, TokenArray_pop_back_unchecked(tokens));
+  } else if (SYMBOL_PERCENT == next->type) {
+    // A slot operand, %n. Its name comes from its body's SLOTS instruction,
+    // once the whole file is read (bytecode_resolve_slot_names()).
+    TokenArray_pop_back_unchecked(tokens);
+    Token *slot = TokenArray_pop_back_unchecked(tokens);
+    bytecode_ins(bytecode, op, slot);
+    Instruction *ins =
+        bytecode_get_mutable(bytecode, bytecode_size(bytecode) - 1);
+    const uint16_t slot_number = (uint16_t)pint(&ins->val);
+    ins->type = INSTRUCTION_ID;
+    ins->id = NULL;
+    ins->slot = slot_number + 1;
   } else {
-    TokenArray_remove_unchecked(tokens, 0);
+    TokenArray_pop_back_unchecked(tokens);
     bytecode_ins(bytecode, op, next);
   }
 
   next = (Token *)q_peek_(tokens);
   if (next != NULL && SYMBOL_POUND == next->type) {
-    TokenArray_remove_unchecked(tokens, 0);
-    Primitive line = token_to_primitive(TokenArray_remove_unchecked(tokens, 0));
-    Primitive col = token_to_primitive(TokenArray_remove_unchecked(tokens, 0));
+    TokenArray_pop_back_unchecked(tokens);
+    Primitive line = token_to_primitive(TokenArray_pop_back_unchecked(tokens));
+    Primitive col = token_to_primitive(TokenArray_pop_back_unchecked(tokens));
     SourceMapping *sm = bytecode_add_source(
         bytecode, bytecode_get_mutable(bytecode, bytecode_size(bytecode) - 1));
     sm->source_line = pint(&line);
@@ -589,19 +625,33 @@ bool bytecode_read_ins(Bytecode *const bytecode, TokenArray *tokens) {
 void bytecode_read(Bytecode *const bytecode, TokenArray *tokens) {
   ASSERT(bytecode != NULL);
   ASSERT(tokens != NULL);
+  reverse_tokens_(tokens);
+  if (0 == strcmp(VERSION_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
+    TokenArray_pop_back_unchecked(tokens);
+    const Token *version_token = TokenArray_pop_back_unchecked(tokens);
+    const int64_t version = strtoll(version_token->text, NULL, 10);
+    if (version > BYTECODE_FORMAT_VERSION) {
+      FATALF("This file is in bytecode format version %d, but this Zinnia "
+             "reads versions up to %d. Rebuild it with this Zinnia.",
+             (int)version, BYTECODE_FORMAT_VERSION);
+    }
+    if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
+      TokenArray_pop_back_unchecked(tokens);
+    }
+  }
   if (0 == strcmp(MODULE_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
-    TokenArray_remove_unchecked(tokens, 0);
-    Token *module_name = TokenArray_remove_unchecked(tokens, 0);
+    TokenArray_pop_back_unchecked(tokens);
+    Token *module_name = TokenArray_pop_back_unchecked(tokens);
     bytecode->module_name = module_name->text;
   } else {
     bytecode->module_name = global_intern("$");
   }
   if (TOKEN_NEWLINE == q_peek_(tokens)->type) {
-    TokenArray_remove_unchecked(tokens, 0);
+    TokenArray_pop_back_unchecked(tokens);
   }
   if (0 == strcmp(SOURCE_KEYWORD, ((Token *)q_peek_(tokens))->text)) {
-    TokenArray_remove_unchecked(tokens, 0);
-    Token *tok = TokenArray_remove_unchecked(tokens, 0);
+    TokenArray_pop_back_unchecked(tokens);
+    Token *tok = TokenArray_pop_back_unchecked(tokens);
     ASSERT(tok != NULL);
     bytecode_set_external_source(bytecode, tok->text);
   }

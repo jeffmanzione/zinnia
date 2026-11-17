@@ -31,6 +31,12 @@ int instruction_write(const Instruction *ins, FILE *file, bool minimize) {
     case INSTRUCTION_NO_ARG:
       return chars_written + fprintf(file, OP_NO_ARG_FMT, op_to_str(ins->op));
     case INSTRUCTION_ID:
+      // A variable in a slot is written as its slot's number.
+      if (ins->slot > 0) {
+        return chars_written +
+               fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
+               fprintf(file, "%%%d", ins->slot - 1);
+      }
       return chars_written +
              fprintf(file, OP_FMT(minimize), op_to_str(ins->op)) +
              fprintf(file, ID_FMT, ins->id);

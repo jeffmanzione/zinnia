@@ -11,6 +11,7 @@
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
+#include "zinnia/program/slots.h"
 #include "zinnia/util/platform.h"
 
 #ifndef OS_WINDOWS
@@ -62,6 +63,7 @@ Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
   ExpressionTree *etree = populate_file(&sa, stree);
 
   semantic_analyzer_produce(&sa, etree, bytecode);
+  bytecode_assign_slots(bytecode);
 
   semantic_analyzer_delete(&sa, etree);
   semantic_analyzer_finalize(&sa);

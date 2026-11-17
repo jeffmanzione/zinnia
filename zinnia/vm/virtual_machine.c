@@ -153,7 +153,7 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
                       #op);                                                    \
           return;                                                              \
         }                                                                      \
-        lookup = scope_lookup(scope, ins->id, &tmp);                           \
+        lookup = scope_lookup_ins(scope, ins, &tmp);                           \
         if (NULL != lookup && PRIMITIVE != lookup->type) {                     \
           raise_error(frame, scope, "RHS for op '%s' must be primitive.",      \
                       #op);                                                    \
@@ -220,7 +220,7 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
                       #op);                                                \
           return;                                                          \
         }                                                                  \
-        lookup = scope_lookup(scope, ins->id, &tmp);                       \
+        lookup = scope_lookup_ins(scope, ins, &tmp);                       \
         if ((NULL == lookup) ||                                            \
             (NULL != lookup && PRIMITIVE != lookup->type)) {               \
           raise_error(frame, scope, "RHS for op '%s' must be primitive.",  \
@@ -333,7 +333,7 @@ void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
     const Value *acc = frame_get_acc(frame);
     if (IS_STRING(acc)) {
       Value tmp;
-      Value *lookup = scope_lookup(scope, ins->id, &tmp);
+      Value *lookup = scope_lookup_ins(scope, ins, &tmp);
       if (!IS_STRING(lookup)) {
         raise_error(frame, scope, "RHS for op '+' must be String.");
         return;
@@ -348,12 +348,12 @@ void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
 void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   const int inc_amount = ins->op == INC ? 1 : -1;
   Value tmp;
-  Value *stored = scope_lookup(scope, ins->id, &tmp);
+  Value *stored = scope_lookup_ins(scope, ins, &tmp);
   if (NULL == stored || NONE == stored->type || OBJECT == stored->type) {
     raise_error(frame, scope, "Can only increment a primitive.");
     return;
   }
-  if (scope_is_const(scope, ins->id)) {
+  if (scope_is_const_ins(scope, ins)) {
     raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
     return;
   }
@@ -398,7 +398,7 @@ void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
         *frame_mutable_acc(frame) = first;
         break;
       }
-      tmp = scope_lookup(scope, ins->id, &second);
+      tmp = scope_lookup_ins(scope, ins, &second);
       *frame_mutable_acc(frame) = (NULL == tmp) ? NONE_VALUE : *tmp;
       break;
     case INSTRUCTION_PRIMITIVE:
@@ -552,7 +552,7 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       break;
     case INSTRUCTION_ID:
       lhs = *frame_get_acc(frame);
-      lookup = scope_lookup(scope, ins->id, &tmp);
+      lookup = scope_lookup_ins(scope, ins, &tmp);
       rhs = (NULL == lookup) ? NONE_VALUE : *lookup;
       break;
     case INSTRUCTION_PRIMITIVE:
@@ -575,7 +575,7 @@ void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       *frame_mutable_acc(frame) = frame_popstack(frame);
       break;
     case INSTRUCTION_ID:
-      member = scope_lookup(scope, ins->id, &tmp);
+      member = scope_lookup_ins(scope, ins, &tmp);
       *frame_mutable_acc(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
@@ -604,7 +604,7 @@ void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       *frame_mutable_acc(frame) = *frame_peekstack_n(frame, pint(&ins->val));
       break;
     case INSTRUCTION_ID:
-      member = scope_lookup(scope, ins->id, &tmp);
+      member = scope_lookup_ins(scope, ins, &tmp);
       *frame_mutable_acc(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     default:
@@ -629,7 +629,7 @@ void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       *frame_pushstack(frame) = *frame_get_acc(frame);
       break;
     case INSTRUCTION_ID:
-      member = scope_lookup(scope, ins->id, &tmp);
+      member = scope_lookup_ins(scope, ins, &tmp);
       *frame_pushstack(frame) = (NULL == member) ? NONE_VALUE : *member;
       break;
     case INSTRUCTION_PRIMITIVE:
@@ -708,7 +708,7 @@ void _execute_FLD(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
-      scope_let(scope, ins->id, frame_get_acc(frame));
+      scope_let_ins(scope, ins, frame_get_acc(frame));
       break;
     default:
       FATALF("Invalid arg type=%d for LET.", ins->type);
@@ -718,7 +718,7 @@ void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
-      if (!scope_set(scope, ins->id, frame_get_acc(scope->parent_frame))) {
+      if (!scope_set_ins(scope, ins, frame_get_acc(scope->parent_frame))) {
         raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
       }
       break;
@@ -730,7 +730,7 @@ void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
 void _execute_SETC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
-      if (!scope_let_const(scope, ins->id,
+      if (!scope_let_const_ins(scope, ins,
                            frame_get_acc(scope->parent_frame))) {
         raise_error(frame, scope, "Cannot reassign const '%s'.", ins->id);
       }
@@ -1100,6 +1100,23 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
   ASSERT(ins != NULL);
   ASSERT(INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
+  // The common cases, a method of the object's class or a function stored on
+  // the object, are called directly, without wrapping the function and the
+  // object in a FunctionRef as object_get_maybe_wrap() does.
+  if (Class_Class != class) {
+    const Value *member = object_get(obj, ins->id);
+    const Function *func = NULL;
+    if (NULL == member) {
+      func = class_get_function(class, ins->id);
+    } else if (OBJECT == member->type &&
+               Class_Function == member->obj->_class) {
+      func = member->obj->_function_obj;
+    }
+    if (NULL != func) {
+      return _call_function_base(frame, scope, func, obj,
+                                 func->_is_anon ? scope : NULL);
+    }
+  }
   Value method =
       object_get_maybe_wrap(obj, ins->id, frame->parent_isolate->heap, scope);
   if (NONE == method.type) {
@@ -1232,7 +1249,7 @@ void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       // *task_mutable_resval(task->dependent_task) = *task_get_resval(task);
       break;
     case INSTRUCTION_ID:
-      *frame_mutable_acc(frame) = *scope_lookup(scope, ins->id, &tmp);
+      *frame_mutable_acc(frame) = *scope_lookup_ins(scope, ins, &tmp);
       break;
     case INSTRUCTION_PRIMITIVE:
       *frame_mutable_acc(frame) = value_primitive(ins->val);
@@ -1342,7 +1359,7 @@ bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       index = frame_get_acc(frame);
       break;
     case INSTRUCTION_ID:
-      index = scope_lookup(scope, ins->id, &index_e);
+      index = scope_lookup_ins(scope, ins, &index_e);
       break;
     case INSTRUCTION_PRIMITIVE:
       if (PRIMITIVE_INT != ptype(&ins->val) || pint(&ins->val) < 0) {
@@ -1754,6 +1771,10 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         goto end_of_loop;
       case NBLK:
         scope = _execute_NBLK(vm, frame, scope, ins);
+        scope->is_block = true;
+        break;
+      case SLOTS:
+        scope_add_slots(scope, ins->slot);
         break;
       case BBLK:
         scope = _execute_BBLK(vm, frame, scope, ins);

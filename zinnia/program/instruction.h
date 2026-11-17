@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 
+#include <stdint.h>
+
 #include "c-data-structures/arraylike.h"
 #include "zinnia/program/op.h"
 #include "zinnia/value/primitive.h"
@@ -22,6 +24,10 @@ typedef enum {
 typedef struct {
   char op;
   char type;
+  // For an INSTRUCTION_ID operand that names a variable kept in a slot, the
+  // slot's number + 1, and 0 otherwise; the id still holds the name. For SLOTS,
+  // the number of slots.
+  uint16_t slot;
   union {
     Primitive val;
     const char *id;

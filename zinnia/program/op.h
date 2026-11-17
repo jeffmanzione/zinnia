@@ -90,6 +90,9 @@ typedef enum {
   // Immutable
   IRES,
   IPSH,
+  // Starts the body of a function, method, lambda or module: makes room for
+  // the variables kept in slots, whose names its operand lists.
+  SLOTS,
   // NOT A REAL OP
   OP_BOUND,
 } Op;

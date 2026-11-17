@@ -22,6 +22,9 @@ const Instruction *scope_ins(Scope *ctx);
 Scope *scope_dynamic_parent(const Scope *ctx);
 // Sets the scope [ctx] is nested in, which it keeps alive.
 void scope_set_previous(Scope *ctx, Scope *previous);
+// Frees [ctx], popped from its frame, unless it has an object on the heap, in
+// which case the collector frees it once nothing refers to it.
+void scope_release(Scope *ctx);
 // Keeps [ctx] alive as long as [fn_ref], an anonymous function defined in it.
 void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap);
 void scope_set_function(Scope *ctx, const Function *func);
@@ -35,6 +38,16 @@ bool scope_set(Scope *ctx, const char id[], const Value *e);
 bool scope_let_const(Scope *ctx, const char id[], const Value *e);
 // Returns true if [id] resolves to a const variable from this scope.
 bool scope_is_const(Scope *ctx, const char id[]);
+
+// Makes room for [num_slots] unset slots for [ctx]'s function (SLOTS).
+void scope_add_slots(Scope *ctx, uint16_t num_slots);
+// The same as the functions above for the variable [ins]'s operand names,
+// using its slot when it has one.
+Value *scope_lookup_ins(Scope *ctx, const Instruction *ins, Value *tmp);
+void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e);
+bool scope_set_ins(Scope *ctx, const Instruction *ins, const Value *e);
+bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e);
+bool scope_is_const_ins(Scope *ctx, const Instruction *ins);
 
 Scope *frame_get_scope_for_index(Frame *frame, uint32_t index);
 

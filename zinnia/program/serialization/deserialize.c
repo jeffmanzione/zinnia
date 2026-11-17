@@ -63,7 +63,8 @@ int deserialize_val(FILE *file, Primitive *val) {
   return i;
 }
 
-int deserialize_ins(FILE *file, const CharPtrArray *strings, Instruction *ins) {
+int deserialize_ins(FILE *file, const CharPtrArray *strings, Instruction *ins,
+                    int version) {
   int i = 0;
   uint8_t op;
   uint8_t param;
@@ -71,6 +72,10 @@ int deserialize_ins(FILE *file, const CharPtrArray *strings, Instruction *ins) {
   i += deserialize_type(file, uint8_t, &param);
   ins->op = op;
   ins->type = param;
+  ins->slot = 0;
+  if (version >= 1) {
+    i += deserialize_type(file, uint16_t, &ins->slot);
+  }
   uint16_t ref16;
   uint8_t ref8;
   switch (param) {

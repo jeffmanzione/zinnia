@@ -16,13 +16,13 @@ static const char *_op_strs[] = {
     "tlte", "teq",  "dup",  "goto", "prnt", "lmdl", "get",  "gtsh", "rnil",
     "pnil", "fld",  "fldc", "is",   "adr",  "rais", "ctch", "anew", "aidx",
     "aset", "cnst", "setc", "letc", "sget", "wait", "rtru", "rfls", "ptru",
-    "pfls", "ires", "ipsh"};
+    "pfls", "ires", "ipsh", "slots"};
 
 const char *op_to_str(Op op) { return _op_strs[op]; }
 
 Op str_to_op(const char op_str[]) {
   int i;
-  for (i = 0; i < sizeof(_op_strs); ++i) {
+  for (i = 0; i < sizeof(_op_strs) / sizeof(_op_strs[0]); ++i) {
     if (0 == strcmp(op_str, _op_strs[i])) {
       return i;
     }

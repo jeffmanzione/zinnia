@@ -27,8 +27,14 @@ cc_library(
 
 cc_library(
     name = "bytecode",
-    srcs = ["bytecode.c"],
-    hdrs = ["bytecode.h"],
+    srcs = [
+        "bytecode.c",
+        "slots.c",
+    ],
+    hdrs = [
+        "bytecode.h",
+        "slots.h",
+    ],
     deps = [
         ":instruction",
         "//zinnia/alloc",

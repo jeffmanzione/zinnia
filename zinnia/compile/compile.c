@@ -21,6 +21,7 @@
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/program/bytecode_binary.h"
+#include "zinnia/program/slots.h"
 #include "zinnia/program/optimization/optimize.h"
 #include "zinnia/util/args/commandlines.h"
 #include "zinnia/util/args/lib_finder.h"
@@ -82,6 +83,7 @@ Bytecode *read_file_(const char fn[], bool opt) {
     if (opt) {
       bytecode = optimize(bytecode);
     }
+    bytecode_assign_slots(bytecode);
     bytecode_set_body(bytecode, fi);
     file_info_delete(fi);
 

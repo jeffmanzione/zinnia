@@ -177,6 +177,7 @@ cc_library(
         ":native_hdrs",
         "//zinnia/lang/parser:lang_parser",
         "//zinnia/lang/semantic_analyzer:definitions",
+        "//zinnia/program:bytecode",
         "@jeffmanzione_file_utils//file-utils:file_info",
         "@jeffmanzione_language_tools//language-tools/parser",
         "@jeffmanzione_language_tools//language-tools/semantic_analyzer",
