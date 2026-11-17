@@ -1100,6 +1100,23 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
   ASSERT(ins != NULL);
   ASSERT(INSTRUCTION_ID == ins->type);
   const Class *class = (Class *)obj->_class;
+  // The common cases, a method of the object's class or a function stored on
+  // the object, are called directly, without wrapping the function and the
+  // object in a FunctionRef as object_get_maybe_wrap() does.
+  if (Class_Class != class) {
+    const Value *member = object_get(obj, ins->id);
+    const Function *func = NULL;
+    if (NULL == member) {
+      func = class_get_function(class, ins->id);
+    } else if (OBJECT == member->type &&
+               Class_Function == member->obj->_class) {
+      func = member->obj->_function_obj;
+    }
+    if (NULL != func) {
+      return _call_function_base(frame, scope, func, obj,
+                                 func->_is_anon ? scope : NULL);
+    }
+  }
   Value method =
       object_get_maybe_wrap(obj, ins->id, frame->parent_isolate->heap, scope);
   if (NONE == method.type) {

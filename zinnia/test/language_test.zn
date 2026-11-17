@@ -418,3 +418,64 @@ class CallTest {
     expect(total, 499500)
   }
 }
+
+function _plus_one(x) x + 1
+
+class _Dispatch {
+  field stored_fn, stored_lambda
+  new(field base) {
+    stored_fn = _plus_one
+    offset = 100
+    stored_lambda = x -> x + offset
+  }
+  method add(x) base + x
+  method twice(x) add(add(x))
+}
+
+class _SubDispatch : _Dispatch {
+  new(base) {
+    super(_Dispatch)(base)
+  }
+  method add(x) base * x
+}
+
+@test.TestClass
+class MethodCallTest {
+  @test.Test
+  method test_methods() {
+    d = _Dispatch(10)
+    expect(d.add(1), 11)
+    expect(d.twice(1), 21)
+  }
+
+  @test.Test
+  method test_overridden_methods() {
+    s = _SubDispatch(10)
+    expect(s.add(2), 20)
+    expect(s.twice(2), 200)
+  }
+
+  @test.Test
+  method test_functions_and_lambdas_in_fields() {
+    d = _Dispatch(0)
+    expect(d.stored_fn(1), 2)
+    expect(d.stored_lambda(1), 101)
+  }
+
+  @test.Test
+  method test_native_methods() {
+    expect([1, 2, 3].len(), 3)
+    expect('a,b'.split(','), ['a', 'b'])
+  }
+
+  @test.Test
+  method test_missing_methods_raise() {
+    message = None
+    try {
+      _Dispatch(0).missing()
+    } catch e {
+      message = e.message
+    }
+    expect(message, 'Failed to find method \'missing\' on _Dispatch')
+  }
+}
