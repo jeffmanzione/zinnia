@@ -127,10 +127,19 @@ Module *scope_module(Scope *ctx) {
 
 Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
                              Scope *ctx) {
+  // A method's FunctionRef depends only on its object, so it's reused.
+  if (!f->_is_anon) {
+    Object *bound = heap_bound_method(heap, obj, f);
+    if (NULL != bound) {
+      return bound;
+    }
+  }
   Object *fn_ref = heap_new(heap, Class_FunctionRef);
   function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL, heap);
   if (f->_is_anon) {
     scope_capture(ctx, fn_ref, heap);
+  } else {
+    heap_set_bound_method(heap, obj, f, fn_ref);
   }
   return fn_ref;
 }
