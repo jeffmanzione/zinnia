@@ -1021,10 +1021,86 @@ static bool _can_call_in_frame(Frame *frame, Scope *scope, const Function *func,
   return MODULE_INITIALIZING == state || MODULE_INITIALIZED == state;
 }
 
+// Removes and returns the value [n] places below the top of the stack: the
+// function or object of a call whose [n] arguments ARGS left on top of it.
+static Value _take_below_stack_args_(Frame *frame, uint16_t n) {
+  ValueStack *stack = &frame->value_stack;
+  const int32_t size = ValueStack_size(stack);
+  ASSERT(size > n);
+  const int32_t index = size - 1 - n;
+  Value *values = ValueStack_mutable_ref_unchecked(stack, 0);
+  const Value taken = values[index];
+  memmove(values + index, values + index + 1, n * sizeof(Value));
+  ValueStack_pop_back_unchecked(stack);
+  return taken;
+}
+
+// The value of the call's callee or object: on top of the stack, or under the
+// arguments ARGS left there.
+static Value _pop_callee_(Frame *frame) {
+  return 0 == frame->pending_args
+             ? frame_popstack(frame)
+             : _take_below_stack_args_(frame, frame->pending_args);
+}
+
+// Makes a tuple in acc of the arguments ARGS left on the stack, as TUPL would
+// have: what a call that doesn't take them from the stack receives.
+static void _collect_stack_args_(Frame *frame) {
+  const uint16_t n = frame->pending_args;
+  if (0 == n) {
+    return;
+  }
+  frame->pending_args = 0;
+  Heap *heap = frame->parent_isolate->heap;
+  Object *tuple_obj = heap_new(heap, Class_Tuple);
+  tuple_obj->_internal_obj = tuple_create(n);
+  *frame_mutable_acc(frame) = value_object(tuple_obj);
+  for (int i = 0; i < n; ++i) {
+    Value e = frame_popstack(frame);
+    tuple_set(heap, tuple_obj, i, &e);
+  }
+}
+
+// Whether [func]'s parameters take [n] arguments from the stack: whether it
+// starts with an ARGC for [n], after its SLOTS and, for a constructor, the
+// instructions that make its fields.
+static bool _takes_stack_args_(const Function *func, uint16_t n) {
+  const Bytecode *bytecode = func->_module->_bytecode;
+  const uint32_t size = bytecode_size(bytecode);
+  for (uint32_t i = func->_ins_pos; i < size; ++i) {
+    const Instruction *ins = bytecode_get(bytecode, i);
+    switch (ins->op) {
+      case SLOTS:
+      case PUSH:
+      case PNIL:
+      case RES:
+      case FLD:
+      case FLDC:
+        continue;
+      case ARGC:
+        return pint(&ins->val) == n;
+      default:
+        return false;
+    }
+  }
+  return false;
+}
+
 // Context is only necessary for native functions.
 bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
                          Object *self, Scope *parent_scope) {
   Isolate *isolate = frame->parent_isolate;
+  // Arguments ARGS left on the stack go straight to the parameters of a
+  // function that takes them there, run in this frame; any other call gets
+  // them as a tuple, as before.
+  const uint16_t stack_args = frame->pending_args;
+  const bool in_frame = !func->_is_native && !func->_is_native2 &&
+                        _can_call_in_frame(frame, scope, func, self);
+  const bool direct =
+      in_frame && stack_args > 0 && _takes_stack_args_(func, stack_args);
+  if (!direct) {
+    _collect_stack_args_(frame);
+  }
   if (func->_is_native) {
     NativeFn native_fn = (NativeFn)func->_native_fn;
     if (NULL == native_fn) {
@@ -1056,12 +1132,18 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
     *frame_mutable_acc(frame) = *FunctionContext_get_retval(&fn_ctx);
     return false;
   }
-  if (_can_call_in_frame(frame, scope, func, self)) {
+  if (in_frame) {
     Scope *fn_ctx = frame_push_call_scope(frame, self, (Module *)func->_module,
                                           func->_ins_pos);
     scope_set_function(fn_ctx, func);
     if (func->_is_anon) {
       scope_set_previous(fn_ctx, parent_scope);
+    }
+    if (direct) {
+      // Its ARGC takes them, and the caller's stack ends below them.
+      fn_ctx->stack_args = stack_args;
+      fn_ctx->caller_stack_size -= stack_args;
+      frame->pending_args = 0;
     }
     // vm_execute_frame() runs it, now that it's the frame's current scope.
     return true;
@@ -1120,16 +1202,19 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
   Value method =
       object_get_maybe_wrap(obj, ins->id, frame->parent_isolate->heap, scope);
   if (NONE == method.type) {
+    _collect_stack_args_(frame);
     raise_error(frame, scope, "Failed to find method '%s' on %s", ins->id,
                 class->_name);
     return false;
   }
   if (OBJECT != method.type) {
+    _collect_stack_args_(frame);
     raise_error(frame, scope, "Attempted to treat '%s' on %s as a method.",
                 ins->id, class->_name);
     return false;
   }
   if (Class_FunctionRef != method.obj->_class) {
+    _collect_stack_args_(frame);
     raise_error(frame, scope,
                 "Attempted to treat '%s' of type %s on %s as a method.",
                 ins->id, method.obj->_class->_name, class->_name);
@@ -1151,8 +1236,9 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     if (CLLN == ins->op) {
       *frame_mutable_acc(frame) = NONE_VALUE;
     }
-    Value obj = frame_popstack(frame);
+    Value obj = _pop_callee_(frame);
     if (OBJECT != obj.type) {
+      _collect_stack_args_(frame);
       const char *type_str = NONE == obj.type                    ? "None"
                              : ptype(&obj.pri) == PRIMITIVE_CHAR ? "Char"
                              : ptype(&obj.pri) == PRIMITIVE_INT  ? "Int"
@@ -1174,9 +1260,10 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     }
   } else {
     ASSERT(INSTRUCTION_NO_ARG == ins->type);
-    fn = frame_popstack(frame);
+    fn = _pop_callee_(frame);
   }
   if (fn.type != OBJECT) {
+    _collect_stack_args_(frame);
     raise_error(frame, scope,
                 "Attempted to call something not a function (not an object).");
     return false;
@@ -1186,6 +1273,8 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
     Object *obj = heap_new(frame->parent_isolate->heap, class);
     const Function *constructor = class_get_function(class, CONSTRUCTOR_KEY);
     if (NULL == constructor) {
+      // Without a constructor, the arguments are dropped.
+      _collect_stack_args_(frame);
       *frame_mutable_acc(frame) = value_object(obj);
       return false;
     } else {
@@ -1204,6 +1293,7 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
                                function_ref_get_parent_scope(fn.obj));
   }
   if (fn.obj->_class != Class_Function) {
+    _collect_stack_args_(frame);
     raise_error(frame, scope,
                 "Attempted to call something not a function (class=%s).",
                 fn.obj->_class->_name);
@@ -1775,6 +1865,18 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         break;
       case SLOTS:
         scope_add_slots(scope, ins->slot);
+        break;
+      case ARGS:
+        frame->pending_args = (uint16_t)pint(&ins->val);
+        break;
+      case ARGC:
+        if (scope->stack_args > 0 && scope->stack_args == pint(&ins->val)) {
+          scope->stack_args = 0;
+          *frame_mutable_acc(frame) = TRUE_VALUE;
+        } else {
+          *frame_pushstack(frame) = *frame_get_acc(frame);
+          *frame_mutable_acc(frame) = FALSE_VALUE;
+        }
         break;
       case BBLK:
         scope = _execute_BBLK(vm, frame, scope, ins);

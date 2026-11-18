@@ -93,6 +93,13 @@ typedef enum {
   // Starts the body of a function, method, lambda or module: makes room for
   // the variables kept in slots, whose names its operand lists.
   SLOTS,
+  // Leaves the n arguments of the call that follows on the stack instead of
+  // making a tuple of them, the first on top.
+  ARGS,
+  // Starts a function's parameters: if it was called with exactly n
+  // arguments on the stack, sets acc to True; otherwise pushes its argument
+  // value, as the parameters that follow expect, and sets acc to False.
+  ARGC,
   // NOT A REAL OP
   OP_BOUND,
 } Op;

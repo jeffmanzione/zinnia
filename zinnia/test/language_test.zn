@@ -638,3 +638,100 @@ class ScopeTest {
     expect(str, 'local')
   }
 }
+
+function _pair(a, b) (a, b)
+function _triple(a, b, c) (a, b, c)
+function _with_default(a, b, c=3) (a, b, c)
+function _one(x) x
+function _named({a, b=2}) (a, b)
+function _sum_to(n, acc) {
+  return if n == 0 then acc else _sum_to(n - 1, acc + n)
+}
+function _pair_later(a, b) async {
+  return (a, b)
+}
+
+class _Point {
+  field label
+  new(field x, field y) {
+    label = cat(x, ',', y)
+  }
+  method moved(dx, dy) _Point(x + dx, y + dy)
+}
+
+class _NoConstructor {}
+
+@test.TestClass
+class ArgumentTest {
+  @test.Test
+  method test_positional_arguments() {
+    expect(_pair(1, 2), (1, 2))
+    expect(_triple(1, 2, 3), (1, 2, 3))
+    expect(_sum_to(100, 0), 5050)
+  }
+
+  @test.Test
+  method test_a_tuple_fills_the_parameters() {
+    expect(_pair((1, 2)), (1, 2))
+    args = (4, 5)
+    expect(_pair(args), (4, 5))
+  }
+
+  @test.Test
+  method test_fewer_and_more_arguments() {
+    ; A parameter after the first, missing and without a default, is an error.
+    raised = False
+    try {
+      _triple(1, 2)
+    } catch e {
+      raised = True
+    }
+    expect(raised, True)
+    expect(_with_default(1, 2), (1, 2, 3))
+    expect(_with_default(1, 2, 9), (1, 2, 9))
+    expect(_pair(1, 2, 3), (1, 2))
+    expect(_pair(1), (1, None))
+  }
+
+  @test.Test
+  method test_one_parameter_gets_a_tuple() {
+    expect(_one(1, 2), (1, 2))
+    expect(_one(7), 7)
+  }
+
+  @test.Test
+  method test_named_parameters() {
+    expect(_named(a: 1), (1, 2))
+    expect(_named(b: 5, a: 4), (4, 5))
+  }
+
+  @test.Test
+  method test_constructors_and_methods() {
+    p = _Point(1, 2)
+    expect((p.x, p.y, p.label), (1, 2, '1,2'))
+    q = p.moved(10, 20)
+    expect((q.x, q.y), (11, 22))
+    expect(_NoConstructor(1, 2) is _NoConstructor, True)
+  }
+
+  @test.Test
+  method test_lambdas_natives_and_async() {
+    add = (a, b) -> a + b
+    expect(add(2, 3), 5)
+    expect(cat('a', 1, 'b'), 'a1b')
+    expect(await _pair_later(1, 2), (1, 2))
+  }
+
+  @test.Test
+  method test_calling_a_non_function_leaves_the_stack_clean() {
+    f = None
+    message = None
+    try {
+      f(1, 2)
+    } catch e {
+      message = e.message
+    }
+    expect(message != None, True)
+    expect([_pair(1, 2), _pair(3, 4)], [(1, 2), (3, 4)])
+  }
+}

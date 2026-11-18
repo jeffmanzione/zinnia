@@ -63,6 +63,7 @@ void scope_init(Scope *ctx, Object *self, Module *module,
   ctx->caller_stack_size = 0;
   ctx->slot_base = 0;
   ctx->is_block = false;
+  ctx->stack_args = 0;
   ctx->const_ids = NULL;
   ctx->num_const_ids = 0;
   ctx->const_ids_capacity = 0;

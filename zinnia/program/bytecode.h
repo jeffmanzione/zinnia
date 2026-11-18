@@ -57,8 +57,8 @@ typedef struct Bytecode_ Bytecode;
 
 // The version of the .zna and .znb formats this build writes; it reads this
 // one and those before it. A file without a version is version 0, from before
-// variables were kept in slots.
-#define BYTECODE_FORMAT_VERSION 1
+// variables were kept in slots. Version 2 added ARGS and ARGC.
+#define BYTECODE_FORMAT_VERSION 2
 
 // Access-related functions.
 const Instruction *bytecode_get(const Bytecode *bytecode, uint32_t index);
