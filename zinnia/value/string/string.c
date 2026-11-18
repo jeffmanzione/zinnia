@@ -15,10 +15,23 @@
 
 IMPL_ARRAYLIKE(String, char);
 
+// String_create_capacity() and String_create_copy() leave a String's table
+// unset when it has no room, so an empty String gets the default room instead.
+static String *string_create_(const char *str, size_t size) {
+  if (0 == size) {
+    return String_create();
+  }
+  return (NULL == str) ? String_create_capacity(size)
+                       : String_create_copy(str, size);
+}
+
 void String_append_raw(String *const head, const char *tail, uint32_t len) {
   ASSERT(head != NULL);
   ASSERT(tail != NULL);
   ASSERT(len >= 0);
+  if (0 == len) {
+    return;
+  }
   // TODO: Implement more efficient version that doesn't make a copy in
   // arraylike.h
   String *tmp = String_create_copy(tail, len);
@@ -29,9 +42,7 @@ void String_append_raw(String *const head, const char *tail, uint32_t len) {
 void string_create__(Object *obj) { obj->_internal_obj = NULL; }
 
 void string_init__(Object *obj, const char *str, size_t size) {
-  String *string = (NULL == str) ? String_create_capacity(size)
-                                 : String_create_copy(str, size);
-  obj->_internal_obj = string;
+  obj->_internal_obj = string_create_(str, size);
 }
 
 void string_delete__(Object *obj) {

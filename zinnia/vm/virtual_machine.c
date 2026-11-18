@@ -478,7 +478,6 @@ VM *vm_create(const char *lib_location, uint32_t max_isolate_object_count,
   vm->exit_code = EXIT_SUCCESS;
   IsolateArray_init(&vm->isolates);
   HeapConf heap_conf = {
-      .mgraph_config = {.eager_delete_edges = true, .eager_delete_nodes = true},
       .max_object_count = max_isolate_object_count};
   vm->base_heap_conf = heap_conf;
   vm->isolate_create_lock = mutex_create();

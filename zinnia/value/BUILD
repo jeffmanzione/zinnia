@@ -28,7 +28,6 @@ cc_library(
         "@jeffmanzione_c_data_structures//c-data-structures:arraylike",
         "@jeffmanzione_c_data_structures//c-data-structures:maplike",
         "@jeffmanzione_c_data_structures//c-data-structures:stable_maplike",
-        "@jeffmanzione_memory_wrapper//memory-wrapper:memory_graph",
     ],
 )
 
