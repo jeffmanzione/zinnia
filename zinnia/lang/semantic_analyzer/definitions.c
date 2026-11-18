@@ -395,6 +395,23 @@ POPULATE_IMPL(postfix_expression, const SyntaxTree *stree,
   postfix_helper(analyzer, suffix, &postfix_expression->suffixes);
 }
 
+// Produces the arguments [exp] of a call. When they're a list, such as
+// `(a, b)`, they're left on the stack (ARGS) rather than made into a tuple,
+// which the VM makes only if the function needs one.
+static int produce_call_arguments_(SemanticAnalyzer *analyzer,
+                                   const ExpressionTree *exp,
+                                   Bytecode *bytecode) {
+  const int num_ins = semantic_analyzer_produce(analyzer, exp, bytecode);
+  if (IS_EXPRESSION(exp, tuple_expression) && bytecode_size(bytecode) > 0) {
+    Instruction *last =
+        bytecode_get_mutable(bytecode, bytecode_size(bytecode) - 1);
+    if (TUPL == last->op && INSTRUCTION_PRIMITIVE == last->type) {
+      last->op = ARGS;
+    }
+  }
+  return num_ins;
+}
+
 int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
                     const PostfixArray *suffixes, const Postfix **next,
                     Bytecode *bytecode) {
@@ -406,7 +423,7 @@ int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
   if (cur->type == Postfix_fncall) {
     num_ins += bytecode_ins_no_arg(bytecode, PUSH, cur->token);
     if (cur->exp != NULL) {
-      num_ins += semantic_analyzer_produce(analyzer, cur->exp, bytecode);
+      num_ins += produce_call_arguments_(analyzer, cur->exp, bytecode);
     }
     num_ins += bytecode_ins_no_arg(bytecode, (NULL == cur->exp) ? CLLN : CALL,
                                    cur->token);
@@ -418,7 +435,7 @@ int produce_postfix(SemanticAnalyzer *analyzer, int *i, int num_postfix,
     // FunctionDef calls on fields must be handled with CALL X.
     if (NULL != *next && (*next)->type == Postfix_fncall) {
       num_ins += bytecode_ins_no_arg(bytecode, PUSH, cur->token);
-      num_ins += ((*next)->exp != NULL ? semantic_analyzer_produce(
+      num_ins += ((*next)->exp != NULL ? produce_call_arguments_(
                                              analyzer, (*next)->exp, bytecode)
                                        : 0);
       num_ins +=
@@ -1226,38 +1243,14 @@ int produce_all_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
   return num_ins;
 }
 
-int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
-                      Bytecode *bytecode) {
-  if (args->is_named) {
-    int num_ins = bytecode_ins_int(bytecode, IF, 2, args->token);
-    num_ins += bytecode_ins_text(bytecode, PUSH, OBJECT_NAME, args->token);
-    num_ins += bytecode_ins_no_arg(bytecode, CLLN, args->token);
-    num_ins += bytecode_ins_no_arg(bytecode, PUSH, args->token);
-    return num_ins + produce_all_arguments(analyzer, args, bytecode);
-  }
+// Binds two or more positional parameters from the argument value in acc: a
+// tuple of the arguments, or a single argument, with defaults for the rest.
+// The value is pushed first.
+static int produce_positional_arguments_(SemanticAnalyzer *analyzer,
+                                         const Arguments *args,
+                                         Bytecode *bytecode) {
   int num_args = ArgumentArray_size(&args->args);
   int i, num_ins = 0;
-  if (num_args == 1) {
-    const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, 0);
-    if (arg->has_default) {
-      Bytecode *defaults = bytecode_create();
-      int num_default_ins =
-          semantic_analyzer_produce(analyzer, arg->default_value, defaults);
-      num_ins += num_default_ins;
-      num_ins += bytecode_ins_no_arg(bytecode, PUSH, arg->arg_name);
-      num_ins += bytecode_ins_int(bytecode, TGTE, 1, arg->arg_name);
-      num_ins +=
-          bytecode_ins_int(bytecode, IF, num_default_ins + 1, arg->arg_name);
-      bytecode_append(bytecode, defaults);
-      num_ins += bytecode_ins_int(bytecode, JMP, 1, arg->arg_name);
-      num_ins += bytecode_ins_no_arg(bytecode, RES, arg->arg_name);
-      num_ins += bytecode_ins_int(bytecode, TGET, 0, arg->arg_name);
-    }
-    num_ins += produce_argument(arg, bytecode);
-    return num_ins;
-  }
-  num_ins += bytecode_ins_no_arg(bytecode, PUSH, args->token);
-
   // Handle case where only 1 arg is passed and the rest are optional.
   const Argument *first = ArgumentArray_get_ref_unchecked(&args->args, 0);
   num_ins += bytecode_ins_no_arg(bytecode, TLEN, first->arg_name);
@@ -1306,6 +1299,57 @@ int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
   bytecode_append(bytecode, defaults);
   bytecode_append(bytecode, non_defaults);
   num_ins += defaults_ins + nondefaults_ins;
+  return num_ins;
+}
+
+int produce_arguments(SemanticAnalyzer *analyzer, const Arguments *args,
+                      Bytecode *bytecode) {
+  if (args->is_named) {
+    int num_ins = bytecode_ins_int(bytecode, IF, 2, args->token);
+    num_ins += bytecode_ins_text(bytecode, PUSH, OBJECT_NAME, args->token);
+    num_ins += bytecode_ins_no_arg(bytecode, CLLN, args->token);
+    num_ins += bytecode_ins_no_arg(bytecode, PUSH, args->token);
+    return num_ins + produce_all_arguments(analyzer, args, bytecode);
+  }
+  int num_args = ArgumentArray_size(&args->args);
+  int i, num_ins = 0;
+  if (num_args == 1) {
+    const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, 0);
+    if (arg->has_default) {
+      Bytecode *defaults = bytecode_create();
+      int num_default_ins =
+          semantic_analyzer_produce(analyzer, arg->default_value, defaults);
+      num_ins += num_default_ins;
+      num_ins += bytecode_ins_no_arg(bytecode, PUSH, arg->arg_name);
+      num_ins += bytecode_ins_int(bytecode, TGTE, 1, arg->arg_name);
+      num_ins +=
+          bytecode_ins_int(bytecode, IF, num_default_ins + 1, arg->arg_name);
+      bytecode_append(bytecode, defaults);
+      num_ins += bytecode_ins_int(bytecode, JMP, 1, arg->arg_name);
+      num_ins += bytecode_ins_no_arg(bytecode, RES, arg->arg_name);
+      num_ins += bytecode_ins_int(bytecode, TGET, 0, arg->arg_name);
+    }
+    num_ins += produce_argument(arg, bytecode);
+    return num_ins;
+  }
+  // A call with exactly as many arguments, left on the stack (ARGS), binds
+  // them directly; any other call passes a value that the parameters unpack.
+  Bytecode *unpack = bytecode_create();
+  const int unpack_ins = produce_positional_arguments_(analyzer, args, unpack);
+  Bytecode *direct = bytecode_create();
+  int direct_ins = 0;
+  for (i = 0; i < num_args; ++i) {
+    const Argument *arg = ArgumentArray_get_ref_unchecked(&args->args, i);
+    direct_ins += bytecode_ins_no_arg(direct, RES, arg->arg_name);
+    direct_ins += produce_argument(arg, direct);
+  }
+  num_ins += bytecode_ins_int(bytecode, ARGC, num_args, args->token);
+  num_ins += bytecode_ins_int(bytecode, IFN, direct_ins + 1, args->token);
+  bytecode_append(bytecode, direct);
+  num_ins += direct_ins;
+  num_ins += bytecode_ins_int(bytecode, JMP, unpack_ins, args->token);
+  bytecode_append(bytecode, unpack);
+  num_ins += unpack_ins;
   return num_ins;
 }
 

@@ -16,7 +16,7 @@ static const char *_op_strs[] = {
     "tlte", "teq",  "dup",  "goto", "prnt", "lmdl", "get",  "gtsh", "rnil",
     "pnil", "fld",  "fldc", "is",   "adr",  "rais", "ctch", "anew", "aidx",
     "aset", "cnst", "setc", "letc", "sget", "wait", "rtru", "rfls", "ptru",
-    "pfls", "ires", "ipsh", "slots"};
+    "pfls", "ires", "ipsh", "slots", "args", "argc"};
 
 const char *op_to_str(Op op) { return _op_strs[op]; }
 

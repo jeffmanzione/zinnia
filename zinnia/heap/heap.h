@@ -35,6 +35,16 @@ typedef struct {
 Heap *heap_create(HeapConf *config);
 void heap_delete(Heap *heap);
 
+// The FunctionRef binding [func] to [obj] made earlier in [heap], if it's still
+// alive, or NULL. A FunctionRef of a method never changes, so one can be
+// reused instead of making a new one for every lookup.
+Object *heap_bound_method(Heap *heap, const Object *obj, const void *func);
+void heap_set_bound_method(Heap *heap, const Object *obj, const void *func,
+                           Object *fn_ref);
+// Forgets [fn_ref], which is being collected, if it's the one remembered.
+void heap_forget_bound_method(Heap *heap, const Object *obj, const void *func,
+                              const Object *fn_ref);
+
 Object *heap_new(Heap *heap, const Class *class);
 
 uint32_t heap_collect_garbage(Heap *heap);

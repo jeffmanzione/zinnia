@@ -52,6 +52,11 @@ void function_ref_delete__(Object *obj) {
   if (NULL == obj->_internal_obj) {
     return;
   }
+  _FunctionRef *func_ref = (_FunctionRef *)obj->_internal_obj;
+  if (NULL == func_ref->parent_scope) {
+    heap_forget_bound_method((Heap *)obj->_heap, func_ref->obj, func_ref->func,
+                             obj);
+  }
   RELEASE(obj->_internal_obj);
 }
 

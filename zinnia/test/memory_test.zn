@@ -82,3 +82,37 @@ class FutureMemoryTest {
     expect(total, 6)
   }
 }
+
+class _Stepper {
+  field total
+  new() {
+    total = 0
+  }
+  method add(x) {
+    total = total + x
+  }
+  method run(n) {
+    for (_, i) in 0:n {
+      add(i)
+    }
+    return total
+  }
+}
+
+@test.TestClass
+class BoundMethodMemoryTest {
+  @test.Test
+  method test_methods_called_unqualified_across_collections() {
+    expect(_Stepper().run(20000), 199990000)
+  }
+
+  @test.Test
+  method test_method_references_outlive_collections() {
+    s = _Stepper()
+    add = s.add
+    await memory.collect_garbage()
+    add(5)
+    expect(s.total, 5)
+    expect(s.add == add, True)
+  }
+}

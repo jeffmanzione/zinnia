@@ -36,11 +36,36 @@ int32_t compare_objects_(const Object *ob1, uint32_t size1, const Object *ob2,
   return (intptr_t)ob1 - (intptr_t)ob2;
 }
 
+// An object and one of its functions, which a FunctionRef binds together.
+typedef struct {
+  const Object *obj;
+  const void *func;
+} BoundMethodKey_;
+
+static uint32_t hash_bound_method_(const BoundMethodKey_ key, uint32_t size) {
+  return (uint32_t)(intptr_t)key.obj * 31 + (uint32_t)(intptr_t)key.func;
+}
+
+static int32_t compare_bound_methods_(const BoundMethodKey_ a, uint32_t a_size,
+                                      const BoundMethodKey_ b,
+                                      uint32_t b_size) {
+  if (a.obj != b.obj) {
+    return a.obj < b.obj ? -1 : 1;
+  }
+  return a.func == b.func ? 0 : (a.func < b.func ? -1 : 1);
+}
+
+DEFINE_MAPLIKE(BoundMethodMap, BoundMethodKey_, Object *);
+IMPL_MAPLIKE(BoundMethodMap, BoundMethodKey_, Object *);
+
 struct Heap_ {
   HeapConf config;
   MGraph mg;
   RzallocArena object_arena;
   uint32_t object_count_threshold_for_garbage_collection;
+  // FunctionRefs of methods bound to objects, reused rather than made anew on
+  // each lookup. A FunctionRef leaves when it's collected.
+  BoundMethodMap bound_methods;
 };
 
 struct HeapProfile_ {
@@ -59,12 +84,38 @@ Heap *heap_create(HeapConf *config) {
       config->max_object_count / 2;
   mgraph_init(&heap->mg, &heap->config.mgraph_config);
   arena_init(&heap->object_arena, sizeof(Object));
+  BoundMethodMap_init(&heap->bound_methods, hash_bound_method_,
+                      compare_bound_methods_);
   return heap;
+}
+
+Object *heap_bound_method(Heap *heap, const Object *obj, const void *func) {
+  return BoundMethodMap_find(&heap->bound_methods,
+                             (BoundMethodKey_){.obj = obj, .func = func},
+                             sizeof(BoundMethodKey_), NULL);
+}
+
+void heap_set_bound_method(Heap *heap, const Object *obj, const void *func,
+                           Object *fn_ref) {
+  BoundMethodMap_insert(&heap->bound_methods,
+                        (BoundMethodKey_){.obj = obj, .func = func},
+                        sizeof(BoundMethodKey_), fn_ref);
+}
+
+void heap_forget_bound_method(Heap *heap, const Object *obj, const void *func,
+                              const Object *fn_ref) {
+  const BoundMethodKey_ key = {.obj = obj, .func = func};
+  if (fn_ref == BoundMethodMap_find(&heap->bound_methods, key,
+                                    sizeof(BoundMethodKey_), NULL)) {
+    BoundMethodMap_remove(&heap->bound_methods, key, sizeof(BoundMethodKey_),
+                          NULL);
+  }
 }
 
 void heap_delete(Heap *heap) {
   ASSERT(heap != NULL);
   mgraph_finalize(&heap->mg);
+  BoundMethodMap_finalize(&heap->bound_methods);
   arena_clear(&heap->object_arena);
   RELEASE(heap);
 }

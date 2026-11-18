@@ -61,6 +61,9 @@ struct __Scope {
   // Where its function's slots start in the frame's slot stack. Block scopes
   // share their function's.
   uint32_t slot_base;
+  // For a call made with its arguments on the stack (ARGS), how many there
+  // are, until its ARGC takes them.
+  uint16_t stack_args;
   // Whether this is the scope of a block in a function, such as a `try`, rather
   // than the function's own. Variables are function-wide, so a block's are
   // created in its function's scope.
@@ -112,6 +115,8 @@ struct __Frame {
   // The slots of the calls running in this frame, each call's after its
   // caller's.
   SlotStack slots;
+  // How many arguments ARGS left on the stack for the call that follows.
+  uint16_t pending_args;
 
   Frame *parent_frame;
 

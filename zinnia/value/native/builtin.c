@@ -295,13 +295,7 @@ Value is_bool_(Frame *frame, Scope *ctx, Object *obj, Value *args) {
 
 Object *wrap_function_in_ref2_(const Function *f, Object *obj, Frame *frame,
                                Scope *ctx) {
-  Object *fn_ref = heap_new(frame->parent_isolate->heap, Class_FunctionRef);
-  function_ref_init__(fn_ref, obj, f, f->_is_anon ? ctx : NULL,
-                      frame->parent_isolate->heap);
-  if (f->_is_anon) {
-    scope_capture(ctx, fn_ref, frame->parent_isolate->heap);
-  }
-  return fn_ref;
+  return wrap_function_in_ref(f, obj, frame->parent_isolate->heap, ctx);
 }
 
 // volatile int tmp = 0;
