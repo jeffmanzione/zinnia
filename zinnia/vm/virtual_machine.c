@@ -1842,6 +1842,46 @@ bool _attemp_catch_error(Frame *frame, Scope *ctx) {
 }
 
 // Please forgive me father, for I have sinned.
+// With GCC or Clang, each instruction jumps straight to its handler through a
+// table of label addresses, which is faster than a switch: there's no bounds
+// check, and each handler has a jump of its own to the next instruction, which
+// the CPU predicts on its own. Other compilers, or defining
+// VM_NO_COMPUTED_GOTO, use the switch.
+#if defined(__GNUC__) && !defined(VM_NO_COMPUTED_GOTO)
+#define VM_COMPUTED_GOTO
+#endif
+#ifdef VM_COMPUTED_GOTO
+#define VM_CASE(op) op_##op
+#define VM_DEFAULT op_default
+#else
+#define VM_CASE(op) case op
+#define VM_DEFAULT default
+#endif
+// Ends an instruction's handler, going on to the next instruction. With
+// computed gotos, the handler fetches and jumps to it itself, unless garbage is
+// due to be collected or an error was raised. A DEBUG build always goes
+// through the top of the loop, which traces each instruction.
+#if defined(VM_COMPUTED_GOTO) && !defined(DEBUG)
+#define VM_NEXT                                          \
+  do {                                                   \
+    scope->ins++;                                        \
+    if (++since_gc_check >= INSTRUCTIONS_PER_GC_CHECK || \
+        NULL != scope->error) {                          \
+      goto instruction_done;                             \
+    }                                                    \
+    ins = scope_ins(scope);                              \
+    goto *dispatch[(unsigned char)ins->op];              \
+  } while (0)
+#else
+#define VM_NEXT goto next_instruction
+#endif
+// Each build jumps to only one of the labels at the end of the loop.
+#ifdef __GNUC__
+#define VM_MAYBE_UNUSED_LABEL __attribute__((unused))
+#else
+#define VM_MAYBE_UNUSED_LABEL
+#endif
+
 FrameState vm_execute_frame(VM *vm, Frame *frame) {
   frame->state = FRAME_RUNNING;
   frame->wait_reason = NOT_WAITING;
@@ -1851,6 +1891,9 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
   }
   Scope *scope = frame->current;
   Isolate *const isolate = frame->parent_isolate;
+  // Kept in a local while the frame runs, which the compiler can hold in a
+  // register, and saved when it stops.
+  uint32_t since_gc_check = isolate->instructions_since_gc_check;
 
   if (frame->child_frame_has_error) {
     const Value *error_e = frame_get_acc(frame);
@@ -1881,54 +1924,128 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
       fflush(stdout);
     });
 #endif
+    // The handlers are kept from clang-format, which takes VM_CASE() for an
+    // expression.
+    // clang-format off
+#ifdef VM_COMPUTED_GOTO
+    static const void *const dispatch[256] = {
+        [0 ... 255] = &&op_default,
+        [RES] = &&op_RES,
+        [IRES] = &&op_IRES,
+        [RNIL] = &&op_RNIL,
+        [PUSH] = &&op_PUSH,
+        [IPSH] = &&op_IPSH,
+        [PNIL] = &&op_PNIL,
+        [PSRS] = &&op_PSRS,
+        [PEEK] = &&op_PEEK,
+        [DUP] = &&op_DUP,
+        [FLD] = &&op_FLD,
+        [LET] = &&op_LET,
+        [SET] = &&op_SET,
+        [SETC] = &&op_SETC,
+        [MSET] = &&op_MSET,
+        [GET] = &&op_GET,
+        [GTSH] = &&op_GTSH,
+        [CALL] = &&op_CALL,
+        [CLLN] = &&op_CLLN,
+        [RET] = &&op_RET,
+        [NBLK] = &&op_NBLK,
+        [SLOTS] = &&op_SLOTS,
+        [ARGS] = &&op_ARGS,
+        [ARGC] = &&op_ARGC,
+        [BBLK] = &&op_BBLK,
+        [JMP] = &&op_JMP,
+        [IF] = &&op_IF,
+        [IFN] = &&op_IFN,
+        [EXIT] = &&op_EXIT,
+        [ADD] = &&op_ADD,
+        [SUB] = &&op_SUB,
+        [MULT] = &&op_MULT,
+        [DIV] = &&op_DIV,
+        [MOD] = &&op_MOD,
+        [INC] = &&op_INC,
+        [DEC] = &&op_DEC,
+        [AND] = &&op_AND,
+        [OR] = &&op_OR,
+        [BAND] = &&op_BAND,
+        [BXOR] = &&op_BXOR,
+        [BOR] = &&op_BOR,
+        [LT] = &&op_LT,
+        [GT] = &&op_GT,
+        [LTE] = &&op_LTE,
+        [GTE] = &&op_GTE,
+        [EQ] = &&op_EQ,
+        [NEQ] = &&op_NEQ,
+        [IS] = &&op_IS,
+        [NOT] = &&op_NOT,
+        [ANEW] = &&op_ANEW,
+        [AIDX] = &&op_AIDX,
+        [ASET] = &&op_ASET,
+        [TUPL] = &&op_TUPL,
+        [TLEN] = &&op_TLEN,
+        [TGET] = &&op_TGET,
+        [TGTE] = &&op_TGTE,
+        [CTCH] = &&op_CTCH,
+        [RAIS] = &&op_RAIS,
+        [LMDL] = &&op_LMDL,
+        [WAIT] = &&op_WAIT,
+        [RTRU] = &&op_RTRU,
+        [PTRU] = &&op_PTRU,
+        [RFLS] = &&op_RFLS,
+        [PFLS] = &&op_PFLS,
+    };
+    goto *dispatch[(unsigned char)ins->op];
+    {
+#else
     switch (ins->op) {
-      case RES:
-      case IRES:
+#endif
+      VM_CASE(RES):
+      VM_CASE(IRES):
         _execute_RES(vm, frame, scope, ins);
-        break;
-      case RNIL:
+        VM_NEXT;
+      VM_CASE(RNIL):
         _execute_RNIL(vm, frame, scope, ins);
-        break;
-      case PUSH:
-      case IPSH:
+        VM_NEXT;
+      VM_CASE(PUSH):
+      VM_CASE(IPSH):
         _execute_PUSH(vm, frame, scope, ins);
-        break;
-      case PNIL:
+        VM_NEXT;
+      VM_CASE(PNIL):
         _execute_PNIL(vm, frame, scope, ins);
-        break;
-      case PSRS:
+        VM_NEXT;
+      VM_CASE(PSRS):
         _execute_PUSH(vm, frame, scope, ins);
         *frame_mutable_acc(frame) = *frame_peekstack(frame);
-        break;
-      case PEEK:
+        VM_NEXT;
+      VM_CASE(PEEK):
         _execute_PEEK(vm, frame, scope, ins);
-        break;
-      case DUP:
+        VM_NEXT;
+      VM_CASE(DUP):
         _execute_DUP(vm, frame, scope, ins);
-        break;
-      case FLD:
+        VM_NEXT;
+      VM_CASE(FLD):
         _execute_FLD(vm, frame, scope, ins);
-        break;
-      case LET:
+        VM_NEXT;
+      VM_CASE(LET):
         _execute_LET(vm, frame, scope, ins);
-        break;
-      case SET:
+        VM_NEXT;
+      VM_CASE(SET):
         _execute_SET(vm, frame, scope, ins);
-        break;
-      case SETC:
+        VM_NEXT;
+      VM_CASE(SETC):
         _execute_SETC(vm, frame, scope, ins);
-        break;
-      case MSET:
+        VM_NEXT;
+      VM_CASE(MSET):
         _execute_MSET(vm, frame, scope, ins);
-        break;
-      case GET:
+        VM_NEXT;
+      VM_CASE(GET):
         _execute_GET(vm, frame, scope, ins);
-        break;
-      case GTSH:
+        VM_NEXT;
+      VM_CASE(GTSH):
         _execute_GTSH(vm, frame, scope, ins);
-        break;
-      case CALL:
-      case CLLN:
+        VM_NEXT;
+      VM_CASE(CALL):
+      VM_CASE(CLLN):
         if (_execute_CALL(vm, frame, scope, ins)) {
           scope->ins++;
           if (_switched_scope(frame, &scope)) {
@@ -1938,8 +2055,8 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           frame->wait_reason = WAITING_ON_FN_CALL;
           goto end_of_loop;
         }
-        break;
-      case RET:
+        VM_NEXT;
+      VM_CASE(RET):
         _execute_RET(vm, frame, scope, ins);
         if (_return_in_frame(frame, scope)) {
           scope = frame->current;
@@ -1948,17 +2065,17 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         frame->state = FRAME_COMPLETE;
         scope->ins++;
         goto end_of_loop;
-      case NBLK:
+      VM_CASE(NBLK):
         scope = _execute_NBLK(vm, frame, scope, ins);
         scope->is_block = true;
-        break;
-      case SLOTS:
+        VM_NEXT;
+      VM_CASE(SLOTS):
         scope_add_slots(scope, ins->slot);
-        break;
-      case ARGS:
+        VM_NEXT;
+      VM_CASE(ARGS):
         frame->pending_args = (uint16_t)pint(&ins->val);
-        break;
-      case ARGC:
+        VM_NEXT;
+      VM_CASE(ARGC):
         if (scope->stack_args > 0 && scope->stack_args == pint(&ins->val)) {
           scope->stack_args = 0;
           *frame_mutable_acc(frame) = TRUE_VALUE;
@@ -1966,68 +2083,68 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           *frame_pushstack(frame) = *frame_get_acc(frame);
           *frame_mutable_acc(frame) = FALSE_VALUE;
         }
-        break;
-      case BBLK:
+        VM_NEXT;
+      VM_CASE(BBLK):
         scope = _execute_BBLK(vm, frame, scope, ins);
-        break;
-      case JMP:
+        VM_NEXT;
+      VM_CASE(JMP):
         _execute_JMP(vm, frame, scope, ins);
-        break;
-      case IF:
-      case IFN:
+        VM_NEXT;
+      VM_CASE(IF):
+      VM_CASE(IFN):
         _execute_IF(vm, frame, scope, ins);
-        break;
-      case EXIT:
+        VM_NEXT;
+      VM_CASE(EXIT):
         _execute_EXIT(vm, frame, scope, ins);
         goto end_of_loop;
-      case ADD:
+      VM_CASE(ADD):
         _execute_ADD_with_string(vm, frame, scope, ins);
-        break;
-      case SUB:
+        VM_NEXT;
+      VM_CASE(SUB):
         _execute_SUB(vm, frame, scope, ins);
-        break;
-      case MULT:
+        VM_NEXT;
+      VM_CASE(MULT):
         _execute_MULT(vm, frame, scope, ins);
-        break;
-      case DIV:
+        VM_NEXT;
+      VM_CASE(DIV):
         _execute_DIV(vm, frame, scope, ins);
-        break;
-      case MOD:
+        VM_NEXT;
+      VM_CASE(MOD):
         _execute_MOD(vm, frame, scope, ins);
-        break;
-      case INC:
-      case DEC:
+        VM_NEXT;
+      VM_CASE(INC):
+      VM_CASE(DEC):
         _execute_INC(vm, frame, scope, ins);
-        break;
-      case AND:
+        VM_NEXT;
+      VM_CASE(AND):
         _execute_AND(vm, frame, scope, ins);
-        break;
-      case OR:
+        VM_NEXT;
+      VM_CASE(OR):
         _execute_OR(vm, frame, scope, ins);
-        break;
-      case BAND:
+        VM_NEXT;
+      VM_CASE(BAND):
         _execute_BAND(vm, frame, scope, ins);
-        break;
-      case BXOR:
+        VM_NEXT;
+      VM_CASE(BXOR):
         _execute_BXOR(vm, frame, scope, ins);
-        break;
-      case BOR:
+        VM_NEXT;
+      VM_CASE(BOR):
         _execute_BOR_with_obj(vm, frame, scope, ins);
-        break;
-      case LT:
+        VM_NEXT;
+      VM_CASE(LT):
         _execute_LT(vm, frame, scope, ins);
-        break;
-      case GT:
+        VM_NEXT;
+      VM_CASE(GT):
         _execute_GT(vm, frame, scope, ins);
-        break;
-      case LTE:
+        VM_NEXT;
+      VM_CASE(LTE):
         _execute_LTE(vm, frame, scope, ins);
-        break;
-      case GTE:
+        VM_NEXT;
+      VM_CASE(GTE):
         _execute_GTE(vm, frame, scope, ins);
-        break;
-      case EQ:
-      case NEQ:
+        VM_NEXT;
+      VM_CASE(EQ):
+      VM_CASE(NEQ):
         if (_execute_EQ(vm, frame, scope, ins)) {
           scope->ins++;
           if (_switched_scope(frame, &scope)) {
@@ -2037,17 +2154,17 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           frame->wait_reason = WAITING_ON_FN_CALL;
           goto end_of_loop;
         }
-        break;
-      case IS:
+        VM_NEXT;
+      VM_CASE(IS):
         _execute_IS(vm, frame, scope, ins);
-        break;
-      case NOT:
+        VM_NEXT;
+      VM_CASE(NOT):
         _execute_NOT(vm, frame, scope, ins);
-        break;
-      case ANEW:
+        VM_NEXT;
+      VM_CASE(ANEW):
         _execute_ANEW(vm, frame, scope, ins);
-        break;
-      case AIDX:
+        VM_NEXT;
+      VM_CASE(AIDX):
         if (_execute_AIDX(vm, frame, scope, ins)) {
           scope->ins++;
           if (_switched_scope(frame, &scope)) {
@@ -2057,8 +2174,8 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           frame->wait_reason = WAITING_ON_FN_CALL;
           goto end_of_loop;
         }
-        break;
-      case ASET:
+        VM_NEXT;
+      VM_CASE(ASET):
         if (_execute_ASET(vm, frame, scope, ins)) {
           scope->ins++;
           if (_switched_scope(frame, &scope)) {
@@ -2068,26 +2185,26 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           frame->wait_reason = WAITING_ON_FN_CALL;
           goto end_of_loop;
         }
-        break;
-      case TUPL:
+        VM_NEXT;
+      VM_CASE(TUPL):
         _execute_TUPL(vm, frame, scope, ins);
-        break;
-      case TLEN:
+        VM_NEXT;
+      VM_CASE(TLEN):
         _execute_TLEN(vm, frame, scope, ins);
-        break;
-      case TGET:
+        VM_NEXT;
+      VM_CASE(TGET):
         _execute_TGET(vm, frame, scope, ins);
-        break;
-      case TGTE:
+        VM_NEXT;
+      VM_CASE(TGTE):
         _execute_TGTE(vm, frame, scope, ins);
-        break;
-      case CTCH:
+        VM_NEXT;
+      VM_CASE(CTCH):
         _execute_CTCH(vm, frame, scope, ins);
-        break;
-      case RAIS:
+        VM_NEXT;
+      VM_CASE(RAIS):
         _execute_RAIS(vm, frame, scope);
-        break;
-      case LMDL:
+        VM_NEXT;
+      VM_CASE(LMDL):
         switch (_execute_LMDL(vm, frame, scope, ins)) {
           case MODULE_READY:
             break;
@@ -2102,43 +2219,50 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
             scope->ins++;
             goto end_of_loop;
         }
-        break;
-      case WAIT:
+        VM_NEXT;
+      VM_CASE(WAIT):
         if (_execute_WAIT(vm, frame, scope, ins)) {
           frame->state = FRAME_WAITING;
           frame->wait_reason = WAITING_ON_FUTURE;
           scope->ins++;
           goto end_of_loop;
         }
-        break;
-      case RTRU:
+        VM_NEXT;
+      VM_CASE(RTRU):
         _execute_RTRU(vm, frame, scope, ins);
-        break;
-      case PTRU:
+        VM_NEXT;
+      VM_CASE(PTRU):
         _execute_PTRU(vm, frame, scope, ins);
-        break;
-      case RFLS:
+        VM_NEXT;
+      VM_CASE(RFLS):
         _execute_RFLS(vm, frame, scope, ins);
-        break;
-      case PFLS:
+        VM_NEXT;
+      VM_CASE(PFLS):
         _execute_PFLS(vm, frame, scope, ins);
-        break;
-      default:
+        VM_NEXT;
+      VM_DEFAULT:
         FATALF("Unknown instruction: %s", op_to_str(ins->op));
     }
+    // clang-format on
+  next_instruction:
+    VM_MAYBE_UNUSED_LABEL;
     scope->ins++;
+    ++since_gc_check;
+  instruction_done:
+    VM_MAYBE_UNUSED_LABEL;
     // Collects garbage now and then while a frame runs, not only once the
     // isolate has nothing left to run, so a long computation doesn't keep all
     // it ever allocated. Between instructions everything live is reachable
     // from the frame.
-    if (++isolate->instructions_since_gc_check >= INSTRUCTIONS_PER_GC_CHECK) {
-      isolate->instructions_since_gc_check = 0;
+    if (since_gc_check >= INSTRUCTIONS_PER_GC_CHECK) {
+      since_gc_check = 0;
       if (isolate_maybe_collect_garbage(isolate)) {
         FATALF("MEMORY LIMIT EXCEEDED");
       }
     }
   }
 end_of_loop:
+  isolate->instructions_since_gc_check = since_gc_check;
   return frame->state;
 }
 
