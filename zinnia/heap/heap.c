@@ -270,16 +270,24 @@ void heap_make_root(Heap *heap, Object *obj) {
   objectlist_push_(&heap->roots, obj);
 }
 
+// Inserts [key] into [obj]'s members. Their storage is made on the first
+// insert, since most objects (Strings, Arrays, Tuples and the like) never get
+// a member. Until then lookups, iteration and finalizing find nothing.
+static void members_insert_(Object *obj, const char key[], Value **entry) {
+  if (NULL == obj->_members.arr.blocks) {
+    ValueMapValueArray_init(&obj->_members.arr);
+  }
+  ValueMap_insert(&obj->_members, key, sizeof(char *), entry);
+}
+
 void object_set_member(Heap *heap, Object *parent, const char key[],
                        const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
   Value *entry_pos;
-  const bool was_insert =
-      ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
+  members_insert_(parent, key, &entry_pos);
   ASSERT(entry_pos != NULL);
-  (void)was_insert;
   (*entry_pos) = *child;
 }
 
@@ -289,8 +297,7 @@ Value *object_set_member_obj(Heap *heap, Object *parent, const char key[],
   ASSERT(parent != NULL);
   ASSERT(child != NULL);
   Value *entry_pos;
-
-  ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
+  members_insert_(parent, key, &entry_pos);
   ASSERT(entry_pos != NULL);
   entry_pos->type = OBJECT;
   entry_pos->obj = (Object *)child;
@@ -304,8 +311,10 @@ Object *object_create_(Heap *heap, const Class *class) {
   object->_class = class;
   object->_gc_marked = false;
   object->_refs = NULL;
-  ValueMap_init(&object->_members, hash_interned_string,
-                compare_interned_strings);
+  // The members' storage is made by members_insert_().
+  object->_members.arr = (ValueMapValueArray){0};
+  ValueMapKVMap_init(&object->_members.map, hash_interned_string,
+                     compare_interned_strings);
   if (NULL != class->_init_fn) {
     class->_init_fn(object);
   }

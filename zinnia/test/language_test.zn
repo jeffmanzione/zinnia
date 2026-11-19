@@ -735,3 +735,38 @@ class ArgumentTest {
     expect([_pair(1, 2), _pair(3, 4)], [(1, 2), (3, 4)])
   }
 }
+
+class CacheA {
+  method name() 'a'
+}
+
+class CacheB {
+  method name() 'b'
+}
+
+class CacheC : CacheB {}
+
+class CacheD : CacheA {
+  method name() 'd'
+}
+
+@test.TestClass
+class MethodCacheTest {
+  @test.Test
+  method test_one_call_site_sees_several_classes() {
+    ; A call remembers the method it found, so the same call on an object of
+    ; another class must still find that class's method.
+    names = []
+    for (_, o) in [CacheA(), CacheB(), CacheA(), CacheC(), CacheD(), CacheA()] {
+      names.append(o.name())
+    }
+    expect(names, ['a', 'b', 'a', 'b', 'd', 'a'])
+  }
+
+  @test.Test
+  method test_subclass_after_superclass() {
+    names = []
+    for (_, o) in [CacheA(), CacheD(), CacheB(), CacheC()] names.append(o.name())
+    expect(names, ['a', 'd', 'b', 'b'])
+  }
+}

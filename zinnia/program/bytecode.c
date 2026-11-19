@@ -34,20 +34,6 @@ IMPL_ARRAYLIKE(ClassRefPtrArray, ClassRef *);
 IMPL_STABLE_MAPLIKE(FunctionRefMap, char *, FunctionRef);
 IMPL_STABLE_MAPLIKE(FieldRefMap, char *, FieldRef);
 
-struct Bytecode_ {
-  const char *module_name;
-  InstructionArray ins;
-
-  SourceMappingArray source_map;
-  CharPtrArray source_lines;
-  char *external_source_fn;
-
-  ClassRefMap class_refs;
-  FunctionRefMap func_refs;
-
-  ClassRef *current_class;
-};
-
 void classref_init_(ClassRef *ref, const char name[]);
 void classref_finalize_(ClassRef *ref);
 
@@ -195,13 +181,6 @@ void bytecode_field(Bytecode *bytecode, const char *field) {
         field);
   }
   field_ref_init_(ref, field);
-}
-
-const Instruction *bytecode_get(const Bytecode *bytecode, uint32_t index) {
-  ASSERT(bytecode != NULL);
-  ASSERT(index >= 0);
-  ASSERT(index < bytecode_size(bytecode));
-  return InstructionArray_get_ref_unchecked(&bytecode->ins, index);
 }
 
 Instruction *bytecode_get_mutable(Bytecode *bytecode, uint32_t index) {

@@ -41,65 +41,88 @@ bool isolate_maybe_collect_garbage(Isolate *isolate);
 bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
                          Object *self, Scope *parent_scope);
 void _mark_frame_complete(Isolate *isolate, Frame *frame, bool should_push);
-void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_RNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_PNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_DUP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_FLD(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_GET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_GTSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-Scope *_execute_NBLK(VM *vm, Frame *frame, Scope *scope,
-                     const Instruction *ins);
-Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
-                     const Instruction *ins);
-void _execute_EXIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_JMP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_IF(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_NOT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
-bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins);
+static void _execute_RES(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_PUSH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_RNIL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_PNIL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_PEEK(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_DUP(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_FLD(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_LET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_SET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_GET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_GTSH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static bool _execute_CALL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_RET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static Scope *_execute_NBLK(VM *vm, Frame *frame, Scope *scope,
+                            const Instruction *ins);
+static Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
+                            const Instruction *ins);
+static void _execute_EXIT(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_JMP(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_IF(VM *vm, Frame *frame, Scope *scope,
+                        const Instruction *ins);
+static void _execute_NOT(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins);
+static void _execute_ANEW(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static bool _execute_ASET(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_TUPL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
+static void _execute_IS(VM *vm, Frame *frame, Scope *scope,
+                        const Instruction *ins);
+static bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins);
 
-#define MATH_OP(op, symbol)                                                   \
-  Primitive _execute_primitive_##op(const Primitive *p1, const Primitive *p2, \
-                                    const char **error) {                     \
-    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {         \
-      *error = "Operator '" #symbol "' is not valid for Bool values.";        \
-      return primitive_int(0);                                                \
-    }                                                                         \
-    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {       \
-      return primitive_float(float_of(p1) symbol float_of(p2));               \
-    }                                                                         \
-    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {           \
-      return primitive_int(int_of(p1) symbol int_of(p2));                     \
-    }                                                                         \
-    return primitive_int(char_of(p1) symbol char_of(p2));                     \
+#define MATH_OP(op, symbol)                                             \
+  static Primitive _execute_primitive_##op(                             \
+      const Primitive *p1, const Primitive *p2, const char **error) {   \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
+      *error = "Operator '" #symbol "' is not valid for Bool values.";  \
+      return primitive_int(0);                                          \
+    }                                                                   \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) { \
+      return primitive_float(float_of(p1) symbol float_of(p2));         \
+    }                                                                   \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {     \
+      return primitive_int(int_of(p1) symbol int_of(p2));               \
+    }                                                                   \
+    return primitive_int(char_of(p1) symbol char_of(p2));               \
   }
 
-#define MATH_OP_INT(op, symbol)                                               \
-  Primitive _execute_primitive_##op(const Primitive *p1, const Primitive *p2, \
-                                    const char **error) {                     \
-    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {         \
-      *error = "Operator '" #symbol "' is not valid for Bool values.";        \
-      return primitive_int(0);                                                \
-    }                                                                         \
-    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) {       \
-      *error = "Operator '" #symbol "' is not valid for Float values.";       \
-      return primitive_int(0);                                                \
-    }                                                                         \
-    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {           \
-      return primitive_int(int_of(p1) symbol int_of(p2));                     \
-    }                                                                         \
-    return primitive_int(char_of(p1) symbol char_of(p2));                     \
+#define MATH_OP_INT(op, symbol)                                         \
+  static Primitive _execute_primitive_##op(                             \
+      const Primitive *p1, const Primitive *p2, const char **error) {   \
+    if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
+      *error = "Operator '" #symbol "' is not valid for Bool values.";  \
+      return primitive_int(0);                                          \
+    }                                                                   \
+    if (PRIMITIVE_FLOAT == ptype(p1) || PRIMITIVE_FLOAT == ptype(p2)) { \
+      *error = "Operator '" #symbol "' is not valid for Float values."; \
+      return primitive_int(0);                                          \
+    }                                                                   \
+    if (PRIMITIVE_INT == ptype(p1) || PRIMITIVE_INT == ptype(p2)) {     \
+      return primitive_int(int_of(p1) symbol int_of(p2));               \
+    }                                                                   \
+    return primitive_int(char_of(p1) symbol char_of(p2));               \
   }
 
 typedef Primitive (*PrimitiveOpFn)(const Primitive *, const Primitive *,
@@ -122,8 +145,8 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
 
 #define PRIMITIVE_OP(op, symbol, math_fn)                                      \
   math_fn;                                                                     \
-  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                       \
-                     const Instruction *ins) {                                 \
+  static void _execute_##op(VM *vm, Frame *frame, Scope *scope,                \
+                            const Instruction *ins) {                          \
     const Value *acc, *lookup;                                                 \
     Value first, second, tmp;                                                  \
     switch (ins->type) {                                                       \
@@ -185,8 +208,8 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
 
 #define PRIMITIVE_BOOL_OP(op, symbol, math_fn)                             \
   math_fn;                                                                 \
-  void _execute_##op(VM *vm, Frame *frame, Scope *scope,                   \
-                     const Instruction *ins) {                             \
+  static void _execute_##op(VM *vm, Frame *frame, Scope *scope,            \
+                            const Instruction *ins) {                      \
     const Value *acc, *lookup;                                             \
     Value first, second, tmp;                                              \
     Primitive result;                                                      \
@@ -258,8 +281,9 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
 PRIMITIVE_OP(ADD, +, MATH_OP(ADD, +));
 PRIMITIVE_OP(SUB, -, MATH_OP(SUB, -));
 PRIMITIVE_OP(MULT, *, MATH_OP(MULT, *));
-Primitive _execute_primitive_DIV(const Primitive *p1, const Primitive *p2,
-                                 const char **error) {
+static Primitive _execute_primitive_DIV(const Primitive *p1,
+                                        const Primitive *p2,
+                                        const char **error) {
   if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {
     *error = "Operator '/' is not valid for Bool values.";
     return primitive_int(0);
@@ -278,8 +302,9 @@ PRIMITIVE_BOOL_OP(LT, <, MATH_OP(LT, <));
 PRIMITIVE_BOOL_OP(GT, >, MATH_OP(GT, >));
 PRIMITIVE_BOOL_OP(LTE, <=, MATH_OP(LTE, <=));
 PRIMITIVE_BOOL_OP(GTE, >=, MATH_OP(GTE, >=));
-Primitive _execute_primitive_MOD(const Primitive *p1, const Primitive *p2,
-                                 const char **error) {
+static Primitive _execute_primitive_MOD(const Primitive *p1,
+                                        const Primitive *p2,
+                                        const char **error) {
   if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {
     *error = "Operator '%' is not valid for Bool values.";
     return primitive_int(0);
@@ -318,8 +343,8 @@ Value string_concat(Frame *frame, const Value *s1, const Value *s2) {
   return value_object(new);
 }
 
-void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
-                              const Instruction *ins) {
+static void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
+                                     const Instruction *ins) {
   if (INSTRUCTION_NO_ARG == ins->type) {
     const Value *first_ptr = frame_peekstack_n(frame, 1);
     const Value *second_ptr = frame_peekstack(frame);
@@ -345,7 +370,8 @@ void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
   _execute_ADD(vm, frame, scope, ins);
 }
 
-void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_INC(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   const int inc_amount = ins->op == INC ? 1 : -1;
   Value tmp;
   Value *stored = scope_lookup_ins(scope, ins, &tmp);
@@ -373,8 +399,8 @@ void _execute_INC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_mutable_acc(frame) = *stored;
 }
 
-void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
-                           const Instruction *ins) {
+static void _execute_BOR_with_obj(VM *vm, Frame *frame, Scope *scope,
+                                  const Instruction *ins) {
   Value first, second;
   const Value *tmp;
   switch (ins->type) {
@@ -540,7 +566,8 @@ static bool _execute_EQ_values(Frame *frame, Scope *scope, bool is_eq,
   return false;
 }
 
-bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_EQ(VM *vm, Frame *frame, Scope *scope,
+                        const Instruction *ins) {
   const bool is_eq = EQ == ins->op;
   Value lhs, rhs, tmp;
   const Value *lookup;
@@ -565,7 +592,8 @@ bool _execute_EQ(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return _execute_EQ_values(frame, scope, is_eq, &lhs, &rhs);
 }
 
-void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_RES(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   Value *member;
   Value tmp;
   Object *str;
@@ -592,7 +620,8 @@ void _execute_RES(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_PEEK(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Value *member;
   Value tmp;
   switch (ins->type) {
@@ -611,7 +640,8 @@ void _execute_PEEK(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_DUP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_DUP(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for DUP.", ins->type);
   }
@@ -619,7 +649,8 @@ void _execute_DUP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_pushstack(frame) = peek;
 }
 
-void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_PUSH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Object *str;
   Value *member;
   Value tmp;
@@ -647,49 +678,56 @@ void _execute_PUSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_PNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_PNIL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PNIL.", ins->type);
   }
   *frame_pushstack(frame) = NONE_VALUE;
 }
 
-void _execute_RNIL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_RNIL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RNIL.", ins->type);
   }
   *frame_mutable_acc(frame) = NONE_VALUE;
 }
 
-void _execute_PTRU(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_PTRU(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PTRU.", ins->type);
   }
   *frame_pushstack(frame) = TRUE_VALUE;
 }
 
-void _execute_RTRU(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_RTRU(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RTRU.", ins->type);
   }
   *frame_mutable_acc(frame) = TRUE_VALUE;
 }
 
-void _execute_PFLS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_PFLS(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for PFLS.", ins->type);
   }
   *frame_pushstack(frame) = FALSE_VALUE;
 }
 
-void _execute_RFLS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_RFLS(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for RFLS.", ins->type);
   }
   *frame_mutable_acc(frame) = FALSE_VALUE;
 }
 
-void _execute_FLD(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_FLD(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for FLD.", ins->type);
   }
@@ -704,7 +742,8 @@ void _execute_FLD(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   object_set_member(frame->parent_isolate->heap, acc->obj, ins->id, &obj);
 }
 
-void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_LET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
       scope_let_ins(scope, ins, frame_get_acc(frame));
@@ -714,7 +753,8 @@ void _execute_LET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_SET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
       if (!scope_set_ins(scope, ins, frame_get_acc(scope->parent_frame))) {
@@ -726,7 +766,8 @@ void _execute_SET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_SETC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_SETC(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
       if (!scope_let_const_ins(scope, ins,
@@ -739,7 +780,8 @@ void _execute_SETC(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_MSET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_MSET(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Value tmp;
   Value *mdl = scope_lookup(scope, TMP_MODULE_HOLDER, &tmp);
   if (!IS_CLASS(mdl, Class_Module)) {
@@ -760,7 +802,8 @@ void _execute_MSET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_GET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_GET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for GET.", ins->type);
   }
@@ -774,7 +817,8 @@ void _execute_GET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       e->obj, ins->id, frame->parent_isolate->heap, scope);
 }
 
-void _execute_GTSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_GTSH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_ID != ins->type) {
     FATALF("Invalid arg type=%d for GTSH.", ins->type);
   }
@@ -789,8 +833,8 @@ void _execute_GTSH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_pushstack(frame) = get_result;
 }
 
-Scope *_execute_as_new_frame(Frame *frame, Object *self, Module *m,
-                             uint32_t ins_pos) {
+static Scope *_execute_as_new_frame(Frame *frame, Object *self, Module *m,
+                                    uint32_t ins_pos) {
   Frame *new_frame = isolate_create_unqueued_frame(frame->parent_isolate);
   new_frame->parent_frame = frame;
   Scope *ctx = frame_create_scope(new_frame, self, m, ins_pos);
@@ -806,7 +850,7 @@ typedef struct {
 } BlockingCallArgs;
 
 // Runs on a thread of the blocking pool.
-void _execute_blocking(BlockingCallArgs *args) {
+static void _execute_blocking(BlockingCallArgs *args) {
   NativeFn native_fn = (NativeFn)args->func->_native_fn;
   native_set_blocking_frame(args->frame);
   Value result = native_fn(args->frame, args->scope, args->self,
@@ -818,7 +862,7 @@ void _execute_blocking(BlockingCallArgs *args) {
 }
 
 // Runs on a thread of the blocking pool.
-void _execute_blocking_callback(BlockingCallArgs *args) {
+static void _execute_blocking_callback(BlockingCallArgs *args) {
   Isolate *isolate = args->frame->parent_isolate;
   // Holds the heap lock so the isolate's garbage collector cannot run while
   // the frame, and its result, are in none of the isolate's frame sets.
@@ -1175,6 +1219,29 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   return true;
 }
 
+// The method [ins] called last, if it's still the one to call on [class]:
+// a method of [class] itself with [ins]'s name.
+static inline const Function *_cached_method_(const Instruction *ins,
+                                              const Class *class) {
+  const Function *func =
+      (const Function *)__atomic_load_n(&ins->method_cache, __ATOMIC_ACQUIRE);
+  return (NULL != func && func->_parent_class == class &&
+          func->_name == ins->id)
+             ? func
+             : NULL;
+}
+
+static inline void _cache_method_(const Instruction *ins, const Function *func,
+                                  const Class *class) {
+  // Only a method of the class itself is kept: an inherited one could be
+  // overridden in the next object's class, and the check above compares the
+  // cached method's own class.
+  if (func->_parent_class == class) {
+    __atomic_store_n(&((Instruction *)ins)->method_cache, (const void *)func,
+                     __ATOMIC_RELEASE);
+  }
+}
+
 bool _call_method(Frame *frame, Object *obj, Scope *scope,
                   const Instruction *ins) {
   ASSERT(obj != NULL);
@@ -1188,7 +1255,13 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
     const Value *member = object_get(obj, ins->id);
     const Function *func = NULL;
     if (NULL == member) {
-      func = class_get_function(class, ins->id);
+      func = _cached_method_(ins, class);
+      if (NULL == func) {
+        func = class_get_function(class, ins->id);
+        if (NULL != func) {
+          _cache_method_(ins, func, class);
+        }
+      }
     } else if (OBJECT == member->type &&
                Class_Function == member->obj->_class) {
       func = member->obj->_function_obj;
@@ -1229,7 +1302,8 @@ bool _call_function(Frame *frame, Scope *scope, Function *func) {
                              scope);
 }
 
-bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_CALL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Value fn;
   if (INSTRUCTION_ID == ins->type) {
     if (CLLN == ins->op) {
@@ -1305,7 +1379,8 @@ bool _execute_CALL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return _call_function(frame, scope, func);
 }
 
-bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   const Value *acc = frame_get_acc(frame);
   // Only wait for futures.
   if (!IS_CLASS(acc, Class_Future)) {
@@ -1328,7 +1403,8 @@ bool _execute_WAIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return false;
 }
 
-void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_RET(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   Value tmp;
   // if (NULL == task->parent_task) {
   //   return;
@@ -1348,8 +1424,8 @@ void _execute_RET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-Scope *_execute_NBLK(VM *vm, Frame *frame, Scope *scope,
-                     const Instruction *ins) {
+static Scope *_execute_NBLK(VM *vm, Frame *frame, Scope *scope,
+                            const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       return frame_create_scope(scope->parent_frame, scope->self.obj,
@@ -1360,8 +1436,8 @@ Scope *_execute_NBLK(VM *vm, Frame *frame, Scope *scope,
   return NULL;
 }
 
-Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
-                     const Instruction *ins) {
+static Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
+                            const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_NO_ARG:
       return frame_back_scope(frame);
@@ -1371,14 +1447,16 @@ Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
   return NULL;
 }
 
-void _execute_JMP(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_JMP(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for JMP.", ins->type);
   }
   scope->ins += ins->val._int_val;
 }
 
-void _execute_IF(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_IF(VM *vm, Frame *frame, Scope *scope,
+                        const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for IF.", ins->type);
   }
@@ -1389,7 +1467,8 @@ void _execute_IF(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_EXIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_EXIT(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE == ins->type) {
     // Implicit exit at the end of a module, which does not set the exit code.
     *frame_mutable_acc(frame) = value_primitive(ins->val);
@@ -1404,7 +1483,8 @@ void _execute_EXIT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   scope->ins++;
 }
 
-void _execute_NOT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_NOT(VM *vm, Frame *frame, Scope *scope,
+                         const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid arg type=%d for NOT.", ins->type);
   }
@@ -1412,7 +1492,8 @@ void _execute_NOT(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_mutable_acc(frame) = IS_FALSE(acc) ? TRUE_VALUE : FALSE_VALUE;
 }
 
-void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_ANEW(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_ID == ins->type) {
     FATALF("Invalid ANEW, ID type.");
   }
@@ -1432,7 +1513,8 @@ void _execute_ANEW(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Object *arr_obj;
   const Value *index = NULL;
   Value index_e;
@@ -1509,7 +1591,8 @@ bool _execute_AIDX(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return false;
 }
 
-bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_ASET(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   Value arr_value = frame_popstack(frame);
   Value new_val = frame_popstack(frame);
   const Value *index = frame_get_acc(frame);
@@ -1548,7 +1631,8 @@ bool _execute_ASET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return false;
 }
 
-void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_TUPL(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_ID == ins->type) {
     FATALF("Invalid TUPL, ID type.");
   }
@@ -1569,7 +1653,8 @@ void _execute_TUPL(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   }
 }
 
-void _execute_TLEN(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_TLEN(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Invalid TLEN type.");
   }
@@ -1582,7 +1667,8 @@ void _execute_TLEN(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
       value_int(tuple_size((Tuple *)e->obj->_internal_obj));
 }
 
-void _execute_TGTE(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_TGTE(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(frame, scope, "Invalid TLEN type.");
     return;
@@ -1604,7 +1690,8 @@ void _execute_TGTE(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_mutable_acc(frame) = tlen >= test_len ? TRUE_VALUE : FALSE_VALUE;
 }
 
-void _execute_TGET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_TGET(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type || PRIMITIVE_INT != ptype(&ins->val)) {
     raise_error(frame, scope, "Invalid TGET type.");
     return;
@@ -1629,7 +1716,8 @@ void _execute_TGET(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   *frame_mutable_acc(frame) = *tuple_get(t, index);
 }
 
-void _execute_IS(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static void _execute_IS(VM *vm, Frame *frame, Scope *scope,
+                        const Instruction *ins) {
   if (INSTRUCTION_NO_ARG != ins->type) {
     FATALF("Weird type for IS.");
   }
@@ -1673,7 +1761,8 @@ ModuleWait _execute_LMDL(VM *vm, Frame *frame, Scope *scope,
   return module_wait;
 }
 
-bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
+static bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope,
+                          const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for CTCH.", ins->type);
   }
@@ -1681,7 +1770,7 @@ bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope, const Instruction *ins) {
   return true;
 }
 
-void _execute_RAIS(VM *vm, Frame *frame, Scope *scope) {
+static void _execute_RAIS(VM *vm, Frame *frame, Scope *scope) {
   const Value *err = frame_get_acc(frame);
   if (OBJECT != err->type || !inherits_from(err->obj->_class, Class_Error)) {
     raise_error(frame, scope, "raise can only be invoked with an Error().");
@@ -1761,6 +1850,7 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
     return FRAME_COMPLETE;
   }
   Scope *scope = frame->current;
+  Isolate *const isolate = frame->parent_isolate;
 
   if (frame->child_frame_has_error) {
     const Value *error_e = frame_get_acc(frame);
@@ -2041,10 +2131,9 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
     // isolate has nothing left to run, so a long computation doesn't keep all
     // it ever allocated. Between instructions everything live is reachable
     // from the frame.
-    if (++frame->parent_isolate->instructions_since_gc_check >=
-        INSTRUCTIONS_PER_GC_CHECK) {
-      frame->parent_isolate->instructions_since_gc_check = 0;
-      if (isolate_maybe_collect_garbage(frame->parent_isolate)) {
+    if (++isolate->instructions_since_gc_check >= INSTRUCTIONS_PER_GC_CHECK) {
+      isolate->instructions_since_gc_check = 0;
+      if (isolate_maybe_collect_garbage(isolate)) {
         FATALF("MEMORY LIMIT EXCEEDED");
       }
     }
