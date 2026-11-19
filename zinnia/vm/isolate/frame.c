@@ -71,7 +71,7 @@ void frame_finalize(Frame *frame) {
 
 Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
                           uint32_t instruction_pos) {
-  Scope *ctx = (Scope *)arena_malloc(&frame->parent_isolate->scope_arena);
+  Scope *ctx = scope_alloc(frame->parent_isolate);
   ctx->parent_frame = frame;
   ctx->parent_isolate = frame->parent_isolate;
   scope_init(ctx, self, module, instruction_pos);
@@ -85,7 +85,7 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
 
 Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
                              uint32_t instruction_pos) {
-  Scope *ctx = (Scope *)arena_malloc(&frame->parent_isolate->scope_arena);
+  Scope *ctx = scope_alloc(frame->parent_isolate);
   ctx->parent_frame = frame;
   ctx->parent_isolate = frame->parent_isolate;
   scope_init(ctx, self, module, instruction_pos);
@@ -98,13 +98,12 @@ Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
 
 void frame_pop_call_scope(Frame *frame, Scope *call_scope) {
   ASSERT(NULL != call_scope->caller_scope);
-  // Drops what the call left on the stack.
-  while (ValueStack_size(&frame->value_stack) > call_scope->caller_stack_size) {
-    ValueStack_pop_back_unchecked(&frame->value_stack);
+  // Drops what the call left on the stack, and its slots.
+  if (frame->value_stack.size > call_scope->caller_stack_size) {
+    frame->value_stack.size = call_scope->caller_stack_size;
   }
-  // And its slots.
-  while (SlotStack_size(&frame->slots) > call_scope->slot_base) {
-    SlotStack_pop_back_unchecked(&frame->slots);
+  if (frame->slots.size > call_scope->slot_base) {
+    frame->slots.size = call_scope->slot_base;
   }
   // And the scopes of blocks it returned from inside of, and its own.
   Scope *scope = frame->current;

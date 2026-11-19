@@ -48,7 +48,19 @@ void scope_release(Scope *ctx) {
     return;
   }
   scope_finalize(ctx);
-  arena_free(&ctx->parent_isolate->scope_arena, ctx);
+  // Kept for the next call, which most likely comes soon.
+  Isolate *isolate = ctx->parent_isolate;
+  ctx->previous_scope = isolate->free_scopes;
+  isolate->free_scopes = ctx;
+}
+
+Scope *scope_alloc(Isolate *isolate) {
+  Scope *ctx = isolate->free_scopes;
+  if (NULL != ctx) {
+    isolate->free_scopes = ctx->previous_scope;
+    return ctx;
+  }
+  return (Scope *)arena_malloc(&isolate->scope_arena);
 }
 
 void scope_init(Scope *ctx, Object *self, Module *module,

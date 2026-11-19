@@ -140,6 +140,9 @@ struct __Isolate {
 
   RzallocArena frame_arena;
   RzallocArena scope_arena;
+  // Released scopes, linked by previous_scope, reused before the arena is
+  // asked for another. See scope_alloc().
+  Scope *free_scopes;
   Mutex frame_create_lock;
   Mutex frame_queue_lock;
 
