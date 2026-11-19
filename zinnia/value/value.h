@@ -52,19 +52,46 @@ const Object *object(const Value *e);
 // Extracts a mutable Object from a value.
 Object *object_m(Value *e);
 
-Value value_char(const int8_t c);
-Value value_int(const int64_t i);
-Value value_float(const double d);
+static inline Value value_char(const int8_t c) {
+  Value e = {.type = PRIMITIVE};
+  pset_char(&e.pri, c);
+  return e;
+}
 
-Value value_primitive_ptr(const Primitive *p);
-Value value_primitive(Primitive p);
+static inline Value value_int(const int64_t i) {
+  Value e = {.type = PRIMITIVE};
+  pset_int(&e.pri, i);
+  return e;
+}
+
+static inline Value value_float(const double d) {
+  Value e = {.type = PRIMITIVE};
+  pset_float(&e.pri, d);
+  return e;
+}
+
+static inline Value value_primitive_ptr(const Primitive *p) {
+  Value e = {.type = PRIMITIVE, .pri = *p};
+  return e;
+}
+
+static inline Value value_primitive(Primitive p) {
+  Value e = {.type = PRIMITIVE, .pri = p};
+  return e;
+}
 
 void value_print(const Value *e, FILE *file);
 
-Value value_none();
+static inline Value value_none() {
+  Value e = {.type = NONE};
+  return e;
+}
 
 Value *object_get(Object *obj, const char field[]);
 
-Value value_object(Object *obj);
+static inline Value value_object(Object *obj) {
+  Value e = {.type = OBJECT, .obj = obj};
+  return e;
+}
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VALUE_VALUE_H_ */

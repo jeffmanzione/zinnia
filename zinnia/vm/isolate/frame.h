@@ -6,6 +6,7 @@
 #ifndef COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 #define COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_
 
+#include "zinnia/util/error.h"
 #include "zinnia/value/value.h"
 #include "zinnia/vm/isolate/isolates.h"
 
@@ -26,13 +27,38 @@ Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
 void frame_pop_call_scope(Frame *frame, Scope *call_scope);
 Scope *frame_back_scope(Frame *frame);
 
-Value frame_popstack(Frame *frame);
-const Value *frame_peekstack(Frame *frame);
-const Value *frame_peekstack_n(Frame *frame, int n);
-void frame_dropstack(Frame *frame);
-Value *frame_pushstack(Frame *frame);
+// The value stack and accumulator are used by nearly every instruction, so
+// these are inline.
+static inline const Value *frame_peekstack(Frame *frame) {
+  ASSERT(frame->value_stack.size > 0);
+  return &frame->value_stack.table[frame->value_stack.size - 1];
+}
 
-const Value *frame_get_acc(Frame *frame);
-Value *frame_mutable_acc(Frame *frame);
+static inline const Value *frame_peekstack_n(Frame *frame, int n) {
+  ASSERT(frame->value_stack.size > n);
+  return &frame->value_stack.table[frame->value_stack.size - 1 - n];
+}
+
+static inline void frame_dropstack(Frame *frame) {
+  ASSERT(frame->value_stack.size > 0);
+  frame->value_stack.size--;
+}
+
+static inline Value frame_popstack(Frame *frame) {
+  ASSERT(frame->value_stack.size > 0);
+  return frame->value_stack.table[--frame->value_stack.size];
+}
+
+static inline Value *frame_pushstack(Frame *frame) {
+  ValueStack *stack = &frame->value_stack;
+  if (stack->size < stack->capacity) {
+    return &stack->table[stack->size++];
+  }
+  return ValueStack_push_back_ref(stack);
+}
+
+static inline const Value *frame_get_acc(Frame *frame) { return &frame->acc; }
+
+static inline Value *frame_mutable_acc(Frame *frame) { return &frame->acc; }
 
 #endif /* COM_GITHUB_JEFFMANZIONE_ZINNIA_VM_ISOLATE_FRAME_H_ */

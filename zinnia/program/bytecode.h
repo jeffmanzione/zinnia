@@ -55,13 +55,34 @@ DEFINE_ARRAYLIKE(ClassRefPtrArray, ClassRef *);
 
 typedef struct Bytecode_ Bytecode;
 
+// Only bytecode.c uses the fields, except bytecode_get(), which is inline since
+// the VM calls it for every instruction.
+struct Bytecode_ {
+  const char *module_name;
+  InstructionArray ins;
+
+  SourceMappingArray source_map;
+  CharPtrArray source_lines;
+  char *external_source_fn;
+
+  ClassRefMap class_refs;
+  FunctionRefMap func_refs;
+
+  ClassRef *current_class;
+};
+
 // The version of the .zna and .znb formats this build writes; it reads this
 // one and those before it. A file without a version is version 0, from before
 // variables were kept in slots. Version 2 added ARGS and ARGC.
 #define BYTECODE_FORMAT_VERSION 2
 
 // Access-related functions.
-const Instruction *bytecode_get(const Bytecode *bytecode, uint32_t index);
+static inline const Instruction *bytecode_get(const Bytecode *bytecode,
+                                              uint32_t index) {
+  ASSERT(bytecode != NULL);
+  ASSERT(index < bytecode->ins.size);
+  return &bytecode->ins.table[index];
+}
 Instruction *bytecode_get_mutable(Bytecode *bytecode, uint32_t index);
 const SourceMapping *bytecode_get_source(const Bytecode *bytecode,
                                          uint32_t index);

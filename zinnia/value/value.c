@@ -27,34 +27,6 @@ Object *object_m(Value *e) {
   return e->obj;
 }
 
-Value value_char(const int8_t c) {
-  Value e = {.type = PRIMITIVE};
-  pset_char(&e.pri, c);
-  return e;
-}
-
-Value value_int(const int64_t i) {
-  Value e = {.type = PRIMITIVE};
-  pset_int(&e.pri, i);
-  return e;
-}
-
-Value value_float(const double d) {
-  Value e = {.type = PRIMITIVE};
-  pset_float(&e.pri, d);
-  return e;
-}
-
-Value value_primitive_ptr(const Primitive *p) {
-  Value e = {.type = PRIMITIVE, .pri = *p};
-  return e;
-}
-
-Value value_primitive(Primitive p) {
-  Value e = {.type = PRIMITIVE, .pri = p};
-  return e;
-}
-
 void primitive_print_(const Primitive *p, FILE *file) {
   switch (p->_type) {
     case PRIMITIVE_BOOL:
@@ -101,18 +73,8 @@ void value_print(const Value *e, FILE *file) {
   }
 }
 
-Value value_none() {
-  Value e = {.type = NONE};
-  return e;
-}
-
 Value *object_get(Object *obj, const char field[]) {
   ASSERT(obj != NULL);
   ASSERT(field != NULL);
   return ValueMap_find_ref(&obj->_members, field, sizeof(char *));
-}
-
-Value value_object(Object *obj) {
-  Value e = {.type = OBJECT, .obj = obj};
-  return e;
 }

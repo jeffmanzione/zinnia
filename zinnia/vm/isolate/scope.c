@@ -5,6 +5,8 @@
 
 #include "zinnia/vm/isolate/scope.h"
 
+#include <string.h>
+
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/value/class/classes_def.h"
@@ -85,11 +87,6 @@ static bool scope_is_const_(const Scope *ctx, const char id[]) {
     }
   }
   return false;
-}
-
-const Instruction *scope_ins(Scope *ctx) {
-  ASSERT(ctx != NULL);
-  return bytecode_get(ctx->bytecode, ctx->ins);
 }
 
 Heap *scope_heap_(Scope *ctx) { return ctx->parent_isolate->heap; }
@@ -320,30 +317,18 @@ bool scope_set(Scope *ctx, const char id[], const Value *e) {
   return true;
 }
 
-// The slot that [ins]'s operand names, in [ctx]'s function's slots.
-static Slot *slot_of_(Scope *ctx, const Instruction *ins) {
-  SlotStack *slots = &ctx->parent_frame->slots;
-  const uint32_t index = ctx->slot_base + ins->slot - 1;
-  ASSERT(index < SlotStack_size(slots));
-  return SlotStack_mutable_ref_unchecked(slots, index);
-}
-
 void scope_add_slots(Scope *ctx, uint16_t num_slots) {
   SlotStack *slots = &ctx->parent_frame->slots;
   ctx->slot_base = SlotStack_size(slots);
+  if (slots->size + num_slots <= slots->capacity) {
+    // An unset slot is all zeros: a None value, neither set nor const.
+    memset(slots->table + slots->size, 0, sizeof(Slot) * num_slots);
+    slots->size += num_slots;
+    return;
+  }
   for (int i = 0; i < num_slots; ++i) {
     SlotStack_push_back(slots, (Slot){.value = NONE_VALUE});
   }
-}
-
-Value *scope_lookup_ins(Scope *ctx, const Instruction *ins, Value *tmp) {
-  if (ins->slot > 0) {
-    Slot *slot = slot_of_(ctx, ins);
-    if (slot->is_set) {
-      return &slot->value;
-    }
-  }
-  return scope_lookup(ctx, ins->id, tmp);
 }
 
 void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e) {
@@ -351,17 +336,17 @@ void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e) {
     scope_let(ctx, ins->id, e);
     return;
   }
-  Slot *slot = slot_of_(ctx, ins);
+  Slot *slot = scope_slot_ins(ctx, ins);
   slot->value = *e;
   slot->is_set = true;
   slot->is_const = false;
 }
 
-bool scope_set_ins(Scope *ctx, const Instruction *ins, const Value *e) {
+bool scope_set_ins_slow(Scope *ctx, const Instruction *ins, const Value *e) {
   if (0 == ins->slot) {
     return scope_set(ctx, ins->id, e);
   }
-  Slot *slot = slot_of_(ctx, ins);
+  Slot *slot = scope_slot_ins(ctx, ins);
   if (slot->is_set) {
     if (slot->is_const) {
       return false;
@@ -384,7 +369,7 @@ bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e) {
   if (0 == ins->slot) {
     return scope_let_const(ctx, ins->id, e);
   }
-  Slot *slot = slot_of_(ctx, ins);
+  Slot *slot = scope_slot_ins(ctx, ins);
   if (slot->is_set && slot->is_const) {
     return false;
   }
@@ -392,16 +377,6 @@ bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e) {
   slot->is_set = true;
   slot->is_const = true;
   return true;
-}
-
-bool scope_is_const_ins(Scope *ctx, const Instruction *ins) {
-  if (ins->slot > 0) {
-    Slot *slot = slot_of_(ctx, ins);
-    if (slot->is_set) {
-      return slot->is_const;
-    }
-  }
-  return scope_is_const(ctx, ins->id);
 }
 
 void scope_set_function(Scope *ctx, const Function *func) { ctx->func = func; }

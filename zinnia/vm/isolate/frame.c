@@ -128,33 +128,3 @@ Scope *frame_back_scope(Frame *frame) {
   frame->current->ins = ins;
   return frame->current;
 }
-
-Value frame_popstack(Frame *frame) {
-  ASSERT(ValueStack_size(&frame->value_stack) > 0);
-  Value e = *frame_peekstack(frame);
-  frame_dropstack(frame);
-  return e;
-}
-
-const Value *frame_peekstack(Frame *frame) {
-  ASSERT(ValueStack_size(&frame->value_stack) > 0);
-  return ValueStack_last_ref_unchecked(&frame->value_stack);
-}
-
-const Value *frame_peekstack_n(Frame *frame, int n) {
-  ASSERT(ValueStack_size(&frame->value_stack) > n);
-  return ValueStack_get_ref_unchecked(
-      &frame->value_stack, ValueStack_size(&frame->value_stack) - 1 - n);
-}
-
-void frame_dropstack(Frame *frame) {
-  ValueStack_pop_back_unchecked(&frame->value_stack);
-}
-
-Value *frame_pushstack(Frame *frame) {
-  return ValueStack_push_back_ref(&frame->value_stack);
-}
-
-const Value *frame_get_acc(Frame *frame) { return &frame->acc; }
-
-Value *frame_mutable_acc(Frame *frame) { return &frame->acc; }
