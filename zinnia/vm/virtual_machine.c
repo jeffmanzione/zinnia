@@ -1219,6 +1219,29 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
   return true;
 }
 
+// The method [ins] called last, if it's still the one to call on [class]:
+// a method of [class] itself with [ins]'s name.
+static inline const Function *_cached_method_(const Instruction *ins,
+                                              const Class *class) {
+  const Function *func =
+      (const Function *)__atomic_load_n(&ins->method_cache, __ATOMIC_ACQUIRE);
+  return (NULL != func && func->_parent_class == class &&
+          func->_name == ins->id)
+             ? func
+             : NULL;
+}
+
+static inline void _cache_method_(const Instruction *ins, const Function *func,
+                                  const Class *class) {
+  // Only a method of the class itself is kept: an inherited one could be
+  // overridden in the next object's class, and the check above compares the
+  // cached method's own class.
+  if (func->_parent_class == class) {
+    __atomic_store_n(&((Instruction *)ins)->method_cache, (const void *)func,
+                     __ATOMIC_RELEASE);
+  }
+}
+
 bool _call_method(Frame *frame, Object *obj, Scope *scope,
                   const Instruction *ins) {
   ASSERT(obj != NULL);
@@ -1232,7 +1255,13 @@ bool _call_method(Frame *frame, Object *obj, Scope *scope,
     const Value *member = object_get(obj, ins->id);
     const Function *func = NULL;
     if (NULL == member) {
-      func = class_get_function(class, ins->id);
+      func = _cached_method_(ins, class);
+      if (NULL == func) {
+        func = class_get_function(class, ins->id);
+        if (NULL != func) {
+          _cache_method_(ins, func, class);
+        }
+      }
     } else if (OBJECT == member->type &&
                Class_Function == member->obj->_class) {
       func = member->obj->_function_obj;
