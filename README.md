@@ -25,7 +25,6 @@ It supports compilation of programs to the following outputs:
 - [intern](https://github.com/jeffmanzione/intern) - String intern.
 - [language-tools](https://github.com/jeffmanzione/language-tools) - Creating the lexer, parser, and semantic analyzer.
 - [libzip](https://github.com/nih-at/libzip) - For .zip creation.
-- [memory-wrapper](https://github.com/jeffmanzione/memory-wrapper) - Heap-based memory storage.
 - [rzalloc](https://github.com/jeffmanzione/rzalloc) - Bulk memory allocation.
 
 ## Downloading this project

@@ -6,6 +6,7 @@
 #include "zinnia/heap/heap.h"
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "rzalloc/rzalloc.h"
 #include "zinnia/alloc/alloc.h"
@@ -58,10 +59,44 @@ static int32_t compare_bound_methods_(const BoundMethodKey_ a, uint32_t a_size,
 DEFINE_MAPLIKE(BoundMethodMap, BoundMethodKey_, Object *);
 IMPL_MAPLIKE(BoundMethodMap, BoundMethodKey_, Object *);
 
+struct ObjectRefs_ {
+  uint32_t size;
+  uint32_t capacity;
+  // A child appears once for each heap_inc_edge() not yet undone.
+  Object *children[];
+};
+
+// A growable list of objects.
+typedef struct {
+  Object **objects;
+  uint32_t size;
+  uint32_t capacity;
+} ObjectList_;
+
+static void objectlist_push_(ObjectList_ *list, Object *obj) {
+  if (list->size == list->capacity) {
+    list->capacity = 0 == list->capacity ? 64 : list->capacity * 2;
+    list->objects = (Object **)realloc(list->objects,
+                                       sizeof(Object *) * list->capacity);
+    ASSERT(NULL != list->objects);
+  }
+  list->objects[list->size++] = obj;
+}
+
+static void objectlist_finalize_(ObjectList_ *list) {
+  free(list->objects);
+  list->objects = NULL;
+  list->size = list->capacity = 0;
+}
+
 struct Heap_ {
   HeapConf config;
-  MGraph mg;
   RzallocArena object_arena;
+  // Every object in the heap.
+  ObjectList_ objects;
+  ObjectList_ roots;
+  // Marked objects whose references are yet to be followed.
+  ObjectList_ to_trace;
   uint32_t object_count_threshold_for_garbage_collection;
   // FunctionRefs of methods bound to objects, reused rather than made anew on
   // each lookup. A FunctionRef leaves when it's collected.
@@ -78,11 +113,12 @@ void object_delete_(Object *object, Heap *heap);
 Heap *heap_create(HeapConf *config) {
   ASSERT(config != NULL);
   Heap *heap = MNEW(Heap);
-  config->mgraph_config.ctx = heap;
   heap->config = *config;
   heap->object_count_threshold_for_garbage_collection =
       config->max_object_count / 2;
-  mgraph_init(&heap->mg, &heap->config.mgraph_config);
+  heap->objects = (ObjectList_){0};
+  heap->roots = (ObjectList_){0};
+  heap->to_trace = (ObjectList_){0};
   arena_init(&heap->object_arena, sizeof(Object));
   BoundMethodMap_init(&heap->bound_methods, hash_bound_method_,
                       compare_bound_methods_);
@@ -114,19 +150,88 @@ void heap_forget_bound_method(Heap *heap, const Object *obj, const void *func,
 
 void heap_delete(Heap *heap) {
   ASSERT(heap != NULL);
-  mgraph_finalize(&heap->mg);
+  for (uint32_t i = 0; i < heap->objects.size; ++i) {
+    object_delete_(heap->objects.objects[i], heap);
+  }
+  objectlist_finalize_(&heap->objects);
+  objectlist_finalize_(&heap->roots);
+  objectlist_finalize_(&heap->to_trace);
   BoundMethodMap_finalize(&heap->bound_methods);
   arena_clear(&heap->object_arena);
   RELEASE(heap);
 }
 
+void heap_mark(Heap *heap, Object *obj) {
+  ASSERT(heap != NULL);
+  ASSERT(obj != NULL);
+  if (obj->_heap != heap || obj->_gc_marked) {
+    return;
+  }
+  obj->_gc_marked = true;
+  objectlist_push_(&heap->to_trace, obj);
+}
+
+static void heap_mark_value_(Heap *heap, const Value *value) {
+  if (OBJECT == value->type) {
+    heap_mark(heap, value->obj);
+  }
+}
+
+// Marks what [obj] refers to.
+static void heap_trace_(Heap *heap, Object *obj) {
+  ValueMapIterator members;
+  ValueMap_iterator(&members, &obj->_members);
+  for (; ValueMap_has_entry(&members); ValueMap_next_entry(&members)) {
+    heap_mark_value_(heap, ValueMap_value(&members));
+  }
+  if (Class_Array == obj->_class && NULL != obj->_internal_obj) {
+    const Array *array = (Array *)obj->_internal_obj;
+    for (size_t i = 0; i < array->size; ++i) {
+      heap_mark_value_(heap, &array->table[i]);
+    }
+  } else if (Class_Tuple == obj->_class && NULL != obj->_internal_obj) {
+    const Tuple *tuple = (Tuple *)obj->_internal_obj;
+    const uint32_t size = tuple_size(tuple);
+    for (uint32_t i = 0; i < size; ++i) {
+      heap_mark_value_(heap, tuple_get(tuple, i));
+    }
+  }
+  if (NULL != obj->_refs) {
+    for (uint32_t i = 0; i < obj->_refs->size; ++i) {
+      heap_mark(heap, obj->_refs->children[i]);
+    }
+  }
+}
+
 uint32_t heap_collect_garbage(Heap *heap) {
-  return mgraph_collect_garbage(&heap->mg);
+  ASSERT(heap != NULL);
+  for (uint32_t i = 0; i < heap->roots.size; ++i) {
+    heap_mark(heap, heap->roots.objects[i]);
+  }
+  // A list rather than recursion, so long chains of objects can't overflow the
+  // C stack.
+  while (heap->to_trace.size > 0) {
+    heap_trace_(heap, heap->to_trace.objects[--heap->to_trace.size]);
+  }
+  // Deletes what wasn't marked, and moves what's kept to the front of the list.
+  uint32_t kept = 0;
+  const uint32_t count = heap->objects.size;
+  for (uint32_t i = 0; i < count; ++i) {
+    Object *obj = heap->objects.objects[i];
+    if (!obj->_gc_marked) {
+      object_delete_(obj, heap);
+      continue;
+    }
+    obj->_gc_marked = false;
+    heap->objects.objects[kept++] = obj;
+  }
+  heap->objects.size = kept;
+  return count - kept;
 }
 
 uint32_t heap_object_count(const Heap *const heap) {
   ASSERT(heap != NULL);
-  return mgraph_node_count(&heap->mg);
+  return heap->objects.size;
 }
 
 uint32_t heap_max_object_count(const Heap *const heap) {
@@ -150,13 +255,19 @@ Object *heap_new(Heap *heap, const Class *class) {
   ASSERT(heap != NULL);
   ASSERT(class != NULL);
   Object *object = object_create_(heap, class);
-  object->_node_ref =
-      mgraph_insert(&heap->mg, object, (MGDeleter)object_delete_);
+  objectlist_push_(&heap->objects, object);
   return object;
 }
 
 void heap_make_root(Heap *heap, Object *obj) {
-  mgraph_root(&heap->mg, (Node *)obj->_node_ref);
+  ASSERT(heap != NULL);
+  ASSERT(obj != NULL);
+  for (uint32_t i = 0; i < heap->roots.size; ++i) {
+    if (heap->roots.objects[i] == obj) {
+      return;
+    }
+  }
+  objectlist_push_(&heap->roots, obj);
 }
 
 void object_set_member(Heap *heap, Object *parent, const char key[],
@@ -168,16 +279,7 @@ void object_set_member(Heap *heap, Object *parent, const char key[],
   const bool was_insert =
       ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
   ASSERT(entry_pos != NULL);
-  const bool old_member_is_obj = !was_insert && OBJECT == etype(entry_pos);
-  if (old_member_is_obj && (entry_pos->obj == child->obj)) {
-    return;
-  }
-  if (old_member_is_obj) {
-    heap_dec_edge(heap, parent, object_m(entry_pos));
-  }
-  if (OBJECT == etype(child)) {
-    heap_inc_edge(heap, parent, object_m((Value *)child));
-  }
+  (void)was_insert;
   (*entry_pos) = *child;
 }
 
@@ -188,18 +290,8 @@ Value *object_set_member_obj(Heap *heap, Object *parent, const char key[],
   ASSERT(child != NULL);
   Value *entry_pos;
 
-  const bool new_insert =
-      ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
-
+  ValueMap_insert(&parent->_members, key, sizeof(char *), &entry_pos);
   ASSERT(entry_pos != NULL);
-  const bool old_member_is_obj = !new_insert && OBJECT == etype(entry_pos);
-  if (old_member_is_obj && entry_pos->obj == child) {
-    return entry_pos;
-  }
-  if (old_member_is_obj) {
-    heap_dec_edge(heap, parent, object_m(entry_pos));
-  }
-  heap_inc_edge(heap, parent, (Object *)child);
   entry_pos->type = OBJECT;
   entry_pos->obj = (Object *)child;
   return entry_pos;
@@ -210,6 +302,8 @@ Object *object_create_(Heap *heap, const Class *class) {
   Object *object = (Object *)arena_malloc(&heap->object_arena);
   object->_heap = heap;
   object->_class = class;
+  object->_gc_marked = false;
+  object->_refs = NULL;
   ValueMap_init(&object->_members, hash_interned_string,
                 compare_interned_strings);
   if (NULL != class->_init_fn) {
@@ -263,13 +357,8 @@ void print_object_summary_(Object *object) {
 }
 
 void heap_print_debug_summary(Heap *heap) {
-  const NodeSet *nodes = mgraph_nodes(&heap->mg);
-  NodeSetIterator iter;
-  NodeSet_iterator(&iter, nodes);
-  for (; NodeSet_has_next(&iter); NodeSet_next(&iter)) {
-    const Node *node = (Node *)NodeSet_value(&iter);
-    Object *obj = (Object *)node_ptr(node);
-    print_object_summary_(obj);
+  for (uint32_t i = 0; i < heap->objects.size; ++i) {
+    print_object_summary_(heap->objects.objects[i]);
   }
 }
 
@@ -286,6 +375,9 @@ void object_delete_(Object *object, Heap *heap) {
     object->_class->_delete_fn(object);
   }
   ValueMap_finalize(&object->_members);
+  if (NULL != object->_refs) {
+    free(object->_refs);
+  }
   arena_free(&heap->object_arena, object);
 }
 
@@ -306,7 +398,19 @@ void heap_inc_edge(Heap *heap, Object *parent, Object *child) {
   if (!heap_has_edge_(heap, parent, child)) {
     return;
   }
-  mgraph_inc(&heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+  ObjectRefs *refs = parent->_refs;
+  if (NULL == refs || refs->size == refs->capacity) {
+    const uint32_t capacity = NULL == refs ? 2 : refs->capacity * 2;
+    refs = (ObjectRefs *)realloc(
+        refs, sizeof(ObjectRefs) + sizeof(Object *) * capacity);
+    ASSERT(NULL != refs);
+    if (NULL == parent->_refs) {
+      refs->size = 0;
+    }
+    refs->capacity = capacity;
+    parent->_refs = refs;
+  }
+  refs->children[refs->size++] = child;
 }
 
 void heap_dec_edge(Heap *heap, Object *parent, Object *child) {
@@ -316,7 +420,16 @@ void heap_dec_edge(Heap *heap, Object *parent, Object *child) {
   if (!heap_has_edge_(heap, parent, child)) {
     return;
   }
-  mgraph_dec(&heap->mg, (Node *)parent->_node_ref, (Node *)child->_node_ref);
+  ObjectRefs *refs = parent->_refs;
+  ASSERT(NULL != refs);
+  for (uint32_t i = 0; i < refs->size; ++i) {
+    if (refs->children[i] == child) {
+      refs->children[i] = refs->children[--refs->size];
+      return;
+    }
+  }
+  FATALF("Removing a reference from %p to %p which did not exist.", parent,
+         child);
 }
 
 void array_add(Heap *heap, Object *array, const Value *child) {
@@ -325,22 +438,13 @@ void array_add(Heap *heap, Object *array, const Value *child) {
   ASSERT(child != NULL);
   Value *e = Array_push_back_ref((Array *)array->_internal_obj);
   *e = *child;
-  if (OBJECT != child->type) {
-    return;
-  }
-  mgraph_inc(&heap->mg, (Node *)array->_node_ref,
-             (Node *)child->obj->_node_ref);
 }
 
 Value array_remove(Heap *heap, Object *array, int32_t index) {
   ASSERT(heap != NULL);
   ASSERT(array != NULL);
   ASSERT(index >= 0);
-  Value e = Array_remove_unchecked((Array *)array->_internal_obj, index);
-  if (OBJECT == e.type) {
-    heap_dec_edge(heap, array, e.obj);
-  }
-  return e;
+  return Array_remove_unchecked((Array *)array->_internal_obj, index);
 }
 
 void array_set(Heap *heap, Object *array, int32_t index, const Value *child) {
@@ -349,20 +453,11 @@ void array_set(Heap *heap, Object *array, int32_t index, const Value *child) {
   ASSERT(child != NULL);
   ASSERT(index >= 0);
   Value *e = Array_set_ref_unchecked((Array *)array->_internal_obj, index);
-  if (NULL != e && OBJECT == e->type) {
-    heap_dec_edge(heap, array, e->obj);
-  }
   *e = *child;
-  if (OBJECT != child->type) {
-    return;
-  }
-  heap_inc_edge(heap, array, child->obj);
 }
 
 Object *array_create(Heap *heap) { return heap_new(heap, Class_Array); }
 
-// This function does not handle overwrites, so references to overwritten
-// members will persist.
 void tuple_set(Heap *heap, Object *tuple, int32_t index, const Value *child) {
   ASSERT(heap != NULL);
   ASSERT(tuple != NULL);
@@ -371,10 +466,6 @@ void tuple_set(Heap *heap, Object *tuple, int32_t index, const Value *child) {
   ASSERT(index < tuple_size((Tuple *)tuple->_internal_obj));
   Value *e = tuple_get_mutable((Tuple *)tuple->_internal_obj, index);
   *e = *child;
-  if (OBJECT != child->type) {
-    return;
-  }
-  heap_inc_edge(heap, tuple, child->obj);
 }
 
 Object *tuple_create_empty(Heap *heap, size_t size) {
@@ -525,12 +616,8 @@ HeapProfile *heap_create_profile(const Heap *const heap) {
   HeapProfile *hp = MNEW(HeapProfile);
   ObjectTypeCountMap_init(&hp->object_type_counts, hash_class_,
                           compare_classes_);
-  const NodeSet *nodes = mgraph_nodes(&heap->mg);
-  NodeSetIterator iter;
-  NodeSet_iterator(&iter, nodes);
-  for (; NodeSet_has_next(&iter); NodeSet_next(&iter)) {
-    const Node *node = *NodeSet_value(&iter);
-    const Object *obj = (const Object *)node_ptr(node);
+  for (uint32_t i = 0; i < heap->objects.size; ++i) {
+    const Object *obj = heap->objects.objects[i];
     const int existing = ObjectTypeCountMap_find(
         &hp->object_type_counts, obj->_class, sizeof(Class *), 0);
     ObjectTypeCountMap_insert(&hp->object_type_counts, obj->_class,

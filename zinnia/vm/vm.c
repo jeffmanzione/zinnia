@@ -82,106 +82,52 @@ Value object_get_maybe_wrap(Object *obj, const char field[], Heap *heap,
   return member;
 }
 
-// Need to investigate whether there is an issue with creating edges cross-heap.
-void frame_inc_all_scope_(Isolate *isolate, Frame *frame) {
+// Marks what [frame] refers to, so the collection that follows keeps it. Values
+// in other heaps are left alone by heap_mark().
+static void frame_mark_(Isolate *isolate, Frame *frame) {
   Heap *heap = isolate->heap;
-  heap_inc_edge(heap, isolate->_reflection, frame->_reflection);
-
+  heap_mark(heap, frame->_reflection);
   if (NULL != frame->parent_frame && frame->parent_isolate == isolate) {
-    heap_inc_edge(heap, frame->_reflection, frame->parent_frame->_reflection);
+    heap_mark(heap, frame->parent_frame->_reflection);
   }
   FrameSetIterator dependent_frames;
   FrameSet_iterator(&dependent_frames, &frame->dependent_frames);
   for (; FrameSet_has_next(&dependent_frames);
        FrameSet_next(&dependent_frames)) {
     Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
-    heap_inc_edge(heap, dependent_frame->_reflection, frame->_reflection);
+    heap_mark(heap, dependent_frame->_reflection);
   }
   ValueStackIterator stack;
   ValueStack_iterator(&stack, &frame->value_stack);
   for (; ValueStack_has_next(&stack); ValueStack_next(&stack)) {
     Value *e = ValueStack_mutable_value(&stack);
     if (OBJECT == e->type) {
-      heap_inc_edge(heap, frame->_reflection, e->obj);
+      heap_mark(heap, e->obj);
     }
   }
   if (OBJECT == frame->acc.type) {
-    heap_inc_edge(heap, frame->_reflection, frame->acc.obj);
+    heap_mark(heap, frame->acc.obj);
   }
   for (int i = 0; i < SlotStack_size(&frame->slots); ++i) {
     const Slot *slot = SlotStack_get_ref_unchecked(&frame->slots, i);
     if (slot->is_set && OBJECT == slot->value.type) {
-      heap_inc_edge(heap, frame->_reflection, slot->value.obj);
+      heap_mark(heap, slot->value.obj);
     }
   }
   Scope *ctx = frame->current;
   while (NULL != ctx) {
-    // printf("_task_inc_all_context task=%p ctx=%p self=%p\n",
-    // task->_reflection,
-    //        ctx->_reflection, IS_NONE(&ctx->self) ? NULL : ctx->self.obj);
     // A scope may have no object on the heap, so the frame keeps what it
     // refers to.
     if (NULL != ctx->_reflection) {
-      heap_inc_edge(heap, frame->_reflection, ctx->_reflection);
+      heap_mark(heap, ctx->_reflection);
     }
     if (NULL != ctx->previous_scope &&
         NULL != ctx->previous_scope->_reflection) {
-      heap_inc_edge(heap, frame->_reflection,
-                    ctx->previous_scope->_reflection);
+      heap_mark(heap, ctx->previous_scope->_reflection);
     }
-    heap_inc_edge(heap, frame->_reflection, ctx->self.obj);
+    heap_mark(heap, ctx->self.obj);
     if (NULL != ctx->error) {
-      heap_inc_edge(heap, frame->_reflection, ctx->error);
-    }
-    ctx = scope_dynamic_parent(ctx);
-  }
-  // printf("done\n");
-}
-
-void frame_dec_all_scope_(Isolate *isolate, Frame *frame) {
-  Heap *heap = isolate->heap;
-  heap_dec_edge(heap, isolate->_reflection, frame->_reflection);
-
-  if (NULL != frame->parent_frame && frame->parent_isolate == isolate) {
-    heap_dec_edge(heap, frame->_reflection, frame->parent_frame->_reflection);
-  }
-  FrameSetIterator dependent_frames;
-  FrameSet_iterator(&dependent_frames, &frame->dependent_frames);
-  for (; FrameSet_has_next(&dependent_frames);
-       FrameSet_next(&dependent_frames)) {
-    Frame *dependent_frame = *FrameSet_mutable_value(&dependent_frames);
-    heap_dec_edge(heap, dependent_frame->_reflection, frame->_reflection);
-  }
-  ValueStackIterator stack;
-  ValueStack_iterator(&stack, &frame->value_stack);
-  for (; ValueStack_has_next(&stack); ValueStack_next(&stack)) {
-    Value *e = ValueStack_mutable_value(&stack);
-    if (OBJECT == e->type) {
-      heap_dec_edge(heap, frame->_reflection, e->obj);
-    }
-  }
-  if (OBJECT == frame->acc.type) {
-    heap_dec_edge(heap, frame->_reflection, frame->acc.obj);
-  }
-  for (int i = 0; i < SlotStack_size(&frame->slots); ++i) {
-    const Slot *slot = SlotStack_get_ref_unchecked(&frame->slots, i);
-    if (slot->is_set && OBJECT == slot->value.type) {
-      heap_dec_edge(heap, frame->_reflection, slot->value.obj);
-    }
-  }
-  Scope *ctx = frame->current;
-  while (NULL != ctx) {
-    if (NULL != ctx->_reflection) {
-      heap_dec_edge(heap, frame->_reflection, ctx->_reflection);
-    }
-    if (NULL != ctx->previous_scope &&
-        NULL != ctx->previous_scope->_reflection) {
-      heap_dec_edge(heap, frame->_reflection,
-                    ctx->previous_scope->_reflection);
-    }
-    heap_dec_edge(heap, frame->_reflection, ctx->self.obj);
-    if (NULL != ctx->error) {
-      heap_dec_edge(heap, frame->_reflection, ctx->error);
+      heap_mark(heap, ctx->error);
     }
     ctx = scope_dynamic_parent(ctx);
   }
@@ -193,6 +139,10 @@ void delete_completed_frames_(Isolate *isolate) {
   for (; FrameSet_has_next(&completed_frames);
        FrameSet_next(&completed_frames)) {
     Frame *completed_frame = *FrameSet_mutable_value(&completed_frames);
+    // The frame that ran last can be among them, and isn't marked once freed.
+    if (completed_frame == isolate->current_frame) {
+      isolate->current_frame = NULL;
+    }
     isolate_delete_frame(isolate, completed_frame);
   }
   // TODO: Switch to set_clear() after that is implemented.
@@ -200,39 +150,21 @@ void delete_completed_frames_(Isolate *isolate) {
   FrameSet_init(&isolate->completed_frames, hash_frame, compare_frames);
 }
 
-void inc_queued_frames_(Isolate *isolate) {
+static void mark_queued_frames_(Isolate *isolate) {
   FrameArrayIterator queued_frames;
   FrameArray_iterator(&queued_frames, &isolate->queued_frames);
   for (; FrameArray_has_next(&queued_frames); FrameArray_next(&queued_frames)) {
     Frame *queued_frame = *FrameArray_mutable_value(&queued_frames);
-    frame_inc_all_scope_(isolate, queued_frame);
+    frame_mark_(isolate, queued_frame);
   }
 }
 
-void dec_queued_frames_(Isolate *isolate) {
-  FrameArrayIterator queued_frames;
-  FrameArray_iterator(&queued_frames, &isolate->queued_frames);
-  for (; FrameArray_has_next(&queued_frames); FrameArray_next(&queued_frames)) {
-    Frame *queued_frame = *FrameArray_mutable_value(&queued_frames);
-    frame_dec_all_scope_(isolate, queued_frame);
-  }
-}
-
-void inc_frame_set_(Isolate *isolate, FrameSet *frame_set) {
+static void mark_frame_set_(Isolate *isolate, FrameSet *frame_set) {
   FrameSetIterator frames;
   FrameSet_iterator(&frames, frame_set);
   for (; FrameSet_has_next(&frames); FrameSet_next(&frames)) {
     Frame *frame = *FrameSet_mutable_value(&frames);
-    frame_inc_all_scope_(isolate, frame);
-  }
-}
-
-void dec_frame_set_(Isolate *isolate, FrameSet *frame_set) {
-  FrameSetIterator frames;
-  FrameSet_iterator(&frames, frame_set);
-  for (; FrameSet_has_next(&frames); FrameSet_next(&frames)) {
-    Frame *frame = *FrameSet_mutable_value(&frames);
-    frame_dec_all_scope_(isolate, frame);
+    frame_mark_(isolate, frame);
   }
 }
 
@@ -246,25 +178,16 @@ uint32_t isolate_collect_garbage(Isolate *isolate) {
       SYNCHRONIZED(isolate->frame_queue_lock, {
         delete_completed_frames_(isolate);
 
-        frame_inc_all_scope_(isolate, isolate->current_frame);
-        if (isolate->keep_alive) {
-          frame_inc_all_scope_(isolate, isolate->keep_alive_frame);
+        if (NULL != isolate->current_frame) {
+          frame_mark_(isolate, isolate->current_frame);
         }
-        inc_queued_frames_(isolate);
-        inc_frame_set_(isolate, &isolate->waiting_frames);
-        inc_frame_set_(isolate, &isolate->blocking_frames);
-
-        // printf("process_collect_garbage(%p)\n", process->heap);
-
+        if (isolate->keep_alive) {
+          frame_mark_(isolate, isolate->keep_alive_frame);
+        }
+        mark_queued_frames_(isolate);
+        mark_frame_set_(isolate, &isolate->waiting_frames);
+        mark_frame_set_(isolate, &isolate->blocking_frames);
         deleted_nodes_count = heap_collect_garbage(isolate->heap);
-
-        frame_dec_all_scope_(isolate, isolate->current_frame);
-        if (isolate->keep_alive) {
-          frame_dec_all_scope_(isolate, isolate->keep_alive_frame);
-        }
-        dec_queued_frames_(isolate);
-        dec_frame_set_(isolate, &isolate->waiting_frames);
-        dec_frame_set_(isolate, &isolate->blocking_frames);
       });
     });
   });

@@ -6,8 +6,12 @@
 // A memory-allocating heap for allocating new objects and deleting them once
 // they are no longer referenced.
 //
-// NOTE: Heap is NOT threadsafe. Heap wraps MGraph, which is not threadsafe and
-// provides no additional thread safety. To safely pass objects between a source
+// Garbage is found by marking: what can be reached from the roots, from the
+// objects passed to heap_mark() and from what they refer to (their members,
+// what's in an Array or a Tuple, and the edges heap_inc_edge() adds) is kept,
+// and the rest is deleted.
+//
+// NOTE: Heap is NOT threadsafe. To safely pass objects between a source
 // and target heaps, the following must occur in the specified order:
 //   1. The soure and target heaps must be locked.
 //   2. The object from the source heap must be DEEPLY copied in the target heap
@@ -28,7 +32,6 @@ DEFINE_MAPLIKE(ObjectCopyMap, Object *, Object *);
 typedef struct Heap_ Heap;
 
 typedef struct {
-  MGraphConf mgraph_config;
   uint32_t max_object_count;
 } HeapConf;
 
@@ -47,6 +50,11 @@ void heap_forget_bound_method(Heap *heap, const Object *obj, const void *func,
 
 Object *heap_new(Heap *heap, const Class *class);
 
+// Keeps [obj] through the next heap_collect_garbage(), with what it refers to.
+// Objects in other heaps are left alone.
+void heap_mark(Heap *heap, Object *obj);
+// Deletes the objects that can't be reached from the roots or from what was
+// passed to heap_mark() since the last collection. Returns how many it deleted.
 uint32_t heap_collect_garbage(Heap *heap);
 void heap_print_debug_summary(Heap *heap);
 uint32_t heap_object_count(const Heap *const heap);
@@ -57,6 +65,10 @@ void heap_set_object_count_threshold_for_garbage_collection(
     Heap *heap, uint32_t new_threshold);
 void heap_make_root(Heap *heap, Object *obj);
 
+// A reference from [parent] to [child] the collector can't otherwise see,
+// because it's kept in C rather than in a member, an Array or a Tuple. Each
+// heap_inc_edge() is undone by one heap_dec_edge(). Edges between heaps are
+// left out.
 void heap_inc_edge(Heap *heap, Object *parent, Object *child);
 void heap_dec_edge(Heap *heap, Object *parent, Object *child);
 

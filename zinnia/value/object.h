@@ -12,7 +12,6 @@
 #include "c-data-structures/arraylike.h"
 #include "c-data-structures/maplike.h"
 #include "c-data-structures/stable_maplike.h"
-#include "memory-wrapper/memory_graph.h"
 #include "zinnia/program/bytecode.h"
 #include "zinnia/util/dll.h"
 #include "zinnia/util/sync/mutex.h"
@@ -38,8 +37,14 @@ DEFINE_STABLE_MAPLIKE(FieldMap, char *, Field);
 DEFINE_STABLE_MAPLIKE(FunctionMap, char *, Function);
 
 // Represents an object with properties.
+// References an object keeps that the collector can't find in its members, an
+// Array or a Tuple, such as a FunctionRef's object. See heap_inc_edge().
+typedef struct ObjectRefs_ ObjectRefs;
+
 struct Object_ {
-  const Node *_node_ref;
+  // Whether the collector has found the object reachable.
+  bool _gc_marked;
+  ObjectRefs *_refs;
   // The heap the object is in, a Heap.
   const void *_heap;
   const Class *_class;

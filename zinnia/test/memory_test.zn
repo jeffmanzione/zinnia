@@ -30,6 +30,14 @@ function make_counter() {
 @test.TestClass
 class MemoryTest {
   @test.Test
+  method test_empty_strings_are_collected() {
+    ; Each copy is an empty String that's garbage as soon as it's made.
+    for (_, i) in 0:100 ''.copy()
+    await memory.collect_garbage()
+    expect(''.copy(), '')
+  }
+
+  @test.Test
   method test_closures_keep_their_scopes() {
     counter = make_counter()
     counter()
