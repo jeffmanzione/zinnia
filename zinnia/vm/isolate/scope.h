@@ -29,6 +29,9 @@ void scope_set_previous(Scope *ctx, Scope *previous);
 // Frees [ctx], popped from its frame, unless it has an object on the heap, in
 // which case the collector frees it once nothing refers to it.
 void scope_release(Scope *ctx);
+// A new, uninitialized scope for [isolate], reusing a released one if there
+// is one.
+Scope *scope_alloc(Isolate *isolate);
 // Keeps [ctx] alive as long as [fn_ref], an anonymous function defined in it.
 void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap);
 void scope_set_function(Scope *ctx, const Function *func);

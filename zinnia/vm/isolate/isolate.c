@@ -16,6 +16,7 @@ void isolate_init(Isolate *isolate, HeapConf *conf) {
   isolate->heap = heap_create(conf);
   arena_init(&isolate->frame_arena, sizeof(Frame));
   arena_init(&isolate->scope_arena, sizeof(Scope));
+  isolate->free_scopes = NULL;
   isolate->frame_create_lock = mutex_create();
   isolate->frame_queue_lock = mutex_create();
   isolate->heap_access_lock = mutex_create();
