@@ -11,6 +11,7 @@
 #include "language-tools/semantic_analyzer/semantic_analyzer.h"
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
+#include "zinnia/program/fuse.h"
 #include "zinnia/program/slots.h"
 #include "zinnia/util/platform.h"
 
@@ -62,8 +63,11 @@ Value load_class_from_text_(Frame *frame, Scope *ctx, Object *obj,
   semantic_analyzer_init(&sa, semantic_analyzer_init_fn);
   ExpressionTree *etree = populate_file(&sa, stree);
 
+  // The class's code goes after the module's, which may be running.
+  const uint32_t class_start = bytecode_size(bytecode);
   semantic_analyzer_produce(&sa, etree, bytecode);
   bytecode_assign_slots(bytecode);
+  bytecode_fuse(bytecode, class_start);
 
   semantic_analyzer_delete(&sa, etree);
   semantic_analyzer_finalize(&sa);

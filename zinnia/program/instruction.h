@@ -21,9 +21,27 @@ typedef enum {
   INSTRUCTION_PRIMITIVE
 } InstructionType;
 
+// How the VM runs an instruction together with the one after it, as one. Set
+// by bytecode_fuse() when the VM loads code; files never store it.
+typedef enum {
+  FUSE_NONE = 0,
+  // A comparison, then the IF or IFN that branches on it.
+  FUSE_BRANCH,
+  // An instruction that goes on to the next, then a JMP.
+  FUSE_JMP,
+  // A function's SLOTS, then the LET of its only parameter.
+  FUSE_LET,
+  // An ARGC, then the instructions that move its arguments into their slots
+  // (IFN, then RES and LET for each, then JMP), when they're on the stack.
+  // Those all run as one.
+  FUSE_ARGS,
+} Fuse;
+
 typedef struct {
   char op;
   char type;
+  // A Fuse.
+  uint8_t fuse;
   // For an INSTRUCTION_ID operand that names a variable kept in a slot, the
   // slot's number + 1, and 0 otherwise; the id still holds the name. For SLOTS,
   // the number of slots.

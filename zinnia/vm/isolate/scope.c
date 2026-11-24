@@ -42,7 +42,7 @@ static Value *scope_get_(Scope *ctx, const char id[]) {
   return NULL == ctx->_reflection ? NULL : object_get(ctx->_reflection, id);
 }
 
-void scope_release(Scope *ctx) {
+void scope_release_slow(Scope *ctx) {
   // A scope with an object on the heap is freed when the object is collected.
   if (NULL != ctx->_reflection) {
     return;
@@ -52,36 +52,6 @@ void scope_release(Scope *ctx) {
   Isolate *isolate = ctx->parent_isolate;
   ctx->previous_scope = isolate->free_scopes;
   isolate->free_scopes = ctx;
-}
-
-Scope *scope_alloc(Isolate *isolate) {
-  Scope *ctx = isolate->free_scopes;
-  if (NULL != ctx) {
-    isolate->free_scopes = ctx->previous_scope;
-    return ctx;
-  }
-  return (Scope *)arena_malloc(&isolate->scope_arena);
-}
-
-void scope_init(Scope *ctx, Object *self, Module *module,
-                uint32_t instruction_pos) {
-  ctx->self = value_object(self);
-  ctx->module = module;
-  ctx->bytecode = module->_bytecode;
-  ctx->ins = instruction_pos;
-  ctx->func = NULL;
-  ctx->error = NULL;
-  ctx->catch_ins = -1;
-  ctx->previous_scope = NULL;
-  ctx->caller_scope = NULL;
-  ctx->caller_stack_size = 0;
-  ctx->slot_base = 0;
-  ctx->is_block = false;
-  ctx->stack_args = 0;
-  ctx->const_ids = NULL;
-  ctx->num_const_ids = 0;
-  ctx->const_ids_capacity = 0;
-  ctx->_reflection = NULL;
 }
 
 void scope_finalize(Scope *ctx) {
@@ -329,15 +299,9 @@ bool scope_set(Scope *ctx, const char id[], const Value *e) {
   return true;
 }
 
-void scope_add_slots(Scope *ctx, uint16_t num_slots) {
+void scope_add_slots_growing(Scope *ctx, uint16_t num_slots) {
   SlotStack *slots = &ctx->parent_frame->slots;
   ctx->slot_base = SlotStack_size(slots);
-  if (slots->size + num_slots <= slots->capacity) {
-    // An unset slot is all zeros: a None value, neither set nor const.
-    memset(slots->table + slots->size, 0, sizeof(Slot) * num_slots);
-    slots->size += num_slots;
-    return;
-  }
   for (int i = 0; i < num_slots; ++i) {
     SlotStack_push_back(slots, (Slot){.value = NONE_VALUE});
   }

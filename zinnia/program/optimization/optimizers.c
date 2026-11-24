@@ -333,6 +333,7 @@ bool is_math_op(Op op) {
     case GTE:
     case GT:
     case EQ:
+    case NEQ:
       return true;
     default:
       return false;

@@ -83,38 +83,6 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
   return ctx;
 }
 
-Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
-                             uint32_t instruction_pos) {
-  Scope *ctx = scope_alloc(frame->parent_isolate);
-  ctx->parent_frame = frame;
-  ctx->parent_isolate = frame->parent_isolate;
-  scope_init(ctx, self, module, instruction_pos);
-  ctx->caller_scope = frame->current;
-  ctx->caller_stack_size = ValueStack_size(&frame->value_stack);
-  ctx->slot_base = SlotStack_size(&frame->slots);
-  frame->current = ctx;
-  return ctx;
-}
-
-void frame_pop_call_scope(Frame *frame, Scope *call_scope) {
-  ASSERT(NULL != call_scope->caller_scope);
-  // Drops what the call left on the stack, and its slots.
-  if (frame->value_stack.size > call_scope->caller_stack_size) {
-    frame->value_stack.size = call_scope->caller_stack_size;
-  }
-  if (frame->slots.size > call_scope->slot_base) {
-    frame->slots.size = call_scope->slot_base;
-  }
-  // And the scopes of blocks it returned from inside of, and its own.
-  Scope *scope = frame->current;
-  frame->current = call_scope->caller_scope;
-  while (NULL != scope) {
-    Scope *next = (scope == call_scope) ? NULL : scope->previous_scope;
-    scope_release(scope);
-    scope = next;
-  }
-}
-
 Scope *frame_back_scope(Frame *frame) {
   Scope *block = frame->current;
   uint32_t ins = block->ins;

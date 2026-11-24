@@ -770,3 +770,71 @@ class MethodCacheTest {
     expect(names, ['a', 'd', 'b', 'b'])
   }
 }
+
+function _fused_one(x) x + 1
+function _fused_two(a, b) a - b
+
+@test.TestClass
+class FusedInstructionTest {
+  ; The VM runs some pairs of instructions as one: a comparison and the branch
+  ; on it, an instruction and the jump after it, and the moves of a function's
+  ; arguments into its parameters. These check that each still behaves as the
+  ; two instructions would.
+
+  @test.Test
+  method test_comparisons_and_branches() {
+    hits = []
+    i = 0
+    while i < 6 {
+      if i == 2 hits.append('eq')
+      if i != 3 hits.append(i)
+      if (i > 3) and (i <= 4) hits.append('gt')
+      if (i < 1) or (i >= 5) hits.append('or')
+      i = i + 1
+    }
+    expect(hits, [0, 'or', 1, 'eq', 2, 4, 'gt', 5, 'or'])
+  }
+
+  @test.Test
+  method test_comparison_that_raises() {
+    ; The comparison raises, so the branch fused to it must not run.
+    caught = None
+    reached = False
+    try {
+      if None < 1 reached = True
+    } catch e {
+      caught = e
+    }
+    expect(caught != None, True)
+    expect(reached, False)
+  }
+
+  @test.Test
+  method test_if_expressions_and_loops() {
+    n = 27
+    steps = 0
+    while n != 1 {
+      n = if n % 2 == 0 then n / 2 else 3 * n + 1
+      steps = steps + 1
+    }
+    expect(steps, 111)
+    total = 0
+    for (_, j) in 0:10 total = total + (if j > 4 then j else 0)
+    expect(total, 35)
+  }
+
+  @test.Test
+  method test_arguments_into_parameters() {
+    expect(_fused_one(1), 2)
+    expect(_fused_two(5, 3), 2)
+    ; A tuple fills the parameters without the arguments on the stack.
+    expect(_fused_two((7, 2)), 5)
+    raised = False
+    try {
+      _fused_two(1)
+    } catch e {
+      raised = True
+    }
+    expect(raised, True)
+  }
+}

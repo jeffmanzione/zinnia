@@ -29,6 +29,7 @@ void function_init(Function *f, const char name[], const Module *module,
   f->_is_const = is_const;
   f->_is_async = is_async;
   f->_is_blocking = false;
+  f->_stack_args_plus_1 = 0;
   f->_reflection = NULL;
 }
 

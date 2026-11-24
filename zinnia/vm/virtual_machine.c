@@ -92,8 +92,16 @@ static void _execute_IS(VM *vm, Frame *frame, Scope *scope,
 static bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope,
                           const Instruction *ins);
 
+// The handlers of the instructions that run most often, which the compiler
+// would otherwise leave as calls out of the dispatch loop, it's so large.
+#ifdef __GNUC__
+#define VM_HOT inline __attribute__((always_inline))
+#else
+#define VM_HOT inline
+#endif
+
 #define MATH_OP(op, symbol)                                             \
-  static Primitive _execute_primitive_##op(                             \
+  static VM_HOT Primitive _execute_primitive_##op(                      \
       const Primitive *p1, const Primitive *p2, const char **error) {   \
     if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
       *error = "Operator '" #symbol "' is not valid for Bool values.";  \
@@ -109,7 +117,7 @@ static bool _execute_CTCH(VM *vm, Frame *frame, Scope *scope,
   }
 
 #define MATH_OP_INT(op, symbol)                                         \
-  static Primitive _execute_primitive_##op(                             \
+  static VM_HOT Primitive _execute_primitive_##op(                      \
       const Primitive *p1, const Primitive *p2, const char **error) {   \
     if (PRIMITIVE_BOOL == ptype(p1) || PRIMITIVE_BOOL == ptype(p2)) {   \
       *error = "Operator '" #symbol "' is not valid for Bool values.";  \
@@ -130,9 +138,10 @@ typedef Primitive (*PrimitiveOpFn)(const Primitive *, const Primitive *,
 
 // Applies [fn] to [p1] and [p2], storing the result in the accumulator.
 // Raises an error and returns false if the operation is invalid.
-static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
-                                         PrimitiveOpFn fn, const Primitive *p1,
-                                         const Primitive *p2) {
+static VM_HOT bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
+                                                PrimitiveOpFn fn,
+                                                const Primitive *p1,
+                                                const Primitive *p2) {
   const char *error = NULL;
   const Primitive result = fn(p1, p2, &error);
   if (NULL != error) {
@@ -145,8 +154,8 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
 
 #define PRIMITIVE_OP(op, symbol, math_fn)                                      \
   math_fn;                                                                     \
-  static void _execute_##op(VM *vm, Frame *frame, Scope *scope,                \
-                            const Instruction *ins) {                          \
+  static VM_HOT void _execute_##op(VM *vm, Frame *frame, Scope *scope,         \
+                                   const Instruction *ins) {                   \
     const Value *acc, *lookup;                                                 \
     Value first, second, tmp;                                                  \
     switch (ins->type) {                                                       \
@@ -208,8 +217,8 @@ static bool _execute_primitive_into_acc_(Frame *frame, Scope *scope,
 
 #define PRIMITIVE_BOOL_OP(op, symbol, math_fn)                             \
   math_fn;                                                                 \
-  static void _execute_##op(VM *vm, Frame *frame, Scope *scope,            \
-                            const Instruction *ins) {                      \
+  static VM_HOT void _execute_##op(VM *vm, Frame *frame, Scope *scope,     \
+                                   const Instruction *ins) {               \
     const Value *acc, *lookup;                                             \
     Value first, second, tmp;                                              \
     Primitive result;                                                      \
@@ -343,8 +352,8 @@ Value string_concat(Frame *frame, const Value *s1, const Value *s2) {
   return value_object(new);
 }
 
-static void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
-                                     const Instruction *ins) {
+static VM_HOT void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
+                                            const Instruction *ins) {
   if (INSTRUCTION_NO_ARG == ins->type) {
     const Value *first_ptr = frame_peekstack_n(frame, 1);
     const Value *second_ptr = frame_peekstack(frame);
@@ -370,8 +379,8 @@ static void _execute_ADD_with_string(VM *vm, Frame *frame, Scope *scope,
   _execute_ADD(vm, frame, scope, ins);
 }
 
-static void _execute_INC(VM *vm, Frame *frame, Scope *scope,
-                         const Instruction *ins) {
+static VM_HOT void _execute_INC(VM *vm, Frame *frame, Scope *scope,
+                                const Instruction *ins) {
   const int inc_amount = ins->op == INC ? 1 : -1;
   Value tmp;
   Value *stored = scope_lookup_ins(scope, ins, &tmp);
@@ -592,8 +601,8 @@ static bool _execute_EQ(VM *vm, Frame *frame, Scope *scope,
   return _execute_EQ_values(frame, scope, is_eq, &lhs, &rhs);
 }
 
-static void _execute_RES(VM *vm, Frame *frame, Scope *scope,
-                         const Instruction *ins) {
+static VM_HOT void _execute_RES(VM *vm, Frame *frame, Scope *scope,
+                                const Instruction *ins) {
   Value *member;
   Value tmp;
   Object *str;
@@ -649,8 +658,8 @@ static void _execute_DUP(VM *vm, Frame *frame, Scope *scope,
   *frame_pushstack(frame) = peek;
 }
 
-static void _execute_PUSH(VM *vm, Frame *frame, Scope *scope,
-                          const Instruction *ins) {
+static VM_HOT void _execute_PUSH(VM *vm, Frame *frame, Scope *scope,
+                                 const Instruction *ins) {
   Object *str;
   Value *member;
   Value tmp;
@@ -742,8 +751,8 @@ static void _execute_FLD(VM *vm, Frame *frame, Scope *scope,
   object_set_member(frame->parent_isolate->heap, acc->obj, ins->id, &obj);
 }
 
-static void _execute_LET(VM *vm, Frame *frame, Scope *scope,
-                         const Instruction *ins) {
+static VM_HOT void _execute_LET(VM *vm, Frame *frame, Scope *scope,
+                                const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
       scope_let_ins(scope, ins, frame_get_acc(frame));
@@ -753,8 +762,8 @@ static void _execute_LET(VM *vm, Frame *frame, Scope *scope,
   }
 }
 
-static void _execute_SET(VM *vm, Frame *frame, Scope *scope,
-                         const Instruction *ins) {
+static VM_HOT void _execute_SET(VM *vm, Frame *frame, Scope *scope,
+                                const Instruction *ins) {
   switch (ins->type) {
     case INSTRUCTION_ID:
       if (!scope_set_ins(scope, ins, frame_get_acc(scope->parent_frame))) {
@@ -1080,19 +1089,15 @@ static Value _take_below_stack_args_(Frame *frame, uint16_t n) {
 
 // The value of the call's callee or object: on top of the stack, or under the
 // arguments ARGS left there.
-static Value _pop_callee_(Frame *frame) {
+static VM_HOT Value _pop_callee_(Frame *frame) {
   return 0 == frame->pending_args
              ? frame_popstack(frame)
              : _take_below_stack_args_(frame, frame->pending_args);
 }
 
-// Makes a tuple in acc of the arguments ARGS left on the stack, as TUPL would
-// have: what a call that doesn't take them from the stack receives.
-static void _collect_stack_args_(Frame *frame) {
+// _collect_stack_args_() when there are arguments on the stack.
+static void _collect_pending_stack_args_(Frame *frame) {
   const uint16_t n = frame->pending_args;
-  if (0 == n) {
-    return;
-  }
   frame->pending_args = 0;
   Heap *heap = frame->parent_isolate->heap;
   Object *tuple_obj = heap_new(heap, Class_Tuple);
@@ -1104,10 +1109,19 @@ static void _collect_stack_args_(Frame *frame) {
   }
 }
 
-// Whether [func]'s parameters take [n] arguments from the stack: whether it
-// starts with an ARGC for [n], after its SLOTS and, for a constructor, the
-// instructions that make its fields.
-static bool _takes_stack_args_(const Function *func, uint16_t n) {
+// Makes a tuple in acc of the arguments ARGS left on the stack, as TUPL would
+// have: what a call that doesn't take them from the stack receives. Most calls
+// have none there.
+static VM_HOT void _collect_stack_args_(Frame *frame) {
+  if (0 != frame->pending_args) {
+    _collect_pending_stack_args_(frame);
+  }
+}
+
+// The number of arguments [func]'s parameters take from the stack: that of the
+// ARGC it starts with, after its SLOTS and, for a constructor, the
+// instructions that make its fields; 0 if it has none.
+static uint16_t _find_stack_args_(const Function *func) {
   const Bytecode *bytecode = func->_module->_bytecode;
   const uint32_t size = bytecode_size(bytecode);
   for (uint32_t i = func->_ins_pos; i < size; ++i) {
@@ -1121,12 +1135,25 @@ static bool _takes_stack_args_(const Function *func, uint16_t n) {
       case FLDC:
         continue;
       case ARGC:
-        return pint(&ins->val) == n;
+        return (uint16_t)pint(&ins->val);
       default:
-        return false;
+        return 0;
     }
   }
-  return false;
+  return 0;
+}
+
+// Whether [func]'s parameters take [n] arguments from the stack. The answer is
+// found once, and kept on the function.
+static bool _takes_stack_args_(const Function *func, uint16_t n) {
+  uint16_t plus_1 =
+      __atomic_load_n(&func->_stack_args_plus_1, __ATOMIC_RELAXED);
+  if (0 == plus_1) {
+    plus_1 = _find_stack_args_(func) + 1;
+    __atomic_store_n(&((Function *)func)->_stack_args_plus_1, plus_1,
+                     __ATOMIC_RELAXED);
+  }
+  return plus_1 - 1 == n;
 }
 
 // Context is only necessary for native functions.
@@ -1447,16 +1474,16 @@ static Scope *_execute_BBLK(VM *vm, Frame *frame, Scope *scope,
   return NULL;
 }
 
-static void _execute_JMP(VM *vm, Frame *frame, Scope *scope,
-                         const Instruction *ins) {
+static VM_HOT void _execute_JMP(VM *vm, Frame *frame, Scope *scope,
+                                const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for JMP.", ins->type);
   }
   scope->ins += ins->val._int_val;
 }
 
-static void _execute_IF(VM *vm, Frame *frame, Scope *scope,
-                        const Instruction *ins) {
+static VM_HOT void _execute_IF(VM *vm, Frame *frame, Scope *scope,
+                               const Instruction *ins) {
   if (INSTRUCTION_PRIMITIVE != ins->type) {
     FATALF("Invalid arg type=%d for IF.", ins->type);
   }
@@ -1842,6 +1869,22 @@ bool _attemp_catch_error(Frame *frame, Scope *ctx) {
 }
 
 // Please forgive me father, for I have sinned.
+// Runs the instructions of an ARGC fused with FUSE_ARGS, whose arguments are on
+// the stack: puts each in its parameter's slot, as each RES and LET would, and
+// goes to where their JMP goes.
+static inline void _take_stack_args_(Frame *frame, Scope *scope,
+                                     const Instruction *argc) {
+  const int64_t n = pint(&argc->val);
+  Value *acc = frame_mutable_acc(frame);
+  for (int64_t k = 0; k < n; ++k) {
+    *acc = frame_popstack(frame);
+    scope_let_ins(scope, argc + 3 + 2 * k, acc);
+  }
+  const Instruction *jmp = argc + 2 + 2 * n;
+  scope->ins += 2 + 2 * n;
+  scope->ins += pint(&jmp->val);
+}
+
 // With GCC or Clang, each instruction jumps straight to its handler through a
 // table of label addresses, which is faster than a switch: there's no bounds
 // check, and each handler has a jump of its own to the next instruction, which
@@ -1875,6 +1918,28 @@ bool _attemp_catch_error(Frame *frame, Scope *ctx) {
 #else
 #define VM_NEXT goto next_instruction
 #endif
+// VM_NEXT for a comparison, which may have the IF or IFN after it fused to it
+// (see bytecode_fuse()). That one then runs here, unless the comparison raised
+// an error: it jumps if acc is false and it's an IFN, or true and it's an IF.
+#define VM_NEXT_BRANCH                                             \
+  do {                                                             \
+    if (FUSE_BRANCH == ins->fuse && NULL == scope->error) {        \
+      const Instruction *branch = ins + 1;                         \
+      scope->ins++;                                                \
+      if (IS_FALSE(frame_get_acc(frame)) == (IFN == branch->op)) { \
+        scope->ins += branch->val._int_val;                        \
+      }                                                            \
+    }                                                              \
+    VM_NEXT;                                                       \
+  } while (0)
+// VM_NEXT for an instruction that may have the JMP after it fused to it.
+#define VM_NEXT_JMP                                      \
+  do {                                                   \
+    if (FUSE_JMP == ins->fuse && NULL == scope->error) { \
+      scope->ins += 1 + (ins + 1)->val._int_val;         \
+    }                                                    \
+    VM_NEXT;                                             \
+  } while (0)
 // Each build jumps to only one of the labels at the end of the loop.
 #ifdef __GNUC__
 #define VM_MAYBE_UNUSED_LABEL __attribute__((unused))
@@ -2031,7 +2096,7 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         VM_NEXT;
       VM_CASE(SET):
         _execute_SET(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(SETC):
         _execute_SETC(vm, frame, scope, ins);
         VM_NEXT;
@@ -2071,6 +2136,12 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         VM_NEXT;
       VM_CASE(SLOTS):
         scope_add_slots(scope, ins->slot);
+        // A function of one parameter receives it in acc, and its LET may be
+        // fused to the SLOTS.
+        if (FUSE_LET == ins->fuse) {
+          scope->ins++;
+          scope_let_ins(scope, ins + 1, frame_get_acc(frame));
+        }
         VM_NEXT;
       VM_CASE(ARGS):
         frame->pending_args = (uint16_t)pint(&ins->val);
@@ -2078,6 +2149,10 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
       VM_CASE(ARGC):
         if (scope->stack_args > 0 && scope->stack_args == pint(&ins->val)) {
           scope->stack_args = 0;
+          if (FUSE_ARGS == ins->fuse) {
+            _take_stack_args_(frame, scope, ins);
+            VM_NEXT;
+          }
           *frame_mutable_acc(frame) = TRUE_VALUE;
         } else {
           *frame_pushstack(frame) = *frame_get_acc(frame);
@@ -2099,23 +2174,23 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         goto end_of_loop;
       VM_CASE(ADD):
         _execute_ADD_with_string(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(SUB):
         _execute_SUB(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(MULT):
         _execute_MULT(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(DIV):
         _execute_DIV(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(MOD):
         _execute_MOD(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(INC):
       VM_CASE(DEC):
         _execute_INC(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_JMP;
       VM_CASE(AND):
         _execute_AND(vm, frame, scope, ins);
         VM_NEXT;
@@ -2133,16 +2208,16 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
         VM_NEXT;
       VM_CASE(LT):
         _execute_LT(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_BRANCH;
       VM_CASE(GT):
         _execute_GT(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_BRANCH;
       VM_CASE(LTE):
         _execute_LTE(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_BRANCH;
       VM_CASE(GTE):
         _execute_GTE(vm, frame, scope, ins);
-        VM_NEXT;
+        VM_NEXT_BRANCH;
       VM_CASE(EQ):
       VM_CASE(NEQ):
         if (_execute_EQ(vm, frame, scope, ins)) {
@@ -2154,7 +2229,7 @@ FrameState vm_execute_frame(VM *vm, Frame *frame) {
           frame->wait_reason = WAITING_ON_FN_CALL;
           goto end_of_loop;
         }
-        VM_NEXT;
+        VM_NEXT_BRANCH;
       VM_CASE(IS):
         _execute_IS(vm, frame, scope, ins);
         VM_NEXT;
