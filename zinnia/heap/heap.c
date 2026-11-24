@@ -92,6 +92,8 @@ static void objectlist_finalize_(ObjectList_ *list) {
 struct Heap_ {
   HeapConf config;
   RzallocArena object_arena;
+  // The Strings of String objects, kept here rather than allocated one by one.
+  RzallocArena string_arena;
   // Every object in the heap.
   ObjectList_ objects;
   ObjectList_ roots;
@@ -120,6 +122,7 @@ Heap *heap_create(HeapConf *config) {
   heap->roots = (ObjectList_){0};
   heap->to_trace = (ObjectList_){0};
   arena_init(&heap->object_arena, sizeof(Object));
+  arena_init(&heap->string_arena, sizeof(String));
   BoundMethodMap_init(&heap->bound_methods, hash_bound_method_,
                       compare_bound_methods_);
   return heap;
@@ -158,6 +161,7 @@ void heap_delete(Heap *heap) {
   objectlist_finalize_(&heap->to_trace);
   BoundMethodMap_finalize(&heap->bound_methods);
   arena_clear(&heap->object_arena);
+  arena_clear(&heap->string_arena);
   RELEASE(heap);
 }
 
@@ -249,6 +253,11 @@ void heap_set_object_count_threshold_for_garbage_collection(
     Heap *heap, uint32_t new_threshold) {
   ASSERT(heap != NULL);
   heap->object_count_threshold_for_garbage_collection = new_threshold;
+}
+
+String *heap_string_storage(Heap *heap) {
+  ASSERT(heap != NULL);
+  return (String *)arena_malloc(&heap->string_arena);
 }
 
 Object *heap_new(Heap *heap, const Class *class) {
@@ -382,6 +391,9 @@ void object_delete_(Object *object, Heap *heap) {
   // }
   if (NULL != object->_class->_delete_fn) {
     object->_class->_delete_fn(object);
+  }
+  if (Class_String == object->_class && NULL != object->_internal_obj) {
+    arena_free(&heap->string_arena, object->_internal_obj);
   }
   ValueMap_finalize(&object->_members);
   if (NULL != object->_refs) {

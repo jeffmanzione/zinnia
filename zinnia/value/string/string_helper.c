@@ -12,7 +12,7 @@
 
 Object *string_new(Heap *heap, const char src[], size_t len) {
   Object *str = heap_new(heap, Class_String);
-  string_init__(str, src, len);
+  string_init__(str, heap_string_storage(heap), src, len);
   return str;
 }
 

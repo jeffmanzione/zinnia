@@ -75,7 +75,11 @@ Object *native_blocking_new(Isolate *isolate, Class *class) {
 
 Object *native_blocking_string_new(Isolate *isolate, const char src[],
                                    size_t len) {
-  Object *str = native_blocking_new(isolate, Class_String);
-  string_init__(str, src, len);
+  Object *str;
+  SYNCHRONIZED(isolate->heap_access_lock, {
+    str = heap_new(isolate->heap, Class_String);
+    string_init__(str, heap_string_storage(isolate->heap), src, len);
+    native_pin_blocking_object(isolate, str);
+  });
   return str;
 }

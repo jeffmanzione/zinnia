@@ -15,7 +15,10 @@ DEFINE_ARRAYLIKE(String, char);
 void String_append_raw(String *const head, const char *tail, uint32_t len);
 
 void string_create__(Object *obj);
-void string_init__(Object *obj, const char *str, size_t size);
+// Makes [obj] a String of [size] chars of [str], or an empty one with room for
+// them if [str] is NULL, kept in [storage], which comes from
+// heap_string_storage() of [obj]'s heap.
+void string_init__(Object *obj, String *storage, const char *str, size_t size);
 void string_delete__(Object *obj);
 void string_print__(const Object *obj, FILE *out);
 

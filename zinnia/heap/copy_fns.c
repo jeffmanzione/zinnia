@@ -39,7 +39,8 @@ void tuple_copy(ValueCopier *copier, const Object *src_obj,
 void string_copy(ValueCopier *copier, const Object *src_obj,
                  Object *target_obj) {
   String *src = (String *)src_obj->_internal_obj;
-  string_init__(target_obj, src->table, String_size(src));
+  string_init__(target_obj, heap_string_storage(copier->target), src->table,
+                String_size(src));
 }
 
 void istring_copy(ValueCopier *copier, const Object *src_obj,
