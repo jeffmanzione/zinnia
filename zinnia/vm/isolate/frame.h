@@ -9,6 +9,7 @@
 #include "zinnia/util/error.h"
 #include "zinnia/value/value.h"
 #include "zinnia/vm/isolate/isolates.h"
+#include "zinnia/vm/isolate/scope.h"
 
 const char *frame_state_str(FrameState state);
 const char *wait_reason_str(WaitReason reason);
@@ -20,11 +21,39 @@ Scope *frame_create_scope(Frame *frame, Object *self, Module *module,
 // Starts a call of a function or method in [frame], in a scope of its own,
 // which is returned. The scope that was current runs again once
 // frame_pop_call_scope() ends the call.
-Scope *frame_push_call_scope(Frame *frame, Object *self, Module *module,
-                             uint32_t instruction_pos);
+static inline Scope *frame_push_call_scope(Frame *frame, Object *self,
+                                           Module *module,
+                                           uint32_t instruction_pos) {
+  Scope *ctx = scope_alloc(frame->parent_isolate);
+  ctx->parent_frame = frame;
+  ctx->parent_isolate = frame->parent_isolate;
+  scope_init(ctx, self, module, instruction_pos);
+  ctx->caller_scope = frame->current;
+  ctx->caller_stack_size = frame->value_stack.size;
+  ctx->slot_base = frame->slots.size;
+  frame->current = ctx;
+  return ctx;
+}
 // Ends [call_scope], a call started by frame_push_call_scope(), and returns to
 // its caller.
-void frame_pop_call_scope(Frame *frame, Scope *call_scope);
+static inline void frame_pop_call_scope(Frame *frame, Scope *call_scope) {
+  ASSERT(NULL != call_scope->caller_scope);
+  // Drops what the call left on the stack, and its slots.
+  if (frame->value_stack.size > call_scope->caller_stack_size) {
+    frame->value_stack.size = call_scope->caller_stack_size;
+  }
+  if (frame->slots.size > call_scope->slot_base) {
+    frame->slots.size = call_scope->slot_base;
+  }
+  // And the scopes of blocks it returned from inside of, and its own.
+  Scope *scope = frame->current;
+  frame->current = call_scope->caller_scope;
+  while (NULL != scope) {
+    Scope *next = (scope == call_scope) ? NULL : scope->previous_scope;
+    scope_release(scope);
+    scope = next;
+  }
+}
 Scope *frame_back_scope(Frame *frame);
 
 // The value stack and accumulator are used by nearly every instruction, so

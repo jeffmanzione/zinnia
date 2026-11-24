@@ -21,9 +21,27 @@ typedef enum {
   INSTRUCTION_PRIMITIVE
 } InstructionType;
 
+// How the VM runs an instruction together with the one after it, as one. Set
+// by bytecode_fuse() when the VM loads code; files never store it.
+typedef enum {
+  FUSE_NONE = 0,
+  // A comparison, then the IF or IFN that branches on it.
+  FUSE_BRANCH,
+  // An instruction that goes on to the next, then a JMP.
+  FUSE_JMP,
+  // A function's SLOTS, then the LET of its only parameter.
+  FUSE_LET,
+  // An ARGC, then the instructions that move its arguments into their slots
+  // (IFN, then RES and LET for each, then JMP), when they're on the stack.
+  // Those all run as one.
+  FUSE_ARGS,
+} Fuse;
+
 typedef struct {
   char op;
   char type;
+  // A Fuse.
+  uint8_t fuse;
   // For an INSTRUCTION_ID operand that names a variable kept in a slot, the
   // slot's number + 1, and 0 otherwise; the id still holds the name. For SLOTS,
   // the number of slots.
@@ -33,11 +51,12 @@ typedef struct {
     const char *id;
     const char *str;
   };
-  // For a call of a method by name, the Function the last call found on its
-  // object's own class, so the next call on that class skips the lookup. The
-  // VM sets it, on whichever threads run the instruction, so it's only read and
-  // written atomically. Always NULL in a compiled file.
-  const void *method_cache;
+  // What the VM found for the instruction last time, so it can skip finding it
+  // again: for a call of a method by name, the Function found on its object's
+  // own class; for a name looked up in its module's members, that member's
+  // Value. The VM sets it, on whichever threads run the instruction, so it's
+  // only read and written atomically. Always NULL in a compiled file.
+  const void *cache;
 } Instruction;
 
 DEFINE_ARRAYLIKE(InstructionArray, Instruction);

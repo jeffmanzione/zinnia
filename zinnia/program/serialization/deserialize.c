@@ -37,8 +37,9 @@ int deserialize_val(FILE *file, Primitive *val) {
   int i = 0;
   uint8_t val_type;
 
-  int32_t int_val;
-  float float_val;
+  // Each is read in full into a variable of its own size.
+  int64_t int_val;
+  double float_val;
   int8_t char_val;
   bool bool_val;
 
@@ -55,6 +56,7 @@ int deserialize_val(FILE *file, Primitive *val) {
     case PRIMITIVE_CHAR:
       i += deserialize_type(file, int8_t, &char_val);
       *val = primitive_char(char_val);
+      break;
     case PRIMITIVE_BOOL:
     default:
       i += deserialize_type(file, bool, &bool_val);

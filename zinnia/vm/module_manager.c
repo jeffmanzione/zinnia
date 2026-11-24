@@ -19,8 +19,9 @@
 #include "zinnia/lang/parser/lang_parser.h"
 #include "zinnia/lang/semantic_analyzer/definitions.h"
 #include "zinnia/program/bytecode_binary.h"
-#include "zinnia/program/slots.h"
+#include "zinnia/program/fuse.h"
 #include "zinnia/program/optimization/optimize.h"
+#include "zinnia/program/slots.h"
 #include "zinnia/util/file.h"
 #include "zinnia/value/class/class.h"
 #include "zinnia/value/class/classes_def.h"
@@ -145,6 +146,9 @@ ModuleInfo *modulemanager_hydrate_(ModuleManager *mm, Bytecode *bytecode,
   ASSERT(mm != NULL);
   ASSERT(bytecode != NULL);
   ASSERT(module_info != NULL);
+
+  // Slots are assigned by now, however the module was read.
+  bytecode_fuse(bytecode, 0);
 
   Module *module = &module_info->module;
   module_init(module, bytecode_module_name(bytecode), module_info->file_path,

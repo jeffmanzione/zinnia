@@ -13,8 +13,26 @@
 #include "zinnia/value/object.h"
 #include "zinnia/vm/isolate/isolates.h"
 
-void scope_init(Scope *ctx, Object *self, Module *module,
-                uint32_t instruction_pos);
+static inline void scope_init(Scope *ctx, Object *self, Module *module,
+                              uint32_t instruction_pos) {
+  ctx->self = value_object(self);
+  ctx->module = module;
+  ctx->bytecode = module->_bytecode;
+  ctx->ins = instruction_pos;
+  ctx->func = NULL;
+  ctx->error = NULL;
+  ctx->catch_ins = -1;
+  ctx->previous_scope = NULL;
+  ctx->caller_scope = NULL;
+  ctx->caller_stack_size = 0;
+  ctx->slot_base = 0;
+  ctx->is_block = false;
+  ctx->stack_args = 0;
+  ctx->const_ids = NULL;
+  ctx->num_const_ids = 0;
+  ctx->const_ids_capacity = 0;
+  ctx->_reflection = NULL;
+}
 void scope_finalize(Scope *ctx);
 Object *scope_self(Scope *ctx);
 Module *scope_module(Scope *ctx);
@@ -28,10 +46,28 @@ Scope *scope_dynamic_parent(const Scope *ctx);
 void scope_set_previous(Scope *ctx, Scope *previous);
 // Frees [ctx], popped from its frame, unless it has an object on the heap, in
 // which case the collector frees it once nothing refers to it.
-void scope_release(Scope *ctx);
+// scope_release() for a scope with an object on the heap or const variables.
+void scope_release_slow(Scope *ctx);
+static inline void scope_release(Scope *ctx) {
+  if (NULL != ctx->_reflection || NULL != ctx->const_ids) {
+    scope_release_slow(ctx);
+    return;
+  }
+  // Kept for the next call, which most likely comes soon.
+  Isolate *isolate = ctx->parent_isolate;
+  ctx->previous_scope = isolate->free_scopes;
+  isolate->free_scopes = ctx;
+}
 // A new, uninitialized scope for [isolate], reusing a released one if there
 // is one.
-Scope *scope_alloc(Isolate *isolate);
+static inline Scope *scope_alloc(Isolate *isolate) {
+  Scope *ctx = isolate->free_scopes;
+  if (NULL != ctx) {
+    isolate->free_scopes = ctx->previous_scope;
+    return ctx;
+  }
+  return (Scope *)arena_malloc(&isolate->scope_arena);
+}
 // Keeps [ctx] alive as long as [fn_ref], an anonymous function defined in it.
 void scope_capture(Scope *ctx, Object *fn_ref, Heap *heap);
 void scope_set_function(Scope *ctx, const Function *func);
@@ -47,13 +83,34 @@ bool scope_let_const(Scope *ctx, const char id[], const Value *e);
 bool scope_is_const(Scope *ctx, const char id[]);
 
 // Makes room for [num_slots] unset slots for [ctx]'s function (SLOTS).
-void scope_add_slots(Scope *ctx, uint16_t num_slots);
+// scope_add_slots() when the frame's slots must grow to make room.
+void scope_add_slots_growing(Scope *ctx, uint16_t num_slots);
+static inline void scope_add_slots(Scope *ctx, uint16_t num_slots) {
+  SlotStack *slots = &ctx->parent_frame->slots;
+  if (slots->size + num_slots > slots->capacity) {
+    scope_add_slots_growing(ctx, num_slots);
+    return;
+  }
+  ctx->slot_base = slots->size;
+  // An unset slot's value is never read, so only what makes it unset is.
+  Slot *slot = slots->table + slots->size;
+  for (uint16_t i = 0; i < num_slots; ++i) {
+    slot[i].value.type = NONE;
+    slot[i].is_set = false;
+    slot[i].is_const = false;
+  }
+  slots->size += num_slots;
+}
 // The same as the functions above for the variable [ins]'s operand names,
 // using its slot when it has one.
 //
 // A variable in a slot is handled inline, since most instructions use one.
 void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e);
 bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e);
+// scope_lookup(), for the name [ins]'s operand names, in the module's own code,
+// where self is the module: remembers where in the module's members it was
+// found, if it was found there.
+Value *scope_lookup_named_ins(Scope *ctx, const Instruction *ins, Value *tmp);
 // scope_set_ins() for what isn't an assignment to a set, non-const slot.
 bool scope_set_ins_slow(Scope *ctx, const Instruction *ins, const Value *e);
 
@@ -73,6 +130,10 @@ static inline Value *scope_lookup_ins(Scope *ctx, const Instruction *ins,
     if (slot->is_set) {
       return &slot->value;
     }
+  }
+  // Only the module's own code, where self is the module, remembers.
+  if (ctx->self.obj == ctx->module->_reflection) {
+    return scope_lookup_named_ins(ctx, ins, tmp);
   }
   return scope_lookup(ctx, ins->id, tmp);
 }

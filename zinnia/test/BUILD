@@ -1,4 +1,4 @@
-load("//zinnia:zinnia.bzl", "zinnia_test")
+load("//zinnia:zinnia.bzl", "zinnia_library", "zinnia_test")
 
 package(
     default_visibility = ["//visibility:private"],
@@ -92,4 +92,17 @@ zinnia_test(
 zinnia_test(
     name = "struct_test",
     main = "struct_test.zn",
+)
+
+# Runs from a .znb file, which zinnia_test prefers when given one.
+zinnia_library(
+    name = "binary_test_lib",
+    srcs = ["binary_test.zn"],
+    assembly = False,
+    bin = True,
+)
+
+zinnia_test(
+    name = "binary_test",
+    main = ":binary_test_lib",
 )

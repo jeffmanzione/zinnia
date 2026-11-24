@@ -29,10 +29,12 @@ cc_library(
     name = "bytecode",
     srcs = [
         "bytecode.c",
+        "fuse.c",
         "slots.c",
     ],
     hdrs = [
         "bytecode.h",
+        "fuse.h",
         "slots.h",
     ],
     deps = [

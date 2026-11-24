@@ -22,9 +22,11 @@ int serialize_bytes(WBuffer *buffer, const char *start, int num_bytes) {
 }
 
 int serialize_primitive(WBuffer *buffer, Primitive val) {
-  int32_t int_val;
-  float float_val;
+  // Each is written in full from a variable of its own size.
+  int64_t int_val;
+  double float_val;
   int8_t char_val;
+  bool bool_val;
 
   int i = 0;
   uint8_t val_type = (uint8_t)ptype(&val);
@@ -39,9 +41,13 @@ int serialize_primitive(WBuffer *buffer, Primitive val) {
       i += serialize_type(buffer, double, float_val);
       break;
     case PRIMITIVE_CHAR:
-    default:
       char_val = pchar(&val);
       i += serialize_type(buffer, int8_t, char_val);
+      break;
+    case PRIMITIVE_BOOL:
+    default:
+      bool_val = pbool(&val);
+      i += serialize_type(buffer, bool, bool_val);
   }
   return i;
 }

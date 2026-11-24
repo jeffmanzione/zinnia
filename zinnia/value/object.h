@@ -114,6 +114,10 @@ struct Function_ {
   bool _is_async;
   bool _is_const;
   bool _is_blocking;
+  // The number of arguments the function's ARGC takes from the stack, + 1; 1
+  // if it has none; 0 until the VM first looks. Threads may set it at once, to
+  // the same value, so it's only read and written atomically.
+  uint16_t _stack_args_plus_1;
   union {
     uint32_t _ins_pos;
     void *_native_fn;   // NativeFn
