@@ -1,0 +1,30 @@
+; Run from its .znb file (see BUILD), to check that the constants in it read
+; back as they were written. It's a plain script, not a test.TestClass, since
+; classes' fields aren't kept in .znb files yet.
+
+import error
+
+function check(what, got, want) {
+  if got != want {
+    raise error.Error(cat(what, ': expected ', want, ' but was ', got))
+  }
+}
+
+check('small int', 2 + 3, 5)
+check('negative int', 0 - 7, -7)
+check('int beyond 32 bits', 3000000000 + 1, 3000000001)
+check('int beyond 32 bits, negative', 0 - 5000000000, -5000000000)
+check('float', 2.5 * 2, 5.0)
+check('float fraction', 0.125 + 0.25, 0.375)
+check('mixed', 1 + 0.5, 1.5)
+
+function sum_to(n) {
+  t = 0
+  i = 0
+  while i <= n {
+    t = t + i
+    i = i + 1
+  }
+  t
+}
+check('loop', sum_to(100), 5050)
