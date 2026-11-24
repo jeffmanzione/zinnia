@@ -51,11 +51,12 @@ typedef struct {
     const char *id;
     const char *str;
   };
-  // For a call of a method by name, the Function the last call found on its
-  // object's own class, so the next call on that class skips the lookup. The
-  // VM sets it, on whichever threads run the instruction, so it's only read and
-  // written atomically. Always NULL in a compiled file.
-  const void *method_cache;
+  // What the VM found for the instruction last time, so it can skip finding it
+  // again: for a call of a method by name, the Function found on its object's
+  // own class; for a name looked up in its module's members, that member's
+  // Value. The VM sets it, on whichever threads run the instruction, so it's
+  // only read and written atomically. Always NULL in a compiled file.
+  const void *cache;
 } Instruction;
 
 DEFINE_ARRAYLIKE(InstructionArray, Instruction);

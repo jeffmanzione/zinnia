@@ -838,3 +838,50 @@ class FusedInstructionTest {
     expect(raised, True)
   }
 }
+
+; Used by ModuleNameTest. Its functions look names up in the module itself,
+; which the VM remembers where it found them.
+function _lookup_helper(x) x + 1
+
+function _lookup_shadowed() {
+  results = []
+  for (_, i) in 0:3 {
+    results.append(_lookup_helper(i))
+    ; Assigns the module's _lookup_helper, since that's where the name is.
+    _lookup_helper = (x) { x * 100 }
+    g = () { _lookup_helper(5) }
+    results.append(g())
+  }
+  results
+}
+
+function _lookup_sum() {
+  t = 0
+  for (_, i) in 0:5 t = t + _lookup_helper(i)
+  t
+}
+
+; Its parameter has the name of a module function. A lambda captures it, so
+; it's a named variable, which a lookup must find before the module's.
+function _lookup_param(_lookup_helper) {
+  g = () { _lookup_helper }
+  _lookup_helper
+}
+
+@test.TestClass
+class ModuleNameTest {
+  @test.Test
+  method test_a_remembered_name_sees_its_new_value() {
+    expect(_lookup_sum(), 15)
+    expect(_lookup_shadowed(), [1, 500, 100, 500, 200, 500])
+    ; The same lookups again, now that _lookup_helper was reassigned.
+    expect(_lookup_sum(), 1000)
+    expect(_lookup_shadowed(), [0, 500, 100, 500, 200, 500])
+  }
+
+  @test.Test
+  method test_a_variable_hides_a_module_name() {
+    expect(_lookup_param(7), 7)
+    expect(_lookup_param('x'), 'x')
+  }
+}

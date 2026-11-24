@@ -52,7 +52,6 @@ extern const char *STACKLINE_NAME;
 extern const char *STRING_NAME;
 extern const char *SUPER_KEY;
 extern const char *FRAME_NAME;
-extern const char *TMP_MODULE_HOLDER;
 extern const char *TO_S_KEY;
 extern const char *TRUE_KEYWORD;
 extern const char *TUPLE_NAME;

@@ -124,7 +124,56 @@ Object *wrap_function_in_ref(const Function *f, Object *obj, Heap *heap,
   return fn_ref;
 }
 
-Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
+static inline Value *scope_lookup_after_self_(Scope *ctx, const char id[],
+                                              Value *tmp);
+
+// Whether neither [ctx] nor any scope it's nested in has named variables, so
+// scope_lookup() would find none of them. A scope's variables have names only
+// once it has an object on the heap, and that may have none.
+static bool scope_chain_has_no_names_(const Scope *ctx) {
+  for (; NULL != ctx; ctx = ctx->previous_scope) {
+    if (NULL != ctx->_reflection &&
+        0 != ctx->_reflection->_members.map.num_entries) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool is_anon_function_(const Value *e) {
+  return OBJECT == e->type && Class_Function == e->obj->_class &&
+         e->obj->_function_obj->_is_anon;
+}
+
+Value *scope_lookup_named_ins(Scope *ctx, const Instruction *ins, Value *tmp) {
+  // In a module's own code and its functions, self is the module. Where no
+  // scope has named variables, scope_lookup() then looks in the module's
+  // members first, and a member found there is kept where it is, so where it
+  // is can be remembered. Its value is read each time, so it can change.
+  Object *module_obj = ctx->module->_reflection;
+  ASSERT(ctx->self.obj == module_obj);
+  if (NULL != module_obj && SELF != ins->id && scope_chain_has_no_names_(ctx)) {
+    Value *member = (Value *)__atomic_load_n(&ins->cache, __ATOMIC_ACQUIRE);
+    if (NULL == member) {
+      member = object_get(module_obj, ins->id);
+      if (NULL != member) {
+        __atomic_store_n(&((Instruction *)ins)->cache, (const void *)member,
+                         __ATOMIC_RELEASE);
+      }
+    }
+    // scope_lookup() gives an anonymous function as a FunctionRef.
+    if (NULL != member && !is_anon_function_(member)) {
+      return member;
+    }
+    if (NULL == member) {
+      return scope_lookup_after_self_(ctx, ins->id, tmp);
+    }
+  }
+  return scope_lookup(ctx, ins->id, tmp);
+}
+
+__attribute__((flatten)) Value *scope_lookup(Scope *ctx, const char id[],
+                                             Value *tmp) {
   ASSERT(ctx != NULL);
   ASSERT(id != NULL);
   if (SELF == id) {
@@ -154,6 +203,15 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
     }
     return member;
   }
+  return scope_lookup_after_self_(ctx, id, tmp);
+}
+
+// The rest of scope_lookup(), once neither [ctx]'s scopes nor self's members
+// have [id].
+static inline Value *scope_lookup_after_self_(Scope *ctx, const char id[],
+                                              Value *tmp) {
+  Frame *frame = ctx->parent_frame;
+  Value *member;
   const Function *f = class_get_function(ctx->self.obj->_class, id);
   // Generic methods inherited from Object (e.g., Object.hash()) and, in
   // module-level code, methods of the module object itself would otherwise
@@ -183,9 +241,12 @@ Value *scope_lookup(Scope *ctx, const char id[], Value *tmp) {
     *tmp = value_object(f_ref);
     return tmp;
   }
-  member = object_get(ctx->module->_reflection, id);
-  if (NULL != member) {
-    return member;
+  // In the module's own code, self is the module, whose members were looked in.
+  if (ctx->self.obj != ctx->module->_reflection) {
+    member = object_get(ctx->module->_reflection, id);
+    if (NULL != member) {
+      return member;
+    }
   }
 
   Object *obj = module_lookup(ctx->module, id);

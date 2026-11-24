@@ -107,6 +107,10 @@ static inline void scope_add_slots(Scope *ctx, uint16_t num_slots) {
 // A variable in a slot is handled inline, since most instructions use one.
 void scope_let_ins(Scope *ctx, const Instruction *ins, const Value *e);
 bool scope_let_const_ins(Scope *ctx, const Instruction *ins, const Value *e);
+// scope_lookup(), for the name [ins]'s operand names, in the module's own code,
+// where self is the module: remembers where in the module's members it was
+// found, if it was found there.
+Value *scope_lookup_named_ins(Scope *ctx, const Instruction *ins, Value *tmp);
 // scope_set_ins() for what isn't an assignment to a set, non-const slot.
 bool scope_set_ins_slow(Scope *ctx, const Instruction *ins, const Value *e);
 
@@ -126,6 +130,10 @@ static inline Value *scope_lookup_ins(Scope *ctx, const Instruction *ins,
     if (slot->is_set) {
       return &slot->value;
     }
+  }
+  // Only the module's own code, where self is the module, remembers.
+  if (ctx->self.obj == ctx->module->_reflection) {
+    return scope_lookup_named_ins(ctx, ins, tmp);
   }
   return scope_lookup(ctx, ins->id, tmp);
 }

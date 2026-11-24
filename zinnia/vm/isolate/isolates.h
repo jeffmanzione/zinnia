@@ -117,6 +117,9 @@ struct __Frame {
   SlotStack slots;
   // How many arguments ARGS left on the stack for the call that follows.
   uint16_t pending_args;
+  // The module LMDL loaded, for the MSET after it to name. Modules are kept
+  // alive by the module manager.
+  Object *loaded_module;
 
   Frame *parent_frame;
 

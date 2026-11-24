@@ -33,6 +33,7 @@ void frame_init(Frame *frame) {
   ValueStack_init(&frame->value_stack);
   SlotStack_init(&frame->slots);
   frame->pending_args = 0;
+  frame->loaded_module = NULL;
   frame->parent_frame = NULL;
   FrameSet_init(&frame->dependent_frames, hash_frame, compare_frames);
   frame->child_frame_has_error = false;

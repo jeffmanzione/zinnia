@@ -791,20 +791,20 @@ static void _execute_SETC(VM *vm, Frame *frame, Scope *scope,
 
 static void _execute_MSET(VM *vm, Frame *frame, Scope *scope,
                           const Instruction *ins) {
-  Value tmp;
-  Value *mdl = scope_lookup(scope, TMP_MODULE_HOLDER, &tmp);
-  if (!IS_CLASS(mdl, Class_Module)) {
-    FATALF("Temp held module must be of type Module.");
+  Object *mdl = frame->loaded_module;
+  frame->loaded_module = NULL;
+  if (NULL == mdl || Class_Module != mdl->_class) {
+    FATALF("MSET must follow the LMDL of a module.");
   }
   switch (ins->type) {
     case INSTRUCTION_ID:
       object_set_member_obj(frame->parent_isolate->heap,
-                            scope->module->_reflection, ins->id, mdl->obj);
+                            scope->module->_reflection, ins->id, mdl);
       break;
     case INSTRUCTION_STRING:
       object_set_member_obj(frame->parent_isolate->heap,
-                            scope->module->_reflection,
-                            mdl->obj->_module_obj->_name, mdl->obj);
+                            scope->module->_reflection, mdl->_module_obj->_name,
+                            mdl);
       break;
     default:
       FATALF("Invalid arg type=%d for MSET.", ins->type);
@@ -1251,7 +1251,7 @@ bool _call_function_base(Frame *frame, Scope *scope, const Function *func,
 static inline const Function *_cached_method_(const Instruction *ins,
                                               const Class *class) {
   const Function *func =
-      (const Function *)__atomic_load_n(&ins->method_cache, __ATOMIC_ACQUIRE);
+      (const Function *)__atomic_load_n(&ins->cache, __ATOMIC_ACQUIRE);
   return (NULL != func && func->_parent_class == class &&
           func->_name == ins->id)
              ? func
@@ -1264,7 +1264,7 @@ static inline void _cache_method_(const Instruction *ins, const Function *func,
   // overridden in the next object's class, and the check above compares the
   // cached method's own class.
   if (func->_parent_class == class) {
-    __atomic_store_n(&((Instruction *)ins)->method_cache, (const void *)func,
+    __atomic_store_n(&((Instruction *)ins)->cache, (const void *)func,
                      __ATOMIC_RELEASE);
   }
 }
@@ -1783,8 +1783,9 @@ ModuleWait _execute_LMDL(VM *vm, Frame *frame, Scope *scope,
     return MODULE_READY;
   }
   ModuleWait module_wait = _maybe_init_module(frame, module);
-  Value module_reflection = value_object(module->_reflection);
-  scope_set(scope, TMP_MODULE_HOLDER, &module_reflection);
+  // Kept on the frame rather than in a variable, which would give the module's
+  // scope a named variable and so make lookups of names in it slower.
+  frame->loaded_module = module->_reflection;
   return module_wait;
 }
 

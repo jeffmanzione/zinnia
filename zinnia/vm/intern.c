@@ -49,7 +49,6 @@ const char *STACKLINE_NAME;
 const char *STRING_NAME;
 const char *SUPER_KEY;
 const char *FRAME_NAME;
-const char *TMP_MODULE_HOLDER;
 const char *TO_S_KEY;
 const char *TRUE_KEYWORD;
 const char *TUPLE_NAME;
@@ -100,7 +99,6 @@ void strings_insert_constants_() {
   STRING_NAME = global_intern("String");
   SUPER_KEY = global_intern("super");
   FRAME_NAME = global_intern("Frame");
-  TMP_MODULE_HOLDER = global_intern("$tmp_module_holder");
   TO_S_KEY = global_intern("to_s");
   TRUE_KEYWORD = global_intern("True");
   TUPLE_NAME = global_intern("Tuple");
