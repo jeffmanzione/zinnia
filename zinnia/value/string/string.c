@@ -6,6 +6,7 @@
 #include "zinnia/value/string/string.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "zinnia/alloc/alloc.h"
 #include "zinnia/util/error.h"
@@ -15,14 +16,23 @@
 
 IMPL_ARRAYLIKE(String, char);
 
-// String_create_capacity() and String_create_copy() leave a String's table
-// unset when it has no room, so an empty String gets the default room instead.
-static String *string_create_(const char *str, size_t size) {
+// Fills [string] with [size] chars of [str], or with room for them if [str] is
+// NULL, as String_create_copy() and String_create_capacity() would. Those
+// leave the table unset when there's no room, so an empty String gets the
+// default room instead.
+static void string_fill_(String *string, const char *str, size_t size) {
   if (0 == size) {
-    return String_create();
+    String_init(string);
+  } else if (NULL == str) {
+    String_init_capacity(string, size);
+  } else {
+    // Rounded up, as String_create_copy() does.
+    String_init_capacity(string, ((size + ARRAYLIKE_DEFAULT_TABLE_SIZE - 1) /
+                                  ARRAYLIKE_DEFAULT_TABLE_SIZE) *
+                                     ARRAYLIKE_DEFAULT_TABLE_SIZE);
+    memmove(string->table, str, size);
+    string->size = size;
   }
-  return (NULL == str) ? String_create_capacity(size)
-                       : String_create_copy(str, size);
 }
 
 void String_append_raw(String *const head, const char *tail, uint32_t len) {
@@ -41,15 +51,17 @@ void String_append_raw(String *const head, const char *tail, uint32_t len) {
 
 void string_create__(Object *obj) { obj->_internal_obj = NULL; }
 
-void string_init__(Object *obj, const char *str, size_t size) {
-  obj->_internal_obj = string_create_(str, size);
+void string_init__(Object *obj, String *storage, const char *str, size_t size) {
+  string_fill_(storage, str, size);
+  obj->_internal_obj = storage;
 }
 
 void string_delete__(Object *obj) {
   if (NULL == obj->_internal_obj) {
     return;
   }
-  String_delete((String *)obj->_internal_obj);
+  // The heap frees the String itself (see heap_string_storage()).
+  String_finalize((String *)obj->_internal_obj);
 }
 
 void string_print__(const Object *obj, FILE *out) {

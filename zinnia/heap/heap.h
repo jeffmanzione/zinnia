@@ -24,6 +24,7 @@
 #include "c-data-structures/maplike.h"
 #include "zinnia/util/error.h"
 #include "zinnia/value/object.h"
+#include "zinnia/value/string/string.h"
 #include "zinnia/value/value.h"
 
 DEFINE_MAPLIKE(ObjectTypeCountMap, Class *, int);
@@ -49,6 +50,9 @@ void heap_forget_bound_method(Heap *heap, const Object *obj, const void *func,
                               const Object *fn_ref);
 
 Object *heap_new(Heap *heap, const Class *class);
+// Room for the String of a String object in [heap], which frees it when it
+// deletes the object. See string_init__().
+String *heap_string_storage(Heap *heap);
 
 // Keeps [obj] through the next heap_collect_garbage(), with what it refers to.
 // Objects in other heaps are left alone.
